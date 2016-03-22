@@ -77,7 +77,7 @@ public class NotesSearchKeyEncoder {
 			else if (currKey instanceof Date[]) {
 				Date[] dateArr = (Date[]) currKey;
 				Calendar[] calArr = new Calendar[dateArr.length];
-				for (int j=0; i<dateArr.length; j++) {
+				for (int j=0; j<dateArr.length; j++) {
 					calArr[j] = Calendar.getInstance();
 					calArr[j].setTime(dateArr[j]);
 				}
