@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.INavigateConstants;
+import com.mindoo.domino.jna.constants.IReadMaskConstants;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.utils.StringUtil;
 
@@ -113,7 +114,7 @@ public abstract class NotesCollectionReader {
 						//read the last view entry position to see where start here
 						m_pos = NotesCollectionPosition.toPosition("0");
 						
-						viewData = m_col.readEntries(m_pos, (short) (INavigateConstants.NAVIGATE_NEXT | INavigateConstants.NAVIGATE_CONTINUE), Integer.MAX_VALUE, m_returnNav, 1, NotesCAPI.READ_MASK_INDEXPOSITION);
+						viewData = m_col.readEntries(m_pos, (short) (INavigateConstants.NAVIGATE_NEXT | INavigateConstants.NAVIGATE_CONTINUE), Integer.MAX_VALUE, m_returnNav, 1, IReadMaskConstants.READ_MASK_INDEXPOSITION);
 						List<NotesViewEntryData> entries = viewData.getEntries();
 						if (entries.size()>0) {
 							NotesViewEntryData lastEntryData = entries.get(0);
@@ -125,7 +126,7 @@ public abstract class NotesCollectionReader {
 						//read the first view entry position to see if we start here
 						m_pos = NotesCollectionPosition.toPosition("0");
 						
-						viewData = m_col.readEntries(m_pos, m_skipNav, 1, m_returnNav, 1, NotesCAPI.READ_MASK_INDEXPOSITION);
+						viewData = m_col.readEntries(m_pos, m_skipNav, 1, m_returnNav, 1, IReadMaskConstants.READ_MASK_INDEXPOSITION);
 						List<NotesViewEntryData> entries = viewData.getEntries();
 						if (entries.size()>0) {
 							NotesViewEntryData lastEntryData = entries.get(0);

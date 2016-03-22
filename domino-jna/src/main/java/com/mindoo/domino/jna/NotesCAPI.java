@@ -5,6 +5,7 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
+import com.mindoo.domino.jna.structs.NotesCollectionStats;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItem;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
@@ -202,27 +203,6 @@ public interface NotesCAPI extends Library {
 											/* prevents any sharing of associated */
 											/* structures such as unread lists, etc */
 
-	
-	public static final int READ_MASK_NOTEID = 0x00000001;
-	public static final int READ_MASK_NOTEUNID = 0x00000002;
-	public static final int READ_MASK_NOTECLASS = 0x00000004;
-	public static final int READ_MASK_INDEXSIBLINGS = 0x00000008;
-	public static final int READ_MASK_INDEXCHILDREN = 0x00000010;
-	public static final int READ_MASK_INDEXDESCENDANTS = 0x00000020;
-	public static final int READ_MASK_INDEXANYUNREAD = 0x00000040;
-	public static final int READ_MASK_INDENTLEVELS = 0x00000080;
-	public static final int READ_MASK_SCORE = 0x00000200;
-	public static final int READ_MASK_INDEXUNREAD = 0x00000400;
-	public static final int READ_MASK_COLLECTIONSTATS = 0x00000100;
-	public static final int READ_MASK_INDEXPOSITION = 0x00004000;
-	public static final int READ_MASK_SUMMARYVALUES = 0x00002000;
-	public static final int READ_MASK_SUMMARY = 0x00008000;
-
-	
-	/*	If the following is ORed in with a note class, the resultant note ID
-	may be passed into NSFNoteOpen and may be treated as though you first
-	did an NSFGetSpecialNoteID followed by an NSFNoteOpen, all in a single
-	transaction. */
 	/**
 	 * If the following is ORed in with a note class, the resultant note ID
 	 * may be passed into NSFNoteOpen and may be treated as though you first

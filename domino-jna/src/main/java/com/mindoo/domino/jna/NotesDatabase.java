@@ -12,6 +12,7 @@ import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.constants.IFTIndexConstants;
 import com.mindoo.domino.jna.constants.IFTSearchConstants;
 import com.mindoo.domino.jna.constants.INavigateConstants;
+import com.mindoo.domino.jna.constants.IReadMaskConstants;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -655,7 +656,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
-				NotesViewData data = col.readEntries(pos, isFirstRun ? INavigateConstants.NAVIGATE_NEXT : INavigateConstants.NAVIGATE_CURRENT, isFirstRun ? 1 : 0, INavigateConstants.NAVIGATE_NEXT, Integer.MAX_VALUE, NotesCAPI.READ_MASK_NOTEID | NotesCAPI.READ_MASK_NOTECLASS);
+				NotesViewData data = col.readEntries(pos, isFirstRun ? INavigateConstants.NAVIGATE_NEXT : INavigateConstants.NAVIGATE_CURRENT, isFirstRun ? 1 : 0, INavigateConstants.NAVIGATE_NEXT, Integer.MAX_VALUE, IReadMaskConstants.READ_MASK_NOTEID | IReadMaskConstants.READ_MASK_NOTECLASS);
 				moreToDo = data.hasMoreToDo();
 				isFirstRun=false;
 				
