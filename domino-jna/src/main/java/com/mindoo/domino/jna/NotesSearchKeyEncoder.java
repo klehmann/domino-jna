@@ -139,33 +139,33 @@ public class NotesSearchKeyEncoder {
 			offset++;
 		}
 		
-		System.out.println("Dumping meta data:");
-		StringBuilder sb = new StringBuilder();
-		for (int i=0; i<metaDataByteArr.length; i++) {
-			if (sb.length()>0)
-				sb.append(" ");
-			sb.append(Integer.toString(mem.getByte(i), 16) + " ");
-		}
-		System.out.println(sb.toString());
-		
-		
-		System.out.println("Dumping value data:");
-		sb.setLength(0);
-		for (int i=0; i<valueDataByteArr.length; i++) {
-			if (sb.length()>0)
-				sb.append(" ");
-			sb.append(Integer.toString(mem.getByte(metaDataByteArr.length + i), 16) + " ");
-		}
-		System.out.println(sb.toString());
-
-		System.out.println("Dumping mem:");
-		sb.setLength(0);
-		for (int i=0; i<mem.size(); i++) {
-			if (sb.length()>0)
-				sb.append(" ");
-			sb.append(Integer.toString(mem.getByte(i), 16) + " ");
-		}
-		System.out.println(sb.toString());
+//		System.out.println("Dumping meta data:");
+//		StringBuilder sb = new StringBuilder();
+//		for (int i=0; i<metaDataByteArr.length; i++) {
+//			if (sb.length()>0)
+//				sb.append(" ");
+//			sb.append(Integer.toString(mem.getByte(i), 16) + " ");
+//		}
+//		System.out.println(sb.toString());
+//		
+//		
+//		System.out.println("Dumping value data:");
+//		sb.setLength(0);
+//		for (int i=0; i<valueDataByteArr.length; i++) {
+//			if (sb.length()>0)
+//				sb.append(" ");
+//			sb.append(Integer.toString(mem.getByte(metaDataByteArr.length + i), 16) + " ");
+//		}
+//		System.out.println(sb.toString());
+//
+//		System.out.println("Dumping mem:");
+//		sb.setLength(0);
+//		for (int i=0; i<mem.size(); i++) {
+//			if (sb.length()>0)
+//				sb.append(" ");
+//			sb.append(Integer.toString(mem.getByte(i), 16) + " ");
+//		}
+//		System.out.println(sb.toString());
 
 		return mem;
 	}
