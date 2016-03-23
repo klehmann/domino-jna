@@ -354,7 +354,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		int viewNoteId = findCollection(viewName);
 		return openCollection(viewName, viewNoteId);
 	}
-	
+
+	/**
+	 * Locates a collection by its name and opens it. This method lets you store
+	 * the view in a separate database than the one containing the actual data,
+	 * which can be useful to reduce database size (by externalizing view indices) and
+	 * to let one Domino server index data of another one.
+	 * 
+	 * @param dataDb database containing the data to populate the collection
+	 * @param viewName name of the view/collection
+	 * @return collection
+	 */
+	public NotesCollection openCollectionByNameWithExternalData(NotesDatabase dbData, String viewName) {
+		checkHandle();
+		
+		int viewNoteId = findCollection(viewName);
+		return openCollectionWithExternalData(dbData, viewName, viewNoteId);
+	}
+
 	/**
 	 * Opens a collection by its view note id
 	 * 
@@ -363,6 +380,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return collection
 	 */
 	public NotesCollection openCollection(String name, int viewNoteId)  {
+		return openCollectionWithExternalData(this, name, viewNoteId);
+	}
+
+	/**
+	 * Opens a collection by its view note id. This method lets you store
+	 * the view in a separate database than the one containing the actual data,
+	 * which can be useful to reduce database size (by externalizing view indices) and
+	 * to let one Domino server index data of another one.
+	 * 
+	 * @param dataDb database containing the data to populate the collection
+	 * @param name view/collection name
+	 * @param viewNoteId view/collection note id
+	 * @return collection
+	 */
+	public NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, String name, int viewNoteId)  {
 		checkHandle();
 		
 		Memory viewUNID = new Memory(16);
@@ -380,7 +412,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
 				//open view as server
-				result = notesAPI.b64_NIFOpenCollection(m_hDB64, m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
+				result = notesAPI.b64_NIFOpenCollection(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -404,7 +436,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					namesList.read();
 
 					//now try to open collection as this user
-					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList64);
+					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList64);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -424,7 +456,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			selectedList.setValue(0);
 			
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
-				result = notesAPI.b32_NIFOpenCollection(m_hDB32, m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
+				result = notesAPI.b32_NIFOpenCollection(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -448,7 +480,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					namesList.read();
 
 					//now try to open collection as this user
-					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList32);
+					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList32);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -464,7 +496,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(newCol);
 		return newCol;
 	}
-
+	
 	/**
 	 * Lookup method to find a collection
 	 * 
