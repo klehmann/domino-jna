@@ -3,15 +3,17 @@ package com.mindoo.domino.jna;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
 import org.joda.time.Interval;
 
-import com.mindoo.domino.jna.constants.IFTSearchConstants;
-import com.mindoo.domino.jna.constants.IFindConstants;
-import com.mindoo.domino.jna.constants.INavigateConstants;
+import com.mindoo.domino.jna.constants.FTSearch;
+import com.mindoo.domino.jna.constants.Find;
+import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -171,26 +173,26 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param nav navigator mode
 	 * @return true if descending
 	 */
-	public static boolean isDescendingNav(short nav) {
-		boolean descending = nav == INavigateConstants.NAVIGATE_PREV ||
-				nav == INavigateConstants.NAVIGATE_PREV_CATEGORY ||
-				nav == INavigateConstants.NAVIGATE_PREV_EXP_NONCATEGORY ||
-				nav == INavigateConstants.NAVIGATE_PREV_EXPANDED ||
-				nav == INavigateConstants.NAVIGATE_PREV_EXPANDED_CATEGORY ||
-				nav == INavigateConstants.NAVIGATE_PREV_EXPANDED_SELECTED ||
-				nav == INavigateConstants.NAVIGATE_PREV_EXPANDED_UNREAD ||
-				nav == INavigateConstants.NAVIGATE_PREV_HIT ||
-				nav == INavigateConstants.NAVIGATE_PREV_MAIN ||
-				nav == INavigateConstants.NAVIGATE_PREV_NONCATEGORY ||
-				nav == INavigateConstants.NAVIGATE_PREV_PARENT ||
-				nav == INavigateConstants.NAVIGATE_PREV_PEER ||
-				nav == INavigateConstants.NAVIGATE_PREV_SELECTED ||
-				nav == INavigateConstants.NAVIGATE_PREV_SELECTED_HIT ||
-				nav == INavigateConstants.NAVIGATE_PREV_SELECTED_MAIN ||
-				nav == INavigateConstants.NAVIGATE_PREV_UNREAD ||
-				nav == INavigateConstants.NAVIGATE_PREV_UNREAD_HIT ||
-				nav == INavigateConstants.NAVIGATE_PREV_UNREAD_MAIN ||
-				nav == INavigateConstants.NAVIGATE_PARENT;
+	public static boolean isDescendingNav(EnumSet<Navigate> nav) {
+		boolean descending = nav.contains(Navigate.PREV) ||
+				nav.contains(Navigate.PREV_CATEGORY) ||
+				nav.contains(Navigate.PREV_EXP_NONCATEGORY) ||
+				nav.contains(Navigate.PREV_EXPANDED) ||
+				nav.contains(Navigate.PREV_EXPANDED_CATEGORY) ||
+				nav.contains(Navigate.PREV_EXPANDED_SELECTED) ||
+				nav.contains(Navigate.PREV_EXPANDED_UNREAD) ||
+				nav.contains(Navigate.PREV_HIT) ||
+				nav.contains(Navigate.PREV_MAIN) ||
+				nav.contains(Navigate.PREV_NONCATEGORY) ||
+				nav.contains(Navigate.PREV_PARENT) ||
+				nav.contains(Navigate.PREV_PEER) ||
+				nav.contains(Navigate.PREV_SELECTED) ||
+				nav.contains(Navigate.PREV_SELECTED_HIT) ||
+				nav.contains(Navigate.PREV_SELECTED_MAIN) ||
+				nav.contains(Navigate.PREV_UNREAD) ||
+				nav.contains(Navigate.PREV_UNREAD_HIT) ||
+				nav.contains(Navigate.PREV_UNREAD_MAIN) ||
+				nav.contains(Navigate.PARENT);
 	
 		return descending;
 	}
@@ -202,86 +204,86 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param nav nav constant
 	 * @return reversed contant
 	 */
-	public static short reverseNav(short nav) {
+	public static Navigate reverseNav(Navigate nav) {
 		switch (nav) {
-		case INavigateConstants.NAVIGATE_PARENT:
-			return INavigateConstants.NAVIGATE_CHILD;
-		case INavigateConstants.NAVIGATE_CHILD:
-			return INavigateConstants.NAVIGATE_PARENT;
-		case INavigateConstants.NAVIGATE_NEXT_PEER:
-			return INavigateConstants.NAVIGATE_PREV_PEER;
-		case INavigateConstants.NAVIGATE_PREV_PEER:
-			return INavigateConstants.NAVIGATE_NEXT_PEER;
-		case INavigateConstants.NAVIGATE_FIRST_PEER:
-			return INavigateConstants.NAVIGATE_LAST_PEER;
-		case INavigateConstants.NAVIGATE_LAST_PEER:
-			return INavigateConstants.NAVIGATE_FIRST_PEER;
-		case INavigateConstants.NAVIGATE_NEXT_MAIN:
-			return INavigateConstants.NAVIGATE_PREV_MAIN;
-		case INavigateConstants.NAVIGATE_PREV_MAIN:
-			return INavigateConstants.NAVIGATE_NEXT_MAIN;
-		case INavigateConstants.NAVIGATE_NEXT_PARENT:
-			return INavigateConstants.NAVIGATE_PREV_PARENT;
-		case INavigateConstants.NAVIGATE_PREV_PARENT:
-			return INavigateConstants.NAVIGATE_NEXT_PARENT;
-		case INavigateConstants.NAVIGATE_NEXT:
-			return INavigateConstants.NAVIGATE_PREV;
-		case INavigateConstants.NAVIGATE_NEXT_UNREAD:
-			return INavigateConstants.NAVIGATE_PREV_UNREAD;
-		case INavigateConstants.NAVIGATE_NEXT_UNREAD_MAIN:
-			return INavigateConstants.NAVIGATE_PREV_UNREAD_MAIN;
-		case INavigateConstants.NAVIGATE_PREV_UNREAD_MAIN:
-			return INavigateConstants.NAVIGATE_NEXT_UNREAD_MAIN;
-		case INavigateConstants.NAVIGATE_PREV_UNREAD:
-			return INavigateConstants.NAVIGATE_NEXT_UNREAD;
-		case INavigateConstants.NAVIGATE_NEXT_SELECTED:
-			return INavigateConstants.NAVIGATE_PREV_SELECTED;
-		case INavigateConstants.NAVIGATE_PREV_SELECTED:
-			return INavigateConstants.NAVIGATE_NEXT_SELECTED;
-		case INavigateConstants.NAVIGATE_NEXT_SELECTED_MAIN:
-			return INavigateConstants.NAVIGATE_PREV_SELECTED_MAIN;
-		case INavigateConstants.NAVIGATE_PREV_SELECTED_MAIN:
-			return INavigateConstants.NAVIGATE_NEXT_SELECTED_MAIN;
-		case INavigateConstants.NAVIGATE_NEXT_EXPANDED:
-			return INavigateConstants.NAVIGATE_PREV_EXPANDED;
-		case INavigateConstants.NAVIGATE_PREV_EXPANDED:
-			return INavigateConstants.NAVIGATE_NEXT_EXPANDED;
-		case INavigateConstants.NAVIGATE_NEXT_EXPANDED_UNREAD:
-			return INavigateConstants.NAVIGATE_PREV_EXPANDED_UNREAD;
-		case INavigateConstants.NAVIGATE_PREV_EXPANDED_UNREAD:
-			return INavigateConstants.NAVIGATE_NEXT_EXPANDED_UNREAD;
-		case INavigateConstants.NAVIGATE_NEXT_EXPANDED_SELECTED:
-			return INavigateConstants.NAVIGATE_PREV_EXPANDED_SELECTED;
-		case INavigateConstants.NAVIGATE_PREV_EXPANDED_SELECTED:
-			return INavigateConstants.NAVIGATE_NEXT_EXPANDED_SELECTED;
-		case INavigateConstants.NAVIGATE_NEXT_EXPANDED_CATEGORY:
-			return INavigateConstants.NAVIGATE_PREV_EXPANDED_CATEGORY;
-		case INavigateConstants.NAVIGATE_PREV_EXPANDED_CATEGORY:
-			return INavigateConstants.NAVIGATE_NEXT_EXPANDED_CATEGORY;
-		case INavigateConstants.NAVIGATE_NEXT_EXP_NONCATEGORY:
-			return INavigateConstants.NAVIGATE_PREV_EXP_NONCATEGORY;
-		case INavigateConstants.NAVIGATE_PREV_EXP_NONCATEGORY:
-			return INavigateConstants.NAVIGATE_NEXT_EXP_NONCATEGORY;
-		case INavigateConstants.NAVIGATE_NEXT_HIT:
-			return INavigateConstants.NAVIGATE_PREV_HIT;
-		case INavigateConstants.NAVIGATE_PREV_HIT:
-			return INavigateConstants.NAVIGATE_NEXT_HIT;
-		case INavigateConstants.NAVIGATE_NEXT_SELECTED_HIT:
-			return INavigateConstants.NAVIGATE_PREV_SELECTED_HIT;
-		case INavigateConstants.NAVIGATE_PREV_SELECTED_HIT:
-			return INavigateConstants.NAVIGATE_NEXT_SELECTED_HIT;
-		case INavigateConstants.NAVIGATE_NEXT_UNREAD_HIT:
-			return INavigateConstants.NAVIGATE_PREV_UNREAD_HIT;
-		case INavigateConstants.NAVIGATE_PREV_UNREAD_HIT:
-			return INavigateConstants.NAVIGATE_NEXT_UNREAD_HIT;
-		case INavigateConstants.NAVIGATE_NEXT_CATEGORY:
-			return INavigateConstants.NAVIGATE_PREV_CATEGORY;
-		case INavigateConstants.NAVIGATE_PREV_CATEGORY:
-			return INavigateConstants.NAVIGATE_NEXT_CATEGORY;
-		case INavigateConstants.NAVIGATE_NEXT_NONCATEGORY:
-			return INavigateConstants.NAVIGATE_PREV_NONCATEGORY;
-		case INavigateConstants.NAVIGATE_PREV_NONCATEGORY:
-			return INavigateConstants.NAVIGATE_NEXT_NONCATEGORY;
+		case PARENT:
+			return Navigate.CHILD;
+		case CHILD:
+			return Navigate.PARENT;
+		case NEXT_PEER:
+			return Navigate.PREV_PEER;
+		case PREV_PEER:
+			return Navigate.NEXT_PEER;
+		case FIRST_PEER:
+			return Navigate.LAST_PEER;
+		case LAST_PEER:
+			return Navigate.FIRST_PEER;
+		case NEXT_MAIN:
+			return Navigate.PREV_MAIN;
+		case PREV_MAIN:
+			return Navigate.NEXT_MAIN;
+		case NEXT_PARENT:
+			return Navigate.PREV_PARENT;
+		case PREV_PARENT:
+			return Navigate.NEXT_PARENT;
+		case NEXT:
+			return Navigate.PREV;
+		case NEXT_UNREAD:
+			return Navigate.PREV_UNREAD;
+		case NEXT_UNREAD_MAIN:
+			return Navigate.PREV_UNREAD_MAIN;
+		case PREV_UNREAD_MAIN:
+			return Navigate.NEXT_UNREAD_MAIN;
+		case PREV_UNREAD:
+			return Navigate.NEXT_UNREAD;
+		case NEXT_SELECTED:
+			return Navigate.PREV_SELECTED;
+		case PREV_SELECTED:
+			return Navigate.NEXT_SELECTED;
+		case NEXT_SELECTED_MAIN:
+			return Navigate.PREV_SELECTED_MAIN;
+		case PREV_SELECTED_MAIN:
+			return Navigate.NEXT_SELECTED_MAIN;
+		case NEXT_EXPANDED:
+			return Navigate.PREV_EXPANDED;
+		case PREV_EXPANDED:
+			return Navigate.NEXT_EXPANDED;
+		case NEXT_EXPANDED_UNREAD:
+			return Navigate.PREV_EXPANDED_UNREAD;
+		case PREV_EXPANDED_UNREAD:
+			return Navigate.NEXT_EXPANDED_UNREAD;
+		case NEXT_EXPANDED_SELECTED:
+			return Navigate.PREV_EXPANDED_SELECTED;
+		case PREV_EXPANDED_SELECTED:
+			return Navigate.NEXT_EXPANDED_SELECTED;
+		case NEXT_EXPANDED_CATEGORY:
+			return Navigate.PREV_EXPANDED_CATEGORY;
+		case PREV_EXPANDED_CATEGORY:
+			return Navigate.NEXT_EXPANDED_CATEGORY;
+		case NEXT_EXP_NONCATEGORY:
+			return Navigate.PREV_EXP_NONCATEGORY;
+		case PREV_EXP_NONCATEGORY:
+			return Navigate.NEXT_EXP_NONCATEGORY;
+		case NEXT_HIT:
+			return Navigate.PREV_HIT;
+		case PREV_HIT:
+			return Navigate.NEXT_HIT;
+		case NEXT_SELECTED_HIT:
+			return Navigate.PREV_SELECTED_HIT;
+		case PREV_SELECTED_HIT:
+			return Navigate.NEXT_SELECTED_HIT;
+		case NEXT_UNREAD_HIT:
+			return Navigate.PREV_UNREAD_HIT;
+		case PREV_UNREAD_HIT:
+			return Navigate.NEXT_UNREAD_HIT;
+		case NEXT_CATEGORY:
+			return Navigate.PREV_CATEGORY;
+		case PREV_CATEGORY:
+			return Navigate.NEXT_CATEGORY;
+		case NEXT_NONCATEGORY:
+			return Navigate.PREV_NONCATEGORY;
+		case PREV_NONCATEGORY:
+			return Navigate.NEXT_NONCATEGORY;
 		}
 
 		return nav;
@@ -393,7 +395,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param filterIDTable optional ID table to refine the search
 	 * @return search result
 	 */
-	public SearchResult ftSearch(String query, short limit, int options, NotesIDTable filterIDTable) {
+	public SearchResult ftSearch(String query, short limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
 		clearSearch();
 		
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
@@ -416,7 +418,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		IntByReference retNumDocs = new IntByReference();
 		
 		//always filter view data
-		options = options | IFTSearchConstants.FT_SEARCH_SET_COLL;
+		EnumSet<FTSearch> optionsWithView = options.clone();
+		optionsWithView.add(FTSearch.SET_COLL);
+		int optionsWithViewBitMask = FTSearch.toBitMask(optionsWithView);
 		
 		if (NotesContext.is64Bit()) {
 			LongByReference rethResults = new LongByReference();
@@ -425,7 +429,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_activeFTSearchHandle64,
 					m_hCollection64,
 					queryLMBCS,
-					options,
+					optionsWithViewBitMask,
 					limit,
 					filterIDTable==null ? 0 : filterIDTable.getHandle64(),
 					retNumDocs,
@@ -446,7 +450,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_activeFTSearchHandle32,
 					m_hCollection32,
 					queryLMBCS,
-					options,
+					optionsWithViewBitMask,
 					limit,
 					filterIDTable==null ? 0 : filterIDTable.getHandle32(),
 					retNumDocs,
@@ -569,17 +573,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * to read all the entries in the collection that match the keys.<br>
 	 * <br>
 	 * If multiple notes match the specified (partial) keys, and
-	 * {@link IFindConstants#FIND_FIRST_EQUAL} (the default flag) is specified, 
+	 * {@link Find#FIRST_EQUAL} (the default flag) is specified, 
 	 * hen the position
 	 * of the first matching note is returned ("first" is defined by the
 	 * note which collates before all the others in the view).<br>
 	 * <br>
-	 * The position of the last matching note is returned if {@link IFindConstants#FIND_LAST_EQUAL}
-	 * is specified.  If {@link IFindConstants#FIND_LESS_THAN} is specified,
+	 * The position of the last matching note is returned if {@link Find#LAST_EQUAL}
+	 * is specified.  If {@link Find#LESS_THAN} is specified,
 	 * then the last note
 	 * with a key value less than the specified key is returned.<br>
 	 * <br>
-	 * If {@link IFindConstants#FIND_GREATER_THAN} is specified, then the first
+	 * If {@link Find#GREATER_THAN} is specified, then the first
 	 * note with a key
 	 * value greater than the specified key is returned.<br>
 	 * <br>
@@ -594,8 +598,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * as precise as and is equal to the internally stored data.<br>
 	 * <br>
 	 * {@link Calendar} data is displayed with less precision than what is stored
-	 * internally.  Use inequality searches, such as {@link IFindConstants#FIND_GREATER_THAN} or
-	 * {@link IFindConstants#FIND_LESS_THAN}, for {@link Calendar} key values
+	 * internally.  Use inequality searches, such as {@link Find#GREATER_THAN} or
+	 * {@link Find#LESS_THAN}, for {@link Calendar} key values
 	 * to avoid having to find
 	 * an exact match of the specified value.  If the precise key value
 	 * is known, however, equality searches of {@link Calendar} values are supported.<br>
@@ -603,10 +607,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Returning the number of matches on an inequality search is not supported.<br>
 	 * <br>
 	 * In other words, if you specify any one of the following for the FindFlags argument:<br>
-	 * {@link IFindConstants#FIND_LESS_THAN}<br>
-	 * {@link IFindConstants#FIND_LESS_THAN} | {@link IFindConstants#FIND_EQUAL}<br>
-	 * {@link IFindConstants#FIND_GREATER_THAN}<br>
-	 * {@link IFindConstants#FIND_GREATER_THAN} | {@link IFindConstants#FIND_EQUAL}<br>
+	 * {@link Find#LESS_THAN}<br>
+	 * {@link Find#LESS_THAN} | {@link Find#EQUAL}<br>
+	 * {@link Find#GREATER_THAN}<br>
+	 * {@link Find#GREATER_THAN} | {@link Find#EQUAL}<br>
 	 * <br>
 	 * this function cannot determine the number of notes that match the search
 	 * condition (use {@link #canFindExactNumberOfMatches(short)} to check
@@ -614,11 +618,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * If we cannot determine the number of notes, the function will return 1 for the count
 	 * value returned by {@link FindResult#getEntriesFound()}.
 
-	 * @param findFlags {@see IFindConstants}
+	 * @param findFlags {@see Find}
 	 * @param keys lookup keys, can be {@link String}, double / {@link Double}, int / {@link Integer}, {@link Date}, {@link Calendar}, {@link Date}[] or {@link Calendar}[] with two elements or {@link Interval} for date ranges
 	 * @return result
 	 */
-	public FindResult findByKey(short findFlags, Object... keys) {
+	public FindResult findByKey(EnumSet<Find> findFlags, Object... keys) {
 		checkHandle();
 		
 		if (keys==null || keys.length==0)
@@ -627,6 +631,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
 		if (NotesContext.is64Bit()) {
 			Memory keyBuffer;
@@ -635,7 +640,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			} catch (Throwable e) {
 				throw new NotesError(0, "Could not encode search keys", e);
 			}
-			result = notesAPI.b64_NIFFindByKey(m_hCollection64, keyBuffer, findFlags, retIndexPos, retNumMatches);
+			result = notesAPI.b64_NIFFindByKey(m_hCollection64, keyBuffer, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
 		else {
 			Memory keyBuffer;
@@ -644,7 +649,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			} catch (Throwable e) {
 				throw new NotesError(0, "Could not encode search keys", e);
 			}
-			result = notesAPI.b32_NIFFindByKey(m_hCollection32, keyBuffer, findFlags, retIndexPos, retNumMatches);
+			result = notesAPI.b32_NIFFindByKey(m_hCollection32, keyBuffer, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
 		if (result == 1028 || result == 17412) {
 			return new FindResult("", 0, canFindExactNumberOfMatches(findFlags));
@@ -702,10 +707,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * <br>
 	 * In other words, if you specify any one of the following for the FindFlags argument:<br>
 	 * <br>
-	 * {@link IFindConstants#FIND_LESS_THAN}<br>
-	 * {@link IFindConstants#FIND_LESS_THAN} | {@link IFindConstants#FIND_EQUAL}<br>
-	 * {@link IFindConstants#FIND_GREATER_THAN}<br>
-	 * {@link IFindConstants#FIND_GREATER_THAN} | {@link IFindConstants#FIND_EQUAL}<br>
+	 * {@link Find#LESS_THAN}<br>
+	 * {@link Find#LESS_THAN} | {@link Find#EQUAL}<br>
+	 * {@link Find#GREATER_THAN}<br>
+	 * {@link Find#GREATER_THAN} | {@link Find#EQUAL}<br>
 	 * <br>
 	 * this function cannot determine the number of notes that match the search
 	 * condition (use {@link #canFindExactNumberOfMatches(short)} to check
@@ -714,10 +719,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * value returned by {@link FindResult#getEntriesFound()}.
 	 * 
 	 * @param name name to look for
-	 * @param findFlags find flags, see {@link IFindConstants}
+	 * @param findFlags find flags, see {@link Find}
 	 * @return result
 	 */
-	public FindResult findByName(String name, short findFlags) {
+	public FindResult findByName(String name, EnumSet<Find> findFlags) {
 		checkHandle();
 		
 		Memory nameLMBCS = NotesStringUtils.toLMBCS(name);
@@ -725,12 +730,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
 		if (NotesContext.is64Bit()) {
-			result = notesAPI.b64_NIFFindByName(m_hCollection64, nameLMBCS, findFlags, retIndexPos, retNumMatches);
+			result = notesAPI.b64_NIFFindByName(m_hCollection64, nameLMBCS, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
 		else {
-			result = notesAPI.b32_NIFFindByName(m_hCollection32, nameLMBCS, findFlags, retIndexPos, retNumMatches);
+			result = notesAPI.b32_NIFFindByName(m_hCollection32, nameLMBCS, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
 		if (result == 1028 || result == 17412) {
 			return new FindResult("", 0, canFindExactNumberOfMatches(findFlags));
@@ -755,18 +761,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * If the specified find flag uses an inequality search like {@link IFindConstants#FIND_LESS_THAN}
-	 * or {@link IFindConstants#FIND_GREATER_THAN}, this method returns true, meaning that
+	 * If the specified find flag uses an inequality search like {@link Find#LESS_THAN}
+	 * or {@link Find#GREATER_THAN}, this method returns true, meaning that
 	 * the Notes API cannot return an exact number of matches.
 	 * 
 	 * @param findFlags find flags
 	 * @return true if exact number of matches can be returned
 	 */
-	public boolean canFindExactNumberOfMatches(short findFlags) {
-		if ((findFlags & IFindConstants.FIND_LESS_THAN) == IFindConstants.FIND_LESS_THAN) {
+	public boolean canFindExactNumberOfMatches(EnumSet<Find> findFlags) {
+		if (findFlags.contains(Find.LESS_THAN)) {
 			return false;
 		}
-		else if ((findFlags & IFindConstants.FIND_GREATER_THAN) == IFindConstants.FIND_GREATER_THAN) {
+		else if (findFlags.contains(Find.GREATER_THAN)) {
 			return false;
 		}
 		else {
@@ -802,7 +808,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return m_hasExactNumberOfMatches;
 		}
 	}
-
+	
 	/**
 	 * Reads collection entries (using NIFReadEntries method)
 	 * 
@@ -814,7 +820,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnMask bitmask of data to read
 	 * @return read data
 	 */
-	public NotesViewData readEntries(NotesCollectionPosition startPos, short skipNavigator, int skipCount, short returnNavigator, int returnCount, int returnMask) {
+	public NotesViewData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask) {
 		return readEntries(startPos, skipNavigator, skipCount, returnNavigator, returnCount, returnMask, null);
 	}
 	
@@ -830,7 +836,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param decodeColumns optional array with columns to be decoded
 	 * @return read data
 	 */
-	public NotesViewData readEntries(NotesCollectionPosition startPos, short skipNavigator, int skipCount, short returnNavigator, int returnCount, int returnMask, boolean[] decodeColumns) {
+	public NotesViewData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
 		checkHandle();
 
 		IntByReference retNumEntriesSkipped = new IntByReference();
@@ -839,16 +845,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 		ShortByReference retBufferLength = new ShortByReference();
 
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		short skipNavBitMask = Navigate.toBitMask(skipNavigator);
+		short returnNavBitMask = Navigate.toBitMask(returnNavigator);
+		int readMaskBitMask = ReadMask.toBitMask(returnMask);
+		
 		short result;
 		if (NotesContext.is64Bit()) {
 			LongByReference retBuffer = new LongByReference();
 			result = notesAPI.b64_NIFReadEntries(m_hCollection64, // hCollection
 					startPos, // IndexPos
-					skipNavigator, // SkipNavigator
+					skipNavBitMask, // SkipNavigator
 					skipCount, // SkipCount
-					returnNavigator, // ReturnNavigator
+					returnNavBitMask, // ReturnNavigator
 					returnCount, // ReturnCount
-					returnMask, // Return mask
+					readMaskBitMask, // Return mask
 					retBuffer, // rethBuffer
 					retBufferLength, // retBufferLength
 					retNumEntriesSkipped, // retNumEntriesSkipped
@@ -869,11 +879,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			IntByReference retBuffer = new IntByReference();
 			result = notesAPI.b32_NIFReadEntries(m_hCollection32, // hCollection
 					startPos, // IndexPos
-					skipNavigator, // SkipNavigator
+					skipNavBitMask, // SkipNavigator
 					skipCount, // SkipCount
-					returnNavigator, // ReturnNavigator
+					returnNavBitMask, // ReturnNavigator
 					returnCount, // ReturnCount
-					returnMask, // Return mask
+					readMaskBitMask, // Return mask
 					retBuffer, // rethBuffer
 					retBufferLength, // retBufferLength
 					retNumEntriesSkipped, // retNumEntriesSkipped

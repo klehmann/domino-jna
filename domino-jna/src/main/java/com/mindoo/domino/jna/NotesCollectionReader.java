@@ -1,9 +1,10 @@
 package com.mindoo.domino.jna;
 
+import java.util.EnumSet;
 import java.util.List;
 
-import com.mindoo.domino.jna.constants.INavigateConstants;
-import com.mindoo.domino.jna.constants.IReadMaskConstants;
+import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.utils.StringUtil;
 
@@ -21,10 +22,10 @@ public abstract class NotesCollectionReader {
 	private String m_posStr;
 	private int m_skipCount;
 	
-	private short m_skipNav;
-	private short m_returnNav;
+	private EnumSet<Navigate> m_skipNav;
+	private EnumSet<Navigate> m_returnNav;
 	private int m_bufferSize;
-	private int m_returnMask;
+	private EnumSet<ReadMask> m_returnMask;
 	private boolean m_descending;
 	
 	/**
@@ -37,7 +38,7 @@ public abstract class NotesCollectionReader {
 	 * @param bufferSize number of entries to read in one API call (used to improve performance when reading a lot of data)
 	 * @param returnMask bitmask of view data to be returned
 	 */
-	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, short skipNavigator, short returnNavigator, int bufferSize, int returnMask) {
+	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator, EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask) {
 		this(col, startPos, skipCount, skipNavigator, returnNavigator, bufferSize, returnMask,  null);
 	}
 	
@@ -52,7 +53,7 @@ public abstract class NotesCollectionReader {
 	 * @param returnMask bitmask of view data to be returned
 	 * @param decodeColumns optional array to only decode specific view columns
 	 */
-	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, short skipNavigator, short returnNavigator, int bufferSize, int returnMask, boolean[] decodeColumns) {
+	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator, EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
 		m_col = col;
 		m_pos = StringUtil.isEmpty(startPos) ? NotesCollectionPosition.toPosition("0") : NotesCollectionPosition.toPosition(startPos);
 		m_posStr = startPos;
@@ -87,11 +88,10 @@ public abstract class NotesCollectionReader {
 					hasFirst=true;
 					//skip 1 entry and start reading from the first relevant entry
 					m_pos = NotesCollectionPosition.toPosition("0");
-					
 					viewData = m_col.readEntries(m_pos, m_skipNav, 1 + m_skipCount, m_returnNav, m_bufferSize, m_returnMask);
 				}
 				else {
-					viewData = m_col.readEntries(m_pos, INavigateConstants.NAVIGATE_CURRENT, 0, m_returnNav, m_bufferSize, m_returnMask);
+					viewData = m_col.readEntries(m_pos, EnumSet.of(Navigate.CURRENT), 0, m_returnNav, m_bufferSize, m_returnMask);
 				}
 			}
 			else if ("last".equals(m_posStr)) {
@@ -101,10 +101,10 @@ public abstract class NotesCollectionReader {
 					m_pos = NotesCollectionPosition.toPosition("0");
 					hasLast=true;
 					
-					viewData = m_col.readEntries(m_pos, (short) (INavigateConstants.NAVIGATE_NEXT | INavigateConstants.NAVIGATE_CONTINUE), Integer.MAX_VALUE, m_returnNav, m_bufferSize, m_returnMask);
+					viewData = m_col.readEntries(m_pos, EnumSet.of(Navigate.NEXT, Navigate.CONTINUE), Integer.MAX_VALUE, m_returnNav, m_bufferSize, m_returnMask);
 				}
 				else {
-					viewData = m_col.readEntries(m_pos, INavigateConstants.NAVIGATE_CURRENT, 0, m_returnNav, m_bufferSize, m_returnMask);
+					viewData = m_col.readEntries(m_pos, EnumSet.of(Navigate.CURRENT), 0, m_returnNav, m_bufferSize, m_returnMask);
 				}
 			}
 			else {
@@ -114,7 +114,7 @@ public abstract class NotesCollectionReader {
 						//read the last view entry position to see where start here
 						m_pos = NotesCollectionPosition.toPosition("0");
 						
-						viewData = m_col.readEntries(m_pos, (short) (INavigateConstants.NAVIGATE_NEXT | INavigateConstants.NAVIGATE_CONTINUE), Integer.MAX_VALUE, m_returnNav, 1, IReadMaskConstants.READ_MASK_INDEXPOSITION);
+						viewData = m_col.readEntries(m_pos, EnumSet.of(Navigate.NEXT, Navigate.CONTINUE), Integer.MAX_VALUE, m_returnNav, 1, EnumSet.of(ReadMask.INDEXPOSITION));
 						List<NotesViewEntryData> entries = viewData.getEntries();
 						if (entries.size()>0) {
 							NotesViewEntryData lastEntryData = entries.get(0);
@@ -126,7 +126,7 @@ public abstract class NotesCollectionReader {
 						//read the first view entry position to see if we start here
 						m_pos = NotesCollectionPosition.toPosition("0");
 						
-						viewData = m_col.readEntries(m_pos, m_skipNav, 1, m_returnNav, 1, IReadMaskConstants.READ_MASK_INDEXPOSITION);
+						viewData = m_col.readEntries(m_pos, m_skipNav, 1, m_returnNav, 1, EnumSet.of(ReadMask.INDEXPOSITION));
 						List<NotesViewEntryData> entries = viewData.getEntries();
 						if (entries.size()>0) {
 							NotesViewEntryData lastEntryData = entries.get(0);
@@ -137,7 +137,7 @@ public abstract class NotesCollectionReader {
 					
 					m_pos = NotesCollectionPosition.toPosition(m_posStr);
 				}
-				viewData = m_col.readEntries(m_pos, INavigateConstants.NAVIGATE_CURRENT, 0, m_returnNav, m_bufferSize, m_returnMask);
+				viewData = m_col.readEntries(m_pos, EnumSet.of(Navigate.CURRENT), 0, m_returnNav, m_bufferSize, m_returnMask);
 			}
 			
 //			if (m_descending) {

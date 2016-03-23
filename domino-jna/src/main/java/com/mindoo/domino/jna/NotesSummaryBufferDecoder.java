@@ -4,9 +4,10 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.EnumSet;
 import java.util.List;
 
-import com.mindoo.domino.jna.constants.IReadMaskConstants;
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
@@ -42,7 +43,7 @@ public class NotesSummaryBufferDecoder {
 	 * @return collection data
 	 */
 	public static NotesViewData b32_decodeBuffer(int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
-			int returnMask, short signalFlags, boolean[] columnsToDecode) {
+			EnumSet<ReadMask> returnMask, short signalFlags, boolean[] columnsToDecode) {
 		return b64_decodeBuffer(bufferHandle, numEntriesSkipped, numEntriesReturned, returnMask, signalFlags, columnsToDecode);
 	}
 
@@ -58,9 +59,9 @@ public class NotesSummaryBufferDecoder {
 	 * @return collection data
 	 */
 	public static NotesViewData b64_decodeBuffer(long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
-			int returnMask, short signalFlags, boolean[] columnsToDecode) {
-		if ((returnMask & IReadMaskConstants.READ_MASK_SUMMARY) == IReadMaskConstants.READ_MASK_SUMMARY) {
-			throw new UnsupportedOperationException("Mode READ_MASK_SUMMARY is not supported yet");
+			EnumSet<ReadMask> returnMask, short signalFlags, boolean[] columnsToDecode) {
+		if (returnMask.contains(ReadMask.SUMMARY)) {
+			throw new UnsupportedOperationException("Mode ReadMask.SUMMARY is not supported yet");
 		}
 		
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
@@ -80,7 +81,7 @@ public class NotesSummaryBufferDecoder {
 		//compute structure sizes
 		
 		try {
-			if ((returnMask & IReadMaskConstants.READ_MASK_COLLECTIONSTATS)==IReadMaskConstants.READ_MASK_COLLECTIONSTATS) {
+			if (returnMask.contains(ReadMask.COLLECTIONSTATS)) {
 				NotesCollectionStats tmpStats = new NotesCollectionStats(bufferPtr);
 				tmpStats.read();
 				
@@ -98,7 +99,7 @@ public class NotesSummaryBufferDecoder {
             
             Memory sharedCollectionPositionMem = null;
 			NotesCollectionPosition sharedPosition = null;
-			if ((returnMask & IReadMaskConstants.READ_MASK_INDEXPOSITION) == IReadMaskConstants.READ_MASK_INDEXPOSITION) {
+			if (returnMask.contains(ReadMask.INDEXPOSITION)) {
 				//allocate memory for a position
 				sharedCollectionPositionMem = new Memory(NotesCAPI.collectionPositionSize);
 				sharedPosition = new NotesCollectionPosition(sharedCollectionPositionMem);
@@ -108,7 +109,7 @@ public class NotesSummaryBufferDecoder {
 				NotesViewEntryData newData = new NotesViewEntryData();
 				viewEntries.add(newData);
 				
-				if ((returnMask & IReadMaskConstants.READ_MASK_NOTEID) == IReadMaskConstants.READ_MASK_NOTEID) {
+				if (returnMask.contains(ReadMask.NOTEID)) {
 					ByteBuffer noteIdBuf = bufferPtr.getByteBuffer(bufferPos, 4);
 					IntBuffer noteIdBufAsInt = noteIdBuf.asIntBuffer();
 
@@ -118,62 +119,62 @@ public class NotesSummaryBufferDecoder {
 					bufferPos+=4;
 				}
 				
-				if ((returnMask & IReadMaskConstants.READ_MASK_NOTEUNID) == IReadMaskConstants.READ_MASK_NOTEUNID) {
+				if (returnMask.contains(ReadMask.NOTEUNID)) {
 					ByteBuffer unidBytes = bufferPtr.getByteBuffer(bufferPos, 16);
 					String unid = NotesDatabase.toUNID(unidBytes);
 					newData.setUNID(unid);
 					
 					bufferPos+=16;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_NOTECLASS) == IReadMaskConstants.READ_MASK_NOTECLASS) {
+				if (returnMask.contains(ReadMask.NOTECLASS)) {
 					short noteClass = bufferPtr.getShort(bufferPos);
 					newData.setNoteClass(noteClass);
 					
 					bufferPos+=2;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXSIBLINGS) == IReadMaskConstants.READ_MASK_INDEXSIBLINGS) {
+				if (returnMask.contains(ReadMask.INDEXSIBLINGS)) {
 					int siblingCount = bufferPtr.getInt(bufferPos);
 					newData.setSiblingCount(siblingCount);
 					
 					bufferPos+=4;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXCHILDREN) == IReadMaskConstants.READ_MASK_INDEXCHILDREN) {
+				if (returnMask.contains(ReadMask.INDEXCHILDREN)) {
 					int childCount = bufferPtr.getInt(bufferPos);
 					newData.setChildCount(childCount);
 					
 					bufferPos+=4;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXDESCENDANTS) == IReadMaskConstants.READ_MASK_INDEXDESCENDANTS) {
+				if (returnMask.contains(ReadMask.INDEXDESCENDANTS)) {
 					int descendantCount = bufferPtr.getInt(bufferPos);
 					newData.setDescendantCount(descendantCount);
 					
 					bufferPos+=4;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXANYUNREAD) == IReadMaskConstants.READ_MASK_INDEXANYUNREAD) {
+				if (returnMask.contains(ReadMask.INDEXANYUNREAD)) {
 					boolean isAnyUnread = bufferPtr.getShort(bufferPos) == 1;
 					newData.setAnyUnread(isAnyUnread);
 					
 					bufferPos+=2;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDENTLEVELS) == IReadMaskConstants.READ_MASK_INDENTLEVELS) {
+				if (returnMask.contains(ReadMask.INDENTLEVELS)) {
 					short indentLevels = bufferPtr.getShort(bufferPos);
 					newData.setIndentLevels(indentLevels);
 					
 					bufferPos += 2;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_SCORE) == IReadMaskConstants.READ_MASK_SCORE) {
+				if (returnMask.contains(ReadMask.SCORE)) {
 					short score = bufferPtr.getShort(bufferPos);
 					newData.setFTScore(score);
 					
 					bufferPos += 2;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXUNREAD) == IReadMaskConstants.READ_MASK_INDEXUNREAD) {
+				if (returnMask.contains(ReadMask.INDEXUNREAD)) {
 					boolean isUnread = bufferPtr.getShort(bufferPos) == 1;
 					newData.setUnread(isUnread);
 					
 					bufferPos+=2;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_INDEXPOSITION) == IReadMaskConstants.READ_MASK_INDEXPOSITION) {
+				if (returnMask.contains(ReadMask.INDEXPOSITION)) {
 					short level = bufferPtr.getShort(bufferPos);
 					int truncatedCollectionPositionSize = 4 * (level + 2);
 					sharedCollectionPositionMem.clear();
@@ -190,7 +191,7 @@ public class NotesSummaryBufferDecoder {
 					
 					bufferPos += truncatedCollectionPositionSize;
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_SUMMARYVALUES) == IReadMaskConstants.READ_MASK_SUMMARYVALUES) {
+				if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
 					Pointer itemValuePtr = bufferPtr.share(bufferPos);
 					
 					int startBufferPosOfSummaryValues = bufferPos;
@@ -392,7 +393,7 @@ public class NotesSummaryBufferDecoder {
 					
 					newData.setColumnValues(decodedItemValues);
 				}
-				if ((returnMask & IReadMaskConstants.READ_MASK_SUMMARY) == IReadMaskConstants.READ_MASK_SUMMARY) {
+				if (returnMask.contains(ReadMask.SUMMARY)) {
 					//TODO implement decoding summary with item names if required
 				}
 			}

@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.constants;
 
+import java.util.EnumSet;
+
 /**
  * These values define the options you may specify in the Options
  * parameter to FTSearch or FTSearchExt when performing a full text
@@ -8,39 +10,57 @@ package com.mindoo.domino.jna.constants;
  * 
  * @author Karsten Lehmann
  */
-public interface IFTSearchConstants {
-	
+public enum FTSearch {
 	/** Store search results in NIF collections; Don't return them to caller */
-	public static int FT_SEARCH_SET_COLL = 0x00000001;
+	SET_COLL(0x00000001),
 	/** Return # hits only; not the documents */
-	public static int FT_SEARCH_NUMDOCS_ONLY = 0x00000002;
+	NUMDOCS_ONLY(0x00000002),
 	/** Refine the query using the IDTABLE */
-	public static int FT_SEARCH_REFINE = 0x00000004;
+	REFINE(0x00000004),
 	/** Return document scores (default sort) */
-	public static int FT_SEARCH_SCORES = 0x00000008;
+	SCORES(0x00000008),
 	/** Return ID table */
-	public static int FT_SEARCH_RET_IDTABLE = 0x00000010;
+	RET_IDTABLE(0x00000010),
 	/** Sort results by date */
-	public static int FT_SEARCH_SORT_DATE = 0x00000020;
+	SORT_DATE(0x00000020),
 	/** Sort in ascending order */
-	public static int FT_SEARCH_SORT_ASCEND	= 0x00000040;
+	SORT_ASCEND(0x00000040),
 	/** Use Limit arg. to return only top scores */
-	public static int FT_SEARCH_TOP_SCORES = 0x00000080;
+	TOP_SCORES(0x00000080),
 	/** Stem words in this query */
-	public static int FT_SEARCH_STEM_WORDS = 0x00000200;
+	STEM_WORDS(0x00000200),
 	/** Thesaurus words in this query */
-	public static int FT_SEARCH_THESAURUS_WORDS = 0x00000400;
+	THESAURUS_WORDS(0x00000400),
 	/** set if fuzzy search wanted */
-	public static int FT_SEARCH_FUZZY = 0x00004000;
+	FUZZY(0x00004000),
 	/** Return url-based results (FTSearchExt only) */
-	public static int FT_SEARCH_EXT_RET_URL = 0x00008000;
+	EXT_RET_URL(0x00008000),
 	/** Sort by created date (default is to sort by modified date) */
-	public static int FT_SEARCH_SORT_DATE_CREATED = 0x00010000;
+	SORT_DATE_CREATED(0x00010000),
 	/** this is a domain search */
-	public static int FT_SEARCH_EXT_DOMAIN = 0x00040000;
+	EXT_DOMAIN(0x00040000),
 	/** search the filesystem index (Domain Search only) */
-	public static int FT_SEARCH_EXT_FILESYSTEM = 0x00100000;
+	EXT_FILESYSTEM(0x00100000),
 	/** search the database index (Domain Search only) */
-	public static int FT_SEARCH_EXT_DATABASE = 0x00200000;
+	EXT_DATABASE(0x00200000);
 	
+	private int m_val;
+	
+	FTSearch(int val) {
+		m_val = val;
+	}
+	
+	public int getValue() {
+		return m_val;
+	}
+	
+	public static int toBitMask(EnumSet<FTSearch> findSet) {
+		int result = 0;
+		for (FTSearch currFind : values()) {
+			if (findSet.contains(currFind)) {
+				result = result | currFind.getValue();
+			}
+		}
+		return result;
+	}
 }

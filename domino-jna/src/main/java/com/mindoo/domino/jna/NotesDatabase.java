@@ -5,14 +5,15 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.Calendar;
+import java.util.EnumSet;
 import java.util.Formatter;
 import java.util.List;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
-import com.mindoo.domino.jna.constants.IFTIndexConstants;
-import com.mindoo.domino.jna.constants.IFTSearchConstants;
-import com.mindoo.domino.jna.constants.INavigateConstants;
-import com.mindoo.domino.jna.constants.IReadMaskConstants;
+import com.mindoo.domino.jna.constants.FTIndex;
+import com.mindoo.domino.jna.constants.FTSearch;
+import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -534,6 +535,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public SearchResult ftSearch(String query, short limit, NotesIDTable filterIDTable) {
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
 		
+		EnumSet<FTSearch> searchOptions = EnumSet.of(FTSearch.RET_IDTABLE);
+		int searchOptionsBitMask = FTSearch.toBitMask(searchOptions);
+		
 		if (NotesContext.is64Bit()) {
 			LongByReference rethSearch = new LongByReference();
 			
@@ -549,7 +553,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					rethSearch,
 					0,
 					queryLMBCS,
-					IFTSearchConstants.FT_SEARCH_RET_IDTABLE,
+					searchOptionsBitMask,
 					limit,
 					filterIDTable==null ? 0 : filterIDTable.getHandle64(),
 					retNumDocs,
@@ -577,7 +581,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					rethSearch,
 					0,
 					queryLMBCS,
-					IFTSearchConstants.FT_SEARCH_RET_IDTABLE,
+					searchOptionsBitMask,
 					limit,
 					filterIDTable==null ? 0 : filterIDTable.getHandle32(),
 					retNumDocs,
@@ -688,7 +692,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
-				NotesViewData data = col.readEntries(pos, isFirstRun ? INavigateConstants.NAVIGATE_NEXT : INavigateConstants.NAVIGATE_CURRENT, isFirstRun ? 1 : 0, INavigateConstants.NAVIGATE_NEXT, Integer.MAX_VALUE, IReadMaskConstants.READ_MASK_NOTEID | IReadMaskConstants.READ_MASK_NOTECLASS);
+				NotesViewData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS));
 				moreToDo = data.hasMoreToDo();
 				isFirstRun=false;
 				
@@ -766,21 +770,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <br>
 	 * Full text indexing of a remote database is not supported in the C API.
 	 * 
-	 * @param options Indexing options.  See {@link IFTIndexConstants}, FT_INDEX_xxx.  These options may be or'd together.
+	 * @param options Indexing options.  See {@link FTIndex}.  These options may be or'd together.
 	 * @return indexing statistics
 	 */
-	public NotesFTIndexStats FTIndex(short options) {
+	public NotesFTIndexStats FTIndex(EnumSet<FTIndex> options) {
 		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		short optionsBitMask = FTIndex.toBitMask(options);
 		
 		NotesFTIndexStats retStats = new NotesFTIndexStats();
 		if (NotesContext.is64Bit()) {
-			short result = notesAPI.b64_FTIndex(m_hDB64, options, null, retStats);
+			short result = notesAPI.b64_FTIndex(m_hDB64, optionsBitMask, null, retStats);
 			NotesErrorUtils.checkResult(result);
 			retStats.read();
 			return retStats;
 		}
 		else {
-			short result = notesAPI.b32_FTIndex(m_hDB32, options, null, retStats);
+			short result = notesAPI.b32_FTIndex(m_hDB32, optionsBitMask, null, retStats);
 			NotesErrorUtils.checkResult(result);
 			retStats.read();
 			return retStats;
