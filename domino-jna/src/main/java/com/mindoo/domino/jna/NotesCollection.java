@@ -18,6 +18,10 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
+import com.mindoo.domino.jna.internal.NotesSummaryBufferDecoder;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -67,7 +71,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param asUserCanonical user used to read the collection data
 	 */
 	public NotesCollection(NotesDatabase parentDb, int hCollection, String name, int viewNoteId, String viewUNID, NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
-		if (NotesContext.is64Bit())
+		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_asUserCanonical = asUserCanonical;
 		m_parentDb = parentDb;
@@ -95,7 +99,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param asUserCanonical user used to read the collection data
 	 */
 	public NotesCollection(NotesDatabase parentDb, long hCollection, String name, int viewNoteId, String viewUNID, NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUser) {
-		if (!NotesContext.is64Bit())
+		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_asUserCanonical = asUser;
 		m_parentDb = parentDb;
@@ -138,10 +142,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return time date
 	 */
 	public NotesTimeDate getLastModifiedTime() {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		NotesTimeDate retLastModifiedTime = new NotesTimeDate();
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			notesAPI.b64_NIFGetLastModifiedTime(m_hCollection64, retLastModifiedTime);
 		}
 		else {
@@ -151,9 +155,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	public NotesIDTable getIDTableForFolder(boolean validateIds) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference hTable = new LongByReference();
 			short result = notesAPI.b64_NSFFolderGetIDTable(m_hDB64, m_hDB64, m_viewNoteId, validateIds ? NotesCAPI.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
@@ -295,7 +299,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	public boolean isRecycled() {
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			return m_hCollection64==0;
 		}
 		else {
@@ -306,7 +310,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public void recycle() {
 		if (!m_noRecycle) {
 			boolean bHandleIsNull = false;
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				bHandleIsNull = m_hCollection64==0;
 			}
 			else {
@@ -320,9 +324,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_unreadTable.recycle();
 				}
 				
-				NotesCAPI notesAPI = NotesContext.getNotesAPI();
+				NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 				short result;
-				if (NotesContext.is64Bit()) {
+				if (NotesJNAContext.is64Bit()) {
 					result = notesAPI.b64_NIFCloseCollection(m_hCollection64);
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectRecycled(this);
@@ -344,7 +348,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	private void checkHandle() {
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
 		}
@@ -398,9 +402,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public SearchResult ftSearch(String query, short limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
 		clearSearch();
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethSearch = new LongByReference();
 			result = notesAPI.b64_FTOpenSearch(rethSearch);
 			NotesErrorUtils.checkResult(result);
@@ -422,7 +426,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		optionsWithView.add(FTSearch.SET_COLL);
 		int optionsWithViewBitMask = FTSearch.toBitMask(optionsWithView);
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethResults = new LongByReference();
 			result = notesAPI.b64_FTSearch(
 					m_hDB64,
@@ -495,9 +499,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Resets an active filtering cause by a FT search
 	 */
 	public void clearSearch() {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			if (m_activeFTSearchHandle64!=null) {
 				short result = notesAPI.b64_FTCloseSearch(m_activeFTSearchHandle64.getValue());
 				NotesErrorUtils.checkResult(result);
@@ -524,9 +528,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		checkHandle();
 
 		NotesCollectionPosition foundPos = new NotesCollectionPosition();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NIFLocateNote(m_hCollection64, foundPos, noteId);
 		}
 		else {
@@ -630,10 +634,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			Memory keyBuffer;
 			try {
 				keyBuffer = NotesSearchKeyEncoder.b64_encodeKeys(keys);
@@ -729,10 +733,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NIFFindByName(m_hCollection64, nameLMBCS, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
 		else {
@@ -844,13 +848,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		ShortByReference retSignalFlags = new ShortByReference();
 		ShortByReference retBufferLength = new ShortByReference();
 
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short skipNavBitMask = Navigate.toBitMask(skipNavigator);
 		short returnNavBitMask = Navigate.toBitMask(returnNavigator);
 		int readMaskBitMask = ReadMask.toBitMask(returnMask);
 		
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference retBuffer = new LongByReference();
 			result = notesAPI.b64_NIFReadEntries(m_hCollection64, // hCollection
 					startPos, // IndexPos
@@ -907,9 +911,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public void refresh() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NIFUpdateCollection(m_hCollection64);
 		}
 		else {
@@ -925,11 +929,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public short getCollation() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		ShortByReference retCollationNum = new ShortByReference();
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NIFGetCollation(m_hCollection64, retCollationNum);
 		}
 		else {
@@ -946,10 +950,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public void setCollation(short collation) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NIFSetCollation(m_hCollection64, collation);
 		}
 		else {

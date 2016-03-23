@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna;
+package com.mindoo.domino.jna.internal;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;

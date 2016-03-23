@@ -5,6 +5,8 @@ import java.nio.ByteBuffer;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -23,9 +25,9 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * Creates a new ID table
 	 */
 	public NotesIDTable() {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			m_idTableHandle64 = new LongByReference();
 			result = notesAPI.b64_IDCreateTable(0, m_idTableHandle64);
 			NotesErrorUtils.checkResult(result);
@@ -46,7 +48,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param hTable ID table handle
 	 */
 	public NotesIDTable(IntByReference hTable) {
-		if (NotesContext.is64Bit())
+		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_idTableHandle32 = hTable;
 		m_noRecycle=true;
@@ -58,14 +60,14 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param hTable ID table handle
 	 */
 	public NotesIDTable(LongByReference hTable) {
-		if (!NotesContext.is64Bit())
+		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_idTableHandle64 = hTable;
 		m_noRecycle=true;
 	}
 	
 	public boolean isRecycled() {
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			return m_idTableHandle64==null || m_idTableHandle64.getValue()==0;
 		}
 		else {
@@ -79,8 +81,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 	
 	public boolean equalTable(NotesIDTable table) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			return notesAPI.b64_IDAreTablesEqual(m_idTableHandle64.getValue(), table.getHandle64());
 		}
 		else {
@@ -89,9 +91,9 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 	
 	public void recycle() {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (!m_noRecycle) {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				long hTable=m_idTableHandle64.getValue();
 				if (hTable!=0) {
 					short result = notesAPI.b64_IDDestroyTable(hTable);
@@ -125,7 +127,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 
 	private void checkHandle() {
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			if (m_idTableHandle64.getValue()==0)
 				throw new RuntimeException("ID table already recycled");
 		}
@@ -137,10 +139,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public boolean addNote(int noteId) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		IntByReference retInserted = new IntByReference();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_IDInsert(m_idTableHandle64.getValue(), noteId, retInserted);
 		}
 		else {
@@ -153,10 +155,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 
 	public boolean removeNote(int noteId) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		IntByReference retDeleted = new IntByReference();
 		short result;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_IDDelete(m_idTableHandle64.getValue(), noteId, retDeleted);
 		}
 		else {
@@ -169,8 +171,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public int sizeInBytes() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			int size = notesAPI.b64_IDTableSize(m_idTableHandle64.getValue());
 			return size;
 		}
@@ -182,8 +184,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public int count() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			int entries = notesAPI.b64_IDEntries(m_idTableHandle64.getValue());
 			return entries;
 		}
@@ -195,11 +197,11 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public boolean isModified() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		int sizeBytes = sizeInBytes();
 		Pointer ptr;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			ptr = notesAPI.b64_OSLockObject(m_idTableHandle64.getValue());
 		}
 		else {
@@ -214,7 +216,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			}
 		}
 		finally {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				notesAPI.b64_OSUnlockObject(m_idTableHandle64.getValue());
 				if (!m_noRecycle) {
 					notesAPI.b64_OSMemFree(m_idTableHandle64.getValue());
@@ -233,11 +235,11 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public boolean isInverted() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		int sizeBytes = sizeInBytes();
 		Pointer ptr;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			ptr = notesAPI.b64_OSLockObject(m_idTableHandle64.getValue());
 		}
 		else {
@@ -252,7 +254,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			}
 		}
 		finally {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				notesAPI.b64_OSUnlockObject(m_idTableHandle64.getValue());
 				if (!m_noRecycle)
 					notesAPI.b64_OSMemFree(m_idTableHandle64.getValue());
@@ -270,10 +272,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void setModified(boolean modified) {
 		checkHandle();
 		short newFlags = (short) ((isInverted() ? NotesCAPI.IDTABLE_INVERTED : 0) + (modified ? NotesCAPI.IDTABLE_MODIFIED : 0));
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		int sizeBytes = sizeInBytes();
 		Pointer ptr;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			ptr = notesAPI.b64_OSLockObject(m_idTableHandle64.getValue());
 		}
 		else {
@@ -285,7 +287,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			notesAPI.IDTableSetFlags(buf, newFlags);
 		}
 		finally {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				notesAPI.b64_OSUnlockObject(m_idTableHandle64.getValue());
 				if (!m_noRecycle)
 					notesAPI.b64_OSMemFree(m_idTableHandle64.getValue());
@@ -301,10 +303,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void setInverted(boolean inverted) {
 		checkHandle();
 		short newFlags = (short) ((isModified() ? NotesCAPI.IDTABLE_MODIFIED : 0) + (inverted ? NotesCAPI.IDTABLE_INVERTED : 0));
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		int sizeBytes = sizeInBytes();
 		Pointer ptr;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			ptr = notesAPI.b64_OSLockObject(m_idTableHandle64.getValue());
 		}
 		else {
@@ -315,7 +317,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			notesAPI.IDTableSetFlags(buf, newFlags);
 		}
 		finally {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				notesAPI.b64_OSUnlockObject(m_idTableHandle64.getValue());
 				if (!m_noRecycle)
 					notesAPI.b64_OSMemFree(m_idTableHandle64.getValue());
@@ -330,12 +332,12 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public int[] toArray() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		int[] ids = new int[count()];
 		IntByReference retID = new IntByReference();
 		boolean first = true;
 		int cnt = 0;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			while (notesAPI.b64_IDScan(m_idTableHandle64.getValue(), first, retID)) {
 				first=false;
 				ids[cnt] = retID.getValue();
@@ -354,8 +356,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public void subtract(NotesIDTable otherTable) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			short result = notesAPI.b64_IDDeleteTable(m_idTableHandle64.getValue(), otherTable.m_idTableHandle64.getValue());
 			NotesErrorUtils.checkResult(result);
 		}
@@ -367,8 +369,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public void merge(NotesIDTable otherTable) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			short result = notesAPI.b64_IDInsertTable(m_idTableHandle64.getValue(), otherTable.m_idTableHandle64.getValue());
 			NotesErrorUtils.checkResult(result);
 		}
@@ -380,8 +382,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public boolean contains(int noteId) {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			return notesAPI.b64_IDIsPresent(m_idTableHandle64.getValue(), noteId);
 		}
 		else {
@@ -391,8 +393,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	
 	public Object clone() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
-		if (NotesContext.is64Bit()) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
 			short result = notesAPI.b64_IDTableCopy(m_idTableHandle64.getValue(), rethTable);
 			NotesErrorUtils.checkResult(result);

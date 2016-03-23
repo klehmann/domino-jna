@@ -4,8 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
-import com.mindoo.domino.jna.NotesContext;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 
 /**
  * Utility class to simplify memory management with Notes handles. The class tracks
@@ -37,7 +37,7 @@ public class NotesGC {
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			m_b64OpenHandles.get().put(obj.getHandle64(), obj);
 			
 		}
@@ -58,7 +58,7 @@ public class NotesGC {
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			m_b64OpenHandles.get().remove(obj.getHandle64());
 		}
 		else {
@@ -86,7 +86,7 @@ public class NotesGC {
 			LinkedHashMap<Long,IRecyclableNotesObject> b64Handles = null;
 			
 			try {
-				if (NotesContext.is64Bit()) {
+				if (NotesJNAContext.is64Bit()) {
 					b64Handles = new LinkedHashMap<Long,IRecyclableNotesObject>();
 					m_b64OpenHandles.set(b64Handles);
 				}
@@ -98,7 +98,7 @@ public class NotesGC {
 				return callable.call();
 			}
 			finally {
-				if (NotesContext.is64Bit()) {
+				if (NotesJNAContext.is64Bit()) {
 					Entry[] mapEntries = b64Handles.entrySet().toArray(new Entry[b64Handles.size()]);
 					
 					for (int i=mapEntries.length-1; i>=0; i--) {

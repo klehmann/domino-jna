@@ -3,10 +3,10 @@ package com.mindoo.domino.jna.utils;
 import java.util.Calendar;
 import java.util.TimeZone;
 
-import com.mindoo.domino.jna.NotesCAPI;
-import com.mindoo.domino.jna.NotesContext;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.structs.NotesTime;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.sun.jna.Memory;
@@ -167,7 +167,7 @@ public class NotesDateTimeUtils {
 	 * @return innard array
 	 */
 	public static int[] calendarToInnards(Calendar cal, boolean hasDate, boolean hasTime) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		int gmtOffset = getGMTOffset();
 		boolean isDST = isDaylightTime();
@@ -225,7 +225,7 @@ public class NotesDateTimeUtils {
 	 * @return calendar
 	 */
 	public static Calendar innardsToCalendar(boolean useDayLight, int gmtOffset, int[] innards) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (innards==null || innards.length<2)
 			return null;
@@ -312,7 +312,7 @@ public class NotesDateTimeUtils {
 	 * @param timeDate value to be changed
 	 */
 	public static void setMinimum(NotesTimeDate timeDate) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MINIMUM, timeDate);
 //		timeDate.read();
@@ -324,7 +324,7 @@ public class NotesDateTimeUtils {
 	 * @param timeDate value to be changed
 	 */
 	public static void setMaximum(NotesTimeDate timeDate) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MAXIMUM, timeDate);
 //		timeDate.read();
@@ -336,7 +336,7 @@ public class NotesDateTimeUtils {
 	 * @param timeDate value to be changed
 	 */
 	public static void setWildcard(NotesTimeDate timeDate) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_WILDCARD, timeDate);
 //		timeDate.read();
@@ -349,7 +349,7 @@ public class NotesDateTimeUtils {
 	 * @return string with formatted timedate
 	 */
 	public static String toString(NotesTimeDate td) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory retTextBuffer = new Memory(100);
 
 		ShortByReference retTextLength = new ShortByReference();
@@ -377,7 +377,7 @@ public class NotesDateTimeUtils {
 	 * @return timedate
 	 */
 	public static NotesTimeDate fromString(String dateTimeStr) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr);
 		//convert method expects a pointer to the date string in memory
 		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);

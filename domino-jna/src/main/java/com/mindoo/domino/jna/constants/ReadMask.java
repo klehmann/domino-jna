@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.NotesSummaryBufferDecoder;
+import com.mindoo.domino.jna.internal.NotesSummaryBufferDecoder;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 
 /**

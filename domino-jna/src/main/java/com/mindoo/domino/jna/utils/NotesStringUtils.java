@@ -2,8 +2,8 @@ package com.mindoo.domino.jna.utils;
 
 import java.io.UnsupportedEncodingException;
 
-import com.mindoo.domino.jna.NotesCAPI;
-import com.mindoo.domino.jna.NotesContext;
+import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -19,7 +19,7 @@ public class NotesStringUtils {
 //		byte[] outAsBytes = new byte[in.limit() * 2];
 //		ByteBuffer out = ByteBuffer.wrap(outAsBytes);
 
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 	//	public short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
 
 		short inSize = (short) in.size();
@@ -47,7 +47,7 @@ public class NotesStringUtils {
 	}
 
 	public static String fromLMBCS(Pointer inPtr, short bufSizeInBytes) {
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		Memory outPtr = new Memory(NotesCAPI.MAXPATH);
 		short outContentLength = notesAPI.OSTranslate(NotesCAPI.OS_TRANSLATE_LMBCS_TO_UTF8, inPtr, bufSizeInBytes, outPtr, (short) outPtr.size());
@@ -73,7 +73,7 @@ public class NotesStringUtils {
 			return m;
 		}
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		byte[] inAsBytes;
 		try {

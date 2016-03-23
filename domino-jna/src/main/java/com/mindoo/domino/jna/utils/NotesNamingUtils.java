@@ -4,9 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mindoo.domino.jna.NotesCAPI;
-import com.mindoo.domino.jna.NotesContext;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.structs.NotesNamesList32;
 import com.mindoo.domino.jna.structs.NotesNamesList64;
 import com.sun.jna.Memory;
@@ -49,7 +49,7 @@ public class NotesNamingUtils {
 		if (name.length()==0)
 			return name;
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name);
 		Memory outNameMem = new Memory(NotesCAPI.MAXUSERNAME);
@@ -89,7 +89,7 @@ public class NotesNamingUtils {
 		if (name.length()==0)
 			return name;
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name);
 		Memory outNameMem = new Memory(NotesCAPI.MAXUSERNAME);
@@ -113,10 +113,10 @@ public class NotesNamingUtils {
 		//make sure that username is canonical
 		userName = toCanonicalName(userName);
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory userNameLMBCS = NotesStringUtils.toLMBCS(userName);
 		
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethNamesList = new LongByReference();
 			short result = notesAPI.b64_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
 			NotesErrorUtils.checkResult(result);

@@ -3,6 +3,8 @@ package com.mindoo.domino.jna;
 import java.util.Calendar;
 import java.util.Vector;
 
+import com.mindoo.domino.jna.internal.NotesCAPI;
+
 import lotus.domino.Base;
 import lotus.domino.Document;
 import lotus.domino.NotesException;

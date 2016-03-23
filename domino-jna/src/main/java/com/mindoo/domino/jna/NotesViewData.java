@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.Collections;
 import java.util.List;
 
+import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 
 public class NotesViewData {

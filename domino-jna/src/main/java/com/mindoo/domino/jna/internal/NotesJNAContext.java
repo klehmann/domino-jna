@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna;
+package com.mindoo.domino.jna.internal;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -14,7 +14,7 @@ import com.sun.jna.NativeLibrary;
  * 
  * @author Karsten Lehmann
  */
-public class NotesContext {
+public class NotesJNAContext {
 	private static volatile NotesCAPI m_api;
 	private static volatile Boolean m_is64Bit;
 	
@@ -39,7 +39,7 @@ public class NotesContext {
 	@SuppressWarnings("unchecked")
 	public static NotesCAPI getNotesAPI()  {
 		if (m_api==null) {
-			synchronized (NotesContext.class) {
+			synchronized (NotesJNAContext.class) {
 				if (m_api==null) {
 					Throwable t = null;
 					for (int i=0; i<3; i++) {

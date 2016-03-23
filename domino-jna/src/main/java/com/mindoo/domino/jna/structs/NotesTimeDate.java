@@ -3,7 +3,7 @@ package com.mindoo.domino.jna.structs;
 import java.util.Arrays;
 import java.util.List;
 
-import com.mindoo.domino.jna.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;

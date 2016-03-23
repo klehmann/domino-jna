@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna;
+package com.mindoo.domino.jna.internal;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;

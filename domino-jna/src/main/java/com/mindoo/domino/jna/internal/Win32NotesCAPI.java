@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna;
+package com.mindoo.domino.jna.internal;
 
 import com.sun.jna.win32.StdCallLibrary;
 

@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna;
+package com.mindoo.domino.jna.internal;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -7,6 +7,9 @@ import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesViewData;
+import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
@@ -64,10 +67,10 @@ public class NotesSummaryBufferDecoder {
 			throw new UnsupportedOperationException("Mode ReadMask.SUMMARY is not supported yet");
 		}
 		
-		NotesCAPI notesAPI = NotesContext.getNotesAPI();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		Pointer bufferPtr;
-		if (NotesContext.is64Bit()) {
+		if (NotesJNAContext.is64Bit()) {
 			bufferPtr = notesAPI.b64_OSLockObject(bufferHandle);
 		}
 		else {
@@ -401,7 +404,7 @@ public class NotesSummaryBufferDecoder {
 			return new NotesViewData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags);
 		}
 		finally {
-			if (NotesContext.is64Bit()) {
+			if (NotesJNAContext.is64Bit()) {
 				notesAPI.b64_OSUnlockObject(bufferHandle);
 				notesAPI.b64_OSMemFree(bufferHandle);
 			}
