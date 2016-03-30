@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesNamesList32;
@@ -34,6 +35,10 @@ import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.ShortByReference;
+
+import lotus.domino.NotesException;
+import lotus.domino.Session;
 
 /**
  * Object wrapping a Notes database
@@ -53,11 +58,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param server database server
 	 * @param filePath database filepath
-	 * @param asUserCanonical user context to open database or null to run as server
+	 * @throws NotesException 
 	 */
-	public NotesDatabase(String server, String filePath, String asUserCanonical) {
+	public NotesDatabase(Session session, String server, String filePath) throws NotesException {
+		this(session, server, filePath, session.getEffectiveUserName());
+	}
+
+	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param session current session
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
+	 * @throws NotesException 
+	 */
+	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) throws NotesException {
 		//make sure server and username are in canonical format
-		m_asUserCanonical = StringUtil.isEmpty(server) ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
+		m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
 		if (server==null)
 			server = "";
 		if (filePath==null)
@@ -382,7 +400,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param viewNoteId view/collection note id
 	 * @return collection
 	 */
-	public NotesCollection openCollection(String name, int viewNoteId)  {
+	NotesCollection openCollection(String name, int viewNoteId)  {
 		return openCollectionWithExternalData(this, name, viewNoteId);
 	}
 
@@ -404,6 +422,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		NotesIDTable unreadTable = new NotesIDTable();
 		
+		short openFlags = 0; //NotesCAPI.OPEN_NOUPDATE;
+
 		short result;
 		NotesCollection newCol;
 		if (NotesJNAContext.is64Bit()) {
@@ -415,7 +435,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
 				//open view as server
-				result = notesAPI.b64_NIFOpenCollection(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
+				result = notesAPI.b64_NIFOpenCollection(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -439,7 +459,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					namesList.read();
 
 					//now try to open collection as this user
-					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList64);
+					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList64);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -459,7 +479,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			selectedList.setValue(0);
 			
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
-				result = notesAPI.b32_NIFOpenCollection(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
+				result = notesAPI.b32_NIFOpenCollection(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -483,7 +503,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					namesList.read();
 
 					//now try to open collection as this user
-					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) NotesCAPI.OPEN_NOUPDATE, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList32);
+					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList32);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -858,6 +878,76 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retTime.read();
 			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTime);
 		}
+	}
+
+	/**
+	 * This function returns the "major" portion of the build number of the Domino or
+	 * Notes executable running on the system where the specified database resides.
+	 * Use this information to determine what Domino or Notes release is running on a given system.
+	 * The database handle input may represent a local database, or a database that resides
+	 * on a Lotus Domino Server.<br>
+	 * <br>
+	 * Domino or Notes Release 1.0 (all preliminary and final versions) are build numbers 1 to 81.<br>
+	 * Domino or Notes Release 2.0 (all preliminary and final versions) are build numbers 82 to 93.<br>
+	 * Domino or Notes Release 3.0 (all preliminary and final versions) are build numbers 94 to 118.<br>
+	 * Domino or Notes Release 4.0 (all preliminary and final versions) are build numbers 119 to 136.<br>
+	 * Domino or Notes Release 4.1 (all preliminary and final versions) are build number 138.<br>
+	 * Domino or Notes Release 4.5 (all preliminary and final versions) are build number 140 - 145.<br>
+	 * Domino or Notes Release 4.6 (all preliminary and final versions) are build number 147.<br>
+	 * Domino or Notes Release 5.0 Beta 1 is build number 161.<br>
+	 * Domino or Notes Release 5.0 Beta 2 is build number 163.<br>
+	 * Domino or Notes Releases 5.0 - 5.0.11 are build number 166.<br>
+	 * Domino or Notes Release Rnext Beta 1 is build number 173.<br>
+	 * Domino or Notes Release Rnext Beta 2 is build number 176.<br>
+	 * Domino or Notes Release Rnext Beta 3 is build number 178.<br>
+	 * Domino or Notes Release Rnext Beta 4 is build number 179.<br>
+	 * Domino or Notes 6  Pre-release 1 is build number 183.<br>
+	 * Domino or Notes 6  Pre-release 2 is build number 185.<br>
+	 * Domino or Notes 6  Release Candidate is build number 190.<br>
+	 * Domino or Notes 6 - 6.0.2 are build number 190.<br>
+	 * Domino or Notes 6.0.3 - 6.5 are build numbers 191 to 194.<br>
+	 * Domino or Notes 7.0 Beta 2 is build number 254.<br>
+	 * Domino or Notes 9.0 is build number 400.<br>
+	 * Domino or Notes 9.0.1 is build number 405.<br>
+	 * 
+	 * @return build version
+	 */
+	public short getParentServerBuildVersion() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		ShortByReference retVersion = new ShortByReference();
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFDbGetBuildVersion(m_hDB64, retVersion);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NSFDbGetBuildVersion(m_hDB32, retVersion);
+			NotesErrorUtils.checkResult(result);
+		}
+		return retVersion.getValue();
+	}
+	
+	/**
+	 * This function returns a BUILDVERSION structure which contains all types of
+	 * information about the level of code running on a machine.<br>
+	 * <br>
+	 * See {@link NotesBuildVersion} for more information.
+	 * 
+	 * @return version
+	 */
+	public NotesBuildVersion getParentServerMajMinVersion() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		NotesBuildVersion retVersion = new NotesBuildVersion();
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFDbGetMajMinVersion(m_hDB64, retVersion);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NSFDbGetMajMinVersion(m_hDB32, retVersion);
+			NotesErrorUtils.checkResult(result);
+		}
+		return retVersion;
 	}
 	
 	/**

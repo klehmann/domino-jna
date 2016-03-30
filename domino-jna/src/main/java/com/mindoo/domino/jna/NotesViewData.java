@@ -12,18 +12,49 @@ public class NotesViewData {
 	private int m_numEntriesReturned;
 	private int m_numEntriesSkipped;
 	private short m_signalFlags;
+	private String m_pos;
+	private int m_indexModifiedSequenceNo;
 	
-	public NotesViewData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags) {
+	public NotesViewData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo) {
 		m_stats = stats;
 		m_entries = entries;
 		m_numEntriesSkipped = numEntriesSkipped;
 		m_numEntriesReturned = numEntriesReturned;
 		m_signalFlags = signalFlags;
+		m_pos = pos;
+		m_indexModifiedSequenceNo = indexModifiedSequenceNo;
 	}
 
 	public void reverseEntries() {
 		if (m_entries!=null)
 			Collections.reverse(m_entries);
+	}
+
+	/**
+	 * Returns the index modified sequence number, which is increased on every index change.<br>
+	 * <br>
+	 * Will only be set when {@link NotesCollection#findByKeyExtended2(java.util.EnumSet, java.util.EnumSet, boolean[], Object...)}
+	 * is called.
+	 * 
+	 * @return number
+	 */
+	public int getIndexModifiedSequenceNo() {
+		return m_indexModifiedSequenceNo;
+	}
+	
+	/**
+	 * If multiple index entries match the specified lookup key (especially if<br>
+	 * not enough key items were specified), then the index position of<br>
+	 * the FIRST matching entry is returned ("first" is defined by the<br>
+	 * entry which collates before all others in the collated index).<br>
+	 * 
+	 * Will only be set when {@link NotesCollection#findByKeyExtended2(java.util.EnumSet, java.util.EnumSet, boolean[], Object...)}
+	 * is called.
+	 * 
+	 * @return position or null
+	 */
+	public String getPosition() {
+		return m_pos;
 	}
 	
 	/**
@@ -85,15 +116,30 @@ public class NotesViewData {
 	 * At least one of the "definition" view items (Selection formula or sorting rules) has been
 	 * modified by another user since the last NIFReadEntries. Upon receipt, you may wish to
 	 * re-read the view note if up-to-date copies of these items are needed. You also may wish
-	 * to re-synchronize your index position and re-read the rebuilt index.
+	 * to re-synchronize your index position and re-read the rebuilt index.<br>
+	 * <br>
 	 * This signal is returned only ONCE per detection.
 	 * 
 	 * @return true if modified
 	 */
-	public boolean isViewDesignModified() {
+	public boolean isViewDefiningItemModified() {
 		return (m_signalFlags & NotesCAPI.SIGNAL_DEFN_ITEM_MODIFIED) == NotesCAPI.SIGNAL_DEFN_ITEM_MODIFIED;
 	}
 
+	/**
+	 * At least one of the non-"definition" view items ($TITLE,etc) has been
+	 * modified since last ReadEntries.
+	 * Upon receipt, you may wish to re-read the view note if up-to-date copies of these
+	 * items are needed.<br>
+	 * <br>
+	 * Signal returned only ONCE per detection
+	 * 
+	 * @return true if modified
+	 */
+	public boolean isViewOtherItemModified() {
+		return (m_signalFlags & NotesCAPI.SIGNAL_VIEW_ITEM_MODIFIED) == NotesCAPI.SIGNAL_VIEW_ITEM_MODIFIED;
+	}
+	
 	/**
 	 * The collection index has been modified by another user since the last NIFReadEntries.
 	 * Upon receipt, you may wish to re-synchronize your index position and re-read the modified index.
@@ -111,7 +157,20 @@ public class NotesViewData {
 	 * 
 	 * @return true if time relative
 	 */
-	public boolean isTimeRelative() {
+	public boolean isViewTimeRelative() {
 		return (m_signalFlags & NotesCAPI.SIGNAL_VIEW_TIME_RELATIVE) == NotesCAPI.SIGNAL_VIEW_TIME_RELATIVE;
+	}
+	
+	/**	
+	 * Mask that defines all "sharing conflicts" except for {@link #isDatabaseModified()}.
+	 * This can be used in combination with {@link #isTimeRelative()} to tell if
+	 * the database or collection has truly changed out from under the user or if the
+	 * view is a time-relative view which will NEVER be up-to-date. {@link #isDatabaseModified()}
+	 * is always returned for a time-relative view to indicate that it is never up-to-date.
+	 * 
+	 *  @return true if we have conflicts
+	 */
+	public boolean hasAnyNonDataConflicts() {
+		return (m_signalFlags & NotesCAPI.SIGNAL_ANY_NONDATA_CONFLICT) != 0;
 	}
 }

@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna;
 
+import java.util.Map;
+
 /**
  * Data object that contains all data read from collection entries
  * 
@@ -19,6 +21,7 @@ public class NotesViewEntryData {
 	private short m_ftScore;
 	private boolean m_isUnread;
 	private Object[] m_columnValues;
+	private Map<String, Object> m_summaryData;
 	
 	public NotesViewEntryData() {
 		
@@ -148,5 +151,13 @@ public class NotesViewEntryData {
 
 	public Object[] getColumnValues() {
 		return m_columnValues;
+	}
+	
+	public void setSummaryData(Map<String,Object> summaryData) {
+		m_summaryData = summaryData;
+	}
+	
+	public Map<String,Object> getSummaryData() {
+		return m_summaryData;
 	}
 }

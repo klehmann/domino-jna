@@ -5,6 +5,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
@@ -20,8 +22,9 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
-import com.mindoo.domino.jna.internal.NotesSummaryBufferDecoder;
+import com.mindoo.domino.jna.queries.condition.Selection;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -132,6 +135,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the index modified sequence number that can be used to track view changes.
+	 * The method calls {@link #getLastModifiedTime()} and returns part of the result (Innards[0]).
+	 * We found out by testing that this value is the same that NIFFindByKeyExtended2 returns.
+	 * 
+	 * @return index modified sequence number
+	 */
+	public int getIndexModifiedSequenceNo() {
+		NotesTimeDate ndtModified = getLastModifiedTime();
+		return ndtModified.Innards[0];
+	}
+	
+	/**
 	 * Each time the number of documents in a collection is modified, a sequence number
 	 * is incremented.  This function will return the modification sequence number, which
 	 * may then be compared to a previous value (also obtained by calling
@@ -154,6 +169,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return retLastModifiedTime;
 	}
 	
+	/**
+	 * Returns an id table of the folder content
+	 * 
+	 * @param validateIds If set, return only "validated" noteIDs
+	 * @return id table
+	 */
 	public NotesIDTable getIDTableForFolder(boolean validateIds) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
@@ -374,18 +395,39 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return m_hCollection64;
 	}
 
+	/**
+	 * Returns the user for which the collation returns the data
+	 * 
+	 * @return null for server
+	 */
 	public String getContextUser() {
 		return m_asUserCanonical;
 	}
 	
+	/**
+	 * Returns the unread table
+	 * 
+	 * @return unread table
+	 */
 	public NotesIDTable getUnreadTable() {
 		return m_unreadTable;
 	}
 	
+	/**
+	 * Returns the collapsed list; we had no success to far to use this for lookups
+	 * 
+	 * @return collapsed list
+	 */
 	public NotesIDTable getCollapsedList() {
 		return m_collapsedList;
 	}
 	
+	/**
+	 * Returns an id table of "selected" note ids; for local databases, adding note ids
+	 * to this table causes the notes to be found in view lookups using {@link Navigate#NEXT_SELECTED}
+	 * 
+	 * @return selected list
+	 */
 	public NotesIDTable getSelectedList() {
 		return m_selectedList;
 	}
@@ -551,6 +593,392 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return locateNote(Integer.parseInt(noteId, 16));
 	}
 
+	/**
+	 * Convenience function that returns a sorted set of note ids of documents
+	 * matching the specified search key(s) in the collection
+	 * 
+	 * @param findFlags find flags, see {@link Find}
+	 * @param keys lookup keys
+	 * @return note ids
+	 */
+	public LinkedHashSet<Integer> getIdsByKey(EnumSet<Find> findFlags, Object... keys) {
+		List<NotesViewEntryData> entries = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), null, keys);
+		LinkedHashSet<Integer> noteIds = new LinkedHashSet<Integer>();
+		for (NotesViewEntryData currEntry : entries) {
+			noteIds.add(currEntry.getNoteId());
+		}
+		return noteIds;
+	}
+	
+	/**
+	 * Method to check whether an optimized  view lookup method can be used for
+	 * a set of find/return flags and the current Domino version
+	 * 
+	 * @param findFlags find flags
+	 * @param returnMask return flags
+	 * @param keys lookup keys
+	 * @return true if method can be used
+	 */
+	private boolean canUseOptimizedLookupForKeyLookup(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, Object... keys) {
+		{
+			//we had "ERR 774: Unsupported return flag(s)" errors when using the optimized lookup
+			//method wither return values other than note id
+			boolean unsupportedValuesFound = false;
+			for (ReadMask currReadMaskValues: returnMask) {
+				if ((currReadMaskValues != ReadMask.NOTEID) && (currReadMaskValues != ReadMask.SUMMARY)) {
+					unsupportedValuesFound = true;
+					break;
+				}
+			}
+
+			if (unsupportedValuesFound) {
+				return false;
+			}
+		}
+		
+		{
+			//check for R9 and flag compatibility
+			short buildVersion = m_parentDb.getParentServerBuildVersion();
+			if (buildVersion < 400) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	public static interface IViewEntryFilter {
+		public boolean isAccepted(NotesViewEntryData entryData);
+	}
+	
+	/**
+	 * The method reads a number of entries from the collection/view
+	 * 
+	 * @param startPosStr start position; use "0" or null to start before the first entry
+	 * @param skipCount number of entries to skip
+	 * @param returnNav 
+	 * @param returnCount
+	 * @param preloadEntryCount
+	 * @param returnMask
+	 * @param decodeColumns
+	 * @param filter
+	 * @return
+	 */
+	public List<NotesViewEntryData> getAllEntries(String startPosStr, EnumSet<Navigate> returnNav, int returnCount, int preloadEntryCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, IViewEntryFilter filter) {
+		boolean isRootPos = startPosStr==null || "0".equals(startPosStr);
+		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(isRootPos ? "0" : startPosStr);
+		
+		while (true) {
+			List<NotesViewEntryData> retEntries = new ArrayList<NotesViewEntryData>();
+			if (returnCount==0) {
+				return retEntries;
+			}
+			
+			boolean hasMoreData = true;
+			boolean viewModified = false;
+			boolean firstLoopRun = true;
+			
+			while (hasMoreData) {
+				int skipCnt = 1;
+				if (firstLoopRun && !isRootPos) {
+					skipCnt=0;
+				}
+				NotesViewData data = readEntries(pos, returnNav, skipCnt, returnNav, preloadEntryCount, returnMask, decodeColumns);
+				firstLoopRun = false;
+				
+				if (data.hasAnyNonDataConflicts()) {
+					//refresh the view and restart the lookup
+					viewModified=true;
+					break;
+				}
+				
+				List<NotesViewEntryData> entries = data.getEntries();
+				for (NotesViewEntryData currEntry : entries) {
+					if (filter==null || filter.isAccepted(currEntry)) {
+						retEntries.add(currEntry);
+						if (retEntries.size() == returnCount) {
+							return retEntries;
+						}
+					}
+				}
+				hasMoreData = data.hasMoreToDo();
+			}
+			
+			if (viewModified) {
+				//view index was changed while reading; restart scan
+				update();
+				continue;
+			}
+			
+			return retEntries;
+		}
+	}
+	
+	/**
+	 * Returns all view entries matching the specified search key(s) in the collection
+	 * 
+	 * @param findFlags find flags, see {@link Find}
+	 * @param returnMask values to be returned
+	 * @param decodeColumns optional array of columns values to be decoded (or null)
+	 * @param keys lookup keys
+	 * @return view entries matching the lookup key
+	 */
+	public List<NotesViewEntryData> getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
+		//we are leaving the loop when there is no more data to be read;
+		//while(true) is here to rerun the query in case of view index changes while reading
+		while (true) {
+			List<NotesViewEntryData> allEntries = new ArrayList<NotesViewEntryData>();
+			
+			NotesViewData data;
+			//position of first match
+			String firstMatchPosStr;
+			int remainingEntries;
+			
+			if (canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
+				//do the first lookup and read operation atomically; uses a large buffer for local calls
+				EnumSet<Find> findFlagsWithExtraBits = findFlags.clone();
+				findFlagsWithExtraBits.add(Find.AND_READ_MATCHES);
+				findFlagsWithExtraBits.add(Find.RETURN_DWORD);
+				
+				data = findByKeyExtended2(findFlagsWithExtraBits, returnMask, decodeColumns, keys);
+				
+				int numEntriesFound = data.getReturnCount();
+				if (numEntriesFound!=-1) {
+					//check for view index or design change
+					if (data.hasAnyNonDataConflicts()) {
+						//refresh the view and restart the lookup
+						update();
+						continue;
+					}
+					
+					//copy the data we have read
+					List<NotesViewEntryData> entries = data.getEntries();
+					for (NotesViewEntryData currEntryData : entries) {
+						allEntries.add(currEntryData);
+					}
+					if (!data.hasMoreToDo()) {
+						//we are done
+						return allEntries;
+					}
+
+					//compute what we have left
+					int entriesReadOnFirstLookup = entries.size();
+					remainingEntries = numEntriesFound - entriesReadOnFirstLookup;
+					firstMatchPosStr = data.getPosition();
+				}
+				else {
+					//workaround for a bug where the method NIFFindByKeyExtended2 returns -1 as numEntriesFound
+					//and no buffer data
+					//
+					//fallback to classic lookup until this is fixed/commented by IBM dev:
+					FindResult findResult = findByKey(findFlags, keys);
+					remainingEntries = findResult.getEntriesFound();
+					if (remainingEntries==0) {
+						return allEntries;
+					}
+					firstMatchPosStr = findResult.getPosition();
+				}
+			}
+			else {
+				//first find the start position to read data
+				FindResult findResult = findByKey(findFlags, keys);
+				remainingEntries = findResult.getEntriesFound();
+				if (remainingEntries==0) {
+					return allEntries;
+				}
+				firstMatchPosStr = findResult.getPosition();
+			}
+			
+			if (firstMatchPosStr!=null) {
+				//position of the first match; we skip (entries.size()) to read the remaining entries
+				boolean isFirstLookup = true;
+				int entriesToSkipOnFirstLoopRun = allEntries.size();
+				
+				NotesCollectionPosition lookupPos = NotesCollectionPosition.toPosition(firstMatchPosStr);
+				
+				boolean viewModified = false;
+				
+				while (remainingEntries>0) {
+					//on first lookup, start at "posStr" and skip the amount of already read entries
+					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, decodeColumns);
+					isFirstLookup=false;
+					System.out.println("Lookup returned "+data.getEntries().size()+" entries");
+					
+					if (data.hasAnyNonDataConflicts()) {
+						//set viewModified to true and leave the inner loop; we will refresh the view and restart the lookup
+						viewModified=true;
+						break;
+					}
+					
+					List<NotesViewEntryData> entries = data.getEntries();
+					if (entries.isEmpty()) {
+						//looks like we don't have any more data in the view
+						break;
+					}
+					
+					for (NotesViewEntryData currEntryData : entries) {
+						allEntries.add(currEntryData);
+					}
+					remainingEntries = remainingEntries - entries.size();
+				}
+				
+				if (viewModified) {
+					//refresh view and redo the whole lookup
+					update();
+					continue;
+				}
+			}
+			
+			return allEntries;
+		}
+	}
+	
+	/**
+	 * This method is in essense a combo NIFFindKey/NIFReadEntries API. It leverages
+	 * the C API method NIFFindByKeyExtended2 internally which was introduced in Domino R9<br>
+	 * <br>
+	 * The purpose of this method is to provide a mechanism to position into a
+	 * collection and read the associated entries in an atomic manner.<br>
+	 * <br>
+	 * More specifically, the key provided is positioned to and the entries from
+	 * the collection are read while the collection is read locked so that no other updates can occur.<br>
+	 * <br>
+	 * 1)  This avoids the possibility of the initial collection position shifting
+	 * due to an insert/delete/update in and/or around the logical key value that
+	 * would result in an ordinal change to the position.<br>
+	 * <br>
+	 * This a classic problem when doing a NIFFindKey, getting the position returned,
+	 * and then doing a NIFReadEntries following.<br>
+	 * <br>
+	 * 2) The API improves the ability to read all the entries that are associated
+	 * with the key position atomically.<br>
+	 * <br>
+	 * This can be done depending on the size of the data being returned.<br>
+	 * <br>
+	 * If all the data fits into the limitation (64K) of the return buffer, then
+	 * it will be done atomically in 1 call.<br>
+	 * Otherwise subsequent NIFReadEntries will need to be called, which will be non-atomic.<br>
+	 * <br>
+	 * The 64K limit only changes behavior to NIFFindByKey/NIFReadEntries when the call is client/server.
+	 * Locally there is no limit.
+	 * <hr>
+	 * Original documentation of C API method NIFFindByKeyExtended2:<br>
+	 * <br>
+	 * NIFFindByKeyExtended2 - Lookup index entry by "key"<br>
+	 * <br>
+	 *	Given a "key" buffer in the standard format of a summary buffer,<br>
+	 *	locate the entry which matches the given key(s).  Supply as many<br>
+	 *	"key" summary items as required to correspond to the way the index<br>
+	 *	collates, in order to uniquely find an entry.<br>
+	 * <br>
+	 *	If multiple index entries match the specified key (especially if<br>
+	 *	not enough key items were specified), then the index position of<br>
+	 *	the FIRST matching entry is returned ("first" is defined by the<br>
+	 *	entry which collates before all others in the collated index).<br>
+	 * <br>
+	 *	Note that the more explicitly an entry can be specified (by<br>
+	 *	specifying as many keys as possible), then the faster the lookup<br>
+	 *	can be performed, since the "key" lookup is very fast, but a<br>
+	 *	sequential search is performed to locate the "first" entry when<br>
+	 *	multiple entries match.<br>
+	 * <br>
+	 *	This routine can only be used when dealing with notes that do not<br>
+	 *	have multiple permutations, and cannot be used to locate response<br>
+	 *	notes.
+	 * 
+	 * @param findFlags find flags ({@see Find})
+	 * @param returnMask mask specifying what information is to be returned on each entry ({@see ReadMask})
+	 * @param decodeColumns optional array to limit column decoding (or null)
+	 * @param keys lookup keys
+	 * @return lookup result
+	 */
+	public NotesViewData findByKeyExtended2(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
+		checkHandle();
+		
+		if (keys==null || keys.length==0)
+			throw new IllegalArgumentException("No search keys specified");
+		
+		if (!canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
+			throw new UnsupportedOperationException("This method cannot be used for the specified arguments (only noteids) or the current platform (only R9 and above)");
+		}
+		
+		IntByReference retNumMatches = new IntByReference();
+		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short findFlagsBitMask = Find.toBitMask(findFlags);
+		short result;
+		int returnMaskBitMask = ReadMask.toBitMask(returnMask);
+		
+		ShortByReference retSignalFlags = new ShortByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			Memory keyBuffer;
+			try {
+				keyBuffer = NotesSearchKeyEncoder.b64_encodeKeys(keys);
+			} catch (Throwable e) {
+				throw new NotesError(0, "Could not encode search keys", e);
+			}
+			
+			LongByReference retBuffer = new LongByReference();
+			IntByReference retSequence = new IntByReference();
+			
+			long t0=System.currentTimeMillis();
+			result = notesAPI.b64_NIFFindByKeyExtended2(m_hCollection64, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
+			long t1=System.currentTimeMillis();
+			System.out.println("NIFFindByKeyExtended2 took "+(t1-t0)+"ms");
+			int numMatches = retNumMatches.getValue();
+			System.out.println("NumMatches:"+numMatches);
+			System.out.println("Position:"+retIndexPos.toPosString());
+			
+			if (result == 1028 || result == 17412) {
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+			}
+			NotesErrorUtils.checkResult(result);
+
+			if (retNumMatches.getValue()==0) {
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+			}
+			else {
+				if (retBuffer.getValue()==0) {
+					return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+				}
+				else {
+					NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					return viewData;
+				}
+			}
+		}
+		else {
+			Memory keyBuffer;
+			try {
+				keyBuffer = NotesSearchKeyEncoder.b32_encodeKeys(keys);
+			} catch (Throwable e) {
+				throw new NotesError(0, "Could not encode search keys", e);
+			}
+			
+			IntByReference retBuffer = new IntByReference();
+			IntByReference retSequence = new IntByReference();
+			
+			result = notesAPI.b32_NIFFindByKeyExtended2(m_hCollection32, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
+			if (result == 1028 || result == 17412) {
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+			}
+			NotesErrorUtils.checkResult(result);
+
+			if (retNumMatches.getValue()==0) {
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+			}
+			else {
+				if (retBuffer.getValue()==0) {
+					return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+				}
+				else {
+					NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					return viewData;
+				}
+			}
+		}
+	}
+	
 	/**
 	 * This function searches through a collection for the first note whose sort
 	 * column values match the given search keys.<br>
@@ -871,11 +1299,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 					);
 			NotesErrorUtils.checkResult(result);
 			
-			if (retBufferLength.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue());
+			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
+			if (iBufLength==0) {
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, 0);
 			}
 			else {
-				NotesViewData viewData = NotesSummaryBufferDecoder.b64_decodeBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns);
+				NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, 0);
 				return viewData;
 			}
 		}
@@ -897,10 +1326,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			if (retBufferLength.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue());
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, 0);
 			}
 			else {
-				NotesViewData viewData = NotesSummaryBufferDecoder.b32_decodeBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns);
+				NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, 0);
 				return viewData;
 			}
 		}
@@ -909,7 +1338,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Updates the view to reflect the current database content (using NIFUpdateCollection method)
 	 */
-	public void refresh() {
+	public void update() {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
@@ -1109,4 +1538,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public short findCollation(View view, String columnName, Direction direction) throws NotesException {
 		return hashCollations(view).findCollation(columnName, direction);
 	}
+	
+	/**
+	 * Unfinished alternative lookup method
+	 * 
+	 * @param column first column to return
+	 * @param columns other columns to return
+	 * @deprecated not ready for prime time
+	 * @return selection
+	 */
+	public Selection select(String column, String... columns) {
+		List<String> columnsList = new ArrayList<String>();
+		columnsList.add(column);
+		
+		if (columns!=null) {
+			for (String currCol : columns) {
+				columnsList.add(currCol);
+			}
+		}
+	
+		String[] columnsArr = columnsList.toArray(new String[columnsList.size()]);
+		return new Selection(columnsArr);
+	}
+
 }

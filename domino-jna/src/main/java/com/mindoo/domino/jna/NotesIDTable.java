@@ -19,6 +19,7 @@ import com.sun.jna.ptr.LongByReference;
 public class NotesIDTable implements IRecyclableNotesObject {
 	private IntByReference m_idTableHandle32;
 	private LongByReference m_idTableHandle64;
+	private boolean m_isRecycled;
 	private boolean m_noRecycle;
 	
 	/**
@@ -93,6 +94,9 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void recycle() {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (!m_noRecycle) {
+			if (m_isRecycled)
+				return;
+			
 			if (NotesJNAContext.is64Bit()) {
 				long hTable=m_idTableHandle64.getValue();
 				if (hTable!=0) {
@@ -100,6 +104,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectRecycled(this);
 					m_idTableHandle64.setValue(0);
+					m_isRecycled = true;
 				}
 			}
 			else {
@@ -109,6 +114,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectRecycled(this);
 					m_idTableHandle32.setValue(0);
+					m_isRecycled = true;
 				}
 			}
 		}

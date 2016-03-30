@@ -4,8 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
+import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesCollectionStats;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItem;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
@@ -136,6 +136,25 @@ public interface NotesCAPI extends Library {
 	
 	void b32_NIFGetLastModifiedTime(int hCollection, NotesTimeDate retLastModifiedTime);
 	void b64_NIFGetLastModifiedTime(long hCollection, NotesTimeDate retLastModifiedTime);
+	
+	short b32_NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
+			int findFlags,
+			int returnFlags,
+			NotesCollectionPosition retIndexPos,
+			IntByReference retNumMatches,
+			ShortByReference retSignalFlags,
+			IntByReference rethBuffer,
+			IntByReference retSequence);
+
+	short b64_NIFFindByKeyExtended2 (long hCollection, Memory keyBuffer,
+			int findFlags,
+			int returnFlags,
+			NotesCollectionPosition retIndexPos,
+			IntByReference retNumMatches,
+			ShortByReference retSignalFlags,
+			LongByReference rethBuffer,
+			IntByReference retSequence);
+
 	
 	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, IntByReference rethTable);
 	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, LongByReference rethTable);
@@ -388,16 +407,80 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public static final String DFLAGPAT_VIEWS_AND_FOLDERS = "-G40n^";
 
-
+	/** At least one of the "definition"
+	 * view items ($FORMULA, $COLLATION,
+	 * or $FORMULACLASS) has been modified
+	 * by another user since last ReadEntries.
+	 * Upon receipt, you may wish to
+	 * re-read the view note if up-to-date
+	 * copies of these items are needed.
+	 * Upon receipt, you may also wish to
+	 * re-synchronize your index position
+	 * and re-read the rebuilt index.<br>
+	 * <br>
+	 * Signal returned only ONCE per detection */
 	public static final int SIGNAL_DEFN_ITEM_MODIFIED = 0x0001;
+
+	/** At least one of the non-"definition"
+	 * view items ($TITLE,etc) has been
+	 * modified since last ReadEntries.
+	 * Upon receipt, you may wish to
+	 * re-read the view note if up-to-date
+	 * copies of these items are needed.<br>
+	 * <br>
+	 * Signal returned only ONCE per detection */
 	public static final int SIGNAL_VIEW_ITEM_MODIFIED = 0x0002;
+	
+	/** Collection index has been modified
+	 * by another user since last ReadEntries.
+	 * Upon receipt, you may wish to
+	 * re-synchronize your index position
+	 * and re-read the modified index.<br>
+	 * <br>
+	 * Signal returned only ONCE per detection */
 	public static final int SIGNAL_INDEX_MODIFIED = 0x0004;
+	
+	/** Unread list has been modified
+	 * by another window using the same
+	 * hCollection context
+	 * Upon receipt, you may wish to
+	 * repaint the window if the window
+	 * contains the state of unread flags
+	 * (This signal is never generated
+	 *  by NIF - only unread list users) */
 	public static final int SIGNAL_UNREADLIST_MODIFIED = 0x0008;
+	
+	/** Collection is not up to date */
 	public static final int SIGNAL_DATABASE_MODIFIED = 0x0010;
+	
+	/** End of collection has not been reached
+	 * due to buffer being too full.
+	 * The ReadEntries should be repeated
+	 * to continue reading the desired entries. */
 	public static final int SIGNAL_MORE_TO_DO = 0x0020;
+	
+	/** The view contains a time-relative formula
+	 * (e.g., @Now).  Use this flag to tell if the
+	 * collection will EVER be up-to-date since
+	 * time-relative views, by definition, are NEVER
+	 * up-to-date. */
 	public static final int SIGNAL_VIEW_TIME_RELATIVE = 0x0040;
+	
+	/** Returned if signal flags are not supported
+	 * This is used by NIFFindByKeyExtended when it
+	 * is talking to a pre-V4 server that does not
+	 * support signal flags for FindByKey */
 	public static final int SIGNAL_NOT_SUPPORTED = 0x0080;
+	
+	/**	Mask that defines all "sharing conflicts", which are cases when
+	the database or collection has changed out from under the user. */
 	public static final int SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);
+	
+	/**	Mask that defines all "sharing conflicts" except for SIGNAL_DATABASE_MODIFIED.
+	This can be used in combination with SIGNAL_VIEW_TIME_RELATIVE to tell if
+	the database or collection has truly changed out from under the user or if the
+	view is a time-relative view which will NEVER be up-to-date.  SIGNAL_DATABASE_MODIFIED
+	is always returned for a time-relative view to indicate that it is never up-to-date. */
 	public static final int SIGNAL_ANY_NONDATA_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED);
 
 	public static final short OS_TRANSLATE_NATIVE_TO_LMBCS = 0;	/* Translate platform-specific to LMBCS */
@@ -704,5 +787,11 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public short b32_FTGetLastIndexTime(int hDB, NotesTimeDate retTime);
 	public short b64_FTGetLastIndexTime(long hDB, NotesTimeDate retTime);
+	
+	public short b32_NSFDbGetBuildVersion(int hDB, ShortByReference retVersion);
+	public short b64_NSFDbGetBuildVersion(long hDB, ShortByReference retVersion);
+	
+	public short b32_NSFDbGetMajMinVersion(int hDb, NotesBuildVersion retBuildVersion);
+	public short b64_NSFDbGetMajMinVersion(long hDb, NotesBuildVersion retBuildVersion);
 	
 }

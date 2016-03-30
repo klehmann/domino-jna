@@ -11,6 +11,8 @@ import com.mindoo.domino.jna.utils.StringUtil;
 /**
  * Utility method to easily scan a {@link NotesCollection} and read its data
  * 
+ * @deprecated should by replaced by {@link NotesCollection#getAllEntries(String, EnumSet, int, int, EnumSet, boolean[], com.mindoo.domino.jna.NotesCollection.IViewEntryFilter)}, because this implementation does not handle view index changes
+ * 
  * @author Karsten Lehmann
  */
 public abstract class NotesCollectionReader {

@@ -6,17 +6,17 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 /**
- * JNA class for the ITEM_VALUE_TABLE type
+ * JNA class for the ITEM_TABLE type
  * 
  * @author Karsten Lehmann
  */
-public class NotesItemValueTable extends Structure {
+public class NotesItemTable extends Structure {
 	/** total length of this buffer */
 	public short Length;
 	/** number of items in the table */
 	public short Items;
 	
-	public NotesItemValueTable() {
+	public NotesItemTable() {
 		super();
 	}
 	
@@ -28,21 +28,21 @@ public class NotesItemValueTable extends Structure {
 	 * @param Length total length of this buffer<br>
 	 * @param Items number of items in the table
 	 */
-	public NotesItemValueTable(short Length, short Items) {
+	public NotesItemTable(short Length, short Items) {
 		super();
 		this.Length = Length;
 		this.Items = Items;
 	}
 	
-	public NotesItemValueTable(Pointer peer) {
+	public NotesItemTable(Pointer peer) {
 		super(peer);
 	}
 	
-	public static class ByReference extends NotesItemValueTable implements Structure.ByReference {
+	public static class ByReference extends NotesItemTable implements Structure.ByReference {
 		
 	};
 	
-	public static class ByValue extends NotesItemValueTable implements Structure.ByValue {
+	public static class ByValue extends NotesItemTable implements Structure.ByValue {
 		
 	};
 	
