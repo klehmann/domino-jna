@@ -651,16 +651,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * The method reads a number of entries from the collection/view
+	 * The method reads a number of entries from the collection/view. It internally takes care
+	 * of view index changes while reading view data and restarts reading if such a change has been
+	 * detected.
 	 * 
 	 * @param startPosStr start position; use "0" or null to start before the first entry
-	 * @param skipCount number of entries to skip
-	 * @param returnNav 
-	 * @param returnCount
-	 * @param preloadEntryCount
-	 * @param returnMask
-	 * @param decodeColumns
-	 * @param filter
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param returnCount max number of entries to return
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param decodeColumns optional array to skip decoding of columns (or null)
+	 * @param filter optional filter to skip collection entries
 	 * @return
 	 */
 	public List<NotesViewEntryData> getAllEntries(String startPosStr, EnumSet<Navigate> returnNav, int returnCount, int preloadEntryCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, IViewEntryFilter filter) {
@@ -714,7 +715,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Returns all view entries matching the specified search key(s) in the collection
+	 * Returns all view entries matching the specified search key(s) in the collection.
+	 * It internally takes care of view index changes while reading view data and restarts
+	 * reading if such a change has been detected.
 	 * 
 	 * @param findFlags find flags, see {@link Find}
 	 * @param returnMask values to be returned
@@ -1292,12 +1295,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 					);
 			NotesErrorUtils.checkResult(result);
 			
+			int indexModifiedSequenceNo = getIndexModifiedSequenceNo();
+			
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
 			if (iBufLength==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, 0);
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, 0);
+				NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
 				return viewData;
 			}
 		}
@@ -1318,11 +1323,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 					);
 			NotesErrorUtils.checkResult(result);
 			
+			int indexModifiedSequenceNo = getIndexModifiedSequenceNo();
+
 			if (retBufferLength.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, 0);
+				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, 0);
+				NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
 				return viewData;
 			}
 		}
