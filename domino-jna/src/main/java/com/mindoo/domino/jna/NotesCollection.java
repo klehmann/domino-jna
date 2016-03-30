@@ -801,7 +801,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
 					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, decodeColumns);
 					isFirstLookup=false;
-					System.out.println("Lookup returned "+data.getEntries().size()+" entries");
 					
 					if (data.hasAnyNonDataConflicts()) {
 						//set viewModified to true and leave the inner loop; we will refresh the view and restart the lookup
@@ -921,13 +920,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			LongByReference retBuffer = new LongByReference();
 			IntByReference retSequence = new IntByReference();
 			
-			long t0=System.currentTimeMillis();
 			result = notesAPI.b64_NIFFindByKeyExtended2(m_hCollection64, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
-			long t1=System.currentTimeMillis();
-			System.out.println("NIFFindByKeyExtended2 took "+(t1-t0)+"ms");
-			int numMatches = retNumMatches.getValue();
-			System.out.println("NumMatches:"+numMatches);
-			System.out.println("Position:"+retIndexPos.toPosString());
 			
 			if (result == 1028 || result == 17412) {
 				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
