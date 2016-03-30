@@ -2,7 +2,6 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.internal.NotesSummaryBufferDecoder;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 
 /**
@@ -41,7 +40,7 @@ public enum ReadMask {
 	INDEXPOSITION(0x00004000),
 	/** Return the column values of the entry in the collection */
 	SUMMARYVALUES(0x00002000),
-	/** @deprecated not yet implemented by {@link NotesSummaryBufferDecoder} */
+	/** Return the summary buffer data for collection entries */
 	SUMMARY(0x00008000);
 
 	
@@ -55,10 +54,10 @@ public enum ReadMask {
 		return m_val;
 	}
 	
-	public static int toBitMask(EnumSet<ReadMask> findSet) {
+	public static int toBitMask(EnumSet<ReadMask> readMaskSet) {
 		int result = 0;
 		for (ReadMask currNav : values()) {
-			if (findSet.contains(currNav)) {
+			if (readMaskSet.contains(currNav)) {
 				result = result | currNav.getValue();
 			}
 		}

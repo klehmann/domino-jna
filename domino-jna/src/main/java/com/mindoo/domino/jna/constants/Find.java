@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.NotesCollection;
+
 /**
  * These flags are used by {@link NotesCollection#findByKey(short, Object...)} (NIFFindByKey)
  * and {@link NotesCollection#findByName(String, short)} (NIFFindByName) to control how the

@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.NotesCollection;
+
 /**
  * These flags control how
  * {@link NotesCollection#readEntries(com.weilgut.xlayer.domino.jna.structs.NotesCollectionPosition, short, int, short, int, int, boolean[])}
