@@ -714,7 +714,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
-				NotesViewData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS));
+				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS));
 				moreToDo = data.hasMoreToDo();
 				isFirstRun=false;
 				

@@ -6,7 +6,12 @@ import java.util.List;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 
-public class NotesViewData {
+/**
+ * Container class for a lookup result in a collection/view
+ * 
+ * @author Karsten Lehmann
+ */
+public class NotesViewLookupResultData {
 	private NotesCollectionStats m_stats;
 	private List<NotesViewEntryData> m_entries;
 	private int m_numEntriesReturned;
@@ -15,7 +20,7 @@ public class NotesViewData {
 	private String m_pos;
 	private int m_indexModifiedSequenceNo;
 	
-	public NotesViewData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo) {
+	public NotesViewLookupResultData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo) {
 		m_stats = stats;
 		m_entries = entries;
 		m_numEntriesSkipped = numEntriesSkipped;

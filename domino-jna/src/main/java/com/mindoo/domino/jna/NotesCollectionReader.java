@@ -84,7 +84,7 @@ public abstract class NotesCollectionReader {
 			boolean hasFirst = false;
 			boolean hasLast = false;
 
-			NotesViewData viewData;
+			NotesViewLookupResultData viewData;
 			if (StringUtil.isEmpty(m_posStr) || "0".equals(m_posStr) || "first".equals(m_posStr)) {
 				if (firstRun) {
 					hasFirst=true;
@@ -194,7 +194,7 @@ public abstract class NotesCollectionReader {
 	 * @param endsWithFirst true if the data ends with the first view entry
 	 * @return action, either {@link Action#Continue} or {@link Action#Stop}
 	 */
-	private Action viewDataRead(NotesViewData viewData, boolean startsWithLast, boolean startsWithFirst, boolean endsWithLast, boolean endsWithFirst) {
+	private Action viewDataRead(NotesViewLookupResultData viewData, boolean startsWithLast, boolean startsWithFirst, boolean endsWithLast, boolean endsWithFirst) {
 		List<NotesViewEntryData> entries = viewData.getEntries();
 		for (int i=0; i<entries.size(); i++) {
 			NotesViewEntryData currEntry = entries.get(i);

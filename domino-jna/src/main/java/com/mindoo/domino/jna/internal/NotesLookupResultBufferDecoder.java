@@ -11,7 +11,7 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesViewData;
+import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -50,7 +50,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @return collection data
 	 */
-	public static NotesViewData b32_decodeCollectionLookupResultBuffer(int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
+	public static NotesViewLookupResultData b32_decodeCollectionLookupResultBuffer(int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, boolean[] columnsToDecode, String pos,
 			int indexModifiedSequenceNo) {
 		return b64_decodeCollectionLookupResultBuffer(bufferHandle, numEntriesSkipped, numEntriesReturned, returnMask, signalFlags, columnsToDecode, pos, indexModifiedSequenceNo);
@@ -69,7 +69,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @return collection data
 	 */
-	public static NotesViewData b64_decodeCollectionLookupResultBuffer(long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
+	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, boolean[] columnsToDecode, String pos, int indexModifiedSequenceNo) {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -240,7 +240,7 @@ public class NotesLookupResultBufferDecoder {
 				}
 			}
 			
-			return new NotesViewData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo);
+			return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo);
 		}
 		finally {
 			if (NotesJNAContext.is64Bit()) {

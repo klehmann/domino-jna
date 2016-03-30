@@ -683,7 +683,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				if (firstLoopRun && !isRootPos) {
 					skipCnt=0;
 				}
-				NotesViewData data = readEntries(pos, returnNav, skipCnt, returnNav, preloadEntryCount, returnMask, decodeColumns);
+				NotesViewLookupResultData data = readEntries(pos, returnNav, skipCnt, returnNav, preloadEntryCount, returnMask, decodeColumns);
 				firstLoopRun = false;
 				
 				if (data.hasAnyNonDataConflicts()) {
@@ -731,7 +731,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		while (true) {
 			List<NotesViewEntryData> allEntries = new ArrayList<NotesViewEntryData>();
 			
-			NotesViewData data;
+			NotesViewLookupResultData data;
 			//position of first match
 			String firstMatchPosStr;
 			int remainingEntries;
@@ -893,7 +893,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param keys lookup keys
 	 * @return lookup result
 	 */
-	public NotesViewData findByKeyExtended2(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
+	public NotesViewLookupResultData findByKeyExtended2(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
 		checkHandle();
 		
 		if (keys==null || keys.length==0)
@@ -926,19 +926,19 @@ public class NotesCollection implements IRecyclableNotesObject {
 			result = notesAPI.b64_NIFFindByKeyExtended2(m_hCollection64, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
 			
 			if (result == 1028 || result == 17412) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
 			}
 			NotesErrorUtils.checkResult(result);
 
 			if (retNumMatches.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
 			}
 			else {
 				if (retBuffer.getValue()==0) {
-					return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
 				}
 				else {
-					NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
 					return viewData;
 				}
 			}
@@ -956,19 +956,19 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			result = notesAPI.b32_NIFFindByKeyExtended2(m_hCollection32, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
 			if (result == 1028 || result == 17412) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
 			}
 			NotesErrorUtils.checkResult(result);
 
 			if (retNumMatches.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
 			}
 			else {
 				if (retBuffer.getValue()==0) {
-					return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
 				}
 				else {
-					NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
 					return viewData;
 				}
 			}
@@ -1248,7 +1248,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnMask bitmask of data to read
 	 * @return read data
 	 */
-	public NotesViewData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask) {
+	public NotesViewLookupResultData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask) {
 		return readEntries(startPos, skipNavigator, skipCount, returnNavigator, returnCount, returnMask, null);
 	}
 	
@@ -1264,7 +1264,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param decodeColumns optional array with columns to be decoded
 	 * @return read data
 	 */
-	public NotesViewData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
+	public NotesViewLookupResultData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
 		checkHandle();
 
 		IntByReference retNumEntriesSkipped = new IntByReference();
@@ -1299,10 +1299,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
 			if (iBufLength==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
 				return viewData;
 			}
 		}
@@ -1326,10 +1326,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 			int indexModifiedSequenceNo = getIndexModifiedSequenceNo();
 
 			if (retBufferLength.getValue()==0) {
-				return new NotesViewData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
 				return viewData;
 			}
 		}
