@@ -99,9 +99,11 @@ public enum Find {
 	
 	public static short toBitMask(EnumSet<Find> findSet) {
 		int result = 0;
-		for (Find currFind : values()) {
-			if (findSet.contains(currFind)) {
-				result = result | currFind.getValue();
+		if (findSet!=null) {
+			for (Find currFind : values()) {
+				if (findSet.contains(currFind)) {
+					result = result | currFind.getValue();
+				}
 			}
 		}
 		return (short) (result & 0xffff);

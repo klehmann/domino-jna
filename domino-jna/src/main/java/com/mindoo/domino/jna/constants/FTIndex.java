@@ -48,9 +48,11 @@ public enum FTIndex {
 	
 	public static short toBitMask(EnumSet<FTIndex> optionSet) {
 		int result = 0;
-		for (FTIndex currFind : values()) {
-			if (optionSet.contains(currFind)) {
-				result = result | currFind.getValue();
+		if (optionSet!=null) {
+			for (FTIndex currFind : values()) {
+				if (optionSet.contains(currFind)) {
+					result = result | currFind.getValue();
+				}
 			}
 		}
 		return (short) (result & 0xffff);

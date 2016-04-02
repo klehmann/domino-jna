@@ -8,6 +8,8 @@
 	<properties>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<maven.compiler.target>1.6</maven.compiler.target>
+		<dominodir>/Applications/IBM Notes.app/Contents/MacOS</dominodir>
+		<notes-ini>/Users/klehmann/Library/Preferences/Notes Preferences</notes-ini>
 	</properties>
 
 	<dependencies>
@@ -28,6 +30,17 @@
 			<scope>system</scope>
 			<systemPath>${basedir}/../domino-api/lib/Notes.jar</systemPath>
 		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-collections4</artifactId>
+			<version>4.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -46,6 +59,24 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<!-- Note: Running the tests via Maven build does not work yet (tested 
+					on Mac Notes Client 64 bit; we still need to figure out why -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Xmx512m -Djava.library.path="${dominodir}"
+						-Djna.library.path="${dominodir}"</argLine>
+
+					<environmentVariables>
+						<PATH>${dominodir}${path.separator}${env.PATH}</PATH>
+						<LD_LIBRARY_PATH>${dominodir}${path.separator}${env.LD_LIBRARY_PATH}</LD_LIBRARY_PATH>
+						<DYLD_LIBRARY_PATH>${dominodir}${path.separator}${env.DYLD_LIBRARY_PATH}</DYLD_LIBRARY_PATH>
+						<Notes_ExecDirectory>${dominodir}</Notes_ExecDirectory>
+						<NotesINI>${notes-ini}</NotesINI>
+					</environmentVariables>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

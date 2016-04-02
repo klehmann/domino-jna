@@ -1,0 +1,93 @@
+package com.mindoo.domino.jna.test;
+
+import java.util.concurrent.Callable;
+
+import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.utils.NotesInitUtils;
+
+import lotus.domino.NotesException;
+import lotus.domino.NotesFactory;
+import lotus.domino.NotesThread;
+import lotus.domino.Session;
+
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
+
+public class BaseJNATestClass {
+	private ThreadLocal<Session> m_threadSession = new ThreadLocal<Session>();
+	private static boolean m_notesInitExtendedCalled = false;
+	
+	@BeforeClass
+	public static void initNotes() {
+		String notesProgramDir = System.getenv("Notes_ExecDirectory");
+		String notesIniPath = System.getenv("NotesINI");
+		
+		if (notesProgramDir!=null && notesProgramDir.length()>0 && notesIniPath!=null && notesIniPath.length()>0) {
+			NotesInitUtils.notesInitExtended(new String[] {
+					notesProgramDir,
+					"="+notesIniPath
+			});
+			m_notesInitExtendedCalled = true;
+		}
+		NotesThread.sinitThread();
+	}
+	
+	@AfterClass
+	public static void termNotes() {
+		if (m_notesInitExtendedCalled) {
+			NotesInitUtils.notesTerm();
+		}
+		NotesThread.stermThread();
+	}
+	
+	public NotesDatabase getFakeNamesDb() throws NotesException {
+		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf");
+		return db;
+	}
+
+	public NotesDatabase getFakeNamesViewsDb() throws NotesException {
+		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames-views.nsf");
+		return db;
+	}
+
+	public Session getSession() {
+		return m_threadSession.get();
+	}
+	
+	public <T> T runWithSession(final IDominoCallable<T> callable) {
+		final Session[] session = new Session[1];
+		try {
+			session[0] = NotesFactory.createSession();
+			m_threadSession.set(session[0]);
+			
+			T result = NotesGC.runWithAutoGC(new Callable<T>() {
+
+				@Override
+				public T call() throws Exception {
+					T result = callable.call(session[0]);
+					return result;
+				}
+			});
+			return result;
+		} catch (Throwable e) {
+			throw new RuntimeException(e);
+		}
+		finally {
+			if (session[0]!=null) {
+				try {
+					session[0].recycle();
+				} catch (NotesException e) {
+					e.printStackTrace();
+				}
+			}
+			m_threadSession.set(null);
+		}
+	}
+	
+	public static interface IDominoCallable<T> {
+		
+		public T call(Session session) throws Exception;
+		
+	}
+}

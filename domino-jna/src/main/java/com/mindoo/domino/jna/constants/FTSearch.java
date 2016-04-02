@@ -54,11 +54,13 @@ public enum FTSearch {
 		return m_val;
 	}
 	
-	public static int toBitMask(EnumSet<FTSearch> findSet) {
+	public static int toBitMask(EnumSet<FTSearch> ftSearchSet) {
 		int result = 0;
-		for (FTSearch currFind : values()) {
-			if (findSet.contains(currFind)) {
-				result = result | currFind.getValue();
+		if (ftSearchSet!=null) {
+			for (FTSearch currFind : values()) {
+				if (ftSearchSet.contains(currFind)) {
+					result = result | currFind.getValue();
+				}
 			}
 		}
 		return result;

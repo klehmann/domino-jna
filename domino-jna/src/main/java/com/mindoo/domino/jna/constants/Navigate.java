@@ -163,11 +163,13 @@ public enum Navigate {
 		return m_val;
 	}
 	
-	public static short toBitMask(EnumSet<Navigate> findSet) {
+	public static short toBitMask(EnumSet<Navigate> navigateSet) {
 		int result = 0;
-		for (Navigate currNav : values()) {
-			if (findSet.contains(currNav)) {
-				result = result | currNav.getValue();
+		if (navigateSet!=null) {
+			for (Navigate currNav : values()) {
+				if (navigateSet.contains(currNav)) {
+					result = result | currNav.getValue();
+				}
 			}
 		}
 		return (short) (result & 0xffff);

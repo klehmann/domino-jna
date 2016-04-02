@@ -14,10 +14,24 @@ import com.sun.jna.Structure;
 public class NotesCollectionPosition extends Structure {
 	/** # levels -1 in tumbler */
 	public short Level;
-	/** MINIMUM level that this position */
+
+	/**
+	 * MINIMUM level that this position is allowed to be nagivated to. This is
+	 * useful to navigate a subtree using all navigator codes. This field is
+	 * IGNORED unless the NAVIGATE_MINLEVEL flag is enabled (for backward
+	 * compatibility)
+	 */
 	public byte MinLevel;
-	/** MAXIMUM level that this position */
+
+	/**
+	 * MAXIMUM level that this position is allowed to be nagivated to. This is
+	 * useful to navigate a subtree using all navigator codes. This field is
+	 * IGNORED unless the NAVIGATE_MAXLEVEL flag is enabled (for backward
+	 * compatibility)
+	 */
 	public byte MaxLevel;
+	
+	
 	/**
 	 * Current tumbler (1.2.3, etc)<br>
 	 * C type : DWORD[32]
@@ -58,6 +72,10 @@ public class NotesCollectionPosition extends Structure {
 			}
 			sb.append(this.Tumbler[i]);
 		}
+		
+		if (MinLevel!=0 || MaxLevel!=0) {
+			sb.append("|").append(MinLevel).append("-").append(MaxLevel);
+		}
 		return sb.toString();
 	}
 	
@@ -66,6 +84,19 @@ public class NotesCollectionPosition extends Structure {
 		int[] tumbler;
 		byte minLevel = 0;
 		byte maxLevel = 0;
+		
+		int iPos = posStr.indexOf("|");
+		if (iPos!=-1) {
+			//optional addition to the classic position string: |minlevel-maxlevel
+			String minMaxStr = posStr.substring(iPos+1);
+			posStr = posStr.substring(0, iPos);
+			
+			iPos = minMaxStr.indexOf("-");
+			if (iPos!=-1) {
+				minLevel = Byte.parseByte(minMaxStr.substring(0, iPos));
+				maxLevel = Byte.parseByte(minMaxStr.substring(iPos+1));
+			}
+		}
 		
 		if (posStr==null || posStr.length()==0 || "0".equals(posStr)) {
 			level = 0;
@@ -92,31 +123,7 @@ public class NotesCollectionPosition extends Structure {
 			pos.Tumbler[i] = tumbler[i];
 		}
 		return pos;
-//		return new NotesCollectionPosition(level, (byte) 0, (byte) 0, tumbler);
 	}
-
-//	public static NotesCollectionPosition.ByReference toPositionByRef(String posStr) {
-//		NotesCollectionPosition.ByReference posByRef = new NotesCollectionPosition.ByReference();
-//		
-//		if (posStr==null || posStr.length()==0 || "0".equals(posStr)) {
-//			posByRef.Level = 0;
-//			posByRef.Tumbler = new int[32];
-//			posByRef.Tumbler[0] = 0;
-//		}
-//		else {
-//			String[] parts = posStr.split("\\.");
-//			short level = (short) (parts.length-1);
-//			int[] tumbler = new int[32];
-//			for (int i=0; i<parts.length; i++) {
-//				tumbler[i] = Integer.parseInt(parts[i]);
-//			}
-//			posByRef.Level = level;
-//			posByRef.MinLevel = 0;
-//			posByRef.MaxLevel = 0;
-//			posByRef.Tumbler = tumbler;
-//		}
-//		return posByRef;
-//	}
 
 	public static class ByReference extends NotesCollectionPosition implements Structure.ByReference {
 		

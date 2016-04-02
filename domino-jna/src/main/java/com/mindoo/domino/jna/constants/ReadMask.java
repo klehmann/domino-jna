@@ -56,9 +56,11 @@ public enum ReadMask {
 	
 	public static int toBitMask(EnumSet<ReadMask> readMaskSet) {
 		int result = 0;
-		for (ReadMask currNav : values()) {
-			if (readMaskSet.contains(currNav)) {
-				result = result | currNav.getValue();
+		if (readMaskSet!=null) {
+			for (ReadMask currNav : values()) {
+				if (readMaskSet.contains(currNav)) {
+					result = result | currNav.getValue();
+				}
 			}
 		}
 		return result;

@@ -9,6 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
+
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
@@ -473,6 +475,8 @@ public class NotesLookupResultBufferDecoder {
 						
 						calendarValues.add(new Calendar[] {lowerCalDate, upperCalDate});
 					}
+					
+					decodedItemValues[j] = calendarValues;
 				}
 			}
 		}
@@ -580,7 +584,7 @@ public class NotesLookupResultBufferDecoder {
 		 * @return data as map
 		 */
 		public Map<String,Object> asMap() {
-			Map<String,Object> data = new LinkedHashMap<String, Object>();
+			Map<String,Object> data = new CaseInsensitiveMap<String, Object>();
 			int itemCount = getItemsCount();
 			for (int i=0; i<itemCount; i++) {
 				data.put(m_itemNames[i], m_itemValues[i]);

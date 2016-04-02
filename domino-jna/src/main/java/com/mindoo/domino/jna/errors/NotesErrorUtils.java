@@ -49,6 +49,9 @@ public class NotesErrorUtils {
 		else {
 			outStrLength = notesAPI.b32_OSLoadString(0, err, retBuffer, (short) 255);
 		}
+		if (outStrLength==0) {
+			return "";
+		}
 		Memory newRetBuffer = new Memory(outStrLength);
 		for (int i=0; i<outStrLength; i++) {
 			newRetBuffer.setByte(i, retBuffer.getByte(i));

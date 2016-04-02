@@ -61,11 +61,17 @@ public class NotesJNAContext {
 								}
 							});
 							
-							if (osName.toLowerCase().indexOf("win") >= 0) {
-								m_api = (NotesCAPI) Native.loadLibrary("nnotes", Win32NotesCAPI.class, options);
+							try {
+								if (osName.toLowerCase().indexOf("win") >= 0) {
+									m_api = (NotesCAPI) Native.loadLibrary("nnotes", Win32NotesCAPI.class, options);
+								}
+								else {
+									m_api = (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+								}
 							}
-							else {
-								m_api = (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+							catch (UnsatisfiedLinkError e) {
+								System.out.println("Could not load notes native library.\nEnvironment: "+System.getenv());
+								throw e;
 							}
 							break;
 						}

@@ -13,6 +13,7 @@ import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -370,10 +371,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return collection
 	 */
 	public NotesCollection openCollectionByName(String viewName) {
+		return openCollectionByName(viewName, (EnumSet<OpenCollection>) null);
+	}
+	
+	/**
+	 * Locates a collection by its name and opens it
+	 * 
+	 * @param viewName name of the view/collection
+	 * @param openFlagSet open flags, see {@link OpenCollection}
+	 * @return collection
+	 */
+	public NotesCollection openCollectionByName(String viewName, EnumSet<OpenCollection> openFlagSet) {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
-		return openCollection(viewName, viewNoteId);
+		return openCollection(viewName, viewNoteId, openFlagSet);
 	}
 
 	/**
@@ -387,10 +399,25 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return collection
 	 */
 	public NotesCollection openCollectionByNameWithExternalData(NotesDatabase dbData, String viewName) {
+		return openCollectionByNameWithExternalData(dbData, viewName, (EnumSet<OpenCollection>) null);
+	}
+	
+	/**
+	 * Locates a collection by its name and opens it. This method lets you store
+	 * the view in a separate database than the one containing the actual data,
+	 * which can be useful to reduce database size (by externalizing view indices) and
+	 * to let one Domino server index data of another one.
+	 * 
+	 * @param dataDb database containing the data to populate the collection
+	 * @param viewName name of the view/collection
+	 * @param openFlagSet open flags, see {@link OpenCollection}
+	 * @return collection
+	 */
+	public NotesCollection openCollectionByNameWithExternalData(NotesDatabase dbData, String viewName, EnumSet<OpenCollection> openFlagSet) {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
-		return openCollectionWithExternalData(dbData, viewName, viewNoteId);
+		return openCollectionWithExternalData(dbData, viewName, viewNoteId, openFlagSet);
 	}
 
 	/**
@@ -398,10 +425,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param name view/collection name
 	 * @param viewNoteId view/collection note id
+	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	NotesCollection openCollection(String name, int viewNoteId)  {
-		return openCollectionWithExternalData(this, name, viewNoteId);
+	NotesCollection openCollection(String name, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
+		return openCollectionWithExternalData(this, name, viewNoteId, openFlagSet);
 	}
 
 	/**
@@ -413,16 +441,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param dataDb database containing the data to populate the collection
 	 * @param name view/collection name
 	 * @param viewNoteId view/collection note id
+	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	public NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, String name, int viewNoteId)  {
+	NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, String name, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
 		checkHandle();
 		
 		Memory viewUNID = new Memory(16);
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		NotesIDTable unreadTable = new NotesIDTable();
 		
-		short openFlags = 0; //NotesCAPI.OPEN_NOUPDATE;
+		short openFlags = OpenCollection.toBitMask(openFlagSet); //NotesCAPI.OPEN_NOUPDATE;
 
 		short result;
 		NotesCollection newCol;
@@ -708,7 +737,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public void signAll(int noteClasses) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesCollection col = openCollection("DESIGN", NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN);
+		NotesCollection col = openCollection("DESIGN", NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN, null);
 		try {
 			NotesCollectionPosition pos = NotesCollectionPosition.toPosition("0");
 			boolean moreToDo = true;

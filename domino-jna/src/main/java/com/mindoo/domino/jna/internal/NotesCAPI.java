@@ -17,6 +17,7 @@ import com.mindoo.domino.jna.structs.NotesTimeDatePair;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.StringArray;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
@@ -186,41 +187,6 @@ public interface NotesCAPI extends Library {
 	public short b32_NIFLocateNote (int hCollection, NotesCollectionPosition IndexPos, int NoteID);
 	public short b64_NIFLocateNote (long hCollection, NotesCollectionPosition IndexPos, int NoteID);
 
-	
-	/*	NIFOpenCollection "open" flags */
-
-	public static short OPEN_REBUILD_INDEX = 0x0001;	/* Throw away existing index and */
-											/* rebuild it from scratch */
-	public static short OPEN_NOUPDATE = 0x0002;	/* Do not update index or unread */
-											/* list as part of open (usually */
-											/* set by server when it does it */
-											/* incrementally instead). */
-	public static short OPEN_DO_NOT_CREATE = 0x0004;	/* If collection object has not yet */
-											/* been created, do NOT create it */
-											/* automatically, but instead return */
-											/* a special internal error called */
-											/* ERR_COLLECTION_NOT_CREATED */
-	public static short OPEN_SHARED_VIEW_NOTE = 0x0010;	/* Tells NIF to "own" the view note */
-											/* (which gets read while opening the */
-											/* collection) in memory, rather than */
-											/* the caller "owning" the view note */
-											/* by default.  If this flag is specified */
-											/* on subsequent opens, and NIF currently */
-											/* owns a copy of the view note, it */
-											/* will just pass back the view note */
-											/* handle  rather than re-reading it */
-											/* from disk/network.  If specified, */
-											/* the the caller does NOT have to */
-											/* close the handle.  If not specified, */
-											/* the caller gets a separate copy, */
-											/* and has to NSFNoteClose the */
-											/* handle when its done with it. */
-	public static short OPEN_REOPEN_COLLECTION = 0x0020;	/* Force re-open of collection and */
-											/* thus, re-read of view note. */
-											/* Also implicitly prevents sharing */
-											/* of collection handle, and thus */
-											/* prevents any sharing of associated */
-											/* structures such as unread lists, etc */
 
 	/**
 	 * If the following is ORed in with a note class, the resultant note ID
@@ -573,6 +539,9 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_IDTableCopy (int hTable, IntByReference rethTable);
 	public short b64_IDTableCopy (long hTable, LongByReference rethTable);
 	
+	public short b32_IDTableIntersect(int hSrc1Table, int hSrc2Table, IntByReference rethDstTable);
+	public short b64_IDTableIntersect(long hSrc1Table, long hSrc2Table, LongByReference rethDstTable);
+	
 	public short b32_IDDeleteAll (int hTable);
 	public short b64_IDDeleteAll (long hTable);
 	
@@ -793,5 +762,8 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public short b32_NSFDbGetMajMinVersion(int hDb, NotesBuildVersion retBuildVersion);
 	public short b64_NSFDbGetMajMinVersion(long hDb, NotesBuildVersion retBuildVersion);
+	
+	public short NotesInitExtended(int  argc, StringArray argvPtr);
+	public void NotesTerm();
 	
 }

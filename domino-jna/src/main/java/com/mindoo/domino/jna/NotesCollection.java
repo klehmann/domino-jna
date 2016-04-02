@@ -646,8 +646,34 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return true;
 	}
 	
+	/**
+	 * Filter interface to filter collection entries
+	 * 
+	 * @author Karsten Lehmann
+	 */
 	public static interface IViewEntryFilter {
+		
+		/**
+		 * Implement this method to decide whether an entry is accepted by the filter
+		 * 
+		 * @param entryData entry data
+		 * @return true if accepted
+		 */
 		public boolean isAccepted(NotesViewEntryData entryData);
+	}
+	
+	/**
+	 * Convenience method that collects all note ids in the view, in the sort order of the current collation
+	 * 
+	 * @return sorted set of note ids
+	 */
+	public LinkedHashSet<Integer> getAllIds(boolean includeCategories) {
+		List<NotesViewEntryData> entries = getAllEntries("0", 1, includeCategories ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
+		LinkedHashSet<Integer> result = new LinkedHashSet<Integer>();
+		for (NotesViewEntryData currEntry : entries) {
+			result.add(currEntry.getNoteId());
+		}
+		return result;
 	}
 	
 	/**
@@ -656,17 +682,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * detected.
 	 * 
 	 * @param startPosStr start position; use "0" or null to start before the first entry
+	 * @param skipCount number entries to skip before reading
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param returnCount max number of entries to return
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
 	 * @param decodeColumns optional array to skip decoding of columns (or null)
 	 * @param filter optional filter to skip collection entries
-	 * @return
+	 * @return lookup result
 	 */
-	public List<NotesViewEntryData> getAllEntries(String startPosStr, EnumSet<Navigate> returnNav, int returnCount, int preloadEntryCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, IViewEntryFilter filter) {
-		boolean isRootPos = startPosStr==null || "0".equals(startPosStr);
-		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(isRootPos ? "0" : startPosStr);
+	public List<NotesViewEntryData> getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int returnCount, int preloadEntryCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, IViewEntryFilter filter) {
+		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(startPosStr==null ? "0" : startPosStr);
 		
 		while (true) {
 			List<NotesViewEntryData> retEntries = new ArrayList<NotesViewEntryData>();
@@ -679,11 +705,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			boolean firstLoopRun = true;
 			
 			while (hasMoreData) {
-				int skipCnt = 1;
-				if (firstLoopRun && !isRootPos) {
-					skipCnt=0;
-				}
-				NotesViewLookupResultData data = readEntries(pos, returnNav, skipCnt, returnNav, preloadEntryCount, returnMask, decodeColumns);
+				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, decodeColumns);
 				firstLoopRun = false;
 				
 				if (data.hasAnyNonDataConflicts()) {
