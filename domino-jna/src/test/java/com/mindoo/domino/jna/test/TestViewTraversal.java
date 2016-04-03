@@ -1,11 +1,14 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.swing.ViewportLayout;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +34,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				NotesCollection col = db.openCollectionByName("People");
 				long t0=System.currentTimeMillis();
 				List<NotesViewEntryData> entries = col.getAllEntries("0", 1,
-						EnumSet.of(Navigate.NEXT_PEER), Integer.MAX_VALUE,
+						EnumSet.of(Navigate.NEXT_PEER),
 						Integer.MAX_VALUE,
 						EnumSet.of(
 								ReadMask.NOTEID,
@@ -40,7 +43,24 @@ public class TestViewTraversal extends BaseJNATestClass {
 								ReadMask.SUMMARYVALUES,
 								ReadMask.NOTECLASS,
 								ReadMask.NOTEUNID
-								), null, null);
+								), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+									@Override
+									public List<NotesViewEntryData> startingLookup() {
+										return new ArrayList<NotesViewEntryData>();
+									}
+
+									@Override
+									public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+											List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+										result.add(entryData);
+										return Action.Continue;
+									}
+
+									@Override
+									public void lookupDone(List<NotesViewEntryData> result) {
+									}
+				});
 				long t1=System.currentTimeMillis();
 				System.out.println("Reading data of "+entries.size()+" top level entries took "+(t1-t0)+"ms");
 
@@ -86,8 +106,25 @@ public class TestViewTraversal extends BaseJNATestClass {
 				
 				List<NotesViewEntryData> entriesFromDbViewLocally = colFromDbViewWithLocalData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_PEER),
-						Integer.MAX_VALUE, Integer.MAX_VALUE,
-						returnValues, null, null);
+						Integer.MAX_VALUE,
+						returnValues, new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+				});
 				
 				Assert.assertTrue("View opened locally in dbViews is empty", entriesFromDbViewLocally.size()==0);
 				colFromDbViewWithLocalData.recycle();
@@ -108,15 +145,50 @@ public class TestViewTraversal extends BaseJNATestClass {
 				long t0=System.currentTimeMillis();
 				List<NotesViewEntryData> entriesFromDbView = colFromDbView.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_PEER),
-						Integer.MAX_VALUE, Integer.MAX_VALUE,
-						returnValues, null, null);
+						Integer.MAX_VALUE,
+						returnValues, new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+				});
 				long t1=System.currentTimeMillis();
 				System.out.println("Reading summary data and note ids of "+entriesFromDbView.size()+" top level entries took "+(t1-t0)+"ms");
 
 				List<NotesViewEntryData> entriesFromDbData = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_PEER),
-						Integer.MAX_VALUE, Integer.MAX_VALUE,
-						returnValues, null, null);
+						Integer.MAX_VALUE,
+						returnValues, new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 
 				Assert.assertEquals("Same number of view entries in view db and data db collection",
 						entriesFromDbData.size(), entriesFromDbView.size());
@@ -164,7 +236,26 @@ public class TestViewTraversal extends BaseJNATestClass {
 				colFromDbData.update();
 
 				//read all note ids from the collection
-				List<NotesViewEntryData> allEntries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
+				List<NotesViewEntryData> allEntries = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+				});
 				
 				//pick random note ids
 				Set<Integer> pickedNoteIds = new HashSet<Integer>();
@@ -184,7 +275,27 @@ public class TestViewTraversal extends BaseJNATestClass {
 				}
 
 				//next, traverse selected entries
-				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
+				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 				for (NotesViewEntryData currEntry : selectedEntries) {
 					Assert.assertTrue("Entry read from view is contained in selected list", pickedNoteIds.contains(currEntry.getNoteId()));
 				}
@@ -216,7 +327,27 @@ public class TestViewTraversal extends BaseJNATestClass {
 				colFromDbData.update();
 
 				//read all note ids from the collection
-				List<NotesViewEntryData> allEntries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
+				List<NotesViewEntryData> allEntries = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 				
 				//pick random note ids
 				Set<Integer> pickedNoteIds = new HashSet<Integer>();
@@ -237,7 +368,27 @@ public class TestViewTraversal extends BaseJNATestClass {
 				selectedList.setInverted(true);
 				
 				//next, traverse selected entries
-				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
+				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 				for (NotesViewEntryData currEntry : selectedEntries) {
 					Assert.assertTrue("Entry read from view is contained in selected list", !pickedNoteIds.contains(currEntry.getNoteId()));
 				}
@@ -262,8 +413,26 @@ public class TestViewTraversal extends BaseJNATestClass {
 				//read all descendants of position 1 from the collection
 				List<NotesViewEntryData> allDescendantsEntries = colFromDbData.getAllEntries("1", 1,
 						EnumSet.of(Navigate.ALL_DESCENDANTS),
-						Integer.MAX_VALUE, Integer.MAX_VALUE,
-						EnumSet.of(ReadMask.INDEXPOSITION, ReadMask.NOTEID), null, null);
+						Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.INDEXPOSITION, ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 
 				//make sure we have higher levels than 1 in the result
 				maxLevelFound = 0;
@@ -280,8 +449,26 @@ public class TestViewTraversal extends BaseJNATestClass {
 				//read all descendants of position 1 with minlevel=0 and maxlevel=1 from the collection
 				List<NotesViewEntryData> allDescendantsEntriesMaxLevel1 = colFromDbData.getAllEntries("1|0-1", 1,
 						EnumSet.of(Navigate.ALL_DESCENDANTS, Navigate.MINLEVEL, Navigate.MAXLEVEL),
-						Integer.MAX_VALUE, Integer.MAX_VALUE,
-						EnumSet.of(ReadMask.INDEXPOSITION, ReadMask.NOTEID), null, null);
+						Integer.MAX_VALUE,
+						EnumSet.of(ReadMask.INDEXPOSITION, ReadMask.NOTEID), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 
 				maxLevelFound = 0;
 				for (NotesViewEntryData currEntry : allDescendantsEntriesMaxLevel1) {
@@ -310,8 +497,26 @@ public class TestViewTraversal extends BaseJNATestClass {
 
 				List<NotesViewEntryData> entries = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_NONCATEGORY),
-						1000, 1000,
-						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), null, null);
+						1000, 
+						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new NotesCollection.ViewLookupCallback<List<NotesViewEntryData>>() {
+
+							@Override
+							public List<NotesViewEntryData> startingLookup() {
+								return new ArrayList<NotesViewEntryData>();
+							}
+
+							@Override
+							public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+									List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+								result.add(entryData);
+								return Action.Continue;
+							}
+
+							@Override
+							public void lookupDone(List<NotesViewEntryData> result) {
+							}
+					
+				});
 				
 				for (NotesViewEntryData currEntry : entries) {
 					Map<String,Object> currData = currEntry.getSummaryData();

@@ -12,6 +12,7 @@ import java.util.Vector;
 
 import org.joda.time.Interval;
 
+import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
@@ -601,12 +602,28 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param keys lookup keys
 	 * @return note ids
 	 */
-	public LinkedHashSet<Integer> getIdsByKey(EnumSet<Find> findFlags, Object... keys) {
-		List<NotesViewEntryData> entries = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), null, keys);
-		LinkedHashSet<Integer> noteIds = new LinkedHashSet<Integer>();
-		for (NotesViewEntryData currEntry : entries) {
-			noteIds.add(currEntry.getNoteId());
-		}
+	public LinkedHashSet<Integer> getAllIdsByKey(EnumSet<Find> findFlags, Object... keys) {
+		LinkedHashSet<Integer> noteIds = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), null,
+				new ViewLookupCallback<LinkedHashSet<Integer>>() {
+
+			@Override
+			public LinkedHashSet<Integer> startingLookup() {
+				return new LinkedHashSet<Integer>();
+			}
+
+			@Override
+			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+					LinkedHashSet<Integer> result, NotesViewEntryData entryData) {
+				
+				result.add(entryData.getNoteId());
+				return Action.Continue;
+			}
+			
+			@Override
+			public void lookupDone(LinkedHashSet<Integer> result) {
+			}
+
+		}, keys);
 		return noteIds;
 	}
 	
@@ -647,19 +664,50 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Filter interface to filter collection entries
+	 * Callback base class used to process collection lookup results
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public static interface IViewEntryFilter {
+	public static abstract class ViewLookupCallback<T> {
+		public enum Action {Continue, Stop};
 		
 		/**
-		 * Implement this method to decide whether an entry is accepted by the filter
+		 * The method is called when the view lookup is (re-)started. If the view
+		 * index is modified while reading, the view read operation restarts from
+		 * the beginning.
 		 * 
-		 * @param entryData entry data
-		 * @return true if accepted
+		 * @return result object that is passed to {@link #entryRead(Object, NotesViewEntryData)}
 		 */
-		public boolean isAccepted(NotesViewEntryData entryData);
+		public abstract T startingLookup();
+		
+		/**
+		 * Override this method to specify specific column values to decode from the
+		 * collection (for read mode {@link ReadMask#SUMMARYVALUES})
+		 * 
+		 * @return boolean array or null to decode all column values
+		 */
+		public boolean[] getColumnsToDecode() {
+			return null;
+		}
+		
+		/**
+		 * Implement this method to process a read entry directly or add it to a result object.<br>
+		 * Please note: If you process the entry directly, keep in mind that the lookup
+		 * may restart when a view index change is detected.
+		 * 
+		 * @param result context
+		 * @param entryData entry data
+		 * @return action (whether the lookup should continue)
+		 */
+		public abstract Action entryRead(T result, NotesViewEntryData entryData);
+		
+		/**
+		 * Method is called when the callback is done
+		 * 
+		 * @param result result object
+		 */
+		public abstract void lookupDone(T result);
+		
 	}
 	
 	/**
@@ -668,12 +716,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return sorted set of note ids
 	 */
 	public LinkedHashSet<Integer> getAllIds(boolean includeCategories) {
-		List<NotesViewEntryData> entries = getAllEntries("0", 1, includeCategories ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), null, null);
-		LinkedHashSet<Integer> result = new LinkedHashSet<Integer>();
-		for (NotesViewEntryData currEntry : entries) {
-			result.add(currEntry.getNoteId());
-		}
-		return result;
+		LinkedHashSet<Integer> ids = getAllEntries("0", 1, includeCategories ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
+
+			@Override
+			public LinkedHashSet<Integer> startingLookup() {
+				return new LinkedHashSet<Integer>();
+			}
+
+			@Override
+			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+					LinkedHashSet<Integer> ctx, NotesViewEntryData entryData) {
+				
+				ctx.add(entryData.getNoteId());
+				return Action.Continue;
+			}
+			
+			@Override
+			public void lookupDone(LinkedHashSet<Integer> result) {
+			}
+			
+		});
+		return ids;
 	}
 	
 	/**
@@ -684,20 +747,26 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param startPosStr start position; use "0" or null to start before the first entry
 	 * @param skipCount number entries to skip before reading
 	 * @param returnNav navigator to specify how to move in the collection
-	 * @param returnCount max number of entries to return
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param decodeColumns optional array to skip decoding of columns (or null)
-	 * @param filter optional filter to skip collection entries
+	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
 	 */
-	public List<NotesViewEntryData> getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int returnCount, int preloadEntryCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, IViewEntryFilter filter) {
+	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
+			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
 		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(startPosStr==null ? "0" : startPosStr);
 		
 		while (true) {
-			List<NotesViewEntryData> retEntries = new ArrayList<NotesViewEntryData>();
-			if (returnCount==0) {
-				return retEntries;
+			T result = callback.startingLookup();
+			
+			boolean[] columnsToDecode = null;
+			if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
+				columnsToDecode = callback.getColumnsToDecode();
+			}
+
+			if (preloadEntryCount==0) {
+				callback.lookupDone(result);
+				return result;
 			}
 			
 			boolean hasMoreData = true;
@@ -705,7 +774,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			boolean firstLoopRun = true;
 			
 			while (hasMoreData) {
-				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, decodeColumns);
+				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, columnsToDecode);
 				firstLoopRun = false;
 				
 				if (data.hasAnyNonDataConflicts()) {
@@ -716,11 +785,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				List<NotesViewEntryData> entries = data.getEntries();
 				for (NotesViewEntryData currEntry : entries) {
-					if (filter==null || filter.isAccepted(currEntry)) {
-						retEntries.add(currEntry);
-						if (retEntries.size() == returnCount) {
-							return retEntries;
-						}
+					Action action = callback.entryRead(result, currEntry);
+					if (action==Action.Stop) {
+						callback.lookupDone(result);
+						return result;
 					}
 				}
 				hasMoreData = data.hasMoreToDo();
@@ -732,7 +800,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				continue;
 			}
 			
-			return retEntries;
+			return result;
 		}
 	}
 	
@@ -744,20 +812,23 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param findFlags find flags, see {@link Find}
 	 * @param returnMask values to be returned
 	 * @param decodeColumns optional array of columns values to be decoded (or null)
+	 * @param callback lookup callback
 	 * @param keys lookup keys
-	 * @return view entries matching the lookup key
+	 * @return lookup result
 	 */
-	public List<NotesViewEntryData> getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
+	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, ViewLookupCallback<T> callback, Object... keys) {
 		//we are leaving the loop when there is no more data to be read;
 		//while(true) is here to rerun the query in case of view index changes while reading
 		while (true) {
-			List<NotesViewEntryData> allEntries = new ArrayList<NotesViewEntryData>();
+			T result = callback.startingLookup();
 			
 			NotesViewLookupResultData data;
 			//position of first match
 			String firstMatchPosStr;
 			int remainingEntries;
 			
+			int entriesToSkipOnFirstLoopRun = 0;
+
 			if (canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
 				//do the first lookup and read operation atomically; uses a large buffer for local calls
 				EnumSet<Find> findFlagsWithExtraBits = findFlags.clone();
@@ -778,11 +849,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 					//copy the data we have read
 					List<NotesViewEntryData> entries = data.getEntries();
 					for (NotesViewEntryData currEntryData : entries) {
-						allEntries.add(currEntryData);
+						Action action = callback.entryRead(result, currEntryData);
+						if (action==Action.Stop) {
+							callback.lookupDone(result);
+							return result;
+						}
 					}
+					entriesToSkipOnFirstLoopRun = entries.size();
+					
 					if (!data.hasMoreToDo()) {
 						//we are done
-						return allEntries;
+						callback.lookupDone(result);
+						return result;
 					}
 
 					//compute what we have left
@@ -798,7 +876,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					FindResult findResult = findByKey(findFlags, keys);
 					remainingEntries = findResult.getEntriesFound();
 					if (remainingEntries==0) {
-						return allEntries;
+						return result;
 					}
 					firstMatchPosStr = findResult.getPosition();
 				}
@@ -808,7 +886,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				FindResult findResult = findByKey(findFlags, keys);
 				remainingEntries = findResult.getEntriesFound();
 				if (remainingEntries==0) {
-					return allEntries;
+					return result;
 				}
 				firstMatchPosStr = findResult.getPosition();
 			}
@@ -816,7 +894,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 			if (firstMatchPosStr!=null) {
 				//position of the first match; we skip (entries.size()) to read the remaining entries
 				boolean isFirstLookup = true;
-				int entriesToSkipOnFirstLoopRun = allEntries.size();
 				
 				NotesCollectionPosition lookupPos = NotesCollectionPosition.toPosition(firstMatchPosStr);
 				
@@ -840,7 +917,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 					}
 					
 					for (NotesViewEntryData currEntryData : entries) {
-						allEntries.add(currEntryData);
+						Action action = callback.entryRead(result, currEntryData);
+						if (action==Action.Stop) {
+							callback.lookupDone(result);
+							return result;
+						}
 					}
 					remainingEntries = remainingEntries - entries.size();
 				}
@@ -852,7 +933,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 			}
 			
-			return allEntries;
+			callback.lookupDone(result);
+			return result;
 		}
 	}
 	
