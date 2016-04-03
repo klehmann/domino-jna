@@ -702,6 +702,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		public abstract Action entryRead(T result, NotesViewEntryData entryData);
 		
 		/**
+		 * Override this empty method to get notified about view index changes
+		 */
+		public void viewIndexChangeDetected() {
+		}
+		
+		/**
 		 * Method is called when the callback is done
 		 * 
 		 * @param result result object
@@ -796,6 +802,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			if (viewModified) {
 				//view index was changed while reading; restart scan
+				callback.viewIndexChangeDetected();
 				update();
 				continue;
 			}
@@ -842,6 +849,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					//check for view index or design change
 					if (data.hasAnyNonDataConflicts()) {
 						//refresh the view and restart the lookup
+						callback.viewIndexChangeDetected();
 						update();
 						continue;
 					}
@@ -928,6 +936,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				if (viewModified) {
 					//refresh view and redo the whole lookup
+					callback.viewIndexChangeDetected();
 					update();
 					continue;
 				}
