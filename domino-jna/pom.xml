@@ -27,8 +27,6 @@
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api</artifactId>
 			<version>1.0</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/../domino-api/lib/Notes.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
