@@ -8,8 +8,8 @@
 	<properties>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<maven.compiler.target>1.6</maven.compiler.target>
-		<dominodir>/Applications/IBM Notes.app/Contents/MacOS</dominodir>
-		<notes-ini>/Users/klehmann/Library/Preferences/Notes Preferences</notes-ini>
+		<dominodir>C:\Program Files (x86)\IBM\Notes</dominodir>
+		<notes-ini>C:\Program Files (x86)\IBM\Notes\notes.ini</notes-ini>
 	</properties>
 
 	<dependencies>
@@ -25,8 +25,9 @@
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
-			<artifactId>domino-api</artifactId>
-			<version>1.0</version>
+			<artifactId>domino-api-binaries</artifactId>
+			<version>9.0.1</version>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
