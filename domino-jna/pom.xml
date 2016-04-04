@@ -65,8 +65,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>-Xmx512m -Djava.library.path="${dominodir}"
-						-Djna.library.path="${dominodir}"</argLine>
+					<argLine>-Xmx512m -Djava.library.path="${dominodir}" -Djna.library.path="${dominodir}"</argLine>
 
 					<environmentVariables>
 						<PATH>${dominodir}${path.separator}${env.PATH}</PATH>
