@@ -603,7 +603,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return note ids
 	 */
 	public LinkedHashSet<Integer> getAllIdsByKey(EnumSet<Find> findFlags, Object... keys) {
-		LinkedHashSet<Integer> noteIds = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), null,
+		LinkedHashSet<Integer> noteIds = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), 
 				new ViewLookupCallback<LinkedHashSet<Integer>>() {
 
 			@Override
@@ -882,17 +882,21 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param findFlags find flags, see {@link Find}
 	 * @param returnMask values to be returned
-	 * @param decodeColumns optional array of columns values to be decoded (or null)
 	 * @param callback lookup callback
 	 * @param keys lookup keys
 	 * @return lookup result
 	 */
-	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, ViewLookupCallback<T> callback, Object... keys) {
+	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback, Object... keys) {
 		//we are leaving the loop when there is no more data to be read;
 		//while(true) is here to rerun the query in case of view index changes while reading
 		while (true) {
 			T result = callback.startingLookup();
 			
+			boolean[] columnsToDecode = null;
+			if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
+				columnsToDecode = callback.getColumnsToDecode();
+			}
+
 			NotesViewLookupResultData data;
 			//position of first match
 			String firstMatchPosStr;
@@ -906,7 +910,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				findFlagsWithExtraBits.add(Find.AND_READ_MATCHES);
 				findFlagsWithExtraBits.add(Find.RETURN_DWORD);
 				
-				data = findByKeyExtended2(findFlagsWithExtraBits, returnMask, decodeColumns, keys);
+				data = findByKeyExtended2(findFlagsWithExtraBits, returnMask, columnsToDecode, keys);
 				
 				int numEntriesFound = data.getReturnCount();
 				if (numEntriesFound!=-1) {
@@ -973,7 +977,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				while (remainingEntries>0) {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
-					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, decodeColumns);
+					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, columnsToDecode);
 					isFirstLookup=false;
 					
 					if (data.hasAnyNonDataConflicts()) {
