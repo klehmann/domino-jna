@@ -715,6 +715,70 @@ public class NotesCollection implements IRecyclableNotesObject {
 		public abstract void lookupDone(T result);
 		
 	}
+
+	/**
+	 * Subclass of {@link ViewLookupCallback} that stores the data of read collection entries
+	 * in a {@link List}.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class EntriesAsListCallback extends ViewLookupCallback<List<NotesViewEntryData>> {
+		private int m_maxEntries;
+		
+		/**
+		 * Creates a new instance
+		 * 
+		 * @param maxEntries maximum entries to return
+		 */
+		public EntriesAsListCallback(int maxEntries) {
+			m_maxEntries = maxEntries;
+		}
+		
+		@Override
+		public List<NotesViewEntryData> startingLookup() {
+			return new ArrayList<NotesViewEntryData>();
+		}
+
+		@Override
+		public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+				List<NotesViewEntryData> result, NotesViewEntryData entryData) {
+			
+			if (m_maxEntries==0) {
+				return Action.Stop;
+			}
+
+			if (!isAccepted(entryData)) {
+				//ignore this entry
+				return Action.Continue;
+			}
+
+			//add entry to result list
+			result.add(entryData);
+			
+			if (result.size() > m_maxEntries) {
+				//stop the lookup, we have enough data
+				return Action.Stop;
+			}
+			else {
+				//go on reading the view
+				return Action.Continue;
+			}
+		}
+
+		/**
+		 * Override this method to filter entries
+		 * 
+		 * @param entryData current entry
+		 * @return true if entry should be added to the result
+		 */
+		protected boolean isAccepted(NotesViewEntryData entryData) {
+			return true;
+		}
+		
+		@Override
+		public void lookupDone(List<NotesViewEntryData> result) {
+		}
+	}
 	
 	/**
 	 * Convenience method that collects all note ids in the view, in the sort order of the current collation
