@@ -68,7 +68,7 @@
 				<configuration>
 					<forkMode>once</forkMode>
 					<useSystemClassLoader>false</useSystemClassLoader>
-					<argLine>-Xmx512m -Djava.library.path="${DOMINODIR}" -Djna.library.path="${DOMINODIR}" ${JVMPARAMS}</argLine>
+					<argLine>-Xmx512m -Djava.library.path="${dominodir}" -Djna.library.path="${dominodir}" ${jvm-params}</argLine>
 
 					<environmentVariables>
 						<PATH>${dominodir}${path.separator}${env.PATH}</PATH>
