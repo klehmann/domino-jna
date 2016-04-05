@@ -227,6 +227,8 @@ public class NotesLookupResultBufferDecoder {
 
 					Object[] decodedItemValues = itemTableData.getItemValues();
 					newData.setColumnValues(decodedItemValues);
+					//add some statistical information to the data object to be able to see which columns "pollute" the summary buffer
+					newData.setColumnValueSizesInBytes(itemTableData.getItemValueLengthsInBytes());
 				}
 				if (returnMask.contains(ReadMask.SUMMARY)) {
 					int startBufferPosOfSummaryValues = bufferPos;
@@ -483,6 +485,8 @@ public class NotesLookupResultBufferDecoder {
 		
 		retData.m_itemValues = decodedItemValues;
 		retData.m_itemDataTypes = itemDataTypes;
+		retData.m_itemValueLengthsInBytes = itemValueLengths;
+		
 		if (retData instanceof ItemTableData) {
 			((ItemTableData)retData).m_itemNames = itemNames;
 		}
@@ -548,6 +552,7 @@ public class NotesLookupResultBufferDecoder {
 		protected int[] m_itemDataTypes;
 		protected int m_totalBufferLength;
 		protected int m_itemsCount;
+		protected int[] m_itemValueLengthsInBytes;
 		
 		public Object[] getItemValues() {
 			return m_itemValues;
@@ -563,6 +568,10 @@ public class NotesLookupResultBufferDecoder {
 		
 		public int getItemsCount() {
 			return m_itemsCount;
+		}
+		
+		public int[] getItemValueLengthsInBytes() {
+			return m_itemValueLengthsInBytes;
 		}
 	}
 	
