@@ -58,14 +58,16 @@ public enum Navigate {
 	PREV_UNREAD_MAIN(34),
 	/** PREV, but only "unread" entries */
 	PREV_UNREAD(21),
-	/** NEXT, but only "selected" entries */
+	
+	/** NEXT, but only "selected" entries (only works in local databases) */
 	NEXT_SELECTED(14),
-	/** PREV, but only "selected" entries */
+	/** PREV, but only "selected" entries (only works in local databases) */
 	PREV_SELECTED(22),
-	/** Next selected main. (Next unread main can be found above.) */
+	/** Next selected main (Next unread main can be found above; only works in local databases) */
 	NEXT_SELECTED_MAIN(32),
-	/** Previous selected main. */
+	/** Previous selected main (only works in local databases) */
 	PREV_SELECTED_MAIN(33),
+	
 	/** NEXT, but only "expanded" entries */
 	NEXT_EXPANDED(15),
 	/** PREV, but only "expanded" entries */
@@ -86,24 +88,21 @@ public enum Navigate {
 	NEXT_EXP_NONCATEGORY(39),
 	/** PREV, but only "expanded" "non-category" entries */
 	PREV_EXP_NONCATEGORY(40),
+	
 	/** NEXT, but only FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	NEXT_HIT(29),
-	
 	/** PREV, but only FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	PREV_HIT(30),
-	
 	/** Remain at current position in hit's relevance rank array (in the order of the hit's relevance ranking) */
 	CURRENT_HIT(31),
 	
 	/** NEXT, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	NEXT_SELECTED_HIT(35),
-	
 	/** PREV, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	PREV_SELECTED_HIT(36),
 	
 	/** NEXT, but only "unread" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	NEXT_UNREAD_HIT(37),
-	
 	/** PREV, but only "unread" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
 	PREV_UNREAD_HIT(38),
 	
