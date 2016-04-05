@@ -8,8 +8,9 @@
 	<properties>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<maven.compiler.target>1.6</maven.compiler.target>
-		<dominodir>C:\Program Files (x86)\IBM\Notes</dominodir>
-		<notes-ini>C:\Program Files (x86)\IBM\Notes\notes.ini</notes-ini>
+		<dominodir>${DOMINODIR}</dominodir>
+		<notes-ini>${NOTESINI}</notes-ini>
+		<jvm-params>${JVMPARAMS}</jvm-params>
 	</properties>
 
 	<dependencies>
@@ -65,7 +66,9 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>-Xmx512m -Djava.library.path="${dominodir}" -Djna.library.path="${dominodir}"</argLine>
+					<forkMode>once</forkMode>
+					<useSystemClassLoader>false</useSystemClassLoader>
+					<argLine>-Xmx512m -Djava.library.path="${DOMINODIR}" -Djna.library.path="${DOMINODIR}" ${JVMPARAMS}</argLine>
 
 					<environmentVariables>
 						<PATH>${dominodir}${path.separator}${env.PATH}</PATH>
