@@ -47,6 +47,32 @@ public class NotesGC {
 	}
 	
 	/**
+	 * Internal method to check whether a 64 bit handle exists
+	 * 
+	 * @param handle handle
+	 * @throws NotesError if handle does not exist
+	 */
+	public static void __b64_checkValidHandle(long handle) {
+		IRecyclableNotesObject obj = m_b64OpenHandles.get().get(handle);
+		if (obj==null) {
+			throw new NotesError(0, "The provided C handle does not seem to exist (anymore).");
+		}
+	}
+
+	/**
+	 * Internal method to check whether a 32 bit handle exists
+	 * 
+	 * @param handle handle
+	 * @throws NotesError if handle does not exist
+	 */
+	public static void __b32_checkValidHandle(int handle) {
+		IRecyclableNotesObject obj = m_b32OpenHandles.get().get(handle);
+		if (obj==null) {
+			throw new NotesError(0, "The provided C handle does not seem to exist (anymore).");
+		}
+	}
+
+	/**
 	 * Internal method to unregister a created Notes object that was recycled
 	 * 
 	 * @param obj Notes object

@@ -146,10 +146,14 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_idTableHandle64.getValue()==0)
 				throw new RuntimeException("ID table already recycled");
+			if (!m_noRecycle)
+				NotesGC.__b64_checkValidHandle(getHandle64());
 		}
 		else {
 			if (m_idTableHandle32.getValue()==0)
 				throw new RuntimeException("ID table already recycled");
+			if (!m_noRecycle)
+				NotesGC.__b32_checkValidHandle(getHandle32());
 		}
 	}
 	

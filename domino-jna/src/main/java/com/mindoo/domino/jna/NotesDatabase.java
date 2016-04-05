@@ -357,10 +357,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hDB64==0)
 				throw new NotesError(0, "Database already recycled");
+			NotesGC.__b64_checkValidHandle(m_hDB64);
 		}
 		else {
 			if (m_hDB32==0)
 				throw new NotesError(0, "Database already recycled");
+			NotesGC.__b32_checkValidHandle(m_hDB32);
 		}
 	}
 

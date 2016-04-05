@@ -413,10 +413,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
+			NotesGC.__b64_checkValidHandle(m_hCollection64);
 		}
 		else {
 			if (m_hCollection32==0)
 				throw new NotesError(0, "Collection already recycled");
+			NotesGC.__b32_checkValidHandle(m_hCollection32);
 		}
 	}
 
