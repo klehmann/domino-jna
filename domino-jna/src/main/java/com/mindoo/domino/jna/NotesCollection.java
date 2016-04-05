@@ -60,6 +60,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private NotesIDTable m_unreadTable;
 	private String m_asUserCanonical;
 	private NotesDatabase m_parentDb;
+	private boolean m_autoUpdate;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -87,6 +88,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_collapsedList = collapsedList;
 		m_selectedList = selectedList;
 		m_unreadTable = unreadTable;
+		
+		m_autoUpdate = true;
 	}
 
 	/**
@@ -115,6 +118,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_collapsedList = collapsedList;
 		m_selectedList = selectedList;
 		m_unreadTable = unreadTable;
+		
+		m_autoUpdate = true;
 	}
 
 	/**
@@ -133,6 +138,41 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public NotesDatabase getParent() {
 		return m_parentDb;
+	}
+	
+	/**
+	 * Returns whether the view automatically handles view index updates while reading from the view.<br>
+	 * <br>
+	 * This flag is used by the methods<br>
+	 * <br>
+	 * <ul>
+	 * <li>{@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)}</li>
+	 * <li>{@link #getAllEntriesByKey(EnumSet, EnumSet, ViewLookupCallback, Object...)}</li>
+	 * <li>{@link #getAllIds(boolean)}</li>
+	 * <li>{@link #getAllIdsByKey(EnumSet, Object...)}</li>
+	 * </ul>
+	 * @return true if auto update
+	 */
+	public boolean isAutoUpdate() {
+		return m_autoUpdate;
+	}
+	
+	/**
+	 * Changes the auto update flag, which indicates whether the view automatically handles view index
+	 * updates while reading from the view.<br>
+	 * <br>
+	 * This flag is used by the methods<br>
+	 * <br>
+	 * <ul>
+	 * <li>{@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)}</li>
+	 * <li>{@link #getAllEntriesByKey(EnumSet, EnumSet, ViewLookupCallback, Object...)}</li>
+	 * <li>{@link #getAllIds(boolean)}</li>
+	 * <li>{@link #getAllIdsByKey(EnumSet, Object...)}</li>
+	 * </ul>
+	 * @param update
+	 */
+	public void setAutoUpdate(boolean update) {
+		m_autoUpdate = update;
 	}
 	
 	/**
@@ -847,10 +887,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, columnsToDecode);
 				firstLoopRun = false;
 				
-				if (data.hasAnyNonDataConflicts()) {
-					//refresh the view and restart the lookup
-					viewModified=true;
-					break;
+				if (isAutoUpdate()) {
+					if (data.hasAnyNonDataConflicts()) {
+						//refresh the view and restart the lookup
+						viewModified=true;
+						break;
+					}
 				}
 				
 				List<NotesViewEntryData> entries = data.getEntries();
@@ -914,12 +956,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				int numEntriesFound = data.getReturnCount();
 				if (numEntriesFound!=-1) {
-					//check for view index or design change
-					if (data.hasAnyNonDataConflicts()) {
-						//refresh the view and restart the lookup
-						callback.viewIndexChangeDetected();
-						update();
-						continue;
+					if (isAutoUpdate()) {
+						//check for view index or design change
+						if (data.hasAnyNonDataConflicts()) {
+							//refresh the view and restart the lookup
+							callback.viewIndexChangeDetected();
+							update();
+							continue;
+						}
 					}
 					
 					//copy the data we have read
@@ -980,10 +1024,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, columnsToDecode);
 					isFirstLookup=false;
 					
-					if (data.hasAnyNonDataConflicts()) {
-						//set viewModified to true and leave the inner loop; we will refresh the view and restart the lookup
-						viewModified=true;
-						break;
+					if (isAutoUpdate()) {
+						if (data.hasAnyNonDataConflicts()) {
+							//set viewModified to true and leave the inner loop; we will refresh the view and restart the lookup
+							viewModified=true;
+							break;
+						}
 					}
 					
 					List<NotesViewEntryData> entries = data.getEntries();
