@@ -536,6 +536,9 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public int b32_IDTableSize (int hTable);
 	public int b64_IDTableSize (long hTable);
 	
+	public int b32_IDTableSizeP(Pointer pIDTable);
+	public int b64_IDTableSizeP(Pointer pIDTable);
+	
 	public short b32_IDTableCopy (int hTable, IntByReference rethTable);
 	public short b64_IDTableCopy (long hTable, LongByReference rethTable);
 	
@@ -559,6 +562,8 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public void IDTableSetTime(ByteBuffer pIDTable, NotesTimeDate Time);
 	public NotesTimeDate IDTableTime(ByteBuffer pIDTable);
 
+	public short ODSLength(short type);
+	
 	public short ConvertTIMEDATEToText(
 			ByteBuffer IntlFormat,
 			ByteBuffer TextFormat,
