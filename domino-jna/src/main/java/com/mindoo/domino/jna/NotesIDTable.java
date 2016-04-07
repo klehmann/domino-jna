@@ -1,7 +1,9 @@
 package com.mindoo.domino.jna;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.Set;
 
 import com.mindoo.domino.jna.errors.NotesError;
@@ -215,8 +217,34 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param noteIds ids to add
 	 */
 	public void addNotes(Set<Integer> noteIds) {
-		for (Integer currNoteId : noteIds) {
-			addNote(currNoteId.intValue());
+		//check if Set is already sorted
+		Integer lastVal = null;
+		Iterator<Integer> idsIt = noteIds.iterator();
+		boolean isSorted = true;
+		while (idsIt.hasNext()) {
+			Integer currVal = idsIt.next();
+			if (lastVal!=null && currVal!=null) {
+				if (lastVal.intValue() > currVal.intValue()) {
+					isSorted = false;
+					break;
+				}
+				
+			}
+			lastVal = currVal;
+		}
+		if (isSorted) {
+			for (Integer currNoteId : noteIds) {
+				addNote(currNoteId.intValue());
+			}
+		}
+		else {
+			//if not sorted, sort it first; might produce better performance when adding to the
+			//ID table, because of its memory organization
+			Integer[] noteIdsArr = noteIds.toArray(new Integer[noteIds.size()]);
+			Arrays.sort(noteIdsArr);
+			for (Integer currNoteId : noteIdsArr) {
+				addNote(currNoteId.intValue());
+			}
 		}
 	}
 
