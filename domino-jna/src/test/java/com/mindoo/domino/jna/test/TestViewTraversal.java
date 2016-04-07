@@ -12,14 +12,20 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesCollection.CollationInfo;
+import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.NotesCollection.EntriesAsListCallback;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesViewEntryData;
+import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
 
+import lotus.domino.Database;
+import lotus.domino.Document;
 import lotus.domino.Session;
+import lotus.domino.View;
 
 public class TestViewTraversal extends BaseJNATestClass {
 
@@ -303,6 +309,47 @@ public class TestViewTraversal extends BaseJNATestClass {
 				}
 				Assert.assertTrue("Entries with max level 1 in the result", maxLevelFound<=1);
 
+				return null;
+			}
+		});
+	}
+	
+	@Test
+	public void testViewTraversal_umlauts() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
+				View view = dbLegacyAPI.getView("PeopleFlatMultiColumnSort");
+				
+				NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
+				colFromDbData.update();
+
+				CollationInfo collationInfo = colFromDbData.hashCollations(view);
+				short collationByLastName = collationInfo.findCollation("Lastname", Direction.Ascending);
+				if (collationByLastName==-1) {
+					throw new RuntimeException("Could not resort view by lastname");
+				}
+				colFromDbData.setCollation(collationByLastName);
+				List<NotesViewEntryData> umlautEntryAsList = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.PARTIAL),
+						EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID), new EntriesAsListCallback(1), "Umlaut");
+				
+				Assert.assertFalse("There is a person document with lastname starting with 'Umlaut'", umlautEntryAsList.isEmpty());
+				
+				NotesViewEntryData umlautEntry = umlautEntryAsList.get(0);
+				Map<String,Object> summaryData = umlautEntry.getSummaryData();
+				
+				String lastNameFromView = (String) summaryData.get("lastname");
+				
+				Document docPerson = dbLegacyAPI.getDocumentByID(umlautEntry.getNoteIdAsHex());
+				String lastNameFromDoc = docPerson.getItemValueString("Lastname");
+				docPerson.recycle();
+				
+				Assert.assertEquals("LMBCS decoding to Java String works for Umlauts", lastNameFromDoc, lastNameFromView);
+				
 				return null;
 			}
 		});
