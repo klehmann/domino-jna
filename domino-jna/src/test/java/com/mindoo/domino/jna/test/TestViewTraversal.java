@@ -1,6 +1,5 @@
 package com.mindoo.domino.jna.test;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -12,7 +11,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesCollection;
-import com.mindoo.domino.jna.NotesCollection.CollationInfo;
 import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.NotesCollection.EntriesAsListCallback;
 import com.mindoo.domino.jna.NotesDatabase;
@@ -25,12 +23,68 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import lotus.domino.Database;
 import lotus.domino.Document;
 import lotus.domino.Session;
-import lotus.domino.View;
 
 public class TestViewTraversal extends BaseJNATestClass {
 
 	@Test
-	public void testViewTraversal_readAllEntryInDataDb() {
+	public void testViewTraversal_numericInequalityLookup() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				
+				NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
+				colFromDbData.update();
+
+				colFromDbData.resortView("col_internetaddresslength", Direction.Ascending);
+				
+				double minVal = 10;
+				
+				List<NotesViewEntryData> entriesInNumberRange = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.GREATER_THAN, Find.EQUAL),
+						EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE), Double.valueOf(minVal));
+				
+				Assert.assertFalse("There should be entries with lengths column values matching the search key", entriesInNumberRange.isEmpty());
+				
+				Set<Integer> noteIdsInRange = new HashSet<Integer>();
+				
+				for (NotesViewEntryData currEntry : entriesInNumberRange) {
+					noteIdsInRange.add(currEntry.getNoteId());
+					
+					Map<String,Object> currSummaryData = currEntry.getSummaryData();
+					Number currLength = (Number) currSummaryData.get("col_internetaddresslength");
+					
+					Assert.assertTrue("Length "+currLength.doubleValue()+" of entry with note id "+currEntry.getNoteId()+" should be greater than "+minVal, currLength.doubleValue()>=minVal);
+				}
+				
+				NotesIDTable selectedList = colFromDbData.getSelectedList();
+				selectedList.clear();
+				selectedList.addNotes(noteIdsInRange);
+				selectedList.setInverted(true);
+				
+				//now do an inverted lookup to find every entry not in range
+				List<NotesViewEntryData> entriesNotInNumberRange = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
+				
+				Assert.assertFalse("There should be entries with lengths column values not matching the search key", entriesNotInNumberRange.isEmpty());
+
+				for (NotesViewEntryData currEntry : entriesNotInNumberRange) {
+					Assert.assertFalse("Inverted flag in selected list works", noteIdsInRange.contains(currEntry.getNoteId()));
+					
+					Map<String,Object> currSummaryData = currEntry.getSummaryData();
+					Number currLength = (Number) currSummaryData.get("col_internetaddresslength");
+					
+					Assert.assertFalse("Length "+currLength.doubleValue()+" of entry with note id "+currEntry.getNoteId()+" should not be greater than "+minVal, currLength.doubleValue()>=minVal);
+				}
+				
+				return null;
+			}
+		});
+	
+	}
+	
+	@Test
+	public void testViewTraversal_readAllEntryDataInDataDb() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
@@ -323,17 +377,12 @@ public class TestViewTraversal extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
 				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
-				View view = dbLegacyAPI.getView("PeopleFlatMultiColumnSort");
 				
 				NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
 				colFromDbData.update();
 
-				CollationInfo collationInfo = colFromDbData.hashCollations(view);
-				short collationByLastName = collationInfo.findCollation("Lastname", Direction.Ascending);
-				if (collationByLastName==-1) {
-					throw new RuntimeException("Could not resort view by lastname");
-				}
-				colFromDbData.setCollation(collationByLastName);
+				colFromDbData.resortView("Lastname", Direction.Ascending);
+				
 				List<NotesViewEntryData> umlautEntryAsList = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.PARTIAL),
 						EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID), new EntriesAsListCallback(1), "Umlaut");
 				
