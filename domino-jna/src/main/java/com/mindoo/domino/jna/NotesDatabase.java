@@ -38,6 +38,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
+import lotus.domino.Name;
 import lotus.domino.NotesException;
 import lotus.domino.Session;
 
@@ -75,6 +76,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @throws NotesException 
 	 */
 	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) throws NotesException {
+		
 		//make sure server and username are in canonical format
 		m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
 		if (server==null)
@@ -83,7 +85,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NullPointerException("filePath is null");
 		
 		server = NotesNamingUtils.toCanonicalName(server);
-		
+		if (!"".equals(server)) {
+			if (session.isOnServer()) {
+				Name nameServer = session.createName(server);
+				Name nameCurrServer = session.createName(session.getServerName());
+				if (nameServer.getCommon().equalsIgnoreCase(nameCurrServer.getCommon())) {
+					//switch to "" as servername if server points to the server the API is running on;
+					//this enables advanced lookup features like using NEXT_SELECTED in view traversal
+					server = "";
+				}
+			}
+		}
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server);
 		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath);
