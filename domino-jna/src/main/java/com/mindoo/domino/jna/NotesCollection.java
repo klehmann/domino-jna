@@ -35,6 +35,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
+import lotus.domino.Database;
 import lotus.domino.NotesException;
 import lotus.domino.View;
 import lotus.domino.ViewColumn;
@@ -61,6 +62,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private String m_asUserCanonical;
 	private NotesDatabase m_parentDb;
 	private boolean m_autoUpdate;
+	private CollationInfo m_collationInfo;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -223,13 +225,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 			LongByReference hTable = new LongByReference();
 			short result = notesAPI.b64_NSFFolderGetIDTable(m_hDB64, m_hDB64, m_viewNoteId, validateIds ? NotesCAPI.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(hTable);
+			return new NotesIDTable(hTable.getValue());
 		}
 		else {
 			IntByReference hTable = new IntByReference();
 			short result = notesAPI.b32_NSFFolderGetIDTable(m_hDB32, m_hDB32, m_viewNoteId, validateIds ? NotesCAPI.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(hTable);
+			return new NotesIDTable(hTable.getValue());
 		}
 	}
 	
@@ -530,7 +532,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
 		}
 		else {
 			IntByReference rethResults = new IntByReference();
@@ -552,7 +554,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
 		}
 	}
 	
@@ -679,6 +681,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return true if method can be used
 	 */
 	private boolean canUseOptimizedLookupForKeyLookup(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, Object... keys) {
+		if (findFlags.contains(Find.GREATER_THAN) || findFlags.contains(Find.LESS_THAN)) {
+			//TODO check this with IBM dev; we had crashes like "[0A0F:0002-21A00] PANIC: LookupHandle: null handle" using NIFFindByKeyExtended2
+			return false;
+		}
 		{
 			//we had "ERR 774: Unsupported return flag(s)" errors when using the optimized lookup
 			//method wither return values other than note id
@@ -1012,7 +1018,24 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 				firstMatchPosStr = findResult.getPosition();
 			}
-			
+
+			if (!canFindExactNumberOfMatches(findFlags)) {
+				Direction currSortDirection = getCurrentSortDirection();
+				if (currSortDirection!=null) {
+					//handle special case for inquality search where column sort order matches the find flag,
+					//so we can read all view entries after findResult.getPosition()
+					
+					if (currSortDirection==Direction.Ascending && findFlags.contains(Find.GREATER_THAN)) {
+						//read all entries after findResult.getPosition()
+						remainingEntries = Integer.MAX_VALUE;
+					}
+					else if (currSortDirection==Direction.Descending && findFlags.contains(Find.LESS_THAN)) {
+						//read all entries after findResult.getPosition()
+						remainingEntries = Integer.MAX_VALUE;
+					}
+				}
+			}
+
 			if (firstMatchPosStr!=null) {
 				//position of the first match; we skip (entries.size()) to read the remaining entries
 				boolean isFirstLookup = true;
@@ -1024,15 +1047,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 				while (remainingEntries>0) {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
 					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, columnsToDecode);
-					isFirstLookup=false;
 					
-					if (isAutoUpdate()) {
+					if (isFirstLookup || isAutoUpdate()) {
+						//for the first lookup, make sure we start at the right position
 						if (data.hasAnyNonDataConflicts()) {
 							//set viewModified to true and leave the inner loop; we will refresh the view and restart the lookup
 							viewModified=true;
 							break;
 						}
 					}
+					isFirstLookup=false;
 					
 					List<NotesViewEntryData> entries = data.getEntries();
 					if (entries.isEmpty()) {
@@ -1581,11 +1605,39 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the programmatic name of the column that has last been used to resort
+	 * the view
+	 * 
+	 * @return column name or null if view has not been resorted
+	 */
+	public String getCurrentSortColumnName() {
+		short collation = getCollation();
+		if (collation==0)
+			return null;
+		
+		CollationInfo colInfo = getCollationsInfo();
+		return colInfo.getSortItem(collation);
+	}
+	
+	/**
+	 * Returns the sort direction that has last been used to resort the view
+	 * 
+	 * @return direction or null
+	 */
+	public Direction getCurrentSortDirection() {
+		short collation = getCollation();
+		if (collation==0)
+			return null;
+		CollationInfo colInfo = getCollationsInfo();
+		return colInfo.getSortDirection(collation);
+	}
+	
+	/**
 	 * Returns the currently active collation
 	 * 
 	 * @return collation
 	 */
-	public short getCollation() {
+	private short getCollation() {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
@@ -1602,11 +1654,33 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Changes the collation to sort the collection by the specified column and direction
+	 * 
+	 * @param progColumnName programmatic column name
+	 * @param direction sort direction
+	 */
+	public void resortView(String progColumnName, Direction direction) {
+		short collation = findCollation(progColumnName, direction);
+		if (collation==-1) {
+			throw new NotesError(0, "Column "+progColumnName+" does not exist or is not sortable in "+direction+" direction");
+		}
+		setCollation(collation);
+	}
+	
+	/**
+	 * Resets the view sorting to the default (collation=0). Only needs to be called if
+	 * view had been resorted via {@link #resortView(String, Direction)}
+	 */
+	public void resetViewSortingToDefault() {
+		setCollation((short) 0);
+	}
+	
+	/**
 	 * Sets the active collation (collection column sorting)
 	 * 
 	 * @param collation collation
 	 */
-	public void setCollation(short collation) {
+	private void setCollation(short collation) {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
@@ -1621,42 +1695,55 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Scans the columns of the specified {@link View} and computes the collation indices
+	 * Returns programmatic names and sorting of sortable columns
 	 * 
-	 * @param view view to scan
-	 * @return info object with hashed collation indices
-	 * @throws NotesException
+	 * @return info object with collation info
 	 */
-	public CollationInfo hashCollations(View view) throws NotesException {
-		CollationInfo collationInfo = new CollationInfo();
-		
-		Vector<?> columns = view.getColumns();
-		try {
-			short collation = 1;
-			for (int i=0; i<columns.size(); i++) {
-				ViewColumn currCol = (ViewColumn) columns.get(i);
-				boolean isResortAscending = currCol.isResortAscending();
-				boolean isResortDescending = currCol.isResortDescending();
-				
-				if (isResortAscending || isResortDescending) {
-					String currItemName = currCol.getItemName();
-					
-					if (isResortAscending) {
-						collationInfo.addCollation(collation, currItemName, Direction.Ascending);
-						collation++;
+	private CollationInfo getCollationsInfo() {
+		if (m_collationInfo==null) {
+			try {
+				//TODO implement this in pure JNA code
+				Database db = m_parentDb.getSession().getDatabase(m_parentDb.getServer(), m_parentDb.getRelativeFilePath());
+				View view = db.getView(getName());
+				if (view==null) {
+					throw new NotesError(0, "View "+getName()+" not found using legacy API");
+				}
+
+				CollationInfo collationInfo = new CollationInfo();
+
+				Vector<?> columns = view.getColumns();
+				try {
+					short collation = 1;
+					for (int i=0; i<columns.size(); i++) {
+						ViewColumn currCol = (ViewColumn) columns.get(i);
+						boolean isResortAscending = currCol.isResortAscending();
+						boolean isResortDescending = currCol.isResortDescending();
+
+						if (isResortAscending || isResortDescending) {
+							String currItemName = currCol.getItemName();
+
+							if (isResortAscending) {
+								collationInfo.addCollation(collation, currItemName, Direction.Ascending);
+								collation++;
+							}
+							if (isResortDescending) {
+								collationInfo.addCollation(collation, currItemName, Direction.Descending);
+								collation++;
+							}
+						}
 					}
-					if (isResortDescending) {
-						collationInfo.addCollation(collation, currItemName, Direction.Descending);
-						collation++;
-					}
+
+					m_collationInfo = collationInfo;
+				}
+				finally {
+					view.recycle(columns);
 				}
 			}
-			
-			return collationInfo;
+			catch (Throwable t) {
+				throw new NotesError(0, "Could not read collation information for view "+getName(), t);
+			}
 		}
-		finally {
-			view.recycle(columns);
-		}
+		return m_collationInfo;
 	}
 	
 	/**
@@ -1664,7 +1751,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public static class CollationInfo {
+	private static class CollationInfo {
 		private Map<String,Short> m_ascendingLookup;
 		private Map<String,Short> m_descendingLookup;
 		private Map<Short,String> m_collationSortItem;
@@ -1693,6 +1780,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				m_descendingLookup.put(itemName.toLowerCase(), Short.valueOf(collation));
 			}
 			m_nrOfCollations = Math.max(m_nrOfCollations, collation);
+			m_collationSorting.put(collation, direction);
 		}
 		
 		/**
@@ -1764,8 +1852,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return collation number or -1 if not found
 	 * @throws NotesException
 	 */
-	public short findCollation(View view, String columnName, Direction direction) throws NotesException {
-		return hashCollations(view).findCollation(columnName, direction);
+	public short findCollation(String columnName, Direction direction) {
+		return getCollationsInfo().findCollation(columnName, direction);
 	}
 	
 	/**

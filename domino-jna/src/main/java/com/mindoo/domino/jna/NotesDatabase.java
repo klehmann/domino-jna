@@ -54,6 +54,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String m_asUserCanonical;
 	private String m_server;
 	private String[] m_paths;
+	private Session m_session;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -76,6 +77,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @throws NotesException 
 	 */
 	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) throws NotesException {
+		m_session = session;
 		
 		//make sure server and username are in canonical format
 		m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
@@ -217,6 +219,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(this);
 	}
 
+	Session getSession() {
+		return m_session;
+	}
+	
 	public String getServer() {
 		loadPaths();
 		return m_server;
@@ -512,7 +518,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList), new NotesIDTable(selectedList), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
 		}
 		else {
 			IntByReference hCollection = new IntByReference();
@@ -556,7 +562,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList), new NotesIDTable(selectedList), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
 		}
 		
 		NotesGC.__objectCreated(newCol);
@@ -629,7 +635,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = notesAPI.b64_FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
 		}
 		else {
 			IntByReference rethSearch = new IntByReference();
@@ -657,7 +663,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = notesAPI.b64_FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
 		}
 	}
 
@@ -735,7 +741,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable);
+			return new NotesIDTable(rethTable.getValue());
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
@@ -744,7 +750,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable);
+			return new NotesIDTable(rethTable.getValue());
 		}
 	}
 	
