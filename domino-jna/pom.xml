@@ -8,9 +8,6 @@
 	<properties>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<maven.compiler.target>1.6</maven.compiler.target>
-		<dominodir>${DOMINODIR}</dominodir>
-		<notes-ini>${NOTESINI}</notes-ini>
-		<jvm-params>${JVMPARAMS}</jvm-params>
 	</properties>
 
 	<dependencies>
@@ -68,14 +65,14 @@
 				<configuration>
 					<forkMode>once</forkMode>
 					<useSystemClassLoader>false</useSystemClassLoader>
-					<argLine>-Xmx512m -Djava.library.path="${dominodir}" -Djna.library.path="${dominodir}" ${jvm-params}</argLine>
+					<argLine>-Xmx512m -Djava.library.path="${DOMINODIR}" -Djna.library.path="${DOMINODIR}" ${JVMPARAMS}</argLine>
 
 					<environmentVariables>
-						<PATH>${dominodir}${path.separator}${env.PATH}</PATH>
-						<LD_LIBRARY_PATH>${dominodir}${path.separator}${env.LD_LIBRARY_PATH}</LD_LIBRARY_PATH>
-						<DYLD_LIBRARY_PATH>${dominodir}${path.separator}${env.DYLD_LIBRARY_PATH}</DYLD_LIBRARY_PATH>
-						<Notes_ExecDirectory>${dominodir}</Notes_ExecDirectory>
-						<NotesINI>${notes-ini}</NotesINI>
+						<PATH>${DOMINODIR}${path.separator}${env.PATH}</PATH>
+						<LD_LIBRARY_PATH>${DOMINODIR}${path.separator}${env.LD_LIBRARY_PATH}</LD_LIBRARY_PATH>
+						<DYLD_LIBRARY_PATH>${DOMINODIR}${path.separator}${env.DYLD_LIBRARY_PATH}</DYLD_LIBRARY_PATH>
+						<Notes_ExecDirectory>${DOMINODIR}</Notes_ExecDirectory>
+						<NotesINI>${NOTESINI}</NotesINI>
 					</environmentVariables>
 				</configuration>
 			</plugin>
