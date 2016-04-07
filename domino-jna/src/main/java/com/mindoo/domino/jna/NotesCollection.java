@@ -1773,14 +1773,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 		 * @param direction sort direction
 		 */
 		void addCollation(short collation, String itemName, Direction direction) {
+			String itemNameLC = itemName.toLowerCase();
 			if (direction == Direction.Ascending) {
-				m_ascendingLookup.put(itemName.toLowerCase(), Short.valueOf(collation));
+				m_ascendingLookup.put(itemNameLC, Short.valueOf(collation));
 			}
 			else if (direction == Direction.Descending) {
-				m_descendingLookup.put(itemName.toLowerCase(), Short.valueOf(collation));
+				m_descendingLookup.put(itemNameLC, Short.valueOf(collation));
 			}
 			m_nrOfCollations = Math.max(m_nrOfCollations, collation);
 			m_collationSorting.put(collation, direction);
+			m_collationSortItem.put(collation, itemNameLC);
 		}
 		
 		/**
@@ -1800,12 +1802,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		 * @return collation index or -1 if not found
 		 */
 		public short findCollation(String sortItem, Direction direction) {
+			String itemNameLC = sortItem.toLowerCase();
 			if (direction==Direction.Ascending) {
-				Short collation = m_ascendingLookup.get(sortItem.toLowerCase());
+				Short collation = m_ascendingLookup.get(itemNameLC);
 				return collation==null ? -1 : collation.shortValue();
 			}
 			else {
-				Short collation = m_descendingLookup.get(sortItem.toLowerCase());
+				Short collation = m_descendingLookup.get(itemNameLC);
 				return collation==null ? -1 : collation.shortValue();
 			}
 		}
@@ -1820,7 +1823,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			if (collation > m_nrOfCollations)
 				throw new IndexOutOfBoundsException("Unknown collation index (max value: "+m_nrOfCollations+")");
 			
-			String sortItem = m_collationSortItem.get(Integer.valueOf(collation));
+			String sortItem = m_collationSortItem.get(Short.valueOf((short)collation));
 			return sortItem;
 		}
 		
@@ -1834,7 +1837,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			if (collation > m_nrOfCollations)
 				throw new IndexOutOfBoundsException("Unknown collation index (max value: "+m_nrOfCollations+")");
 			
-			Direction direction = m_collationSorting.get(Integer.valueOf(collation));
+			Direction direction = m_collationSorting.get(Short.valueOf((short)collation));
 			return direction;
 		}
 	}
