@@ -130,6 +130,15 @@ public class NotesViewEntryData {
 	}
 
 	/**
+	 * Returns the note id of the entry in hex format. Only returns a value if {@link ReadMask#NOTEID} is used for the lookup
+	 * 
+	 * @return note id as hex string or null
+	 */
+	public String getNoteIdAsHex() {
+		return m_noteId!=null ? Integer.toString(m_noteId.intValue(), 16) : null;
+	}
+	
+	/**
 	 * Sets the note id
 	 * 
 	 * @param noteId note id
