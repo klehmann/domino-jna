@@ -75,14 +75,16 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 				returnNavigator, Integer.MAX_VALUE,
 				returnData, new EntriesAsListCallback(entriesToReturn));
 				
-		//check that all entries that we read were from our picked id list
 		for (NotesViewEntryData currEntry : selectedEntries) {
+		
+			//check that all entries that we read were from our picked id list
 			Assert.assertTrue("Entry read from view is contained in selected list",
 				pickedNoteIds.contains(currEntry.getNoteId()));
 				
 			//read map of column names and values
 			Map<String,Object> summaryData = currEntry.getSummaryData();
 			//...
+			
 		}
 		
 		//now remove all read ids from pickedNoteIds and make sure that we found everything
@@ -98,10 +100,11 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 ```
 
 This selected list feature demonstrated above is already the first big surprise, if you only know IBM's Java API for Domino.
-It dynamically filters the collection to only return entries matching an id list, that you might have read via previous lookups).
+It dynamically filters the collection to only return entries matching an id list, that you might have read via previous lookups.
 
 Comparable to reading fulltext search results, but a lot more powerful!
-And the cool thing is that Domino handles the paging for you (`entriesToSkip` parameter). so you don't have to waste time to read and ignore data in your own code.
+And the cool thing is that Domino handles the filtering and even the paging for you (`entriesToSkip` parameter). so you don't have to waste
+time to read and skip data slowly in your own code.
 
 
 As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
@@ -112,7 +115,8 @@ In many cases, this should avoid manual recycling of API objects, but for some e
 the C API) or `NotesIDTable`do have a `recycle()`method.
 
 ### Registration of local Notes.jar
-Before running the test cases or building the project, your local Notes.jar file needs to be added to Maven as a repository, because it's platform and Domino version dependent.
+Before running the test cases or building the project, your local Notes.jar file needs to be added to Maven's local repository, because
+it's platform and Domino version dependent.
 
 **For Windows, use this syntax (with the right path to Notes.jar on your machine):**
 
@@ -152,7 +156,8 @@ With skipped testcases, this command should run fine:
 mvn -DJVMPARAMS=-d64 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
 ```
 
-The directory `target/lib` contains all recursive dependencies required to use the library.
+The directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA, Joda DateTime and Apache tool libraries.
+The "domino-api-binaries.jar" generated there is just the Notes.jar that you previously have added to Maven.
 
 ### Running the test cases
 The project contains a number of test cases that demonstrate how the API is used.
