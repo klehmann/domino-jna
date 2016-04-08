@@ -14,9 +14,8 @@ The project provides functionality that is not available in the classic Java API
 * clearing the replication history
 * compute @Usernameslist values for any Notes user
  
-**Please note:
-The project gives access to some really low level functions of IBM Notes/Domino. Using them in the wrong way or sending unexpected parameter values
-might crash your application server, so make sure you know what you are doing :-).*
+**Please note:**
+**The project gives access to some really low level functions of IBM Notes/Domino. Using them in the wrong way or sending unexpected parameter values might crash your application server, so make sure you know what you are doing :-).**
 
 One reason for open sourcing all this stuff was to get more hands on it and make it as robust as possible.
 
