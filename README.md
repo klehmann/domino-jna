@@ -165,7 +165,7 @@ These test cases use sample databases that we provide for download and will upda
 
 You can download the two sample databases fakenames.nsf and fakenames-views.nsf from this URL:
 
-[ftp://domino_jna:domino_jna@www2.mindoo.de](ftp://domino_jna:domino_jna@www2.mindoo.de)
+**[ftp://domino_jna:domino_jna@www2.mindoo.de](ftp://domino_jna:domino_jna@www2.mindoo.de)**
 
 Next, place them in the data folder of your IBM Notes Client.
 
