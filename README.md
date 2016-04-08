@@ -95,19 +95,19 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 This selected list feature demonstrated above is already the first big surprise, if you only know IBM's Java API for Domino.
 It dynamically filters the collection to only return entries matching an id list, that you might have read via previous lookups).
 
-Something like reading fulltext search results, but a lot more powerful!
-And the cool thing is that Domino handles the paging for you (`entriesToSkip` parameter). so you don't have to waste time to read data in your own code.
+Comparable to reading fulltext search results, but a lot more powerful!
+And the cool thing is that Domino handles the paging for you (`entriesToSkip` parameter). so you don't have to waste time to read and ignore data in your own code.
 
 
 As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
 
 We do this to automatically collect allocated C handles and automatically free them when the code block is done.
 
-In many cases, this should avoid manually recycling API objects, but for some edge cases, objects like `NotesCollection` (which is the term for Notes view in
+In many cases, this should avoid manual recycling of API objects, but for some edge cases, objects like `NotesCollection` (which is the term for Notes View in
 the C API) or `NotesIDTable`do have a `recycle()`method.
 
 ### Registration of local Notes.jar
-Before running the test cases or building the project, the local Notes.jar file needs to be added to Maven as a repository.
+Before running the test cases or building the project, your local Notes.jar file needs to be added to Maven as a repository, because it's platform and Domino version dependent.
 
 **For Windows, use this syntax (with the right path to Notes.jar on your machine):**
 
