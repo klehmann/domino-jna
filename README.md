@@ -1,5 +1,5 @@
 # domino-jna
-Java project to access the IBM Domino C API using Java Native Access (JNA)
+Crossplatform access to IBM Notes/Domino C API methods from Java
 
 ## Features
 The project provides functionality that is not available in the classic Java API of IBM Notes/Domino or that is poorly implemented, for example:
