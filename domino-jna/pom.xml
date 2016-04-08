@@ -8,6 +8,8 @@
 	<properties>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<maven.compiler.target>1.6</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
 
 	<dependencies>
@@ -65,7 +67,8 @@
 				<configuration>
 					<forkMode>once</forkMode>
 					<useSystemClassLoader>false</useSystemClassLoader>
-					<argLine>-Xmx512m -Djava.library.path="${DOMINODIR}" -Djna.library.path="${DOMINODIR}" ${JVMPARAMS}</argLine>
+					<argLine>-Xmx512m -Djava.library.path="${DOMINODIR}"
+						-Djna.library.path="${DOMINODIR}" ${JVMPARAMS}</argLine>
 
 					<environmentVariables>
 						<PATH>${DOMINODIR}${path.separator}${env.PATH}</PATH>
