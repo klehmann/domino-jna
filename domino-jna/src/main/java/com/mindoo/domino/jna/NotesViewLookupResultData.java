@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.Collections;
 import java.util.List;
 
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 
@@ -20,6 +21,17 @@ public class NotesViewLookupResultData {
 	private String m_pos;
 	private int m_indexModifiedSequenceNo;
 	
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param stats collection statistics
+	 * @param entries entries read from the buffer
+	 * @param numEntriesSkipped number of skipped entries
+	 * @param numEntriesReturned number of returned entries
+	 * @param signalFlags signal flags indicating view index changes and other stuff
+	 * @param pos first matching position
+	 * @param indexModifiedSequenceNo index modified sequence number
+	 */
 	public NotesViewLookupResultData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo) {
 		m_stats = stats;
 		m_entries = entries;
@@ -30,16 +42,8 @@ public class NotesViewLookupResultData {
 		m_indexModifiedSequenceNo = indexModifiedSequenceNo;
 	}
 
-	public void reverseEntries() {
-		if (m_entries!=null)
-			Collections.reverse(m_entries);
-	}
-
 	/**
 	 * Returns the index modified sequence number, which is increased on every index change.<br>
-	 * <br>
-	 * Will only be set when {@link NotesCollection#findByKeyExtended2(java.util.EnumSet, java.util.EnumSet, boolean[], Object...)}
-	 * is called.
 	 * 
 	 * @return number
 	 */
@@ -63,7 +67,8 @@ public class NotesViewLookupResultData {
 	}
 	
 	/**
-	 * Returns view statistics, if they have been requested via the read mask {@link NotesCAPI#READ_MASK_COLLECTIONSTATS}
+	 * Returns view statistics, if they have been requested via the
+	 * read mask {@link ReadMask#COLLECTIONSTATS}
 	 * 
 	 * @return statistics or null
 	 */
@@ -157,7 +162,7 @@ public class NotesViewLookupResultData {
 	}
 
 	/**
-	 * Use this method to tell whether the collection contains a time-relative formula (e.g., @Now) and
+	 * Use this method to tell whether the collection contains a time-relative formula (e.g., @ Now) and
 	 * will EVER be up-to-date since time-relative views, by definition, are NEVER up-to-date.
 	 * 
 	 * @return true if time relative
@@ -168,7 +173,7 @@ public class NotesViewLookupResultData {
 	
 	/**	
 	 * Mask that defines all "sharing conflicts" except for {@link #isDatabaseModified()}.
-	 * This can be used in combination with {@link #isTimeRelative()} to tell if
+	 * This can be used in combination with {@link #isViewTimeRelative()} to tell if
 	 * the database or collection has truly changed out from under the user or if the
 	 * view is a time-relative view which will NEVER be up-to-date. {@link #isDatabaseModified()}
 	 * is always returned for a time-relative view to indicate that it is never up-to-date.

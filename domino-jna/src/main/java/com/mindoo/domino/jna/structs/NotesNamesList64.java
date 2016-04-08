@@ -33,7 +33,9 @@ public class NotesNamesList64 extends Structure {
 	 */
 	public byte[] Check = new byte[2];
 
-	
+	/**
+	 * Flag to mark the user as already authenticated, e.g. via web server
+	 */
 	public int Authenticated;
 	
 	public NotesNamesList64() {
@@ -44,24 +46,29 @@ public class NotesNamesList64 extends Structure {
 	protected List<? > getFieldOrder() {
 		return Arrays.asList("NumNames", "ID", "Product", "Check", "Authenticated");
 	}
+	
 	/**
-	 * @param NumNames Number of names in list<br>
-	 * @param License User's license - now obsolete<br>
-	 * C type : LICENSEID
+	 * Creates a new instance
+	 * 
+	 * @param numNames number of names in the list
+	 * @param id info from LICENSEID, should be empty
+	 * @param product info from LICENSEID, should be empty
+	 * @param check info from LICENSEID, should be empty
+	 * @param authenticated  Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public NotesNamesList64(short NumNames, byte ID[], byte Product, byte Check[], short Authenticated) {
+	public NotesNamesList64(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
 		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
 		setAlignType(ALIGN_NONE);
-		this.NumNames = NumNames;
-		if ((ID.length != this.ID.length)) 
+		this.NumNames = numNames;
+		if ((id.length != this.ID.length)) 
 			throw new IllegalArgumentException("Wrong array size !");
-		this.ID = ID;
-		this.Product = Product;
-		if ((Check.length != this.Check.length)) 
+		this.ID = id;
+		this.Product = product;
+		if ((check.length != this.Check.length)) 
 			throw new IllegalArgumentException("Wrong array size !");
-		this.Check = Check;
-		this.Authenticated = Authenticated;
+		this.Check = check;
+		this.Authenticated = authenticated;
 	}
 	public NotesNamesList64(Pointer peer) {
 		super(peer);

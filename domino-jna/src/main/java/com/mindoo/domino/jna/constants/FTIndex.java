@@ -21,7 +21,7 @@ public enum FTIndex {
 	CASE_SENS(0x0004),
 	/** Build stem index */
 	STEM_INDEX(0x0008),
-	/** Index paragraph & sentence breaks */
+	/** Index paragraph and sentence breaks */
 	PSW(0x0010),
 	/** Optimize index (e.g. for CDROM) (Not used) */
 	OPTIMIZE(0x0020),

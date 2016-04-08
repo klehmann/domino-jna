@@ -167,25 +167,17 @@ public interface NotesCAPI extends Library {
 	short b32_NIFCloseCollection(int hCollection);
 	short b64_NIFCloseCollection(long hCollection);
 
-	/**
-	 * Original signature : <code>void* OSLockObject(DHANDLE)</code><br>
-	 * <i>native declaration : line 2701</i>
-	 */
-	Pointer b32_OSLockObject(int Handle);
-	Pointer b64_OSLockObject(long Handle);
+	Pointer b32_OSLockObject(int handle);
+	Pointer b64_OSLockObject(long handle);
 
-	/**
-	 * Original signature : <code>BOOL OSUnlockObject(DHANDLE)</code><br>
-	 * <i>native declaration : line 2706</i>
-	 */
-	boolean b32_OSUnlockObject(int Handle);
-	boolean b64_OSUnlockObject(long Handle);
+	boolean b32_OSUnlockObject(int handle);
+	boolean b64_OSUnlockObject(long handle);
 
 	public short b32_OSMemFree(int handle);
 	public short b64_OSMemFree(long handle);
 
-	public short b32_NIFLocateNote (int hCollection, NotesCollectionPosition IndexPos, int NoteID);
-	public short b64_NIFLocateNote (long hCollection, NotesCollectionPosition IndexPos, int NoteID);
+	public short b32_NIFLocateNote (int hCollection, NotesCollectionPosition indexPos, int noteID);
+	public short b64_NIFLocateNote (long hCollection, NotesCollectionPosition indexPos, int noteID);
 
 
 	/**
@@ -345,9 +337,9 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	/** Note is (opened) in canonical form */
 	public static final short NOTE_FLAG_CANONICAL = 0x4000;
 
-/* 	Note structure member IDs for NSFNoteGet&SetInfo. */
+/* 	Note structure member IDs for NSFNoteGet and SetInfo. */
 
-	/** IDs for NSFNoteGet&SetInfo */
+	/** IDs for NSFNoteGet and SetInfo */
 	public static short _NOTE_DB = 0;		
 	/** (When adding new values, see the */
 	public static short _NOTE_ID = 1;
@@ -493,23 +485,23 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			int hDB,
 			IntByReference phSearch,
 			int hColl,
-			Memory Query,
-			int Options,
-			short  Limit,
+			Memory query,
+			int options,
+			short  limit,
 			int hIDTable,
 			IntByReference retNumDocs,
-			Memory Reserved,
+			Memory reserved,
 			IntByReference rethResults);
 	public short b64_FTSearch(
 			long hDB,
 			LongByReference phSearch,
 			long hColl,
-			Memory Query,
-			int Options,
-			short  Limit,
+			Memory query,
+			int options,
+			short  limit,
 			long hIDTable,
 			IntByReference retNumDocs,
-			Memory Reserved,
+			Memory reserved,
 			LongByReference rethResults);
 	
 	public short b32_IDCreateTable (int alignment, IntByReference rethTable);
@@ -565,18 +557,18 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short ODSLength(short type);
 	
 	public short ConvertTIMEDATEToText(
-			ByteBuffer IntlFormat,
-			ByteBuffer TextFormat,
-			NotesTimeDate InputTime,
+			ByteBuffer intlFormat,
+			ByteBuffer textFormat,
+			NotesTimeDate inputTime,
 			Memory retTextBuffer,
-			short TextBufferLength,
+			short textBufferLength,
 			ShortByReference retTextLength);
 	
 	public short ConvertTextToTIMEDATE(
-			ByteBuffer IntlFormat,
-			ByteBuffer TextFormat,
-			Memory Text,
-			short MaxLength,
+			ByteBuffer intlFormat,
+			ByteBuffer textFormat,
+			Memory text,
+			short maxLength,
 			NotesTimeDate retTIMEDATE);
 
 	public boolean TimeGMToLocalZone (NotesTime timePtr);
@@ -587,17 +579,17 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short TIMEDATE_MINIMUM = 0;
 	public short TIMEDATE_MAXIMUM = 1;
 	public short TIMEDATE_WILDCARD = 2;
-	public void TimeConstant(short TimeConstantType, NotesTimeDate tdptr);
+	public void TimeConstant(short timeConstantType, NotesTimeDate tdptr);
 
 	public short ListGetText (ByteBuffer pList,
 			boolean fPrefixDataType,
-			short EntryNumber,
+			short entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 
 	public short ListGetText (Pointer pList,
 			boolean fPrefixDataType,
-			short EntryNumber,
+			short entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 	
@@ -612,15 +604,15 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFFolderGetIDTable(
 			int  hViewDB,
 			int hDataDB,
-			int  ViewNoteID,
-			int  Flags,
+			int  viewNoteID,
+			int  flags,
 			IntByReference hTable);
 
 	public short b64_NSFFolderGetIDTable(
 			long  hViewDB,
 			long hDataDB,
-			int  ViewNoteID,
-			int  Flags,
+			int  viewNoteID,
+			int  flags,
 			LongByReference hTable);
 
 	public short b32_NSFDbClearReplHistory(int hDb, int dwFlags);

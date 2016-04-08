@@ -1,15 +1,13 @@
 package com.mindoo.domino.jna;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.Calendar;
 import java.util.EnumSet;
-import java.util.Formatter;
 import java.util.List;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
+import com.mindoo.domino.jna.NotesDatabase.ISignCallback.Action;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Navigate;
@@ -59,45 +57,64 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
+	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
-	 * @throws NotesException 
 	 */
-	public NotesDatabase(Session session, String server, String filePath) throws NotesException {
-		this(session, server, filePath, session.getEffectiveUserName());
+	public NotesDatabase(Session session, String server, String filePath) {
+		this(session, server, filePath, getEffectiveUserName(session));
 	}
 
 	/**
+	 * Method required to read username in constructor
+	 * 
+	 * @param session session
+	 * @return effective username
+	 */
+	private static String getEffectiveUserName(Session session) {
+		try {
+			return session.getEffectiveUserName();
+		} catch (NotesException e) {
+			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
+		}
+	}
+	
+	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session current session
+	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
 	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
-	 * @throws NotesException 
 	 */
-	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) throws NotesException {
+	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) {
 		m_session = session;
 		
-		//make sure server and username are in canonical format
-		m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
-		if (server==null)
-			server = "";
-		if (filePath==null)
-			throw new NullPointerException("filePath is null");
-		
-		server = NotesNamingUtils.toCanonicalName(server);
-		if (!"".equals(server)) {
-			if (session.isOnServer()) {
-				Name nameServer = session.createName(server);
-				Name nameCurrServer = session.createName(session.getServerName());
-				if (nameServer.getCommon().equalsIgnoreCase(nameCurrServer.getCommon())) {
-					//switch to "" as servername if server points to the server the API is running on;
-					//this enables advanced lookup features like using NEXT_SELECTED in view traversal
-					server = "";
+		try {
+			//make sure server and username are in canonical format
+			m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
+			if (server==null)
+				server = "";
+			if (filePath==null)
+				throw new NullPointerException("filePath is null");
+
+			server = NotesNamingUtils.toCanonicalName(server);
+			if (!"".equals(server)) {
+				if (session.isOnServer()) {
+					Name nameServer = session.createName(server);
+					Name nameCurrServer = session.createName(session.getServerName());
+					if (nameServer.getCommon().equalsIgnoreCase(nameCurrServer.getCommon())) {
+						//switch to "" as servername if server points to the server the API is running on;
+						//this enables advanced lookup features like using NEXT_SELECTED in view traversal
+						server = "";
+					}
 				}
 			}
 		}
+		catch (NotesException e) {
+			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
+		}
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server);
 		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath);
@@ -219,25 +236,49 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(this);
 	}
 
+	/**
+	 * Internal method to read the session used to create the database
+	 * 
+	 * @return session
+	 * @deprecated will be removed if {@link NotesCollection} can decode the collation info without falling back to the legacy API
+	 */
 	Session getSession() {
 		return m_session;
 	}
 	
+	/**
+	 * Returns the server of the database
+	 * 
+	 * @return server
+	 */
 	public String getServer() {
 		loadPaths();
 		return m_server;
 	}
 	
+	/**
+	 * Returns the filepath of the database relative to the data directory
+	 * 
+	 * @return filepath
+	 */
 	public String getRelativeFilePath() {
 		loadPaths();
 		return m_paths[0];
 	}
 	
+	/**
+	 * Returns the absolute filepath of the database
+	 * 
+	 * @return filepath
+	 */
 	public String getAbsoluteFilePathOnLocal() {
 		loadPaths();
 		return m_paths[1];
 	}
 	
+	/**
+	 * Loads the path information from Notes
+	 */
 	private void loadPaths() {
 		if (m_paths==null) {
 			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -276,6 +317,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			m_paths = new String[] {relDbPath, absDbPath};
 		}
 	}
+	
 	public int getHandle32() {
 		return m_hDB32;
 	}
@@ -284,30 +326,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return m_hDB64;
 	}
 
-//	/**
-//	 * Creates a new instance
-//	 * 
-//	 * @param hDB database handle for 32 bit
-//	 */
-//	public NotesDatabase(int hDB) {
-//		if (NotesContext.is64Bit())
-//			throw new IllegalStateException("Constructor is 32bit only");
-//		m_hDB32 = hDB;
-//		m_noRecycleDb=true;
-//	}
-//
-//	/**
-//	 * Creates a new instance
-//	 * 
-//	 * @param hDB database handle for 64 bit
-//	 */
-//	public NotesDatabase(long hDB) {
-//		if (!NotesContext.is64Bit())
-//			throw new IllegalStateException("Constructor is 64bit only");
-//		m_hDB64 = hDB;
-//		m_noRecycleDb=true;
-//	}
-
 	/**
 	 * Returns the username for this we opened the database
 	 * 
@@ -315,11 +333,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public String getContextUser() {
 		return m_asUserCanonical;
-	}
-
-	@Override
-	protected void finalize() throws Throwable {
-		recycle();
 	}
 
 	/**
@@ -414,7 +427,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * which can be useful to reduce database size (by externalizing view indices) and
 	 * to let one Domino server index data of another one.
 	 * 
-	 * @param dataDb database containing the data to populate the collection
+	 * @param dbData database containing the data to populate the collection
 	 * @param viewName name of the view/collection
 	 * @return collection
 	 */
@@ -428,7 +441,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * which can be useful to reduce database size (by externalizing view indices) and
 	 * to let one Domino server index data of another one.
 	 * 
-	 * @param dataDb database containing the data to populate the collection
+	 * @param dbData database containing the data to populate the collection
 	 * @param viewName name of the view/collection
 	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
@@ -517,7 +530,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			
-			String sViewUNID = toUNID(viewUNID);
+			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
 			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
 		}
 		else {
@@ -561,7 +574,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			
-			String sViewUNID = toUNID(viewUNID);
+			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
 			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
 		}
 		
@@ -754,16 +767,59 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 	
-	public void signAll(int noteClasses) {
+	/**
+	 * Opens and returns the design collection
+	 * 
+	 * @return design collection
+	 */
+	public NotesCollection openDesignCollection() {
+		NotesCollection col = openCollection("DESIGN", NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN, null);
+		return col;
+	}
+	
+	/**
+	 * Callback interface to get notified about progress when signing
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface ISignCallback {
+		/** Values to control sign process */
+		public enum Action {Stop, Continue}
+
+		/**
+		 * Method to skip signing for specific notes
+		 * 
+		 * @param noteData note data from design collection
+		 * @return true to sign
+		 */
+		public boolean shouldSign(NotesViewEntryData noteData);
+		
+		/**
+		 * Method is called after signing a note
+		 * 
+		 * @param noteData note data from design collection
+		 * @return return value to stop signing
+		 */
+		public Action noteSigned(NotesViewEntryData noteData);
+	}
+
+	/**
+	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesCAPI}.
+	 * 
+	 * @param noteClasses bitmask of note classes to sign
+	 * @param callback optional callback to get notified about signed notes or null
+	 */
+	public void signAll(int noteClasses, ISignCallback callback) {
+		//TODO improve performance by checking first if the current signer has already signed the documents (like in the legacy API)
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesCollection col = openCollection("DESIGN", NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN, null);
+		NotesCollection col = openDesignCollection();
 		try {
 			NotesCollectionPosition pos = NotesCollectionPosition.toPosition("0");
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
-				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS));
+				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS, ReadMask.SUMMARY));
 				moreToDo = data.hasMoreToDo();
 				isFirstRun=false;
 				
@@ -771,6 +827,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				for (NotesViewEntryData currEntry : entries) {
 					int currNoteClass = currEntry.getNoteClass();
 					if ((currNoteClass & noteClasses)!=0) {
+						if (callback!=null && !callback.shouldSign(currEntry)) {
+							continue;
+						}
+						
 						int currNoteId = currEntry.getNoteId();
 						
 						boolean expandNote = false;
@@ -825,6 +885,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								NotesErrorUtils.checkResult(result);
 							}
 						}
+						
+						if (callback!=null) {
+							Action action = callback.noteSigned(currEntry);
+							if (action==Action.Stop) {
+								return;
+							}
+						}
 					}
 				}
 			}
@@ -841,7 +908,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <br>
 	 * Full text indexing of a remote database is not supported in the C API.
 	 * 
-	 * @param options Indexing options.  See {@link FTIndex}.  These options may be or'd together.
+	 * @param options Indexing options. See {@link FTIndex}
 	 * @return indexing statistics
 	 */
 	public NotesFTIndexStats FTIndex(EnumSet<FTIndex> options) {
@@ -997,39 +1064,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 		}
 		return retVersion;
-	}
-	
-	/**
-	 * Converts bytes in memory to a UNID
-	 * 
-	 * @param buf memory
-	 * @return unid
-	 */
-	public static String toUNID(Memory buf) {
-		Formatter formatter = new Formatter();
-		ByteBuffer data = buf.getByteBuffer(0, buf.size()).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
-		String unid = formatter.toString().toUpperCase();
-		formatter.close();
-		return unid;
-	}
-
-	/**
-	 * Converts bytes in memory to a UNID
-	 * 
-	 * @param buf memory
-	 * @return unid
-	 */
-	public static String toUNID(ByteBuffer buf) {
-		Formatter formatter = new Formatter();
-		ByteBuffer data = buf.order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
-		String unid = formatter.toString().toUpperCase();
-		formatter.close();
-
-		return unid;
 	}
 
 }

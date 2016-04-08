@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 
 import com.mindoo.domino.jna.constants.ReadMask;
@@ -366,7 +367,17 @@ public class NotesViewEntryData {
 	/**
 	 * Returns the collection entry column values. Only returns a non-null value if {@link ReadMask#SUMMARYVALUES}
 	 * is used for the lookup. The column values array contains two additional columns that Domino uses to
-	 * report {@link #isConflict()} and {@link #isResponse()}
+	 * report {@link #isConflict()} and {@link #isResponse()}<br>
+	 * <br>
+	 * The following data types are returned for the different column data types:<br>
+	 * <ul>
+	 * <li>{@link NotesCAPI#TYPE_TEXT} - {@link String}</li>
+	 * <li>{@link NotesCAPI#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+	 * <li>{@link NotesCAPI#TYPE_NUMBER} - {@link Double}</li>
+	 * <li>{@link NotesCAPI#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+	 * <li>{@link NotesCAPI#TYPE_TIME} - {@link Calendar}</li>
+	 * <li>{@link NotesCAPI#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * </ul>
 	 * 
 	 * @return column values or null
 	 */
@@ -405,7 +416,18 @@ public class NotesViewEntryData {
 	
 	/**
 	 * Returns the summary data, which is a map with programmatic column names as key and the column value as map value.
-	 * Only returns a non-null value if {@link ReadMask#SUMMARY} is used for the lookup.
+	 * Only returns a non-null value if {@link ReadMask#SUMMARY} is used for the lookup.<br>
+	 * <br>
+	 * The following values are returned for the different column data types:<br>
+	 * <br>
+	 * <ul>
+	 * <li>{@link NotesCAPI#TYPE_TEXT} - {@link String}</li>
+	 * <li>{@link NotesCAPI#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+	 * <li>{@link NotesCAPI#TYPE_NUMBER} - {@link Double}</li>
+	 * <li>{@link NotesCAPI#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+	 * <li>{@link NotesCAPI#TYPE_TIME} - {@link Calendar}</li>
+	 * <li>{@link NotesCAPI#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * </ul>
 	 * 
 	 * @return summary data or null
 	 */

@@ -36,7 +36,6 @@ import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 import lotus.domino.Database;
-import lotus.domino.NotesException;
 import lotus.domino.View;
 import lotus.domino.ViewColumn;
 
@@ -67,7 +66,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Creates a new instance, 32 bit mode
 	 * 
-	 * @param hDB database handle
+	 * @param parentDb parent database
 	 * @param hCollection collection handle
 	 * @param name collection name
 	 * @param viewNoteId view note id
@@ -77,7 +76,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, int hCollection, String name, int viewNoteId, String viewUNID, NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
+	public NotesCollection(NotesDatabase parentDb, int hCollection, String name, int viewNoteId, String viewUNID,
+			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_asUserCanonical = asUserCanonical;
@@ -97,7 +97,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Creates a new instance, 64 bit mode
 	 * 
-	 * @param hDB database handle
+	 * @param parentDb parent database
 	 * @param hCollection collection handle
 	 * @param name collection name
 	 * @param viewNoteId view note id
@@ -107,10 +107,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, long hCollection, String name, int viewNoteId, String viewUNID, NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUser) {
+	public NotesCollection(NotesDatabase parentDb, long hCollection, String name, int viewNoteId, String viewUNID,
+			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
-		m_asUserCanonical = asUser;
+		m_asUserCanonical = asUserCanonical;
 		m_parentDb = parentDb;
 		m_hDB64 = parentDb.getHandle64();
 		m_hCollection64 = hCollection;
@@ -171,7 +172,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * <li>{@link #getAllIds(boolean)}</li>
 	 * <li>{@link #getAllIdsByKey(EnumSet, Object...)}</li>
 	 * </ul>
-	 * @param update
+	 * @param update true to activate auto update
 	 */
 	public void setAutoUpdate(boolean update) {
 		m_autoUpdate = update;
@@ -266,11 +267,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Method to reverse the traversal order, e.g. from {@link NotesCAPI#NAVIGATE_NEXT} to
-	 * {@link NotesCAPI#NAVIGATE_PREV}.
+	 * Method to reverse the traversal order, e.g. from {@link Navigate#NEXT} to
+	 * {@link Navigate#PREV}.
 	 * 
 	 * @param nav nav constant
-	 * @return reversed contant
+	 * @return reversed constant
 	 */
 	public static Navigate reverseNav(Navigate nav) {
 		switch (nav) {
@@ -296,6 +297,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return Navigate.NEXT_PARENT;
 		case NEXT:
 			return Navigate.PREV;
+		case PREV:
+			return Navigate.NEXT;
 		case NEXT_UNREAD:
 			return Navigate.PREV_UNREAD;
 		case NEXT_UNREAD_MAIN:
@@ -352,14 +355,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return Navigate.PREV_NONCATEGORY;
 		case PREV_NONCATEGORY:
 			return Navigate.NEXT_NONCATEGORY;
+		default:
+			return nav;
 		}
-
-		return nav;
-	}
-	
-	@Override
-	protected void finalize() throws Throwable {
-		recycle();
 	}
 	
 	public boolean isRecycled() {
@@ -831,7 +829,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Convenience method that collects all note ids in the view, in the sort order of the current collation
 	 * 
-	 * @return sorted set of note ids
+	 * @param includeCategories true to also return note ids for category entries, false to just work on documents
+	 * @return set of note ids, sorted by occurence in the collection
 	 */
 	public LinkedHashSet<Integer> getAllIds(boolean includeCategories) {
 		LinkedHashSet<Integer> ids = getAllEntries("0", 1, includeCategories ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
@@ -869,6 +868,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnMask values to extract
 	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
+	 * 
+	 * @param <T> type of lookup result object
 	 */
 	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
@@ -935,6 +936,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param callback lookup callback
 	 * @param keys lookup keys
 	 * @return lookup result
+	 * 
+	 * @param <T> type of lookup result object
 	 */
 	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback, Object... keys) {
 		//we are leaving the loop when there is no more data to be read;
@@ -1140,8 +1143,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 *	have multiple permutations, and cannot be used to locate response<br>
 	 *	notes.
 	 * 
-	 * @param findFlags find flags ({@see Find})
-	 * @param returnMask mask specifying what information is to be returned on each entry ({@see ReadMask})
+	 * @param findFlags find flags ({@link Find})
+	 * @param returnMask mask specifying what information is to be returned on each entry ({link ReadMask})
 	 * @param decodeColumns optional array to limit column decoding (or null)
 	 * @param keys lookup keys
 	 * @return lookup result
@@ -1245,12 +1248,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * The key buffer may contain search keys for: just column 1; columns 1
 	 * and 3; or for columns 1, 3, and 4.<br>
 	 * <br>
-	 * This function yields the COLLECTIONPOSITION of the first note in the
+	 * This function yields the {@link NotesCollectionPosition} of the first note in the
 	 * collection that matches the keys. It also yields a count of the number
 	 * of notes that match the keys. Since all notes that match the keys
 	 * appear contiguously in the view or folder, you may pass the resulting
-	 * COLLECTIONPOSITION and match count as inputs to
-	 * {@link NotesCollection#readEntries(NotesCollectionPosition, short, int, short, int, int)}
+	 * {@link NotesCollectionPosition} and match count as inputs to
+	 * {@link NotesCollection#readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, boolean[])}
 	 * to read all the entries in the collection that match the keys.<br>
 	 * <br>
 	 * If multiple notes match the specified (partial) keys, and
@@ -1294,12 +1297,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * {@link Find#GREATER_THAN} | {@link Find#EQUAL}<br>
 	 * <br>
 	 * this function cannot determine the number of notes that match the search
-	 * condition (use {@link #canFindExactNumberOfMatches(short)} to check
+	 * condition (use {@link #canFindExactNumberOfMatches(EnumSet)} to check
 	 * whether a combination of find flags can return the exact number of matches).<br>
 	 * If we cannot determine the number of notes, the function will return 1 for the count
 	 * value returned by {@link FindResult#getEntriesFound()}.
 
-	 * @param findFlags {@see Find}
+	 * @param findFlags {@link Find}
 	 * @param keys lookup keys, can be {@link String}, double / {@link Double}, int / {@link Integer}, {@link Date}, {@link Calendar}, {@link Date}[] or {@link Calendar}[] with two elements or {@link Interval} for date ranges
 	 * @return result
 	 */
@@ -1361,15 +1364,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * or folder. Use this function only when the leftmost sorted column of
 	 * the view or folder is a string.<br>
 	 * <br>
-	 * This function yields the COLLECTIONPOSITION of the first note in the
+	 * This function yields the {@link NotesCollectionPosition} of the first note in the
 	 * collection that matches the string. It also yields a count of the number
 	 * of notes that match the string.<br>
 	 * <br>
 	 * With views that are not categorized, all notes with primary sort keys that
 	 * match the string appear contiguously in the view or folder.<br>
 	 * <br>
-	 * This means you may pass the resulting COLLECTIONPOSITION and match count
-	 * as inputs to {@link #readEntries(NotesCollectionPosition, short, int, short, int, int)}
+	 * This means you may pass the resulting {@link NotesCollectionPosition} and match count
+	 * as inputs to {@link #readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, boolean[])}
 	 * to read all the entries in the collection that match the string.<br>
 	 * <br>
 	 * This routine returns limited results if the view is categorized.<br>
@@ -1381,7 +1384,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * categorized under multiple categories (the resulting position is unpredictable),
 	 * and also cannot be used to locate responses.<br>
 	 * <br>
-	 * Use {@link #findByKey(short, Object...)} if the leftmost sorted column
+	 * Use {@link #findByKey(EnumSet, Object...)} if the leftmost sorted column
 	 * is a number or a time/date.<br>
 	 * <br>
 	 * Returning the number of matches on an inequality search is not supported.<br>
@@ -1394,7 +1397,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * {@link Find#GREATER_THAN} | {@link Find#EQUAL}<br>
 	 * <br>
 	 * this function cannot determine the number of notes that match the search
-	 * condition (use {@link #canFindExactNumberOfMatches(short)} to check
+	 * condition (use {@link #canFindExactNumberOfMatches(EnumSet)} to check
 	 * whether a combination of find flags can return the exact number of matches).<br>
 	 * If we cannot determine the number of notes, the function will return 1 for the count
 	 * value returned by {@link FindResult#getEntriesFound()}.
@@ -1471,20 +1474,44 @@ public class NotesCollection implements IRecyclableNotesObject {
 		private int m_entriesFound;
 		private boolean m_hasExactNumberOfMatches;
 		
+		/**
+		 * Creates a new instance
+		 * 
+		 * @param position position of the first match
+		 * @param entriesFound number of entries found or 1 if hasExactNumberOfMatches is <code>false</code>
+		 * @param hasExactNumberOfMatches true if Notes was able to count the number of matches (e.g. for string key lookups with full or partial matches)
+		 */
 		public FindResult(String position, int entriesFound, boolean hasExactNumberOfMatches) {
 			m_position = position;
 			m_entriesFound = entriesFound;
 			m_hasExactNumberOfMatches = hasExactNumberOfMatches;
 		}
 
+		/**
+		 * Returns the number of entries found or 1 if hasExactNumberOfMatches is <code>false</code>
+		 * and any matches were found
+		 * 
+		 * @return count
+		 */
 		public int getEntriesFound() {
 			return m_entriesFound;
 		}
 
+		/**
+		 * Returns the position of the first match
+		 * 
+		 * @return position
+		 */
 		public String getPosition() {
 			return m_position;
 		}
 		
+		/**
+		 * Use this method to check whether Notes was able to count the number of matches
+		 * (e.g. for string key lookups with full or partial matches)
+		 * 
+		 * @return true if we have an exact match count
+		 */
 		public boolean hasExactNumberOfMatches() {
 			return m_hasExactNumberOfMatches;
 		}
@@ -1758,6 +1785,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		private Map<Short,Direction> m_collationSorting;
 		private int m_nrOfCollations;
 		
+		/**
+		 * Creates a new instance
+		 */
 		public CollationInfo() {
 			m_ascendingLookup = new HashMap<String,Short>();
 			m_descendingLookup = new HashMap<String,Short>();
@@ -1853,9 +1883,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param columnName sort column name
 	 * @param direction sort direction
 	 * @return collation number or -1 if not found
-	 * @throws NotesException
 	 */
-	public short findCollation(String columnName, Direction direction) {
+	private short findCollation(String columnName, Direction direction) {
 		return getCollationsInfo().findCollation(columnName, direction);
 	}
 	

@@ -5,8 +5,8 @@ import java.util.EnumSet;
 import com.mindoo.domino.jna.NotesCollection;
 
 /**
- * These flags are used by {@link NotesCollection#findByKey(short, Object...)} (NIFFindByKey)
- * and {@link NotesCollection#findByName(String, short)} (NIFFindByName) to control how the
+ * These flags are used by {@link NotesCollection#findByKey(EnumSet, Object...)} (NIFFindByKey)
+ * and {@link NotesCollection#findByName(String, EnumSet)} (NIFFindByName) to control how the
  * view is searched for the key. The flags, {@link #PARTIAL}, {@link #CASE_INSENSITIVE},
  * and {@link #ACCENT_INSENSITIVE} should only be used for character data, since a
  * "partial number" or "partial date" is not well defined.<br>

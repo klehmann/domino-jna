@@ -96,11 +96,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 	}
 	
-	@Override
-	protected void finalize() throws Throwable {
-		recycle();
-	}
-	
 	/**
 	 * Compares this table to another table
 	 * 

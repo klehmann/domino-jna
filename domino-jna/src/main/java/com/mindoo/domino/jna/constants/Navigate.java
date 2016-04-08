@@ -6,7 +6,7 @@ import com.mindoo.domino.jna.NotesCollection;
 
 /**
  * These flags control how
- * {@link NotesCollection#readEntries(com.weilgut.xlayer.domino.jna.structs.NotesCollectionPosition, short, int, short, int, int, boolean[])}
+ * {@link NotesCollection#readEntries(com.mindoo.domino.jna.structs.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, boolean[])}
  * steps through a collection.<br>
  * <br>
  * The flags are used to control both the order in which NIFReadEntries:<br>
@@ -15,7 +15,7 @@ import com.mindoo.domino.jna.NotesCollection;
  * @author Karsten Lehmann
  */
 public enum Navigate {
-	/** Remain at current position (reset position & return data). */
+	/** Remain at current position (reset position and return data). */
 	CURRENT(0),
 	/** Up 1 level */
 	PARENT(3),

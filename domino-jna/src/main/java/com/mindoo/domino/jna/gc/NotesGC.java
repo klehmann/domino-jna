@@ -98,7 +98,9 @@ public class NotesGC {
 	 * 
 	 * @param callable code to execute
 	 * @return computation result
-	 * @throws Exception
+	 * @throws Exception in case of errors
+	 * 
+	 * @param <T> return value type of code to be run
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static <T> T runWithAutoGC(Callable<T> callable) throws Exception {

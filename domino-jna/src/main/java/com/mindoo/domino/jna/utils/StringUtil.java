@@ -113,7 +113,7 @@ public class StringUtil {
 	 * @param targetLength length for the result string
 	 * @param padChar character to add
 	 * @param appendChars true to append the character, false to insert them at the beginning of the string
-	 * @return
+	 * @return processed string
 	 */
 	public static String pad(String str, int targetLength, char padChar, boolean appendChars) {
 		if (str.length()>=targetLength)

@@ -11,7 +11,7 @@ import com.mindoo.domino.jna.utils.StringUtil;
 /**
  * Utility method to easily scan a {@link NotesCollection} and read its data
  * 
- * @deprecated should by replaced by {@link NotesCollection#getAllEntries(String, EnumSet, int, int, EnumSet, boolean[], com.mindoo.domino.jna.NotesCollection.IViewEntryFilter)}, because this implementation does not handle view index changes
+ * @deprecated should by replaced by {@link NotesCollection#getAllEntries(String, int, EnumSet, int, EnumSet, com.mindoo.domino.jna.NotesCollection.ViewLookupCallback)}, because this implementation does not handle view index changes
  * 
  * @author Karsten Lehmann
  */
@@ -36,11 +36,13 @@ public abstract class NotesCollectionReader {
 	 * @param col collection to scan
 	 * @param startPos start position or null to start in the first row
 	 * @param skipCount number of entries to skip
+	 * @param skipNavigator navigator type that defines which collection entries should be skipped
 	 * @param returnNavigator navigator type that defines which collection entries should be read
 	 * @param bufferSize number of entries to read in one API call (used to improve performance when reading a lot of data)
 	 * @param returnMask bitmask of view data to be returned
 	 */
-	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator, EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask) {
+	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator,
+			EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask) {
 		this(col, startPos, skipCount, skipNavigator, returnNavigator, bufferSize, returnMask,  null);
 	}
 	
@@ -50,12 +52,14 @@ public abstract class NotesCollectionReader {
 	 * @param col collection to scan
 	 * @param startPos start position or null to start in the first row
 	 * @param skipCount number of entries to skip
+	 * @param skipNavigator navigator type that defines which collection entries should be skipped
 	 * @param returnNavigator navigator type that defines which collection entries should be read
 	 * @param bufferSize number of entries to read in one API call (used to improve performance when reading a lot of data)
 	 * @param returnMask bitmask of view data to be returned
 	 * @param decodeColumns optional array to only decode specific view columns
 	 */
-	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator, EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
+	public NotesCollectionReader(NotesCollection col, String startPos, int skipCount, EnumSet<Navigate> skipNavigator,
+			EnumSet<Navigate> returnNavigator, int bufferSize, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
 		m_col = col;
 		m_pos = StringUtil.isEmpty(startPos) ? NotesCollectionPosition.toPosition("0") : NotesCollectionPosition.toPosition(startPos);
 		m_posStr = startPos;

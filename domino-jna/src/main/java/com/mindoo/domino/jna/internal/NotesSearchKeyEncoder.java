@@ -24,6 +24,13 @@ import com.sun.jna.Pointer;
 
 public class NotesSearchKeyEncoder {
 
+	/**
+	 * Produces the keybuffer for NIFFindByKey
+	 * 
+	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper), {@link Interval}
+	 * @return buffer with encoded keys
+	 * @throws Exception in case of errors
+	 */
 	public static Memory b32_encodeKeys(Object[] keys) throws Exception {
 		return b64_encodeKeys(keys);
 	}
@@ -32,8 +39,8 @@ public class NotesSearchKeyEncoder {
 	 * Produces the keybuffer for NIFFindByKey
 	 * 
 	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper), {@link Interval}
-	 * @return
-	 * @throws Exception
+	 * @return buffer with encoded keys
+	 * @throws Exception in case of errors
 	 */
 	public static Memory b64_encodeKeys(Object[] keys) throws Exception {
 		ByteArrayOutputStream metaDataByteOut = new ByteArrayOutputStream();
@@ -176,7 +183,7 @@ public class NotesSearchKeyEncoder {
 	 * @param itemOut output stream for ITEM structure
 	 * @param valueDataOut output stream for search key value
 	 * @param currKey search key
-	 * @throws Exception
+	 * @throws Exception in case of errors
 	 */
 	private static void addCalendarKey(OutputStream itemOut, OutputStream valueDataOut, Calendar currKey) throws Exception {
 		Memory itemMem = new Memory(NotesCAPI.itemSize);
@@ -215,7 +222,7 @@ public class NotesSearchKeyEncoder {
 	 * @param itemOut output stream for ITEM structure
 	 * @param valueDataOut output stream for search key value
 	 * @param currKey search key
-	 * @throws Exception
+	 * @throws Exception in case of errors
 	 */
 	private static void addNumberRangeKey(OutputStream itemOut, OutputStream valueDataOut, double[] currKey) throws Exception {
 		if (currKey.length!=2)
@@ -257,7 +264,7 @@ public class NotesSearchKeyEncoder {
 	 * @param itemOut output stream for ITEM structure
 	 * @param valueDataOut output stream for search key value
 	 * @param currKey search key, array with two values
-	 * @throws Exception
+	 * @throws Exception in case of errors
 	 */
 	private static void addCalendarRangeKey(OutputStream itemOut, OutputStream valueDataOut, Calendar[] currKey) throws Exception {
 		if (currKey.length!=2)
@@ -304,7 +311,7 @@ public class NotesSearchKeyEncoder {
 	 * @param itemOut output stream for ITEM structure
 	 * @param valueDataOut output stream for search key value
 	 * @param currKey search key
-	 * @throws Exception
+	 * @throws Exception in case of errors
 	 */
 	private static void addStringKey(OutputStream itemOut, OutputStream valueDataOut, String currKey) throws Exception {
 		Memory strValueMem = NotesStringUtils.toLMBCS(currKey);
@@ -340,8 +347,8 @@ public class NotesSearchKeyEncoder {
 	 * 
 	 * @param itemOut output stream for ITEM structure
 	 * @param valueDataOut output stream for search key value
-	 * @param doubleValue
-	 * @throws Exception
+	 * @param doubleValue search key
+	 * @throws Exception in case of errors
 	 */
 	private static void addNumberKey(OutputStream itemOut, OutputStream valueDataOut, double doubleValue) throws Exception {
 		Memory itemMem = new Memory(NotesCAPI.itemSize);

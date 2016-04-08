@@ -1,6 +1,9 @@
 package com.mindoo.domino.jna.utils;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Formatter;
 
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
@@ -14,13 +17,14 @@ import com.sun.jna.Pointer;
  */
 public class NotesStringUtils {
 
+	/**
+	 * Decodes an LMBCS encoded string to a Java String
+	 * 
+	 * @param in memory with encoded string
+	 * @return decoded string
+	 */
 	public static String fromLMBCS(Memory in) {
-		
-//		byte[] outAsBytes = new byte[in.limit() * 2];
-//		ByteBuffer out = ByteBuffer.wrap(outAsBytes);
-
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-	//	public short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
 
 		short inSize = (short) in.size();
 		//search for terminating null character
@@ -46,6 +50,13 @@ public class NotesStringUtils {
 		}
 	}
 
+	/**
+	 * Converts an LMBCS string to a Java String
+	 * 
+	 * @param inPtr pointer in memory
+	 * @param bufSizeInBytes string lengths in bytes
+	 * @return decoded String
+	 */
 	public static String fromLMBCS(Pointer inPtr, short bufSizeInBytes) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
@@ -63,6 +74,12 @@ public class NotesStringUtils {
 		}
 	}
 
+	/**
+	 * Converts a string to LMBCS format
+	 * 
+	 * @param inStr string
+	 * @return encoded string in memory
+	 */
 	public static Memory toLMBCS(String inStr) {
 		if (inStr==null)
 			return null;
@@ -99,6 +116,39 @@ public class NotesStringUtils {
 		outResized.setByte(outContentLength, (byte) 0);
 		
 		return outResized;
+	}
+
+	/**
+	 * Converts bytes in memory to a UNID
+	 * 
+	 * @param buf memory
+	 * @return unid
+	 */
+	public static String toUNID(Memory buf) {
+		Formatter formatter = new Formatter();
+		ByteBuffer data = buf.getByteBuffer(0, buf.size()).order(ByteOrder.LITTLE_ENDIAN);
+		formatter.format("%16x", data.getLong());
+		formatter.format("%16x", data.getLong());
+		String unid = formatter.toString().toUpperCase();
+		formatter.close();
+		return unid;
+	}
+
+	/**
+	 * Converts bytes in memory to a UNID
+	 * 
+	 * @param buf memory
+	 * @return unid
+	 */
+	public static String toUNID(ByteBuffer buf) {
+		Formatter formatter = new Formatter();
+		ByteBuffer data = buf.order(ByteOrder.LITTLE_ENDIAN);
+		formatter.format("%16x", data.getLong());
+		formatter.format("%16x", data.getLong());
+		String unid = formatter.toString().toUpperCase();
+		formatter.close();
+
+		return unid;
 	}
 
 }

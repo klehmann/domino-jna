@@ -49,6 +49,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param returnMask bitmask used to fill the buffer with data
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param columnsToDecode optional array of columns to decode or null
+	 * @param pos position of first match, if returned by find method
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @return collection data
 	 */
@@ -67,7 +68,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param returnMask bitmask used to fill the buffer with data
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param columnsToDecode optional array of columns to decode or null
-	 * @param pos position to add to NotesViewData object in case view data is read via {@link NotesCollection#findByKeyAndReadData(EnumSet, EnumSet, EnumSet, boolean[], Object...)}
+	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, boolean[], Object...)}
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @return collection data
 	 */
@@ -131,7 +132,7 @@ public class NotesLookupResultBufferDecoder {
 				
 				if (returnMask.contains(ReadMask.NOTEUNID)) {
 					ByteBuffer unidBytes = bufferPtr.getByteBuffer(bufferPos, 16);
-					String unid = NotesDatabase.toUNID(unidBytes);
+					String unid = NotesStringUtils.toUNID(unidBytes);
 					newData.setUNID(unid);
 					
 					bufferPos+=16;
@@ -266,7 +267,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
 	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param columnsToDecode optional array of columns to decode or null
-	 * @return
+	 * @return item value table data
 	 */
 	public static ItemValueTableData decodeItemValueTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight, boolean[] columnsToDecode) {
 		int bufferPos = 0;
@@ -554,22 +555,59 @@ public class NotesLookupResultBufferDecoder {
 		protected int m_itemsCount;
 		protected int[] m_itemValueLengthsInBytes;
 		
+		/**
+		 * Returns the decoded item values, with the following types:<br>
+		 * <ul>
+		 * <li>{@link NotesCAPI#TYPE_TEXT} - {@link String}</li>
+		 * <li>{@link NotesCAPI#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+		 * <li>{@link NotesCAPI#TYPE_NUMBER} - {@link Double}</li>
+		 * <li>{@link NotesCAPI#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+		 * <li>{@link NotesCAPI#TYPE_TIME} - {@link Calendar}</li>
+		 * <li>{@link NotesCAPI#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+		 * </ul>
+		 * 
+		 * @return values
+		 */
 		public Object[] getItemValues() {
 			return m_itemValues;
 		}
 		
+		/**
+		 * Returns the data types of decoded item values, e.g. {@link NotesCAPI#TYPE_TEXT},
+		 * {@link NotesCAPI#TYPE_TEXT_LIST}, {@link NotesCAPI#TYPE_NUMBER},
+		 * {@link NotesCAPI#TYPE_NUMBER_RANGE}
+		 * 
+		 * @return data type
+		 */
 		public int[] getItemDataTypes() {
 			return m_itemDataTypes;
 		}
 		
+		/**
+		 * Returns the total length of the summary buffer
+		 * 
+		 * @return length
+		 */
 		public int getTotalBufferLength() {
 			return m_totalBufferLength;
 		}
 		
+		/**
+		 * Returns the number of decoded items
+		 * 
+		 * @return number
+		 */
 		public int getItemsCount() {
 			return m_itemsCount;
 		}
 		
+		/**
+		 * Returns the lengths of the encoded item values in bytes, e.g. for of each column
+		 * in a collection (for {@link ReadMask#SUMMARYVALUES}) or for the summary buffer items
+		 * returned for {@link ReadMask#SUMMARY}.
+		 * 
+		 * @return lengths
+		 */
 		public int[] getItemValueLengthsInBytes() {
 			return m_itemValueLengthsInBytes;
 		}
@@ -583,6 +621,11 @@ public class NotesLookupResultBufferDecoder {
 	public static class ItemTableData extends ItemValueTableData {
 		protected String[] m_itemNames;
 		
+		/**
+		 * Returns the names of the decoded items (programmatic column names in case of collection data)
+		 * 
+		 * @return names
+		 */
 		public String[] getItemNames() {
 			return m_itemNames;
 		}

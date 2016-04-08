@@ -17,7 +17,7 @@ public class NotesErrorUtils {
 	 * a proper error message if the specified result code is not 0.
 	 * 
 	 * @param result code
-	 * @throws NotesError
+	 * @throws NotesError if the result is not 0
 	 */
 	public static void checkResult(short result) {
 		if (result > 0) {

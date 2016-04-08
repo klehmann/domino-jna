@@ -22,7 +22,7 @@ public class NotesRange extends Structure {
 		return Arrays.asList("ListEntries", "RangeEntries");
 	}
 	/**
-	 * @param ListEntries list entries following<br>
+	 * @param ListEntries list entries following
 	 * @param RangeEntries range entries following
 	 */
 	public NotesRange(short ListEntries, short RangeEntries) {
