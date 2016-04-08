@@ -23,7 +23,8 @@ One reason for open sourcing all this stuff was to get more hands on it and make
 ## Supported platforms
 The code should run in 32 and 64 bit Notes Client and Domino server environments on Windows, Linux and Mac.
 
-It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments.
+It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments, but
+we don't currently have access to those platforms anyway.
 
 ## Usage
 Here is a code snippet to demonstrate how to use the API:
@@ -61,23 +62,27 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		//(its position could be different from "1" caused by reader fields)
 		int entriesToSkip = 1;
 		//add all read entries to the result list
-		int entriesToReturn = Integer.MAX_VALUE);
+		int entriesToReturn = Integer.MAX_VALUE;
 		//tell the API how to navigate in the view: from one entry in the selectedList
 		//to the next one (in view ordering)
 		EnumSet<Navigate> returnNavigator = EnumSet.of(Navigate.NEXT_SELECTED);
 		//use the maximum read buffer
 		int bufferSize = Integer.MAX_VALUE;
 		//tell the API which data we want to read (in this case only note ids, which is very fast)
-		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID);
+		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY);
 		
 		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries(startPos, entriesToSkip,
 				returnNavigator, Integer.MAX_VALUE,
-				returnData, new EntriesAsListCallback(entriesToReturn);
+				returnData, new EntriesAsListCallback(entriesToReturn));
 				
 		//check that all entries that we read were from our picked id list
 		for (NotesViewEntryData currEntry : selectedEntries) {
 			Assert.assertTrue("Entry read from view is contained in selected list",
 				pickedNoteIds.contains(currEntry.getNoteId()));
+				
+			//read map of column names and values
+			Map<String,Object> summaryData = currEntry.getSummaryData();
+			//...
 		}
 		
 		//now remove all read ids from pickedNoteIds and make sure that we found everything
