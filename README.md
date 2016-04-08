@@ -11,7 +11,7 @@ The project provides functionality that is not available in the classic Java API
 * special optimized functions for local databases (e.g. when API is running on the server and databases are on the server as well):
     * **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
     * **reading categorized views** with expanded/collapsed entries and min/max level
-* read *design collection* with design elements in a database
+* read **design collection** with design elements in a database
 support for view resorting (changing the collation in C API terms)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
@@ -55,7 +55,8 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 			pickedNoteIds.add(randomNoteId);
 		}
 				
-		//populate the collection's selected list with picked ids (only works if database with collection is accessed locally)
+		//populate the collection's selected list with picked ids (only works if database
+		//with collection is accessed locally where the API is running)
 		NotesIDTable selectedList = colFromDbData.getSelectedList();
 		selectedList.clear();
 		selectedList.addNotes(pickedNoteIds);
@@ -70,9 +71,10 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		//tell the API how to navigate in the view: from one entry in the selectedList
 		//to the next one (in view ordering)
 		EnumSet<Navigate> returnNavigator = EnumSet.of(Navigate.NEXT_SELECTED);
-		//use the maximum read buffer
+		//preload the maximum number of entries, can be useful when implementing
+		//filter method in EntriesAsListCallback
 		int bufferSize = Integer.MAX_VALUE;
-		//tell the API which data we want to read (in this case only note ids, which is very fast)
+		//tell the API which data we want to read (in this case note ids and column itemname/value map)
 		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY);
 		
 		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries(startPos, entriesToSkip,
