@@ -2,20 +2,26 @@
 Java project to access the IBM Domino C API using Java Native Access (JNA)
 
 ## Features
-The project provides functionality that is not available in the classic Java API of IBM Notes/Domino or that is poorly implemented.
+The project provides functionality that is not available in the classic Java API of IBM Notes/Domino or that is poorly implemented, for example:
 
 * view lookups using different key formats (e.g. strings, numbers, dates, date ranges) and equality/inequality searches (e.g. find less or greater than)
 * decodes all available types of view data (string, string list, number, number list, datetime, datetime list)
 * read view data as another Notes user
-* support for view resorting (changing the sort column = collation)
+* support for view resorting (changing the collation in C API terms) 
 * separation of Notes views and their data into multiple databases (like programmatically creating private views and keeping them up-to-date)
 * fulltext index creation with all available options
 * supports incremental synchronization of Domino databases by reading noteid lists of modified and deleted documents (IBM's Java API does not return ids of deleted docs)
 * clearing the replication history
 * compute @Usernameslist values for any Notes user
  
+**Please note:
+The project gives access to some really low level functions of IBM Notes/Domino. Using them in the wrong way or sending unexpected parameter values
+might crash your application server, so make sure you know what you are doing :-).*
+
+One reason for open sourcing all this stuff was to get more hands on it and make it as robust as possible.
+
 ## Supported platforms
-The code should run with 32 and 64 bit Notes Client and Domino server environments on Windows, Linux and Mac.
+The code should run in 32 and 64 bit Notes Client and Domino server environments on Windows, Linux and Mac.
 
 It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments.
 
@@ -30,7 +36,6 @@ NotesGC.runWithAutoGC(new Callable<T>() {
 				
 		//open People view
 		NotesCollection colFromDbData = dbData.openCollectionByName("People");
-		colFromDbData.update();
 
 		//read all note ids from the collection
 		LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(false);
@@ -44,47 +49,54 @@ NotesGC.runWithAutoGC(new Callable<T>() {
 			pickedNoteIds.add(randomNoteId);
 		}
 				
-		//populate selected list (only works locally)
+		//populate selected list with picked ids (only works if database is local)
 		NotesIDTable selectedList = colFromDbData.getSelectedList();
 		selectedList.clear();
 		selectedList.addNotes(pickedNoteIds);
 
-		//next, traverse selected entries only
+		//next, traverse selected entries only, starting at position "0" (top of the view)
 		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
 				EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
 				EnumSet.of(ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE));
 				
-		//check if we really read entries from our selection
+		//check that all entries that we read were from our picked id list
 		for (NotesViewEntryData currEntry : selectedEntries) {
-			Assert.assertTrue("Entry read from view is contained in selected list", pickedNoteIds.contains(currEntry.getNoteId()));
+			Assert.assertTrue("Entry read from view is contained in selected list",
+				pickedNoteIds.contains(currEntry.getNoteId()));
 		}
 				
 		//now remove all read ids from pickedNoteIds and make sure that we did not miss anything
 		for (NotesViewEntryData currEntry : selectedEntries) {
 			pickedNoteIds.remove(currEntry.getNoteId());
 		}
-				
+		
 		Assert.assertTrue("All ids from the selected list can be found in the view", pickedNoteIds.isEmpty());
 		return null;
 	}
 });
 ```
 
-As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested). We do this to automatically collect allocated
-C handles and automatically free them when the code block is done.
+As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
+
+We do this to automatically collect allocated C handles and automatically free them when the code block is done.
+
 In many cases, this should avoid manually recycling API objects, but for some edge cases, objects like `NotesCollection` (which is the term for Notes view in
-the C API) do have a `recycle()`method.
+the C API) or `NotesIDTable`do have a `recycle()`method.
 
 ### Registration of local Notes.jar
-Before running the test cases, the local Notes.jar file needs to be added to Maven as a repository.
+Before running the test cases or building the project, the local Notes.jar file needs to be added to Maven as a repository.
 
 **For Windows, use this syntax (with the right path to Notes.jar on your machine):**
 
-	`mvn install:install-file -Dfile="C:\Program Files (x86)\IBM\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar`
+```
+mvn install:install-file -Dfile="C:\Program Files (x86)\IBM\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar`
+```
 
 **For the Mac, use this syntax:**
 
-	`mvn install:install-file -Dfile="/Applications/IBM Notes.app/Contents/MacOS/jvm/lib/ext/Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar`
+```
+mvn install:install-file -Dfile="/Applications/IBM Notes.app/Contents/MacOS/jvm/lib/ext/Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar`
+```
 
 ### Maven build
 
@@ -110,10 +122,9 @@ With skipped testcases, this command should run fine:
 
 ```
 mvn -DJVMPARAMS=-d64 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
-
 ```
 
-The directory target/lib contains all recursive dependencies required to use the library.
+The directory `target/lib` contains all recursive dependencies required to use the library.
 
 ### Running the test cases
 The project contains a number of test cases that demonstrate how the API is used.
@@ -153,8 +164,8 @@ NotesINI = ~/Library/Preferences/Notes Preferences
 This project is not done yet, this is just the beginning.
 Here are some of the things that we plan to do:
 
-* write blog entries explaining the API internals
-* add the API to an XPages Extension Library plugin for easier comsumption from XPages applications
+* write [blog entries](http://blog.mindoo.com) explaining the API internals
+* add the API to an XPages Extension Library plugin for easier consumption from XPages applications
 * add more API methods, e.g. NSFSearch is high on the list
 * write more testcases
 * add more syntactical sugar, hide complexity
