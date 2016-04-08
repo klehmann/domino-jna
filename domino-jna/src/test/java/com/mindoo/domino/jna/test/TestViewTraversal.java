@@ -41,14 +41,14 @@ public class TestViewTraversal extends BaseJNATestClass {
 				
 				double minVal = 10;
 				
-				List<NotesViewEntryData> entriesInNumberRange = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.GREATER_THAN, Find.EQUAL),
+				List<NotesViewEntryData> entriesGreaterOrEqualMinVal = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.GREATER_THAN, Find.EQUAL),
 						EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE), Double.valueOf(minVal));
 				
-				Assert.assertFalse("There should be entries with lengths column values matching the search key", entriesInNumberRange.isEmpty());
+				Assert.assertFalse("There should be entries with lengths column values matching the search key", entriesGreaterOrEqualMinVal.isEmpty());
 				
 				Set<Integer> noteIdsInRange = new HashSet<Integer>();
 				
-				for (NotesViewEntryData currEntry : entriesInNumberRange) {
+				for (NotesViewEntryData currEntry : entriesGreaterOrEqualMinVal) {
 					noteIdsInRange.add(currEntry.getNoteId());
 					
 					Map<String,Object> currSummaryData = currEntry.getSummaryData();
@@ -63,12 +63,12 @@ public class TestViewTraversal extends BaseJNATestClass {
 				selectedList.setInverted(true);
 				
 				//now do an inverted lookup to find every entry not in range
-				List<NotesViewEntryData> entriesNotInNumberRange = colFromDbData.getAllEntries("0", 1,
+				List<NotesViewEntryData> entriesNotGreaterOrEqualMinVal = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
 				
-				Assert.assertFalse("There should be entries with lengths column values not matching the search key", entriesNotInNumberRange.isEmpty());
+				Assert.assertFalse("There should be entries with lengths column values not matching the search key", entriesNotGreaterOrEqualMinVal.isEmpty());
 
-				for (NotesViewEntryData currEntry : entriesNotInNumberRange) {
+				for (NotesViewEntryData currEntry : entriesNotGreaterOrEqualMinVal) {
 					Assert.assertFalse("Inverted flag in selected list works", noteIdsInRange.contains(currEntry.getNoteId()));
 					
 					Map<String,Object> currSummaryData = currEntry.getSummaryData();
@@ -82,7 +82,65 @@ public class TestViewTraversal extends BaseJNATestClass {
 		});
 	
 	}
+
+	@Test
+	public void testViewTraversal_stringInequalityLookup() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				
+				NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
+				colFromDbData.update();
+
+				colFromDbData.resortView("lastname", Direction.Ascending);
+				
+				String minVal = "D";
+				
+				List<NotesViewEntryData> entriesGreaterOrEqualMinVal = colFromDbData.getAllEntriesByKey(EnumSet.of(Find.GREATER_THAN, Find.EQUAL),
+						EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE),
+						minVal);
+				
+				Assert.assertFalse("There should be entries with lastname column values matching the search key", entriesGreaterOrEqualMinVal.isEmpty());
+				
+				Set<Integer> noteIdsInRange = new HashSet<Integer>();
+				
+				for (NotesViewEntryData currEntry : entriesGreaterOrEqualMinVal) {
+					noteIdsInRange.add(currEntry.getNoteId());
+					
+					Map<String,Object> currSummaryData = currEntry.getSummaryData();
+					String currLastname = (String) currSummaryData.get("lastname");
+					
+					Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal) >=0);
+				}
+				
+				NotesIDTable selectedList = colFromDbData.getSelectedList();
+				selectedList.clear();
+				selectedList.addNotes(noteIdsInRange);
+				selectedList.setInverted(true);
+				
+				//now do an inverted lookup to find every entry not in range
+				List<NotesViewEntryData> entriesNotGreaterOrEqualMinVal = colFromDbData.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
+				
+				Assert.assertFalse("There should be entries with lastname column values not matching the search key", entriesNotGreaterOrEqualMinVal.isEmpty());
+
+				for (NotesViewEntryData currEntry : entriesNotGreaterOrEqualMinVal) {
+					Assert.assertFalse("Inverted flag in selected list works", noteIdsInRange.contains(currEntry.getNoteId()));
+					
+					Map<String,Object> currSummaryData = currEntry.getSummaryData();
+					String currLastname = (String) currSummaryData.get("lastname");
+					
+					Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should not be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal)<0);
+				}
+				
+				return null;
+			}
+		});
 	
+	}
+
 	@Test
 	public void testViewTraversal_readAllEntryDataInDataDb() {
 		runWithSession(new IDominoCallable<Object>() {
