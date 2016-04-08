@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.test;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -280,39 +281,39 @@ public class TestViewTraversal extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
+				
+				//open People view
 				NotesCollection colFromDbData = dbData.openCollectionByName("People");
 				colFromDbData.update();
 
 				//read all note ids from the collection
-				List<NotesViewEntryData> allEntries = colFromDbData.getAllEntries("0", 1,
-						EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE,
-						EnumSet.of(ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE));
+				LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(false);
+				Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
 				
 				//pick random note ids
 				Set<Integer> pickedNoteIds = new HashSet<Integer>();
 				while (pickedNoteIds.size() < 1000) {
-					int randomIndex = (int) (Math.random() * allEntries.size());
-					NotesViewEntryData randomEntry = allEntries.get(randomIndex);
-					int randomNoteId = randomEntry.getNoteId();
+					int randomIndex = (int) (Math.random() * allIdsArr.length);
+					int randomNoteId = allIdsArr[randomIndex];
 					pickedNoteIds.add(randomNoteId);
 				}
 				
 				//populate selected list (only works locally)
 				NotesIDTable selectedList = colFromDbData.getSelectedList();
 				selectedList.clear();
-				
-				for (Integer currNoteId : pickedNoteIds) {
-					selectedList.addNote(currNoteId.intValue());
-				}
+				selectedList.addNotes(pickedNoteIds);
 
-				//next, traverse selected entries
+				//next, traverse selected entries only
 				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
 						EnumSet.of(ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE));
+				
+				//check if we really read entries from our selection
 				for (NotesViewEntryData currEntry : selectedEntries) {
 					Assert.assertTrue("Entry read from view is contained in selected list", pickedNoteIds.contains(currEntry.getNoteId()));
 				}
 				
+				//now remove all read ids from pickedNoteIds and make sure that we did not miss anything
 				for (NotesViewEntryData currEntry : selectedEntries) {
 					pickedNoteIds.remove(currEntry.getNoteId());
 				}
