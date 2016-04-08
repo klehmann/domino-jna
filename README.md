@@ -93,9 +93,10 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 ```
 
 This selected list feature demonstrated above is already the first big surprise, if you only know IBM's Java API for Domino.
-It dynamically filters the collection to only return documents matching an id list, that you might have read via previous lookups).
+It dynamically filters the collection to only return entries matching an id list, that you might have read via previous lookups).
 
 Something like reading fulltext search results, but a lot more powerful!
+And the cool thing is that Domino handles the paging for you (`entriesToSkip` parameter). so you don't have to waste time to read data in your own code.
 
 
 As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
