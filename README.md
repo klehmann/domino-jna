@@ -29,19 +29,20 @@ It is not expected to run without changes on other platforms, mainly because of 
 Here is a code snippet to demonstrate how to use the API:
 
 ```java
-NotesGC.runWithAutoGC(new Callable<T>() {
+NotesGC.runWithAutoGC(new Callable<Object>() {
 
-	public T call() throws Exception {
+	public Object call() throws Exception {
 		NotesDatabase dbData = getFakeNamesDb();
 				
 		//open People view
 		NotesCollection colFromDbData = dbData.openCollectionByName("People");
 
 		//read all note ids from the collection
-		LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(false);
-		Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
+		boolean includeCategoryIds = false;
+		LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(includeCategoryIds);
 				
 		//pick random note ids
+		Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
 		Set<Integer> pickedNoteIds = new HashSet<Integer>();
 		while (pickedNoteIds.size() < 1000) {
 			int randomIndex = (int) (Math.random() * allIdsArr.length);
@@ -49,23 +50,35 @@ NotesGC.runWithAutoGC(new Callable<T>() {
 			pickedNoteIds.add(randomNoteId);
 		}
 				
-		//populate selected list with picked ids (only works if database is local)
+		//populate the collection's selected list with picked ids (only works if database with collection is accessed locally)
 		NotesIDTable selectedList = colFromDbData.getSelectedList();
 		selectedList.clear();
 		selectedList.addNotes(pickedNoteIds);
 
 		//next, traverse selected entries only, starting at position "0" (top of the view)
-		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
-				EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
-				EnumSet.of(ReadMask.NOTEID), new EntriesAsListCallback(Integer.MAX_VALUE));
+		String startPos = "0";
+		//skip from "0" to the first entry that we are allowed to read
+		int entriesToSkip = 1;
+		//add all read entries to the result list
+		int entriesToReturn = Integer.MAX_VALUE);
+		//tell the API how to navigate in the view: from one entry in the selectedList to the next one (in view ordering)
+		EnumSet<Navigate> returnNavigator = EnumSet.of(Navigate.NEXT_SELECTED);
+		//use the maximum read buffer
+		int bufferSize = Integer.MAX_VALUE;
+		//tell the API which data we want to read (in this case only note ids, which is very fast)
+		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID);
+		
+		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries(startPos, entriesToSkip,
+				returnNavigator, Integer.MAX_VALUE,
+				returnData, new EntriesAsListCallback(entriesToReturn);
 				
 		//check that all entries that we read were from our picked id list
 		for (NotesViewEntryData currEntry : selectedEntries) {
 			Assert.assertTrue("Entry read from view is contained in selected list",
 				pickedNoteIds.contains(currEntry.getNoteId()));
 		}
-				
-		//now remove all read ids from pickedNoteIds and make sure that we did not miss anything
+		
+		//now remove all read ids from pickedNoteIds and make sure that we found everything we were searching for
 		for (NotesViewEntryData currEntry : selectedEntries) {
 			pickedNoteIds.remove(currEntry.getNoteId());
 		}
@@ -75,6 +88,8 @@ NotesGC.runWithAutoGC(new Callable<T>() {
 	}
 });
 ```
+
+This selected list feature demonstrated above is already the first big surprise, if you only know IBM's Java API for Domino.
 
 As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
 
