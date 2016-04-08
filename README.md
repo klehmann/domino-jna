@@ -12,7 +12,7 @@ The project provides functionality that is not available in the classic Java API
     * **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
     * **reading categorized views** with expanded/collapsed entries and min/max level
 * read **design collection** with design elements in a database
-support for view resorting (changing the collation in C API terms)
+* support for view resorting (changing the collation in C API terms)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
 * clearing the replication history
