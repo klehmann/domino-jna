@@ -58,10 +58,12 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		//next, traverse selected entries only, starting at position "0" (top of the view)
 		String startPos = "0";
 		//skip from "0" to the first entry that we are allowed to read
+		//(its position could be different from "1" caused by reader fields)
 		int entriesToSkip = 1;
 		//add all read entries to the result list
 		int entriesToReturn = Integer.MAX_VALUE);
-		//tell the API how to navigate in the view: from one entry in the selectedList to the next one (in view ordering)
+		//tell the API how to navigate in the view: from one entry in the selectedList
+		//to the next one (in view ordering)
 		EnumSet<Navigate> returnNavigator = EnumSet.of(Navigate.NEXT_SELECTED);
 		//use the maximum read buffer
 		int bufferSize = Integer.MAX_VALUE;
@@ -78,7 +80,8 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 				pickedNoteIds.contains(currEntry.getNoteId()));
 		}
 		
-		//now remove all read ids from pickedNoteIds and make sure that we found everything we were searching for
+		//now remove all read ids from pickedNoteIds and make sure that we found everything
+		//we were searching for
 		for (NotesViewEntryData currEntry : selectedEntries) {
 			pickedNoteIds.remove(currEntry.getNoteId());
 		}
