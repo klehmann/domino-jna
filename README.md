@@ -1,4 +1,4 @@
-# domino-jna
+# Domino JNA
 Crossplatform access to IBM Notes/Domino C API methods from Java
 
 ## Features
