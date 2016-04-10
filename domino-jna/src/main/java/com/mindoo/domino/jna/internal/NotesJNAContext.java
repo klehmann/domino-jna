@@ -63,7 +63,7 @@ public class NotesJNAContext {
 							
 							try {
 								if (osName.toLowerCase().indexOf("win") >= 0) {
-									m_api = (NotesCAPI) Native.loadLibrary("nnotes", Win32NotesCAPI.class, options);
+									m_api = (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
 								}
 								else {
 									m_api = (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);

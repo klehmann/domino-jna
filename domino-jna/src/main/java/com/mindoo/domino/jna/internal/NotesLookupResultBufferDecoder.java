@@ -5,16 +5,14 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
 import com.mindoo.domino.jna.NotesCollection;
-import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.NotesViewEntryData;
+import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;

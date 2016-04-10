@@ -8,12 +8,16 @@ import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItem;
+import com.mindoo.domino.jna.structs.NotesItemTable;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
 import com.mindoo.domino.jna.structs.NotesNumberPair;
 import com.mindoo.domino.jna.structs.NotesRange;
+import com.mindoo.domino.jna.structs.NotesSearchMatch32;
+import com.mindoo.domino.jna.structs.NotesSearchMatch64;
 import com.mindoo.domino.jna.structs.NotesTime;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesTimeDatePair;
+import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -21,6 +25,7 @@ import com.sun.jna.StringArray;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
+import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
 
 /**
  * Extract of Notes C API constants and functions converted to JNA calls
@@ -762,5 +767,133 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public short NotesInitExtended(int  argc, StringArray argvPtr);
 	public void NotesTerm();
+
+	public short b32_NSFSearch(
+			int hDB,
+			int hFormula,
+			Memory viewTitle,
+			short SearchFlags,
+			short NoteClassMask,
+			NotesTimeDate Since,
+			b32_NsfSearchProc enumRoutine,
+			Pointer EnumRoutineParameter,
+			NotesTimeDate retUntil);
+
+	public short b64_NSFSearch(
+			long hDB,
+			long hFormula,
+			Memory viewTitle,
+			short SearchFlags,
+			short NoteClassMask,
+			NotesTimeDate Since,
+			b64_NsfSearchProc enumRoutine,
+			Pointer EnumRoutineParameter,
+			NotesTimeDate retUntil);
+
+	public interface b32_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
+        void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
+    }
 	
+	public interface b64_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
+        void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch, NotesItemTable summaryBuffer); 
+    }
+	
+	public short b64_NSFFormulaCompile(
+			Memory FormulaName,
+			short FormulaNameLength,
+			Memory FormulaText,
+			short  FormulaTextLength,
+			LongByReference rethFormula,
+			ShortByReference retFormulaLength,
+			ShortByReference retCompileError,
+			ShortByReference retCompileErrorLine,
+			ShortByReference retCompileErrorColumn,
+			ShortByReference retCompileErrorOffset,
+			ShortByReference retCompileErrorLength);
+
+	public short b32_NSFFormulaCompile(
+			Memory FormulaName,
+			short FormulaNameLength,
+			Memory FormulaText,
+			short  FormulaTextLength,
+			IntByReference rethFormula,
+			ShortByReference retFormulaLength,
+			ShortByReference retCompileError,
+			ShortByReference retCompileErrorLine,
+			ShortByReference retCompileErrorColumn,
+			ShortByReference retCompileErrorOffset,
+			ShortByReference retCompileErrorLength);
+
+	/** does not match formula (deleted or updated) */
+	public static byte SE_FNOMATCH = 0x00;
+	/** matches formula */
+	public static byte SE_FMATCH = 0x01;
+	/** document truncated */
+	public static byte SE_FTRUNCATED = 0x02;
+	/** note has been purged. Returned only when SEARCH_INCLUDE_PURGED is used */
+	public static byte SE_FPURGED = 0x04;
+	/** note has no purge status. Returned only when SEARCH_FULL_DATACUTOFF is used */
+	public static byte SE_FNOPURGE = 0x08;
+	/** if SEARCH_NOTIFYDELETIONS: note is soft deleted; NoteClass&NOTE_CLASS_NOTIFYDELETION also on (off for hard delete) */
+	public static byte SE_FSOFTDELETED = 0x10;
+	/** if there is reader's field at doc level this is the return value so that we could mark the replication as incomplete*/
+	public static byte SE_FNOACCESS = 0x20;
+	/** note has truncated attachments. Returned only when SEARCH1_ONLY_ABSTRACTS is used */
+	public static byte SE_FTRUNCATT	= 0x40;
+
+	/*	File type flags (used with NSFSearch directory searching). */
+
+	/** Any file type */
+	public static int FILE_ANY = 0;
+	/** Starting in V3, any DB that is a candidate for replication */
+	public static int FILE_DBREPL = 1;
+	/** Databases that can be templates */
+	public static int FILE_DBDESIGN = 2;
+	/** BOX - Any .BOX (Mail.BOX, SMTP.Box...) */
+	public static int FILE_MAILBOX = 3;
+							 
+	/** NS?, any NSF version */
+	public static int FILE_DBANY = 4;
+	/** NT?, any NTF version */
+	public static int FILE_FTANY = 5;
+	/** MDM - modem command file */
+	public static int FILE_MDMTYPE = 6;
+	/** directories only */
+	public static int FILE_DIRSONLY = 7;
+	/** VPC - virtual port command file */
+	public static int FILE_VPCTYPE = 8;
+	/** SCR - comm port script files */
+	public static int FILE_SCRTYPE	= 9;
+	/** ANY Notes database (.NS?, .NT?, .BOX)	*/
+	public static int FILE_ANYNOTEFILE = 10;
+	/** DTF - Any .DTF. Used for container and sort temp files to give them a more
+	   unique name than .TMP so we can delete *.DTF from the temp directory and
+	   hopefully not blow away other application's temp files. */
+	public static int FILE_UNIQUETEMP = 11;
+	/** CLN - Any .cln file...multi user cleanup files*/
+	public static int FILE_MULTICLN = 12;
+	/** any smarticon file *.smi */
+	public static int FILE_SMARTI = 13;
+
+	/** File type mask (for FILE_xxx codes above) */
+	public static int FILE_TYPEMASK = 0x00ff;
+	/** List subdirectories as well as normal files */
+	public static int FILE_DIRS = 0x8000;
+	/** Do NOT return ..'s */
+	public static int FILE_NOUPDIRS = 0x4000;
+	/** Recurse into subdirectories */
+	public static int FILE_RECURSE = 0x2000;
+	/** All directories, linked files & directories */
+	public static int FILE_LINKSONLY = 0x1000;
+
+	public short OSPathNetConstruct(Memory PortName,
+											Memory ServerName,
+											Memory FileName,
+											Memory retPathName);
+	
+	public short OSPathNetParse(Memory PathName,
+											Memory retPortName,
+											Memory retServerName,
+											Memory retFileName);
+
 }
