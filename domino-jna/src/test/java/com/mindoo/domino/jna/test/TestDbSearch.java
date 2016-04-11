@@ -55,7 +55,9 @@ public class TestDbSearch extends BaseJNATestClass {
 				System.out.println("Running database search with formula: "+formula);
 				final int[] cnt = new int[1];
 				
-				dbData.search(formula, viewTitle, searchFlags, noteClassMask, null, new ISearchCallback() {
+				//since = null to search in all documents
+				NotesTimeDate since = null;
+				dbData.search(formula, viewTitle, searchFlags, noteClassMask, since, new ISearchCallback() {
 
 					@Override
 					public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
