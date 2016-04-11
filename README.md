@@ -15,6 +15,7 @@ The project provides functionality that is not available in the classic Java API
 * support for view resorting (changing the collation in C API terms)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
+* **Searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values**, e.g. get summary buffer data for each document
 * clearing the replication history
 * compute @Usernameslist values for any Notes user
 
