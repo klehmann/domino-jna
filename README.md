@@ -152,7 +152,7 @@ We had to downgrade Maven to version 3.2.5 for the build, because that was the l
 
 This command should work for 32 bit:
 ```
-mvn -DJVMPARAMS=-d64 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install
+mvn -DJVMPARAMS=-d32 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install
 ```
 
 For 64 bit, running the test cases currently fails with a libxml.dylib loading error and we still need to figure out how to fix this.
