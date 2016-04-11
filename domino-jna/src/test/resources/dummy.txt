@@ -1,0 +1,1 @@
+File is used to create this directory in Git.
