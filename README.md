@@ -15,7 +15,7 @@ The project provides functionality that is not available in the classic Java API
 * support for view resorting (changing the collation in C API terms)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
-* **Searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values**, e.g. get summary buffer data for each document
+* Searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does**
 * clearing the replication history
 * compute @Usernameslist values for any Notes user
 
@@ -206,7 +206,7 @@ Here are some of the things that we plan to do:
 
 * write [blog entries](http://blog.mindoo.com) explaining the API internals
 * add the API to an XPages Extension Library plugin for easier consumption from XPages applications
-* add more API methods, e.g. NSFSearch is high on the list
+* add more API methods
 * write more testcases
 * add more syntactical sugar, hide complexity
 
