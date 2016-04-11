@@ -63,6 +63,17 @@ public class NotesCollectionPosition extends Structure {
 		super(peer);
 	}
 	
+	/**
+	 * Converts the position object to a position string like "1.2.3".<br>
+	 * <br>
+	 * Please note that we also support an advanced syntax in contrast to IBM's API in order
+	 * to specify the min/max level parameters: "1.2.3|0-2" for minlevel=0, maxlevel=2. These
+	 * levels can be used to limit reading entries in a categorized view to specified depths.<br>
+	 * <br>
+	 * This method will returns a string with the advanced syntax if MinLevel or MaxLevel is not 0.
+	 * 
+	 * @return position string
+	 */
 	public String toPosString() {
 		StringBuilder sb = new StringBuilder();
 		
@@ -79,6 +90,16 @@ public class NotesCollectionPosition extends Structure {
 		return sb.toString();
 	}
 	
+	/**
+	 * Converts a position string like "1.2.3" to a {@link NotesCollectionPosition} object.<br>
+	 * <br>
+	 * Please note that we also support an advanced syntax in contrast to IBM's API in order
+	 * to specify the min/max level parameters: "1.2.3|0-2" for minlevel=0, maxlevel=2. These
+	 * levels can be used to limit reading entries in a categorized view to specified depths.
+	 * 
+	 * @param posStr position string
+	 * @return position object
+	 */
 	public static NotesCollectionPosition toPosition(String posStr) {
 		short level;
 		int[] tumbler;
