@@ -37,12 +37,15 @@ public class NotesCollectionPosition extends Structure {
 	 * C type : DWORD[32]
 	 */
 	public int[] Tumbler = new int[32];
+	
 	public NotesCollectionPosition() {
 		super();
 	}
+	
 	protected List<? > getFieldOrder() {
 		return Arrays.asList("Level", "MinLevel", "MaxLevel", "Tumbler");
 	}
+	
 	/**
 	 * @param Level # levels -1 in tumbler<br>
 	 * @param MinLevel MINIMUM level that this position<br>
@@ -59,6 +62,7 @@ public class NotesCollectionPosition extends Structure {
 			throw new IllegalArgumentException("Wrong array size !");
 		this.Tumbler = Tumbler;
 	}
+	
 	public NotesCollectionPosition(Pointer peer) {
 		super(peer);
 	}
