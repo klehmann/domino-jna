@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
 import org.joda.time.Interval;
@@ -211,6 +212,162 @@ public class NotesCollection implements IRecyclableNotesObject {
 			notesAPI.b32_NIFGetLastModifiedTime(m_hCollection32, retLastModifiedTime);
 		}
 		return retLastModifiedTime;
+	}
+
+	/**
+	 * This function adds the document(s) specified in an ID Table to a folder.
+	 * 
+	 * @param idTable id table
+	 */
+	public void addToFolder(NotesIDTable idTable) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_FolderDocAdd(m_hDB64, 0, m_viewNoteId, idTable.getHandle64(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_FolderDocAdd(m_hDB32, 0, m_viewNoteId, idTable.getHandle32(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function adds the document(s) specified as note id set to a folder
+	 * 
+	 * @param noteIds ids of notes to add
+	 */
+	public void addToFolder(Set<Integer> noteIds) {
+		NotesIDTable idTable = new NotesIDTable();
+		try {
+			idTable.addNotes(noteIds);
+			addToFolder(idTable);
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
+
+	/**
+	 * This function removes the document(s) specified in an ID Table from a folder.
+	 * 
+	 * @param idTable id table
+	 */
+	public void removeFromFolder(NotesIDTable idTable) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_FolderDocRemove(m_hDB64, 0, m_viewNoteId, idTable.getHandle64(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_FolderDocRemove(m_hDB32, 0, m_viewNoteId, idTable.getHandle32(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function removes the document(s) specified as note id set from a folder.
+	 * 
+	 * @param noteIds ids of notes to remove
+	 */
+	public void removeFromFolder(Set<Integer> noteIds) {
+		NotesIDTable idTable = new NotesIDTable();
+		try {
+			idTable.addNotes(noteIds);
+			removeFromFolder(idTable);
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
+	
+	/**
+	 * This function removes all documents from a specified folder.<br>
+	 * <br>
+	 * Subfolders and documents within the subfolders are not removed.
+	 */
+	public void removeAllFromFolder() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_FolderDocRemoveAll(m_hDB64, 0, m_viewNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_FolderDocRemoveAll(m_hDB32, 0, m_viewNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function moves the specified folder under a given parent folder.<br>
+	 * <br>
+	 * If the parent folder is a shared folder, then the child folder must be a shared folder.<br>
+	 * If the parent folder is a private folder, then the child folder must be a private folder.
+	 * 
+	 * @param newParentFolder parent folder
+	 */
+	public void moveFolder(NotesCollection newParentFolder) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_FolderMove(m_hDB64, 0, m_viewNoteId, 0, newParentFolder.getNoteId(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_FolderMove(m_hDB32, 0, m_viewNoteId, 0, newParentFolder.getNoteId(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function renames the specified folder and its subfolders.
+	 * 
+	 * @param name new folder name
+	 */
+	public void renameFolder(String name) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		Memory pszName = NotesStringUtils.toLMBCS(name);
+		if (pszName.size() > NotesCAPI.DESIGN_FOLDER_MAX_NAME) {
+			throw new IllegalArgumentException("Folder name too long (max "+NotesCAPI.DESIGN_FOLDER_MAX_NAME+" bytes, found "+pszName.size()+" bytes)");
+		}
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_FolderRename(m_hDB64, 0, m_viewNoteId, pszName, (short) pszName.size(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_FolderRename(m_hDB32, 0, m_viewNoteId, pszName, (short) pszName.size(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function returns the number of entries in the specified folder's index.<br>
+	 * <br>
+	 * This is the number of documents plus the number of cateogories (if any) in the folder.<br>
+	 * <br>
+	 * Subfolders and documents in subfolders are not included in the count.
+	 * 
+	 * @return count
+	 */
+	public long getFolderDocCount() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference pdwNumDocs = new LongByReference();
+			short result = notesAPI.b64_FolderDocCount(m_hDB64, 0, m_viewNoteId, 0, pdwNumDocs);
+			NotesErrorUtils.checkResult(result);
+			return pdwNumDocs.getValue();
+		}
+		else {
+			LongByReference pdwNumDocs = new LongByReference();
+			short result = notesAPI.b32_FolderDocCount(m_hDB32, 0, m_viewNoteId, 0, pdwNumDocs);
+			NotesErrorUtils.checkResult(result);
+			return pdwNumDocs.getValue();
+		}
 	}
 	
 	/**

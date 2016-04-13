@@ -467,7 +467,39 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public static long NOTEID_CATEGORY_ID = 0x00FFFFFFL;	/* Low 24 bits are unique category # */
 
 	public static long RRV_DELETED = NOTEID_RESERVED;	/* indicates a deleted note (DBTABLE.C) */
-	
+
+	/** Cascade can go only one level deep parent\sub */
+	public static int DESIGN_LEVELS = 2; 					
+	/** Maximum size of a level */
+	public static int DESIGN_LEVEL_MAX = 64;
+
+	/** Guaranteed to be the greatest of Form, View or Macro
+	 * length. NOTE:  We need
+	 * space for LEVELS-1 cascade
+	 * characters and a NULL term.
+	 * The +1 takes care of that. */
+	public static int DESIGN_NAME_MAX = ((DESIGN_LEVEL_MAX+1)*DESIGN_LEVELS);
+
+	/** Forms can cascade a level */
+	public static int DESIGN_FORM_MAX = DESIGN_NAME_MAX;
+	/** Views can cascade a level */
+	public static int DESIGN_VIEW_MAX = DESIGN_NAME_MAX;
+	/** Macros can cascade a level */
+	public static int DESIGN_MACRO_MAX = DESIGN_NAME_MAX;
+	/** Fields cannot cascade */
+	public static int DESIGN_FIELD_MAX = DESIGN_LEVEL_MAX+1;
+
+	/** Design element comment max size. */
+	public static int DESIGN_COMMENT_MAX = 256;
+	/** All names, including sysnonyms */
+	public static int DESIGN_ALL_NAMES_MAX = 256;
+	/** Same as for views */
+	public static int DESIGN_FOLDER_MAX	= DESIGN_VIEW_MAX;
+	/** Same as for views */
+	public static int DESIGN_FOLDER_MAX_NAME = DESIGN_LEVEL_MAX;
+
+	public static int DESIGN_FLAGS_MAX = 32;
+
 	public short b32_FTOpenSearch(IntByReference rethSearch);
 	public short b64_FTOpenSearch(LongByReference rethSearch);
 	
@@ -607,6 +639,92 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			int  viewNoteID,
 			int  flags,
 			LongByReference hTable);
+
+	public short b32_FolderDocAdd(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			int  hTable,
+			long  dwFlags);
+
+	public short b64_FolderDocAdd(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			long  hTable,
+			long  dwFlags);
+
+	public short b32_FolderDocCount(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			long  dwFlags,
+			LongByReference pdwNumDocs);
+
+	public short b64_FolderDocCount(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			long  dwFlags,
+			LongByReference pdwNumDocs);
+
+	public short b32_FolderDocRemove(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			int  hTable,
+			long  dwFlags);
+
+	public short b64_FolderDocRemove(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			long  hTable,
+			long  dwFlags);
+
+	public short b32_FolderDocRemoveAll(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			long  dwFlags);
+
+	public short b64_FolderDocRemoveAll(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			long  dwFlags);
+
+	public short b32_FolderMove(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			int  hParentDB,
+			int  ParentNoteID,
+			long  dwFlags);
+	
+	public short b64_FolderMove(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			long  hParentDB,
+			int  ParentNoteID,
+			long  dwFlags);
+
+	public short b32_FolderRename(
+			int  hDataDB,
+			int  hFolderDB,
+			int  FolderNoteID,
+			Memory pszName,
+			short  wNameLen,
+			long  dwFlags);
+
+	public short b64_FolderRename(
+			long  hDataDB,
+			long  hFolderDB,
+			int  FolderNoteID,
+			Memory pszName,
+			short  wNameLen,
+			long  dwFlags);
 
 	public short b32_NSFDbClearReplHistory(int hDb, int dwFlags);
 	public short b64_NSFDbClearReplHistory(long hDb, int dwFlags);
