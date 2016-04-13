@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
 import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.directory.DirectoryScanner;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
@@ -87,5 +89,68 @@ public class TestDbSearch extends BaseJNATestClass {
 				return null;
 			}
 		});
+	}
+
+	/**
+	 * Tests the {@link DirectoryScanner} class which internally also uses the database
+	 * search function (NSFSearch) to read directory data
+	 */
+	@Test
+	public void testDbSearch_directoryScan() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				final String dbDataFilePath = dbData.getRelativeFilePath();
+
+				String server = "";
+				String directory = "";
+				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
+				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS; // + NotesCAPI.FILE_RECURSE;
+
+				//check if our local fakenames database is in the returned list
+				final boolean[] fakeNamesDbFound = new boolean[1];
+				
+				System.out.println("Scanning top level of local directory");
+				DirectoryScanner scanner = new DirectoryScanner(session, server, directory, fileType) {
+					private String toString(Calendar cal) {
+						return cal==null ? "null" : cal.getTime().toString();
+					}
+					
+					@Override
+					protected void entryRead(SearchResultData data) {
+						if (data instanceof DatabaseData) {
+							DatabaseData dbData = (DatabaseData) data;
+							
+							System.out.println("Database found:\ttitle="+dbData.getTitle()+
+									", created="+toString(dbData.getCreated())+
+									", modified="+toString(dbData.getModified())+
+									", filename="+dbData.getFileName()+
+									", filepath="+dbData.getFilePath()+", data="+dbData.getRawData());
+
+							if (dbDataFilePath.equalsIgnoreCase(dbData.getFilePath())) {
+								fakeNamesDbFound[0] = true;
+							}
+						}
+						else if (data instanceof FolderData) {
+							FolderData folderData = (FolderData) data;
+							System.out.println("Folder found:\t"+folderData.getFolderName()+", filepath="+folderData.getFolderPath()+", data="+folderData.getRawData());
+
+						}
+						else {
+							System.out.println("Unknown type found: data="+data.getRawData());
+						}
+					}
+					
+				};
+				scanner.scan();
+				System.out.println("Done scanning top level of local directory");
+				
+				Assert.assertTrue("Fakenames database has been found in the directory", fakeNamesDbFound[0]);
+				return null;
+			}
+		});
+	
 	}
 }
