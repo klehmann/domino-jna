@@ -102,7 +102,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param table other table
 	 * @return true if equal
 	 */
-	public boolean equalTable(NotesIDTable table) {
+	public boolean equalsTable(NotesIDTable table) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
 			return notesAPI.b64_IDAreTablesEqual(m_idTableHandle64, table.getHandle64());
