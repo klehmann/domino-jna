@@ -62,16 +62,16 @@ public abstract class DirectoryScanner {
 						String typeStr = (String) typeObj;
 						if ("$DIR".equals(typeStr)) {
 							String folderName = null;
-							Object folderObj = dataAsMap.get("$TITLE");
-							if (folderObj instanceof String) {
-								folderName = (String) folderObj;
+							Object folderNameObj = dataAsMap.get("$TITLE");
+							if (folderNameObj instanceof String) {
+								folderName = (String) folderNameObj;
 							}
 							
 							
 							String folderPath = null;
 							Object folderPathObj = dataAsMap.get("$path");
 							if (folderPathObj instanceof String) {
-								folderPath = (String) folderObj;
+								folderPath = (String) folderPathObj;
 							}
 
 							FolderData folderData = new FolderData();
@@ -185,8 +185,8 @@ public abstract class DirectoryScanner {
 	 * @author Karsten Lehmann
 	 */
 	public static class FolderData extends SearchResultData {
-		private String m_fileName;
-		private String m_filePath;
+		private String m_folderName;
+		private String m_folderPath;
 		
 		/**
 		 * Returns the name of the folder
@@ -194,7 +194,7 @@ public abstract class DirectoryScanner {
 		 * @return name
 		 */
 		public String getFolderName() {
-			return m_fileName;
+			return m_folderName;
 		}
 		
 		/**
@@ -203,7 +203,7 @@ public abstract class DirectoryScanner {
 		 * @param folderName name
 		 */
 		public void setFolderName(String folderName) {
-			this.m_fileName = folderName;
+			this.m_folderName = folderName;
 		}
 		
 		/**
@@ -213,7 +213,7 @@ public abstract class DirectoryScanner {
 		 * @return path
 		 */
 		public String getFolderPath() {
-			return m_filePath;
+			return m_folderPath;
 		}
 		
 		/**
@@ -223,7 +223,7 @@ public abstract class DirectoryScanner {
 		 * @param folderPath path
 		 */
 		public void setFolderPath(String folderPath) {
-			this.m_filePath = folderPath;
+			this.m_folderPath = folderPath;
 		}
 	}
 

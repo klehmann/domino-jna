@@ -107,7 +107,8 @@ public class TestDbSearch extends BaseJNATestClass {
 				String server = "";
 				String directory = "";
 				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
-				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS; // + NotesCAPI.FILE_RECURSE;
+//				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS + NotesCAPI.FILE_RECURSE;
+				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS;
 
 				//check if our local fakenames database is in the returned list
 				final boolean[] fakeNamesDbFound = new boolean[1];
