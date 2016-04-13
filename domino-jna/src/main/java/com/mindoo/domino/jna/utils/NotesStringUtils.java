@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Formatter;
 
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Memory;
@@ -149,6 +150,67 @@ public class NotesStringUtils {
 		formatter.close();
 
 		return unid;
+	}
+
+	/**
+	 * This function takes a port name, a server name, and file path relative to the Domino or
+	 * Notes data directory and creates a full network path specification for a Domino database
+	 * file.<br>
+	 * <br>
+	 * To open a Domino database on a server, use this function to create the full path specification,
+	 * and pass this specification as input to NSFDbOpen or NSFDbOpenExtended.
+	 * 
+	 * @param portName network port name or NULL to allow Domino or Notes to use the "most available" port to the given server
+	 * @param serverName Name of the server (either in abbreviated format, canonical format or as common name)  or "" for local
+	 * @param fileName filename of the Domino database you with to access, relative to the data directory
+	 * @return fully qualified network path
+	 */
+	public static String osPathNetConstruct(String portName, String serverName, String fileName) {
+		Memory portNameMem = toLMBCS(portName);
+		Memory serverNameMem = toLMBCS(serverName);
+		Memory fileNameMem = toLMBCS(fileName);
+		
+		Memory retPathMem = new Memory(NotesCAPI.MAXPATH);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result = notesAPI.OSPathNetConstruct(portNameMem, serverNameMem, fileNameMem, retPathMem);
+		NotesErrorUtils.checkResult(result);
+		String retPath = fromLMBCS(retPathMem);
+		return retPath;
+	}
+
+	/**
+	 * Given a fully-qualified network path to a Domino database file, this function breaks it
+	 * into its port name, server name, and filename components.<br>
+	 * If the fully qualified path contains just the port name and/or server name components,
+	 * then they will be the only ones returned.<br>
+	 * <br>
+	 * Expanded database filepath syntax:<br>
+	 * <br>
+	 * {Port} NetworkSeparator {servername} Serversuffix {filename}<br>
+	 * COM! {NetworkSeparator} NOTESBETA {ServerSuffix} NOTEFILE\APICOMMS.NSF<br>
+	 * <br>
+	 * Note: the NetworkSeparator and ServerSuffix are not system independent. To maintain the
+	 * portability of your code, it is recommended that you make no explicit use of them
+	 * anywhere in your programs.
+	 * 
+	 * @param pathName expanded path specification of a Domino database file
+	 * @return String array of portname, servername, filename
+	 */
+	public static String[] osPathNetParse(String pathName) {
+		Memory retPortNameMem = new Memory(NotesCAPI.MAXPATH);
+		Memory retServerNameMem = new Memory(NotesCAPI.MAXPATH);
+		Memory retFileNameMem = new Memory(NotesCAPI.MAXPATH);
+		
+		Memory pathNameMem = toLMBCS(pathName);
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result = notesAPI.OSPathNetParse(pathNameMem, retPortNameMem, retServerNameMem, retFileNameMem);
+		NotesErrorUtils.checkResult(result);
+		
+		String portName = fromLMBCS(retPortNameMem);
+		String serverName = fromLMBCS(retServerNameMem);
+		String fileName = fromLMBCS(retFileNameMem);
+		return new String[] {portName, serverName, fileName};
 	}
 
 }

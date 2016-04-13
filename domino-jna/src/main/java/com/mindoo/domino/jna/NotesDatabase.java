@@ -5,7 +5,6 @@ import java.nio.LongBuffer;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.ISignCallback.Action;
@@ -129,21 +128,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server);
 		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath);
-		Memory retDbPathName = new Memory(NotesCAPI.MAXPATH);
+		Memory retFullNetPath = new Memory(NotesCAPI.MAXPATH);
 
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retDbPathName);
-			NotesErrorUtils.checkResult(result);
-		}
-		else {
-			short result = notesAPI.b32_OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retDbPathName);
-			NotesErrorUtils.checkResult(result);
-		}
+		short result = notesAPI.OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retFullNetPath);
+		NotesErrorUtils.checkResult(result);
+		
 		{
 			//reduce length of retDbPathName
 			int newLength = 0;
-			for (int i=0; i<retDbPathName.size(); i++) {
-				byte b = retDbPathName.getByte(i);
+			for (int i=0; i<retFullNetPath.size(); i++) {
+				byte b = retFullNetPath.getByte(i);
 				if (b==0) {
 					newLength = i;
 					break;
@@ -151,18 +145,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			Memory newMem = new Memory(newLength+1);
 			for (int i=0; i<newLength; i++) {
-				newMem.setByte(i, retDbPathName.getByte(i));
+				newMem.setByte(i, retFullNetPath.getByte(i));
 			}
 			newMem.setByte(newLength, (byte) 0);
-			retDbPathName = newMem;
+			retFullNetPath = newMem;
 		}
 		
-		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongBuffer hDB = LongBuffer.allocate(1);
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
 				//open database as server
-				result = notesAPI.b64_NSFDbOpen(retDbPathName, hDB);
+				result = notesAPI.b64_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -191,7 +184,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					NotesTimeDate modifiedTime = null;
 					NotesTimeDate retDataModified = new NotesTimeDate();
 					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b64_NSFDbOpenExtended(retDbPathName, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -205,7 +198,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntBuffer hDB = IntBuffer.allocate(1);
 			if (StringUtil.isEmpty(m_asUserCanonical)) {
-				result = notesAPI.b32_NSFDbOpen(retDbPathName, hDB);
+				result = notesAPI.b32_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
@@ -233,7 +226,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					NotesTimeDate modifiedTime = null;
 					NotesTimeDate retDataModified = new NotesTimeDate();
 					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b32_NSFDbOpenExtended(retDbPathName, openOptions, hUserNamesList32, modifiedTime, hDB, retDataModified, retNonDataModified);
+					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, hUserNamesList32, modifiedTime, hDB, retDataModified, retNonDataModified);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {

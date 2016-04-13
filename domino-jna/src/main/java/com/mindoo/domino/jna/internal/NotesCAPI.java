@@ -25,7 +25,6 @@ import com.sun.jna.StringArray;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
-import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
 
 /**
  * Extract of Notes C API constants and functions converted to JNA calls
@@ -57,17 +56,6 @@ public interface NotesCAPI extends Library {
 														/*	password access allowed" feature */
 	public static final short NAMES_LIST_FULL_ADMIN_ACCESS = 0x0004;	/* 	Set if user requested full admin access and it was granted */
 
-	public short b32_OSPathNetConstruct(
-			Memory PortName,
-			Memory ServerName,
-			Memory FileName,
-			Memory retPathName);
-	public short b64_OSPathNetConstruct(
-			Memory PortName,
-			Memory ServerName,
-			Memory FileName,
-			Memory retPathName);
-	
 	//	WORD LNPUBLIC OSLoadString(
 	//			HMODULE  hModule,
 	//			STATUS  StringCode,
