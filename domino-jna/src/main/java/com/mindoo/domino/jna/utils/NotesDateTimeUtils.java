@@ -227,7 +227,7 @@ public class NotesDateTimeUtils {
 	public static Calendar innardsToCalendar(boolean useDayLight, int gmtOffset, int[] innards) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		if (innards==null || innards.length<2)
+		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
 			return null;
 		
         boolean hasTime=(innards[0]!=0 && innards[0]!=NotesCAPI.ALLDAY);
@@ -349,6 +349,9 @@ public class NotesDateTimeUtils {
 	 * @return string with formatted timedate
 	 */
 	public static String toString(NotesTimeDate td) {
+		if (td.Innards==null || td.Innards.length<2 || (td.Innards.length>=2 && td.Innards[0]==0 && td.Innards[1]==0))
+			return null;
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory retTextBuffer = new Memory(100);
 
