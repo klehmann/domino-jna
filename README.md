@@ -17,7 +17,9 @@ The project provides functionality that is not available in the classic Java API
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
 * searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does**
 * quick reading of files and folders in the Domino data directory or in subdirectories (IBM's DbDirectory is slow for many DBs and does not support subdirectory scanning)
+* read/write replication data (replica id and flags)
 * clearing the replication history
+* fast noteid / UNID conversion
 * compute @Usernameslist values for any Notes user
 
 **Please note:**
