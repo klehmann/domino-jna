@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -14,6 +15,7 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.NotesCollection.EntriesAsListCallback;
+import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesViewEntryData;
@@ -514,6 +516,104 @@ public class TestViewTraversal extends BaseJNATestClass {
 				return null;
 			}
 
+		});
+	}
+	
+	/**
+	 * The test compares reading view data with limited and unlimited preload buffer; boths
+	 * are expected to return the same result, which shows that continuing reading view
+	 * data after the first preload buffer has been processed restarts reading at the right
+	 * position
+	 */
+	@Test
+	public void testViewTraversal_allEntriesLimitedPreloadBuffer() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				System.out.println("Starting limited preload buffer test");
+				
+				NotesDatabase dbData = getFakeNamesDb();
+				
+				final int nrOfNotesToRead = 20; // no more than we have in the view
+				//only read 10 entries per readEntries call
+				int preloadBufferEntries = 10;
+				
+				//grab some note ids from the People view
+				NotesCollection col = dbData.openCollectionByName("People");
+				int[] someNoteIdsReadWithLimitedPreloadBuffer = col.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), preloadBufferEntries, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<int[]>() {
+					
+					int m_idx = 0;
+					
+					@Override
+					public int[] startingLookup() {
+						return new int[nrOfNotesToRead];
+					}
+
+					@Override
+					public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(int[] result,
+							NotesViewEntryData entryData) {
+						if (m_idx < result.length) {
+							result[m_idx] = entryData.getNoteId();
+							m_idx++;
+							return Action.Continue;
+						}
+						else {
+							return Action.Stop;
+						}
+					}
+
+					@Override
+					public int[] lookupDone(int[] result) {
+						return result;
+					}
+				});
+				
+				int cntNonNullIds = 0;
+				for (int currId : someNoteIdsReadWithLimitedPreloadBuffer) {
+					if (currId!=0) {
+						cntNonNullIds++;
+					}
+				}
+				
+				Assert.assertEquals("All ids have been read", someNoteIdsReadWithLimitedPreloadBuffer.length, cntNonNullIds);
+
+				//now read with unlimited buffer, which effectively reads 64K of data, but only
+				//takes the first "nrOfNotesToRead" entries of them
+				int[] someNoteIdsReadWithUnlimitedPreloadBuffer = col.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<int[]>() {
+					
+					int m_idx = 0;
+					
+					@Override
+					public int[] startingLookup() {
+						return new int[nrOfNotesToRead];
+					}
+
+					@Override
+					public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(int[] result,
+							NotesViewEntryData entryData) {
+						if (m_idx < result.length) {
+							result[m_idx] = entryData.getNoteId();
+							m_idx++;
+							return Action.Continue;
+						}
+						else {
+							return Action.Stop;
+						}
+					}
+
+					@Override
+					public int[] lookupDone(int[] result) {
+						return result;
+					}
+				});
+				
+				Assert.assertTrue("Reading with limited and unlimited preload buffer produces the same result", Arrays.equals(someNoteIdsReadWithLimitedPreloadBuffer, someNoteIdsReadWithUnlimitedPreloadBuffer));
+				
+				System.out.println("Done with limited preload buffer test");
+				return null;
+			}
 		});
 	}
 

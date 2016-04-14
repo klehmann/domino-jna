@@ -8,6 +8,7 @@ import java.util.Formatter;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -120,6 +121,25 @@ public class NotesStringUtils {
 	}
 
 	/**
+	 * Extracts the UNID from a {@link NotesOriginatorId}
+	 * 
+	 * @param oid originator id
+	 * @return unid
+	 */
+	public static String extractUNID(NotesOriginatorId oid) {
+		oid.write();
+		Pointer oidPtr = oid.getPointer();
+		
+		Formatter formatter = new Formatter();
+		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
+		formatter.format("%16x", data.getLong());
+		formatter.format("%16x", data.getLong());
+		String unid = formatter.toString().toUpperCase();
+		formatter.close();
+		return unid;
+	}
+	
+	/**
 	 * Converts bytes in memory to a UNID
 	 * 
 	 * @param buf memory
@@ -213,4 +233,35 @@ public class NotesStringUtils {
 		return new String[] {portName, serverName, fileName};
 	}
 
+	/**
+	 * Converts an innards array to hex format, e.g. used for replica ids
+	 * 
+	 * @param innards innards array with two elements
+	 * @return replica id (16 character hex string)
+	 */
+	public static String innardsToReplicaId(int[] innards) {
+		return StringUtil.pad(Integer.toHexString(innards[1]).toUpperCase(), 8, '0', false) +
+				StringUtil.pad(Integer.toHexString(innards[0]).toUpperCase(), 8, '0', false);
+	}
+
+	/**
+	 * Converts a replica id to an innards array
+	 * 
+	 * @param replicaId replica id
+	 * @return innards array with two elements
+	 */
+	public static int[] replicaIdToInnards(String replicaId) {
+		if (replicaId.contains(":"))
+			replicaId = replicaId.replace(":", "");
+		
+		if (replicaId.length() != 16) {
+			throw new IllegalArgumentException("Replica ID is expected to have 16 hex characters or 8:8 format");
+		}
+		
+		int[] innards = new int[2];
+		innards[1] = (int) (Long.parseLong(replicaId.substring(0,8), 16) & 0xffffffff);
+		innards[0] = (int) (Long.parseLong(replicaId.substring(8), 16) & 0xffffffff);
+		
+		return innards;
+	}
 }

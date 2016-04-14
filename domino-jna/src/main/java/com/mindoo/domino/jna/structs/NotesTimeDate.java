@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna.structs;
 
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -45,13 +47,42 @@ public class NotesTimeDate extends Structure {
 		
 	};
 	
+	/**
+	 * Checks whether the timedate has a date portion
+	 * 
+	 * @return true if date part exists
+	 */
 	public boolean hasDate() {
         boolean hasDate=(Innards[1]!=0 && Innards[1]!=NotesCAPI.ANYDAY);
 		return hasDate;
 	}
 	
+	/**
+	 * Checks whether the timedate has a time portion
+	 * 
+	 * @return true if time part exists
+	 */
 	public boolean hasTime() {
         boolean hasDate=(Innards[0]!=0 && Innards[0]!=NotesCAPI.ALLDAY);
 		return hasDate;
+	}
+	
+	/**
+	 * Converts the time date to a calendar
+	 * 
+	 * @return calendar or null if data is invalid
+	 */
+	public Calendar toCalendar() {
+		return NotesDateTimeUtils.innardsToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), this.Innards);
+	}
+	
+	/**
+	 * Converts the time date to a Java {@link Date}
+	 * 
+	 * @return date or null if data is invalid
+	 */
+	public Date toDate() {
+		Calendar cal = toCalendar();
+		return cal==null ? null : cal.getTime();
 	}
 }

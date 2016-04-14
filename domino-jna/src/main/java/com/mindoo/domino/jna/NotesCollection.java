@@ -819,7 +819,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			
 			@Override
-			public void lookupDone(LinkedHashSet<Integer> result) {
+			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
+				return result;
 			}
 
 		}, keys);
@@ -914,8 +915,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		 * Method is called when the callback is done
 		 * 
 		 * @param result result object
+		 * @return result or transformed result
 		 */
-		public abstract void lookupDone(T result);
+		public abstract T lookupDone(T result);
 		
 	}
 
@@ -979,7 +981,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		
 		@Override
-		public void lookupDone(List<NotesViewEntryData> result) {
+		public List<NotesViewEntryData> lookupDone(List<NotesViewEntryData> result) {
+			return result;
 		}
 	}
 	
@@ -1006,7 +1009,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			
 			@Override
-			public void lookupDone(LinkedHashSet<Integer> result) {
+			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
+				return result;
 			}
 			
 		});
@@ -1041,7 +1045,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 
 			if (preloadEntryCount==0) {
-				callback.lookupDone(result);
+				result = callback.lookupDone(result);
 				return result;
 			}
 			
@@ -1049,8 +1053,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 			boolean viewModified = false;
 			boolean firstLoopRun = true;
 			
-			while (hasMoreData) {
+			while (true) {
+				if (preloadEntryCount==0) {
+					break;
+				}
+				
 				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, columnsToDecode);
+				if (data.getReturnCount()==0) {
+					//no more data found
+					result = callback.lookupDone(result);
+					return result;
+				}
+				
 				firstLoopRun = false;
 				
 				if (isAutoUpdate()) {
@@ -1065,11 +1079,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 				for (NotesViewEntryData currEntry : entries) {
 					Action action = callback.entryRead(result, currEntry);
 					if (action==Action.Stop) {
-						callback.lookupDone(result);
+						result = callback.lookupDone(result);
 						return result;
 					}
 				}
-				hasMoreData = data.hasMoreToDo();
 			}
 			
 			if (viewModified) {
@@ -1139,7 +1152,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					for (NotesViewEntryData currEntryData : entries) {
 						Action action = callback.entryRead(result, currEntryData);
 						if (action==Action.Stop) {
-							callback.lookupDone(result);
+							result = callback.lookupDone(result);
 							return result;
 						}
 					}
@@ -1147,7 +1160,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					
 					if (!data.hasMoreToDo()) {
 						//we are done
-						callback.lookupDone(result);
+						result = callback.lookupDone(result);
 						return result;
 					}
 
@@ -1227,7 +1240,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					for (NotesViewEntryData currEntryData : entries) {
 						Action action = callback.entryRead(result, currEntryData);
 						if (action==Action.Stop) {
-							callback.lookupDone(result);
+							result = callback.lookupDone(result);
 							return result;
 						}
 					}
@@ -1242,7 +1255,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 			}
 			
-			callback.lookupDone(result);
+			result = callback.lookupDone(result);
 			return result;
 		}
 	}

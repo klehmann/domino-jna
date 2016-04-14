@@ -6,11 +6,13 @@ import java.nio.LongBuffer;
 
 import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
+import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItem;
 import com.mindoo.domino.jna.structs.NotesItemTable;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
 import com.mindoo.domino.jna.structs.NotesNumberPair;
+import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesRange;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
@@ -41,7 +43,8 @@ public interface NotesCAPI extends Library {
 	public final int collectionPositionSize = new NotesCollectionPosition().size();
 	public final int itemValueTableSize = new NotesItemValueTable().size();
 	public final int itemSize = new NotesItem().size();
-
+	public final int oidSize = new NotesOriginatorId().size();
+	
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
@@ -81,6 +84,87 @@ public interface NotesCAPI extends Library {
 
 	short b32_NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
 	short b64_NSFDbDeleteNotes(long hDB, long hTable, Memory retUNIDArray);
+
+	/*  Replication flags
+
+	NOTE:  Please note the distinction between REPLFLG_DISABLE and
+	REPLFLG_NEVER_REPLICATE.  The former is used to temporarily disable
+	replication.  The latter is used to indicate that this database should
+	NEVER be replicated.  The former may be set and cleared by the Notes
+	user interface.  The latter is intended to be set programmatically
+	and SHOULD NEVER be able to be cleared by the user interface.
+
+	The latter was invented to avoid having to set the replica ID to
+	the known value of REPLICA_ID_NEVERREPLICATE.  This latter method has
+	the failing that DBs that use it cannot have DocLinks to them.  */
+
+	/*								0x0001	spare was COPY_ACL */
+	/*								0x0002	spare */
+
+	/** Disable replication */
+	public short REPLFLG_DISABLE = 0x0004;
+	/** Mark unread only if newer note */
+	public short REPLFLG_UNREADIFFNEW = 0x0008;
+	/** Don't propagate deleted notes when replicating from this database */
+	public short REPLFLG_IGNORE_DELETES = 0x0010;
+	/** UI does not allow perusal of Design */
+	public short REPLFLG_HIDDEN_DESIGN = 0x0020;
+	/** Do not list in catalog */
+	public short REPLFLG_DO_NOT_CATALOG	= 0x0040;
+	/** Auto-Delete documents prior to cutoff date */
+	public short REPLFLG_CUTOFF_DELETE = 0x0080;
+	/** DB is not to be replicated at all */
+	public short REPLFLG_NEVER_REPLICATE = 0x0100;
+	/** Abstract during replication */
+	public short REPLFLG_ABSTRACT = 0x0200;
+	/** Do not list in database add */
+	public short REPLFLG_DO_NOT_BROWSE = 0x0400;
+	/** Do not run chronos on database */
+	public short REPLFLG_NO_CHRONOS	= 0x0800;
+	/** Don't replicate deleted notes into destination database */
+	public short REPLFLG_IGNORE_DEST_DELETES = 0x1000;
+	/** Include in Multi Database indexing */
+	public short REPLFLG_MULTIDB_INDEX = 0x2000;
+	/** Low priority */
+	public short REPLFLG_PRIORITY_LOW = (short) (0xC000 & 0xffff);
+	/** Medium priority */
+	public short REPLFLG_PRIORITY_MED = 0x0000;
+	/** High priority */
+	public short REPLFLG_PRIORITY_HI = 0x4000;
+	/** Shift count for priority field */
+	public short REPLFLG_PRIORITY_SHIFT	= 14;
+	/** Mask for priority field after shifting*/
+	public short REPLFLG_PRIORITY_MASK = 0x0003;
+	/** Mask for clearing the field */
+	public short REPLFLG_PRIORITY_INVMASK = 0x3fff;
+	public short REPLFLG_USED_MASK = (short) ((0x4|0x8|0x10|0x40|0x80|0x100|0x200|0xC000|0x1000|0x2000|0x4000) & 0xffff);
+
+
+	/** Reserved ReplicaID.Date. Used in ID.Date field in ReplicaID to escape
+	to reserved REPLICA_ID_xxx */
+	public short REPLICA_DATE_RESERVED = 0;
+
+
+	/**	Number of times within cutoff interval that we purge deleted stubs.
+	For example, if the cutoff interval is 90 days, we purge every 30
+	days. */
+	public short CUTOFF_CHANGES_DURING_INTERVAL = 3;
+
+	public short b32_NSFDbReplicaInfoGet(
+			int  hDB,
+			NotesDbReplicaInfo retReplicationInfo);
+
+	public short b64_NSFDbReplicaInfoGet(
+			long  hDB,
+			NotesDbReplicaInfo retReplicationInfo);
+	
+	public short b32_NSFDbReplicaInfoSet(
+			int  hDB,
+			NotesDbReplicaInfo ReplicationInfo);
+
+	public short b64_NSFDbReplicaInfoSet(
+			long  hDB,
+			NotesDbReplicaInfo ReplicationInfo);
 
 	short b32_NIFFindDesignNoteExt(int hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntBuffer retNoteID, int Options);
 	short b64_NIFFindDesignNoteExt(long hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntBuffer retNoteID, int Options);
@@ -169,6 +253,18 @@ public interface NotesCAPI extends Library {
 	public short b32_OSMemFree(int handle);
 	public short b64_OSMemFree(long handle);
 
+	public void ODSWriteMemory(
+			Pointer ppDest,
+			short  type,
+			Pointer pSrc,
+			short  iterations);
+	
+	public void ODSReadMemory(
+			Pointer ppSrc,
+			short  type,
+			Pointer pDest,
+			short iterations);
+	
 	public short b32_NIFLocateNote (int hCollection, NotesCollectionPosition indexPos, int noteID);
 	public short b64_NIFLocateNote (long hCollection, NotesCollectionPosition indexPos, int noteID);
 
@@ -334,9 +430,8 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	/** IDs for NSFNoteGet and SetInfo */
 	public static short _NOTE_DB = 0;		
-	/** (When adding new values, see the */
+	/** (When adding new values, see the table in NTINFO.C */
 	public static short _NOTE_ID = 1;
-	/**  table in NTINFO.C */
 	public static short _NOTE_OID = 2;
 	public static short _NOTE_CLASS	= 3;
 	public static short _NOTE_MODIFIED = 4;
@@ -761,7 +856,151 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFNoteOpenExt(int hDB, int noteId, int flags, IntByReference rethNote);
 	public short b64_NSFNoteOpenExt(long hDB, int noteId, int flags, LongByReference rethNote);
 
+
+	public short b32_NSFDbGetMultNoteInfo(
+			int  hDb,
+			short  Count,
+			short  Options,
+			int  hInBuf,
+			LongByReference retSize,
+			IntByReference rethOutBuf);
 	
+	public short b64_NSFDbGetMultNoteInfo(
+			long  hDb,
+			short  Count,
+			short  Options,
+			long  hInBuf,
+			LongByReference retSize,
+			LongByReference rethOutBuf);
+
+	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
+
+	/** Return NoteID */
+	public static short fINFO_NOTEID = 0x0001;
+	/** Return SequenceTime from OID */
+	public static short fINFO_SEQTIME = 0x0002;
+	/** Return Sequence number from OID */
+	public static short fINFO_SEQNUM = 0x0004;
+	/** Return OID (disables SeqTime & number & UNID) */
+	public static short fINFO_OID  = 0x0008;
+	/** Compress non-existent UNIDs */
+	public static short fINFO_COMPRESS = 0x0040;
+	/** Return UNID  */
+	public static short fINFO_UNID = 0x0080;
+	/** Allow the returned buffer to exceed 64k. */	
+	public static short fINFO_ALLOW_HUGE = 0x0400;
+
+	public short NSFDbCreateExtended(
+			Memory pathName,
+			short  DbClass,
+			boolean  ForceCreation,
+			short  Options,
+			byte  EncryptStrength,
+			long  MaxFileSize);
+
+	/*	Define NSF DB Classes - These all begin with 0xf000 for no good
+	reason other than to ENSURE that callers of NSFDbCreate call the
+	routine with valid parameters, since in earlier versions of NSF
+	the argument to the call was typically 0. */
+
+	/* The type of the database is determined by the filename extension.
+	 * The extensions and their database classes are .NSX (NSFTESTFILE),
+	 * .NSF (NOTEFILE), .DSK (DESKTOP), .NCF (NOTECLIPBOARD), .NTF (TEMPLATEFILE),
+	 * .NSG (GIANTNOTEFILE), .NSH (HUGENOTEFILE), NTD (ONEDOCFILE),
+	 * NS2 (V2NOTEFILE), NTM (ENCAPSMAILFILE). */
+public int DBCLASS_BY_EXTENSION = 0;	
+
+/** A test database. */
+public short DBCLASS_NSFTESTFILE = (short) (0xff00 & 0xffff);
+/** A standard Domino database. */
+public short DBCLASS_NOTEFILE = (short) (0xff01 & 0xffff);
+/** A Notes desktop (folders, icons, etc.). */
+public short DBCLASS_DESKTOP = (short) (0xff02 & 0xffff);
+/** A Notes clipboard (used for cutting and pasting). */
+public short DBCLASS_NOTECLIPBOARD = (short) (0xff03 & 0xffff);
+/** A database that contains every type of note (forms, views, ACL, icon, etc.) except data notes. */
+public short DBCLASS_TEMPLATEFILE = (short) (0xff04 & 0xffff);
+/** A standard Domino database, with size up to 1 GB. This was used
+ * in Notes Release 3 when the size of a previous version of a database had been limited to 200 MB.
+ */
+public short DBCLASS_GIANTNOTEFILE = (short) (0xff05 & 0xffff);
+/**  A standard Domino database, with size up to 1 GB. This was used in Notes Release
+ * 3 when the size of a previous version of a database had been limited to 300 MB.
+ */
+public short DBCLASS_HUGENOTEFILE	= (short) (0xff06 & 0xffff);
+/** One document database with size up to 10MB. Specifically used by alternate
+ * mail to create an encapsulated database. Components of the document are
+ * further limited in size. It is not recommended that you use this database
+ * class with NSFDbCreate. If you do, and you get an error when saving the document,
+ * you will need to re-create the database using DBCLASS_NOTEFILE. */
+public short DBCLASS_ONEDOCFILE = (short) (0xff07 & 0xffff);
+/** Database was created as a Notes Release 2 database. */
+public short DBCLASS_V2NOTEFILE = (short) (0xff08 & 0xffff);
+/** One document database with size up to 5MB. Specifically used by alternate mail
+ * to create an encapsulated database. Components of the document are further
+ * limited in size. It is not recommended that you use this database class with
+ * NSFDbCreate. If you do, and you get an error when saving the document, you will
+ * need to re-create the database using DBCLASS_NOTEFILE. */
+public short DBCLASS_ENCAPSMAILFILE = (short) (0xff09 & 0xffff);
+/** Specifically used by alternate mail. Not recomended for use with NSFDbCreate. */
+public short DBCLASS_LRGENCAPSMAILFILE = (short) (0xff0a & 0xffff);
+/** Database was created as a Notes Release 3 database. */
+public short DBCLASS_V3NOTEFILE = (short) (0xff0b & 0xffff);
+/** Object store. */
+public short DBCLASS_OBJSTORE = (short) (0xff0c & 0xffff);
+/**  One document database with size up to 10MB. Specifically used by Notes Release 3
+ * alternate mail to create an encapsulated database. Not recomended for use
+ * with NSFDbCreate. */
+public short DBCLASS_V3ONEDOCFILE	= (short) (0xff0d & 0xffff);
+/** Database was created specifically for Domino and Notes Release 4. */
+public short DBCLASS_V4NOTEFILE = (short) (0xff0e & 0xffff);
+/** Database was created specifically for Domino and Notes Release 5. */
+public short DBCLASS_V5NOTEFILE = (short) (0xff0f & 0xffff);
+/** Database was created specifically for Domino and Notes Release Notes/Domino 6. */
+public short DBCLASS_V6NOTEFILE = (short) (0xff10 & 0xffff);
+/** Database was created specifically for Domino and Notes Release Notes/Domino 8. */
+public short DBCLASS_V8NOTEFILE = (short) (0xff11 & 0xffff);
+/** Database was created specifically for Domino and Notes Release Notes/Domino 8.5. */
+public short DBCLASS_V85NOTEFILE = (short) (0xff12 & 0xffff);
+/** Database was created specifically for Domino and Notes Release Notes/Domino 9. */
+public short DBCLASS_V9NOTEFILE = (short) (0xff13 & 0xffff);
+
+
+public short DBCLASS_MASK	= (0x00ff & 0xffff);
+public short DBCLASS_VALID_MASK = (short) (0xff00 & 0xffff);
+
+/* 	Option flags for NSFDbCreateExtended */
+
+/** Create a locally encrypted database. */
+public short DBCREATE_LOCALSECURITY	= 0x0001;
+/** NSFNoteUpdate will not use an object store for notes in the database. */
+public short DBCREATE_OBJSTORE_NEVER	= 0x0002;
+/** The maximum database length is specified in bytes in NSFDbCreateExtended. */
+public short DBCREATE_MAX_SPECIFIED	= 0x0004;
+/** Don't support note hierarchy - ODS21 and up only */
+public short DBCREATE_NORESPONSE_INFO = 0x0010;
+/** Don't maintain unread lists for this DB */
+public short DBCREATE_NOUNREAD = 0x0020;
+/** Skip overwriting freed disk buffer space */
+public short DBCREATE_NO_FREE_OVERWRITE	= 0x0200;
+/** Maintain form/bucket bitmap */
+public short DBCREATE_FORM_BUCKET_OPT = 0x0400;
+/** Disable transaction logging for this database if specified */
+public short DBCREATE_DISABLE_TXN_LOGGING = 0x0800;
+/** Enable maintaining last accessed time */
+public short DBCREATE_MAINTAIN_LAST_ACCESSED = 0x1000;
+/** TRUE if database is a mail[n].box database */
+public short DBCREATE_IS_MAILBOX = 0x4000;
+/** TRUE if database should allow "large" (>64K bytes) UNK table */
+public short DBCREATE_LARGE_UNKTABLE = (short) (0x8000 & 0xffff);
+
+/* Values for EncryptStrength of NSFDbCreateExtended */
+
+public byte DBCREATE_ENCRYPT_NONE = 0x00;	
+public byte DBCREATE_ENCRYPT_SIMPLE	= 0x01;	
+public byte DBCREATE_ENCRYPT_MEDIUM	= 0x02;
+public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
+
 	/*	Data Type Definitions. */
 
 
@@ -1001,5 +1240,15 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 											Memory retPortName,
 											Memory retServerName,
 											Memory retFileName);
+
+	public short b32_OSMemAlloc(
+			short  BlkType,
+			long  dwSize,
+			IntByReference retHandle);
+	
+	public short b64_OSMemAlloc(
+			short  BlkType,
+			long  dwSize,
+			LongByReference retHandle);
 
 }

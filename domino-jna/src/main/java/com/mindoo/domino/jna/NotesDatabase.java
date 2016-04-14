@@ -5,6 +5,8 @@ import java.nio.LongBuffer;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.ISignCallback.Action;
@@ -29,10 +31,12 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableDa
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
+import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItemTable;
 import com.mindoo.domino.jna.structs.NotesNamesList32;
 import com.mindoo.domino.jna.structs.NotesNamesList64;
+import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
@@ -63,6 +67,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String m_server;
 	private String[] m_paths;
 	private Session m_session;
+	private String m_replicaID;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -240,6 +245,49 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(this);
 	}
 
+	/** Available encryption strengths for database creation */
+	public static enum Encryption {None, Simple, Medium, Strong};
+	
+	/**
+	 * This function creates a new Domino database.
+	 * 
+	 * @param session current session
+	 * @param serverName server name, either canonical, abbreviated or common name
+	 * @param filePath filepath to database
+	 * @param dbClass specifies the class of the database created. See DB_CLASS for classes that may be specified.
+	 * @param forceCreation controls whether the call will overwrite an existing database of the same name. Set to TRUE to overwrite, set to FALSE not to overwrite.
+	 * @param options database creation option flags.  See DBCREATE_xxx
+	 * @param encryption encryption strength
+	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, DBCLASS_BY_EXTENSION and use the option, DBCREATE_MAX_SPECIFIED.
+	 * @return new database instance
+	 */
+	public static void createDatabase(Session session, String serverName, String filePath, short dbClass, boolean forceCreation, short options, Encryption encryption, long maxFileSize) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
+		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath);
+		
+		byte encryptStrengthByte;
+		switch (encryption) {
+		case None:
+			encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_NONE;
+			break;
+		case Simple:
+			encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_SIMPLE;
+			break;
+		case Medium:
+			encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_MEDIUM;
+			break;
+		case Strong:
+			encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_STRONG;
+			break;
+			default:
+				encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_NONE;
+		}
+		
+		short result = notesAPI.NSFDbCreateExtended(fullPathMem, dbClass, forceCreation, options, encryptStrengthByte, maxFileSize);
+		NotesErrorUtils.checkResult(result);
+	}
+	
 	/**
 	 * Internal method to read the session used to create the database
 	 * 
@@ -268,6 +316,86 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public String getRelativeFilePath() {
 		loadPaths();
 		return m_paths[0];
+	}
+	
+	/**
+	 * This function gets the given database's {@link NotesDbReplicaInfo} structure.<br>
+	 * <br>
+	 * This structure contains information that tells the Domino Replicator how to treat the database.<br>
+	 * The ".ID" member enables the Replicator to identify "replicas" of databases.<br>
+	 * <br>
+	 * The ".CutoffInterval" is the age in days at which deleted document identifiers are purged.<br>
+	 * Domino divides this interval into thirds, and for each third of the interval carries
+	 * out what amounts to an incremental purge.<br>
+	 * <br>
+	 * These deleted document identifiers are sometimes called deletion stubs.<br>
+	 * <br>
+	 * The ".Cutoff" member is a {@link NotesTimeDate} value that is calculated by
+	 * subtracting the Cutoff Interval (also called Purge Interval) from today's date.<br>
+	 * <br>
+	 * It prevents notes that are older than that date from being replicated at all.<br>
+	 * <br>
+	 * The ".Flags" member is a bit-wise encoded short that stores miscellaneous Replicator flags.<br>
+	 * See REPLFLG_xxx for further information on Replicator flags.
+
+	 * @return replica info
+	 */
+	public NotesDbReplicaInfo getReplicaInfo() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		NotesDbReplicaInfo retReplicationInfo = new NotesDbReplicaInfo();
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbReplicaInfoGet(m_hDB64, retReplicationInfo);
+		}
+		else {
+			result = notesAPI.b32_NSFDbReplicaInfoGet(m_hDB32, retReplicationInfo);
+		}
+		NotesErrorUtils.checkResult(result);
+		return retReplicationInfo;
+	}
+	
+	/**
+	 * This function sets the given database's {@link NotesDbReplicaInfo} structure.<br>
+	 * <br>
+	 * Use this function to set specific values, such as the replica ID, in the header
+	 * data of a database.<br>
+	 * To create a new replica copy of a given database, for example, you must first
+	 * create the new database using the NSFDbCreate, then get the replica ID of the
+	 * source database via {@link #getReplicaInfo()}, then set this replica ID into
+	 * the new database via {@link #setReplicaInfo(NotesDbReplicaInfo)}.<br>
+	 * <br>
+	 * You may also use {@link #setReplicaInfo(NotesDbReplicaInfo)} to set values
+	 * such as the replication flags in the header of the database.<br>
+	 * <br>
+	 * See the symbolic value REPLFLG_xxx for specific replication settings.
+
+	 * @param replInfo new replica info
+	 */
+	public void setReplicaInfo(NotesDbReplicaInfo replInfo) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbReplicaInfoSet(m_hDB64, replInfo);
+		}
+		else {
+			result = notesAPI.b32_NSFDbReplicaInfoSet(m_hDB32, replInfo);
+		}
+		NotesErrorUtils.checkResult(result);
+		//reset cached replicaId
+		m_replicaID = null;
+	}
+	
+	/**
+	 * Returns the hex encoded replica id of the database (16 character hex string)
+	 * 
+	 * @return replica id
+	 */
+	public String getReplicaID() {
+		if (m_replicaID==null) {
+			NotesDbReplicaInfo replInfo = getReplicaInfo();
+			m_replicaID = replInfo.getReplicaID();
+		}
+		return m_replicaID;
 	}
 	
 	/**
@@ -1411,5 +1539,298 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 
 		}
+	}
+	
+	/**
+	 * Data container that stores the lookup result for note info
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class NoteInfo {
+		private int m_noteId;
+		private NotesOriginatorId m_oid;
+		private boolean m_isDeleted;
+		private boolean m_notPresent;
+		
+		public NoteInfo(int noteId, NotesOriginatorId oid, boolean isDeleted, boolean notPresent) {
+			m_noteId = noteId;
+			m_oid = oid;
+			m_isDeleted = isDeleted;
+			m_notPresent = notPresent;
+		}
+		
+		/**
+		 * Returns the note id used to look up this data
+		 * 
+		 * @return note id
+		 */
+		public int getNoteId() {
+			return m_noteId;
+		}
+		
+		/**
+		 * Returns the raw {@link NotesOriginatorId} object containing the
+		 * data we also provide via direct methods
+		 * 
+		 * @return OID
+		 */
+		public NotesOriginatorId getOID() {
+			return m_oid;
+		}
+		
+		/**
+		 * Returns the sequence number
+		 * 
+		 * @return sequence number
+		 */
+		public int getSequence() {
+			return m_oid==null ? 0 : m_oid.Sequence;
+		}
+		
+		/**
+		 * Returns the sequence time ( = "Modified (initially)")
+		 * 
+		 * @return sequence time
+		 */
+		public NotesTimeDate getSequenceTime() {
+			return m_oid==null ? null : m_oid.SequenceTime;
+		}
+		
+		/**
+		 * Returns the UNID as hex string
+		 * 
+		 * @return UNID or null if the note could not be found
+		 */
+		public String getUnid() {
+			return m_oid!=null ? m_oid.getUNID() : null;
+		}
+		
+		/**
+		 * Returns true if the note has already been deleted
+		 * 
+		 * @return true if deleted
+		 */
+		public boolean isDeleted() {
+			return m_isDeleted;
+		}
+		
+		/**
+		 * Returns true if the note currently exists in the database
+		 * 
+		 * @return true if note exists
+		 */
+		public boolean exists() {
+			return !m_notPresent;
+		}
+	}
+
+	/**
+	 * Convenience to convert note ids to UNIDs.
+	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
+	 * 
+	 * 
+	 * @param noteIds note ids to look up
+	 * @param retUnidsByNoteId map is populated with found UNIDs
+	 * @param retNoteIdsNotFound set is populated with any note id that could not be found
+	 */
+	public void toUnids(int[] noteIds, Map<Integer,String> retUnidsByNoteId, Set<Integer> retNoteIdsNotFound) {
+		NoteInfo[] infoArr = getMultiNoteInfo(noteIds);
+		for (NoteInfo currInfo : infoArr) {
+			if (currInfo.exists()) {
+				retUnidsByNoteId.put(currInfo.getNoteId(), currInfo.getUnid());
+			}
+			else {
+				retNoteIdsNotFound.add(currInfo.getNoteId());
+			}
+		}
+	}
+	
+	/**
+	 * This method can be used to get information for a number documents in a
+	 * database from their note ids in a single call.<br>
+	 * the data returned by this method is the {@link NotesOriginatorId}, which contains
+	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
+	 * <br>
+	 * In addition, the method checks whether a document exists or has been deleted.<br>
+	 * <br>
+	 * Please note that the method can only handle max. 65535 note ids, because it's
+	 * using a WORD / short datatype for the count internally to call the C API.
+	 * 
+	 * @param noteIds array of note ids
+	 * @return lookup results, same size and order as <code>noteIds</code> array
+	 * @throws IllegalArgumentException if note id array has too many entries (more than 65535)
+	 */
+	public NoteInfo[] getMultiNoteInfo(int[] noteIds) {
+		if (noteIds.length ==0) {
+			return new NoteInfo[0];
+		}
+		
+		if (noteIds.length > 65535) {
+			throw new IllegalArgumentException("Max 65535 note ids are supported");
+		}
+		
+		NoteInfo[] retNoteInfo;
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retHandle = new LongByReference();
+			short result = notesAPI.b64_OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
+			NotesErrorUtils.checkResult(result);
+
+			long retHandleLong = retHandle.getValue();
+			try {
+				Pointer inBufPtr = notesAPI.b64_OSLockObject(retHandleLong);
+				
+				Pointer currInBufPtr = inBufPtr;
+				int offset = 0;
+				
+				for (int i=0; i<noteIds.length; i++) {
+					currInBufPtr.setInt(0, noteIds[i]);
+					offset += 4;
+					currInBufPtr = inBufPtr.share(offset);
+				}
+				
+				notesAPI.b64_OSUnlockObject(retHandleLong);
+
+				LongByReference retSize = new LongByReference();
+				LongByReference rethOutBuf = new LongByReference();
+				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
+				
+				result = notesAPI.b64_NSFDbGetMultNoteInfo(m_hDB64, (short) (noteIds.length & 0xffff), options, retHandleLong, retSize, rethOutBuf);
+				NotesErrorUtils.checkResult(result);
+
+				long rethOutBufLong = rethOutBuf.getValue();
+				
+				//decode return buffer
+				int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+				long retSizeLong = retSize.getValue();
+				if (retSizeLong != noteIds.length*entrySize) {
+					throw new IllegalStateException("Unexpected size of return data. Expected "+noteIds.length*entrySize+" bytes for data of "+noteIds.length+" ids, got "+retSizeLong+" bytes");
+				}
+				
+				Pointer outBufPtr = notesAPI.b64_OSLockObject(rethOutBuf.getValue());
+				try {
+					retNoteInfo = decodeMultiNoteLookupData(noteIds, outBufPtr);
+					
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethOutBufLong);
+					notesAPI.b64_OSMemFree(rethOutBufLong);
+				}
+			}
+			finally {
+				notesAPI.b64_OSMemFree(retHandleLong);
+			}
+		}
+		else {
+			IntByReference retHandle = new IntByReference();
+			short result = notesAPI.b32_OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
+			NotesErrorUtils.checkResult(result);
+
+			int retHandleInt = retHandle.getValue();
+			try {
+				Pointer inBufPtr = notesAPI.b32_OSLockObject(retHandleInt);
+				
+				Pointer currInBufPtr = inBufPtr;
+				int offset = 0;
+				
+				for (int i=0; i<noteIds.length; i++) {
+					currInBufPtr.setInt(0, noteIds[i]);
+					offset += 4;
+					currInBufPtr = inBufPtr.share(offset);
+				}
+				
+				notesAPI.b32_OSUnlockObject(retHandleInt);
+
+				LongByReference retSize = new LongByReference();
+				IntByReference rethOutBuf = new IntByReference();
+				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
+				
+				result = notesAPI.b32_NSFDbGetMultNoteInfo(m_hDB32, (short) (noteIds.length & 0xffff), options, retHandleInt, retSize, rethOutBuf);
+				NotesErrorUtils.checkResult(result);
+
+				int rethOutBufInt = rethOutBuf.getValue();
+				
+				//decode return buffer
+				int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+				long retSizeLong = retSize.getValue();
+				if (retSizeLong != noteIds.length*entrySize) {
+					throw new IllegalStateException("Unexpected size of return data. Expected "+noteIds.length*entrySize+" bytes for data of "+noteIds.length+" ids, got "+retSizeLong+" bytes");
+				}
+				
+				Pointer outBufPtr = notesAPI.b32_OSLockObject(rethOutBuf.getValue());
+				try {
+					retNoteInfo = decodeMultiNoteLookupData(noteIds, outBufPtr);
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethOutBufInt);
+					notesAPI.b32_OSMemFree(rethOutBufInt);
+				}
+			}
+			finally {
+				notesAPI.b32_OSMemFree(retHandleInt);
+			}
+		}
+
+		return retNoteInfo;
+	}
+	
+	/**
+	 * Helper method to extract the return data of method {@link #getMultNoteInfo(int[])}
+	 * 
+	 * @param noteIds note ids used for lookup
+	 * @param outBufPtr buffer pointer
+	 * @return array of note info objects
+	 */
+	private NoteInfo[] decodeMultiNoteLookupData(int[] noteIds, Pointer outBufPtr) {
+		NoteInfo[] retNoteInfo = new NoteInfo[noteIds.length];
+		
+		Pointer entryBufPtr = outBufPtr;
+		
+		for (int i=0; i<noteIds.length; i++) {
+			int offsetInEntry = 0;
+			
+			int currNoteId = noteIds[i];
+			int returnedNoteId = entryBufPtr.getInt(0);
+
+			offsetInEntry += 4;
+
+			Pointer fileTimeDatePtr = entryBufPtr.share(offsetInEntry);
+			NotesTimeDate fileTimeDate = new NotesTimeDate(fileTimeDatePtr);
+			fileTimeDate.read();
+			
+			offsetInEntry += 8;
+			
+			Pointer noteTimeDatePtr = entryBufPtr.share(offsetInEntry);
+			NotesTimeDate noteTimeDate = new NotesTimeDate(noteTimeDatePtr);
+			noteTimeDate.read();
+			
+			offsetInEntry += 8;
+			
+			int sequence = entryBufPtr.getInt(offsetInEntry);
+
+			offsetInEntry += 4;
+			
+			Pointer sequenceTimePtr = entryBufPtr.share(offsetInEntry);
+			NotesTimeDate sequenceTimeDate = new NotesTimeDate(sequenceTimePtr);
+			sequenceTimeDate.read();
+			
+			offsetInEntry += 8;
+
+			NotesOriginatorId oid = new NotesOriginatorId();
+			oid.File = fileTimeDate;
+			oid.Note = noteTimeDate;
+			oid.Sequence = sequence;
+			oid.SequenceTime = sequenceTimeDate;
+			
+			
+			entryBufPtr = entryBufPtr.share(offsetInEntry);
+			
+			boolean isDeleted = (returnedNoteId & NotesCAPI.NOTEID_RESERVED) == NotesCAPI.NOTEID_RESERVED;
+			boolean isNotPresent = returnedNoteId==0;
+			retNoteInfo[i] = new NoteInfo(currNoteId, oid, isDeleted, isNotPresent);
+		}
+		return retNoteInfo;
 	}
 }
