@@ -1740,6 +1740,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			if (result==INotesErrorConstants.ERR_NOTE_DELETED) {
 				isDeleted = true;
 			}
+			else if (result==INotesErrorConstants.ERR_INVALID_NOTE) {
+				notPresent = true;
+			}
 			else {
 				NotesErrorUtils.checkResult(result);
 			}
@@ -1748,6 +1751,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b32_NSFDbGetNoteInfoExt(m_hDB32, noteId, retNoteOID, retModified, retNoteClass, retAddedToFile, retResponseCount, retParentNoteID);
 			if (result==INotesErrorConstants.ERR_NOTE_DELETED) {
 				isDeleted = true;
+			}
+			else if (result==INotesErrorConstants.ERR_INVALID_NOTE) {
+				notPresent = true;
 			}
 			else {
 				NotesErrorUtils.checkResult(result);

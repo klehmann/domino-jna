@@ -171,31 +171,39 @@ public class TestNoteLookup extends BaseJNATestClass {
 				//required for the modified date comparison between legacy API and JNA:
 				session.setTrackMillisecInJavaDates(true);
 				
-				NoteInfoExt noteInfo = dbData.getNoteInfoExt(someNoteIds[0]);
-				System.out.println("noteid="+noteInfo.getNoteId()+", unid="+noteInfo.getUnid()+
-						", seq="+noteInfo.getSequence()+", seqtime="+noteInfo.getSequenceTime()+
-						", deleted="+noteInfo.isDeleted()+", exists="+(noteInfo.exists()+
-								", modified="+noteInfo.getModified()+", noteclass="+noteInfo.getNoteClass()+
-								", parentid="+noteInfo.getParentNoteId()+", responsecount="+
-								noteInfo.getResponseCount()+", addedtofile="+noteInfo.getAddedToFile()
-								));
-
-				Document doc = dbLegacyAPI.getDocumentByUNID(noteInfo.getUnid());
+				NoteInfoExt noteInfo = dbData.getNoteInfoExt(73843498);
+				Assert.assertFalse("Check for nonexisting docs works", noteInfo.exists());
 				
-				Assert.assertEquals("Loaded doc has the expected note id", noteInfo.getNoteId(), Integer.parseInt(doc.getNoteID(), 16));
-
-				Assert.assertEquals("Response count matches", noteInfo.getResponseCount(), doc.getResponses().getCount());
-
-				Vector<?> formulaResult = session.evaluate("@Modified", doc);
-				DateTime ndtLastModLegacy = (DateTime) formulaResult.get(0);
-				Date jdtLastModLegacy = ndtLastModLegacy.toJavaDate();
+				noteInfo = dbData.getNoteInfoExt(someNoteIds[0]);
 				
-				NotesTimeDate lastModJNA = noteInfo.getSequenceTime();
-				Date jdtLastModJNA = lastModJNA.toDate();
-				
-				Assert.assertEquals("Last modified dates of note with id " + noteInfo.getNoteId()+
-						" matches between legacy API and JNA", jdtLastModLegacy, jdtLastModJNA);
+				if (noteInfo.exists()) {
+					System.out.println("noteid="+noteInfo.getNoteId()+", unid="+noteInfo.getUnid()+
+							", seq="+noteInfo.getSequence()+", seqtime="+noteInfo.getSequenceTime()+
+							", deleted="+noteInfo.isDeleted()+", exists="+(noteInfo.exists()+
+									", modified="+noteInfo.getModified()+", noteclass="+noteInfo.getNoteClass()+
+									", parentid="+noteInfo.getParentNoteId()+", responsecount="+
+									noteInfo.getResponseCount()+", addedtofile="+noteInfo.getAddedToFile()
+									));
+					
+					Document doc = dbLegacyAPI.getDocumentByUNID(noteInfo.getUnid());
+					
+					Assert.assertEquals("Loaded doc has the expected note id", noteInfo.getNoteId(), Integer.parseInt(doc.getNoteID(), 16));
 
+					Assert.assertEquals("Response count matches", noteInfo.getResponseCount(), doc.getResponses().getCount());
+
+					Vector<?> formulaResult = session.evaluate("@Modified", doc);
+					DateTime ndtLastModLegacy = (DateTime) formulaResult.get(0);
+					Date jdtLastModLegacy = ndtLastModLegacy.toJavaDate();
+					
+					NotesTimeDate lastModJNA = noteInfo.getSequenceTime();
+					Date jdtLastModJNA = lastModJNA.toDate();
+					
+					Assert.assertEquals("Last modified dates of note with id " + noteInfo.getNoteId()+
+							" matches between legacy API and JNA", jdtLastModLegacy, jdtLastModJNA);
+				}
+				else {
+					System.out.println("Note with id "+noteInfo.getNoteId()+" does not exist");
+				}
 				
 				System.out.println("Done with single note lookup");
 				return null;
