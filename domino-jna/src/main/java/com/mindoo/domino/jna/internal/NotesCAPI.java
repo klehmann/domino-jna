@@ -873,6 +873,26 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			LongByReference retSize,
 			LongByReference rethOutBuf);
 
+	public short b32_NSFDbGetNoteInfoExt(
+			int  hDB,
+			int  NoteID,
+			NotesOriginatorId retNoteOID,
+			NotesTimeDate retModified,
+			ShortByReference retNoteClass,
+			NotesTimeDate retAddedToFile,
+			ShortByReference retResponseCount,
+			IntByReference retParentNoteID);
+
+	public short b64_NSFDbGetNoteInfoExt(
+			long  hDB,
+			int  NoteID,
+			NotesOriginatorId retNoteOID,
+			NotesTimeDate retModified,
+			ShortByReference retNoteClass,
+			NotesTimeDate retAddedToFile,
+			ShortByReference retResponseCount,
+			IntByReference retParentNoteID);
+
 	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
 
 	/** Return NoteID */

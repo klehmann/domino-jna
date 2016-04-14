@@ -10,6 +10,7 @@ import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.NoteInfo;
+import com.mindoo.domino.jna.NotesDatabase.NoteInfoExt;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
@@ -118,6 +119,85 @@ public class TestNoteLookup extends BaseJNATestClass {
 				}
 				
 				System.out.println("Done with multi note lookup");
+				return null;
+			}
+		});
+	}
+
+	@Test
+	public void testNoteLookup_single() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				System.out.println("Starting single note lookup");
+				
+				NotesDatabase dbData = getFakeNamesDb();
+				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
+				
+				final int nrOfNotesToRead = 1; // no more than we have in the view
+				
+				//grab some note ids from the People view
+				NotesCollection col = dbData.openCollectionByName("People");
+				int[] someNoteIds = col.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), 2, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<int[]>() {
+					
+					int m_idx = 0;
+					
+					@Override
+					public int[] startingLookup() {
+						return new int[nrOfNotesToRead];
+					}
+
+					@Override
+					public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(int[] result,
+							NotesViewEntryData entryData) {
+						if (m_idx < result.length) {
+							result[m_idx] = entryData.getNoteId();
+							m_idx++;
+							return Action.Continue;
+						}
+						else {
+							return Action.Stop;
+						}
+					}
+
+					@Override
+					public int[] lookupDone(int[] result) {
+						return result;
+					}
+				});
+				
+				//required for the modified date comparison between legacy API and JNA:
+				session.setTrackMillisecInJavaDates(true);
+				
+				NoteInfoExt noteInfo = dbData.getNoteInfoExt(someNoteIds[0]);
+				System.out.println("noteid="+noteInfo.getNoteId()+", unid="+noteInfo.getUnid()+
+						", seq="+noteInfo.getSequence()+", seqtime="+noteInfo.getSequenceTime()+
+						", deleted="+noteInfo.isDeleted()+", exists="+(noteInfo.exists()+
+								", modified="+noteInfo.getModified()+", noteclass="+noteInfo.getNoteClass()+
+								", parentid="+noteInfo.getParentNoteId()+", responsecount="+
+								noteInfo.getResponseCount()+", addedtofile="+noteInfo.getAddedToFile()
+								));
+
+				Document doc = dbLegacyAPI.getDocumentByUNID(noteInfo.getUnid());
+				
+				Assert.assertEquals("Loaded doc has the expected note id", noteInfo.getNoteId(), Integer.parseInt(doc.getNoteID(), 16));
+
+				Assert.assertEquals("Response count matches", noteInfo.getResponseCount(), doc.getResponses().getCount());
+
+				Vector<?> formulaResult = session.evaluate("@Modified", doc);
+				DateTime ndtLastModLegacy = (DateTime) formulaResult.get(0);
+				Date jdtLastModLegacy = ndtLastModLegacy.toJavaDate();
+				
+				NotesTimeDate lastModJNA = noteInfo.getSequenceTime();
+				Date jdtLastModJNA = lastModJNA.toDate();
+				
+				Assert.assertEquals("Last modified dates of note with id " + noteInfo.getNoteId()+
+						" matches between legacy API and JNA", jdtLastModLegacy, jdtLastModJNA);
+
+				
+				System.out.println("Done with single note lookup");
 				return null;
 			}
 		});

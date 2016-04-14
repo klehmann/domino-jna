@@ -1624,6 +1624,76 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Extension of {@link NoteInfo} with additional note lookup data
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class NoteInfoExt extends NoteInfo {
+		private NotesTimeDate m_modified;
+		private short m_noteClass;
+		private NotesTimeDate m_addedToFile;
+		private short m_responseCount;
+		private int m_parentNoteId;
+		
+		public NoteInfoExt(int noteId, NotesOriginatorId oid, boolean isDeleted, boolean notPresent,
+				NotesTimeDate modified, short noteClass, NotesTimeDate addedToFile, short responseCount,
+				int parentNoteId) {
+			
+			super(noteId, oid, isDeleted, notPresent);
+			m_modified = modified;
+			m_noteClass = noteClass;
+			m_addedToFile = addedToFile;
+			m_responseCount = responseCount;
+			m_parentNoteId = parentNoteId;
+		}
+		
+		/**
+		 * Returns the value for "Modified in this file"
+		 * 
+		 * @return date
+		 */
+		public NotesTimeDate getModified() {
+			return m_modified;
+		}
+		
+		/**
+		 * Returns the note class
+		 * 
+		 * @return class
+		 */
+		public short getNoteClass() {
+			return m_noteClass;
+		}
+		
+		/**
+		 * Returns the value for "Added in this file"
+		 * 
+		 * @return date
+		 */
+		public NotesTimeDate getAddedToFile() {
+			return m_addedToFile;
+		}
+		
+		/**
+		 * Returns the number of responses
+		 * 
+		 * @return response count
+		 */
+		public short getResponseCount() {
+			return m_responseCount;
+		}
+		
+		/**
+		 * Returns the note id of the parent note or 0
+		 * 
+		 * @return parent note id
+		 */
+		public int getParentNoteId() {
+			return m_parentNoteId;
+		}
+	}
+	
+	/**
 	 * Convenience to convert note ids to UNIDs.
 	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
 	 * 
@@ -1642,6 +1712,52 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				retNoteIdsNotFound.add(currInfo.getNoteId());
 			}
 		}
+	}
+	
+	/**
+	 * Get the note's the Originator ID (OID) structure, the time and date the note was last
+	 * modified, the NOTE_CLASS_xxx, the time and date it was added to the database,
+	 * the number of response documents and its parent's NoteID.
+	 * 
+	 * @param noteId note id
+	 * @return info object with data
+	 */
+	public NoteInfoExt getNoteInfoExt(int noteId) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		NotesOriginatorId retNoteOID = new NotesOriginatorId();
+		NotesTimeDate retModified = new NotesTimeDate();
+		ShortByReference retNoteClass = new ShortByReference();
+		NotesTimeDate retAddedToFile = new NotesTimeDate();
+		ShortByReference retResponseCount = new ShortByReference();
+		IntByReference retParentNoteID = new IntByReference();
+		boolean isDeleted = false;
+		//not sure if we can check this via error code:
+		boolean notPresent = false;
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFDbGetNoteInfoExt(m_hDB64, noteId, retNoteOID, retModified, retNoteClass, retAddedToFile, retResponseCount, retParentNoteID);
+			if (result==INotesErrorConstants.ERR_NOTE_DELETED) {
+				isDeleted = true;
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+		else {
+			short result = notesAPI.b32_NSFDbGetNoteInfoExt(m_hDB32, noteId, retNoteOID, retModified, retNoteClass, retAddedToFile, retResponseCount, retParentNoteID);
+			if (result==INotesErrorConstants.ERR_NOTE_DELETED) {
+				isDeleted = true;
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+		
+		NoteInfoExt info = new NoteInfoExt(noteId, retNoteOID, isDeleted, notPresent, retModified,
+				retNoteClass.getValue(), retAddedToFile, retResponseCount.getValue(), retParentNoteID.getValue());
+		
+		return info;
 	}
 	
 	/**
