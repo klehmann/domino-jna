@@ -71,8 +71,9 @@ public class NotesOriginatorId extends Structure {
 	}
 	
 	/**
-	 * @param File C type : DBID<br>
-	 * @param Note C type : TIMEDATE<br>
+	 * @param File C type : DBID
+	 * @param Note C type : TIMEDATE
+	 * @param Sequence : int
 	 * @param SequenceTime C type : TIMEDATE
 	 */
 	public NotesOriginatorId(NotesTimeDate File, NotesTimeDate Note, int Sequence, NotesTimeDate SequenceTime) {

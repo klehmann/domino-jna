@@ -43,9 +43,8 @@ public abstract class DirectoryScanner {
 	}
 
 	/**
-	 * Starts the directory scan. During the scan, we call {@link #entryRead(ItemTableData)} with
-	 * every entry we found, which then calls {@link #databaseFound(String, Calendar, Calendar, String, String)}
-	 * or {@link #folderFound(String, String)} for database or folder entries
+	 * Starts the directory scan. During the scan, we call {@link #entryRead(SearchResultData)} with
+	 * every entry we found
 	 */
 	public void scan() {
 		NotesDatabase dir = new NotesDatabase(m_session, m_serverName, m_directory, "");

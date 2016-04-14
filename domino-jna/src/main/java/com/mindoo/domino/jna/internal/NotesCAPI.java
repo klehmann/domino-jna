@@ -881,7 +881,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public static short fINFO_SEQTIME = 0x0002;
 	/** Return Sequence number from OID */
 	public static short fINFO_SEQNUM = 0x0004;
-	/** Return OID (disables SeqTime & number & UNID) */
+	/** Return OID (disables SeqTime &amp; number &amp; UNID) */
 	public static short fINFO_OID  = 0x0008;
 	/** Compress non-existent UNIDs */
 	public static short fINFO_COMPRESS = 0x0040;
@@ -991,7 +991,7 @@ public short DBCREATE_DISABLE_TXN_LOGGING = 0x0800;
 public short DBCREATE_MAINTAIN_LAST_ACCESSED = 0x1000;
 /** TRUE if database is a mail[n].box database */
 public short DBCREATE_IS_MAILBOX = 0x4000;
-/** TRUE if database should allow "large" (>64K bytes) UNK table */
+/** TRUE if database should allow "large" (&lt;64K bytes) UNK table */
 public short DBCREATE_LARGE_UNKTABLE = (short) (0x8000 & 0xffff);
 
 /* Values for EncryptStrength of NSFDbCreateExtended */
@@ -1179,7 +1179,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static byte SE_FPURGED = 0x04;
 	/** note has no purge status. Returned only when SEARCH_FULL_DATACUTOFF is used */
 	public static byte SE_FNOPURGE = 0x08;
-	/** if SEARCH_NOTIFYDELETIONS: note is soft deleted; NoteClass&NOTE_CLASS_NOTIFYDELETION also on (off for hard delete) */
+	/** if SEARCH_NOTIFYDELETIONS: note is soft deleted; NoteClass &amp; NOTE_CLASS_NOTIFYDELETION also on (off for hard delete) */
 	public static byte SE_FSOFTDELETED = 0x10;
 	/** if there is reader's field at doc level this is the return value so that we could mark the replication as incomplete*/
 	public static byte SE_FNOACCESS = 0x20;
@@ -1228,7 +1228,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static int FILE_NOUPDIRS = 0x4000;
 	/** Recurse into subdirectories */
 	public static int FILE_RECURSE = 0x2000;
-	/** All directories, linked files & directories */
+	/** All directories, linked files &amp; directories */
 	public static int FILE_LINKSONLY = 0x1000;
 
 	public short OSPathNetConstruct(Memory PortName,

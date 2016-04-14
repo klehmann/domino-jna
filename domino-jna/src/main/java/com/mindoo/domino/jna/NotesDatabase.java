@@ -259,7 +259,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param options database creation option flags.  See DBCREATE_xxx
 	 * @param encryption encryption strength
 	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, DBCLASS_BY_EXTENSION and use the option, DBCREATE_MAX_SPECIFIED.
-	 * @return new database instance
 	 */
 	public static void createDatabase(Session session, String serverName, String filePath, short dbClass, boolean forceCreation, short options, Encryption encryption, long maxFileSize) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -1226,7 +1225,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Do the following before the call to NSFSearch:<br>
 	 * Call search with a formula like this:<br>
 	 * "DEFAULT dLength := @DocLength; @All"<br>
-	 * and specify {@link Search#SEARCH_SUMMARY} for the SearchFlags argument.<br>
+	 * and specify {@link Search#SUMMARY} for the SearchFlags argument.<br>
 	 * <br>
 	 * In the action routine of NSFSearch, if you get a search match, look at the summary information.<br>
 	 * The dLength field will be one of the items in the summary information buffer.<br>
@@ -1258,7 +1257,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param noteClassMask bitmask of noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, short, NotesTimeDate, ISearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, int, NotesTimeDate, ISearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
