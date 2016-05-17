@@ -189,7 +189,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					NotesTimeDate modifiedTime = null;
 					NotesTimeDate retDataModified = new NotesTimeDate();
 					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, hUserNamesList64, modifiedTime, hDB, retDataModified, retNonDataModified);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
