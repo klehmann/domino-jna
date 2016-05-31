@@ -615,7 +615,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		NotesIDTable unreadTable = new NotesIDTable();
 		
-		short openFlags = OpenCollection.toBitMask(openFlagSet); //NotesCAPI.OPEN_NOUPDATE;
+		//always enforce reopening; funny things can happen on a Domino server
+        //without this flag like sharing collections between users resulting in
+        //users seeing the wrong data *sometimes*...
+        EnumSet<OpenCollection> openFlagSetClone = openFlagSet==null ? EnumSet.noneOf(OpenCollection.class) : openFlagSet.clone();
+        openFlagSetClone.add(OpenCollection.OPEN_REOPEN_COLLECTION);
+        
+        short openFlags = OpenCollection.toBitMask(openFlagSetClone); //NotesCAPI.OPEN_NOUPDATE;
 
 		short result;
 		NotesCollection newCol;
