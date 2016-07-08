@@ -111,7 +111,7 @@ public class TestStringUtils extends BaseJNATestClass {
 	 * Tests reading the replication info from a database and conversion functions between
 	 * innards arrays and hex strings
 	 */
-//	@Test
+	@Test
 	public void testStringUtils_replicaIdInnards() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -147,7 +147,7 @@ public class TestStringUtils extends BaseJNATestClass {
 	 * Tests whether the parsing of a hex encoded UNID to two {@link NotesUniversalNoteId} and
 	 * the formatting back to a string roundtrip.
 	 */
-//	@Test
+	@Test
 	public void testStringUtils_unidFormattingAndParsing() {
 		runWithSession(new IDominoCallable<Object>() {
 
