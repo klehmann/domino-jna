@@ -24,7 +24,8 @@ public class QueryTest implements Relation {
 								or (
 										column("ZIP", Equals, 76189),
 										column("ZIP", GreaterThan, 76200),
-										noteIdsContain(2302, 2310)
+										noteIdsContain(2302, 2310),
+										column("ZIP", NotEquals, 1234)
 										)
 								)
 						)

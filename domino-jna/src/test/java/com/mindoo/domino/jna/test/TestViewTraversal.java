@@ -6,7 +6,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.Assert;
@@ -27,6 +26,11 @@ import lotus.domino.Database;
 import lotus.domino.Document;
 import lotus.domino.Session;
 
+/**
+ * Test cases that read data from views
+ * 
+ * @author Karsten Lehmann
+ */
 public class TestViewTraversal extends BaseJNATestClass {
 
 	@Test
@@ -54,8 +58,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				for (NotesViewEntryData currEntry : entriesGreaterOrEqualMinVal) {
 					noteIdsInRange.add(currEntry.getNoteId());
 					
-					Map<String,Object> currSummaryData = currEntry.getSummaryData();
-					Number currLength = (Number) currSummaryData.get("col_internetaddresslength");
+					Number currLength = (Number) currEntry.get("col_internetaddresslength");
 					
 					Assert.assertTrue("Length "+currLength.doubleValue()+" of entry with note id "+currEntry.getNoteId()+" should be greater than "+minVal, currLength.doubleValue()>=minVal);
 				}
@@ -74,8 +77,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				for (NotesViewEntryData currEntry : entriesNotGreaterOrEqualMinVal) {
 					Assert.assertFalse("Inverted flag in selected list works", noteIdsInRange.contains(currEntry.getNoteId()));
 					
-					Map<String,Object> currSummaryData = currEntry.getSummaryData();
-					Number currLength = (Number) currSummaryData.get("col_internetaddresslength");
+					Number currLength = (Number) currEntry.get("col_internetaddresslength");
 					
 					Assert.assertFalse("Length "+currLength.doubleValue()+" of entry with note id "+currEntry.getNoteId()+" should not be greater than "+minVal, currLength.doubleValue()>=minVal);
 				}
@@ -112,8 +114,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				for (NotesViewEntryData currEntry : entriesGreaterOrEqualMinVal) {
 					noteIdsInRange.add(currEntry.getNoteId());
 					
-					Map<String,Object> currSummaryData = currEntry.getSummaryData();
-					String currLastname = (String) currSummaryData.get("lastname");
+					String currLastname = (String) currEntry.get("lastname");
 					
 					Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal) >=0);
 				}
@@ -132,8 +133,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				for (NotesViewEntryData currEntry : entriesNotGreaterOrEqualMinVal) {
 					Assert.assertFalse("Inverted flag in selected list works", noteIdsInRange.contains(currEntry.getNoteId()));
 					
-					Map<String,Object> currSummaryData = currEntry.getSummaryData();
-					String currLastname = (String) currSummaryData.get("lastname");
+					String currLastname = (String) currEntry.get("lastname");
 					
 					Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should not be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal)<0);
 				}
@@ -160,7 +160,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 								ReadMask.NOTEID,
 								ReadMask.SUMMARY,
 								ReadMask.INDEXPOSITION,
-								ReadMask.SUMMARYVALUES,
+//								ReadMask.SUMMARYVALUES,
 								ReadMask.NOTECLASS,
 								ReadMask.NOTEUNID
 								), new EntriesAsListCallback(Integer.MAX_VALUE));
@@ -169,9 +169,8 @@ public class TestViewTraversal extends BaseJNATestClass {
 
 				for (NotesViewEntryData currEntry : entries) {
 					Assert.assertTrue("Note id is not null", currEntry.getNoteId()!=0);
-					Assert.assertNotNull("Summary data is not null", currEntry.getSummaryData());
 					Assert.assertNotNull("Position is not null", currEntry.getPositionStr());
-					Assert.assertNotNull("Summary values are not null", currEntry.getColumnValues());
+					Assert.assertNotNull("Column values are not null", currEntry.get("$17"));
 					Assert.assertTrue("Note class is set", currEntry.getNoteClass()!=0);
 					Assert.assertNotNull("UNID is not null", currEntry.getUNID());
 				}
@@ -254,13 +253,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 					
 					Assert.assertEquals("Position #"+i+" matches", currEntryDbView.getPositionStr(), currEntryDbData.getPositionStr());
 					
-					Assert.assertEquals("Summary data #"+i+" matches",
-							currEntryDbView.getSummaryData(),
-							currEntryDbData.getSummaryData());
-
-					Assert.assertArrayEquals("Summary values data #"+i+" matches",
-							currEntryDbView.getColumnValues(),
-							currEntryDbData.getColumnValues());
+					Assert.assertEquals("Column data #"+i+" matches",
+							currEntryDbView.getColumnDataAsMap(),
+							currEntryDbData.getColumnDataAsMap());
 					
 					Assert.assertEquals("Note class #"+i+" matches", currEntryDbView.getNoteClass(), currEntryDbData.getNoteClass());
 					Assert.assertEquals("UNID #"+i+" matches", currEntryDbView.getUNID(), currEntryDbData.getUNID());
@@ -450,9 +445,8 @@ public class TestViewTraversal extends BaseJNATestClass {
 				Assert.assertFalse("There is a person document with lastname starting with 'Umlaut'", umlautEntryAsList.isEmpty());
 				
 				NotesViewEntryData umlautEntry = umlautEntryAsList.get(0);
-				Map<String,Object> summaryData = umlautEntry.getSummaryData();
 				
-				String lastNameFromView = (String) summaryData.get("lastname");
+				String lastNameFromView = (String) umlautEntry.get("lastname");
 				
 				Document docPerson = dbLegacyAPI.getDocumentByID(umlautEntry.getNoteIdAsHex());
 				String lastNameFromDoc = docPerson.getItemValueString("Lastname");
@@ -478,39 +472,38 @@ public class TestViewTraversal extends BaseJNATestClass {
 				List<NotesViewEntryData> entries = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_NONCATEGORY),
 						1000, 
-						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
+						EnumSet.of(ReadMask.NOTEID, ReadMask.NOTEUNID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
 				
 				for (NotesViewEntryData currEntry : entries) {
-					Map<String,Object> currData = currEntry.getSummaryData();
 					
 					//col_namevariants - stringlist
-					Object nameVariants = currData.get("col_namevariants");
+					Object nameVariants = currEntry.get("col_namevariants");
 					Assert.assertTrue("Numberlist column contains correct datatype", nameVariants!=null && (nameVariants instanceof List && isListOfType((List<?>)nameVariants, String.class)));
 					
 					//col_namevariantlengths - numberlist
-					Object nameVariantLengths = currData.get("col_namevariantlengths");
+					Object nameVariantLengths = currEntry.get("col_namevariantlengths");
 					Assert.assertTrue("Numberlist column contains correct datatype", nameVariantLengths!=null && (nameVariantLengths instanceof List && isListOfType((List<?>)nameVariantLengths, Double.class)));
 					
 					//col_createdmodified - datelist
-					Object createdModified = currData.get("col_createdmodified");
+					Object createdModified = currEntry.get("col_createdmodified");
 					Assert.assertTrue("Datelist column contains correct datatype", createdModified!=null && (createdModified instanceof List && isListOfType((List<?>)createdModified, Calendar.class)));
 					
 					//lastname - string
-					Object lastName = currData.get("lastname");
+					Object lastName = currEntry.get("lastname");
 					Assert.assertTrue("String column contains correct datatype", lastName!=null && lastName instanceof String);
 					
 					//HTTPPasswordChangeDate - datetime
-					Object httpPwdChangeDate = currData.get("HTTPPasswordChangeDate");
+					Object httpPwdChangeDate = currEntry.get("HTTPPasswordChangeDate");
 					Assert.assertTrue("Datetime column contains correct datatype", httpPwdChangeDate!=null && httpPwdChangeDate instanceof Calendar);
 					
 					//col_internetaddresslength - number
-					Object internetAddressLength = currData.get("col_internetaddresslength");
+					Object internetAddressLength = currEntry.get("col_internetaddresslength");
 					Assert.assertTrue("Number column contains correct datatype", internetAddressLength!=null && internetAddressLength instanceof Double);
 					
 					//col_createdmodifiedrange - daterange
-					Object createModifiedRange = currData.get("col_createdmodifiedrange");
-					Assert.assertTrue("Daterange column contains correct datatype", createModifiedRange!=null && (createModifiedRange instanceof List && isListOfType((List<?>)createModifiedRange, Calendar[].class)));
+					Object createModifiedRange = currEntry.get("col_createdmodifiedrange");
 					
+					Assert.assertTrue("Daterange column of note unid "+currEntry.getUNID()+" contains correct datatype", createModifiedRange!=null && (createModifiedRange instanceof List && isListOfType((List<?>)createModifiedRange, Calendar[].class)));
 				}
 				
 				return null;

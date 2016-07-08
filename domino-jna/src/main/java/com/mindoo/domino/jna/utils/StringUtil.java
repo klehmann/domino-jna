@@ -201,4 +201,30 @@ public class StringUtil {
 		return sb.toString();
 	}
 
+	/**
+	 * Computes the number of bytes a string would allocate if converted to UTF-8
+	 * 
+	 * @param str string
+	 * @return number of bytes
+	 */
+	public static int stringLengthInUTF8(String str) {
+		int retLength = 0;
+		int strLen = str.length();
+
+		for (int i = 0; i < strLen; i++) {
+			char c = str.charAt(i);
+			
+			if (c <= 0x7F) {
+				retLength++;
+			} else if (c <= 0x7FF) {
+				retLength += 2;
+			} else if (Character.isHighSurrogate(c)) {
+				retLength += 4;
+				i++;
+			} else {
+				retLength += 3;
+			}
+		}
+		return retLength;
+	}
 }

@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna;
 
 import java.util.Calendar;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Vector;
 
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -19,7 +21,7 @@ import lotus.domino.ViewEntry;
 public class ViewEntryImpl implements ViewEntry {
 	private View m_parent;
 	private NotesViewEntryData m_data;
-	private Vector m_colValues;
+	private Vector<Object> m_colValues;
 	
 	public ViewEntryImpl(View parent, NotesViewEntryData data) {
 		m_data = data;
@@ -151,41 +153,56 @@ public class ViewEntryImpl implements ViewEntry {
 	@Override
 	public Vector getColumnValues() throws NotesException {
 		if (m_colValues==null) {
-			Object[] colValuesArr = m_data.getColumnValues();
-
-			if (colValuesArr==null) {
-				m_colValues = new Vector(0);
-			}
-			else {
-				m_colValues = toVector(colValuesArr);
+			m_colValues = new Vector<Object>();
+			
+			Iterator<String> colNames = m_data.getColumnNames();
+			while (colNames.hasNext()) {
+				String currColName = colNames.next();
+				Object currColValue = m_data.get(currColName);
+				
+				if (currColValue instanceof List) {
+					List<?> currColValueAsList = (List<?>) currColValue;
+					
+					//convert column value to a Vector
+					Vector<Object> currColValueAsVector = new Vector<Object>(currColValueAsList.size());
+					
+					for (int i=0; i<currColValueAsList.size(); i++) {
+						Object currListVal = currColValueAsList.get(i);
+						
+						//replace Calendar[] with date range info with a Vector of Calendar
+						if (currListVal instanceof Calendar[]) {
+							Calendar[] calArr = (Calendar[]) currListVal;
+							Vector<Object> currDateRangeValuesAsVector = new Vector<Object>();
+							for (int j=0; j<calArr.length; j++) {
+								if (calArr[j]!=null) {
+									currDateRangeValuesAsVector.add(calArr[j]);
+								}
+							}
+							currListVal = currDateRangeValuesAsVector;
+						}
+						
+						currColValueAsVector.add(currListVal);
+					}
+					
+					currColValue = currColValueAsVector;
+				}
+				
+				m_colValues.add(currColValue);
 			}
 		}
 		return m_colValues;
 	}
-
-	private Vector toVector(Object[] values) {
-		Vector dataAsVector = new Vector(values.length);
-		for (int i=0; i<values.length; i++) {
-			if (values[i] instanceof Object[]) {
-				Vector innerDataAsVector = toVector((Object[]) values[i]);
-				dataAsVector.add(innerDataAsVector);
-			}
-			else if (values[i] instanceof Calendar) {
-				//returns {@link Date} objects instead of {@link lotus.domino.DateTime}
-				dataAsVector.add(((Calendar)values[i]).getTime());
-			}
-			else if (values[i] != null) {
-				dataAsVector.add(values[i]);
-			}
-			else {
-				dataAsVector.add("");
-			}
-		}
-		return dataAsVector;
+	
+	public Iterator<String> getColumnNamesWithValues() {
+		return m_data.getColumnNames();
 	}
 	
-	public Object[] getColumnValuesAsArray() {
-		return m_data.getColumnValues();
+	public Object getColumnValue(String columnName) {
+		return m_data.get(columnName);
+	}
+	
+	public int getNumberOfColumnsWithValues() {
+		return m_data.getNumberOfColumnsWithValues();
 	}
 	
 	@Override

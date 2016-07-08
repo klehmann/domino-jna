@@ -366,11 +366,7 @@ public class NotesDateTimeUtils {
 			NotesErrorUtils.checkResult(result);
 		}
 
-		Memory reducedTextBuffer = new Memory(retTextLength.getValue());
-		for (int i=0; i<reducedTextBuffer.size(); i++) {
-			reducedTextBuffer.setByte(i, retTextBuffer.getByte(i));
-		}
-		return NotesStringUtils.fromLMBCS(reducedTextBuffer);
+		return NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
 	}
 	
 	/**
@@ -381,7 +377,7 @@ public class NotesDateTimeUtils {
 	 */
 	public static NotesTimeDate fromString(String dateTimeStr) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr);
+		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr, true);
 		//convert method expects a pointer to the date string in memory
 		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
 		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);

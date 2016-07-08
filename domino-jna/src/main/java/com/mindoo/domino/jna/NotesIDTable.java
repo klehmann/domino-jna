@@ -68,7 +68,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * 
 	 * @param hTable ID table handle
 	 */
-	public NotesIDTable(int hTable) {
+	NotesIDTable(int hTable) {
 		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_idTableHandle32 = hTable;
@@ -80,7 +80,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * 
 	 * @param hTable ID table handle
 	 */
-	public NotesIDTable(long hTable) {
+	NotesIDTable(long hTable) {
 		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_idTableHandle64 = hTable;
@@ -156,13 +156,13 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			if (m_idTableHandle64==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b64_checkValidHandle(m_idTableHandle64);
+				NotesGC.__b64_checkValidHandle(getClass(), m_idTableHandle64);
 		}
 		else {
 			if (m_idTableHandle32==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b32_checkValidHandle(m_idTableHandle32);
+				NotesGC.__b32_checkValidHandle(getClass(), m_idTableHandle32);
 		}
 	}
 	
@@ -328,12 +328,22 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 	}
 	
+	@Override
+	public String toString() {
+		if (isRecycled()) {
+			return "NotesIDTable [recycled]";
+		}
+		else {
+			return "NotesIDTable [handle="+(NotesJNAContext.is64Bit() ? m_idTableHandle64 : m_idTableHandle32)+", "+getCount()+" entries]";
+		}
+	}
+	
 	/**
 	 * Returns the number of entries in this table
 	 * 
 	 * @return count
 	 */
-	public int count() {
+	public int getCount() {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
@@ -626,7 +636,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public int[] toArray() {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		int[] ids = new int[count()];
+		int[] ids = new int[getCount()];
 		IntByReference retID = new IntByReference();
 		boolean first = true;
 		int cnt = 0;

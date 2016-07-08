@@ -146,7 +146,7 @@ public abstract class DirectoryScanner {
 	/**
 	 * Implement this method to get notified about each directory entry found
 	 * 
-	 * @param data, either {@link SearchResultData} or for known types one of its subclasses {@link FolderData} or {@link DatabaseData}
+	 * @param data either {@link SearchResultData} or for known types one of its subclasses {@link FolderData} or {@link DatabaseData}
 	 */
 	protected abstract void entryRead(SearchResultData data);
 

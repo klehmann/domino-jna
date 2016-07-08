@@ -84,6 +84,18 @@ public class NotesOriginatorId extends Structure {
 		this.SequenceTime = SequenceTime;
 	}
 	
+	/**
+	 * @param unid C type : UNID / UNIVERSALNOTEID
+	 * @param Sequence : int
+	 * @param SequenceTime C type : TIMEDATE
+	 */
+	public NotesOriginatorId(NotesUniversalNoteId unid, int Sequence, NotesTimeDate SequenceTime) {
+		this.File = unid.File;
+		this.Note = unid.Note;
+		this.Sequence = Sequence;
+		this.SequenceTime = SequenceTime;
+	}
+	
 	public NotesOriginatorId(Pointer peer) {
 		super(peer);
 	}
@@ -97,11 +109,20 @@ public class NotesOriginatorId extends Structure {
 	};
 	
 	/**
+	 * Extracts the {@link NotesUniversalNoteId} part from the OID data
+	 * 
+	 * @return UNID
+	 */
+	public NotesUniversalNoteId getUNID() {
+		return new NotesUniversalNoteId(this.File, this.Note);
+	}
+	
+	/**
 	 * Computes the hex UNID from the OID data
 	 * 
 	 * @return UNID
 	 */
-	public String getUNID() {
+	public String getUNIDAsString() {
 		return NotesStringUtils.extractUNID(this);
 	}
 }

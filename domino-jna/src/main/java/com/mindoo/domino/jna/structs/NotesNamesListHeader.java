@@ -11,9 +11,9 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNamesList64 extends Structure {
+public class NotesNamesListHeader extends Structure {
 	/** Number of names in list */
-	public int NumNames;
+	public short NumNames;
 
 	/**
 	 * User's license - now obsolete<br>
@@ -36,9 +36,9 @@ public class NotesNamesList64 extends Structure {
 	/**
 	 * Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public int Authenticated;
+	public short Authenticated;
 	
-	public NotesNamesList64() {
+	public NotesNamesListHeader() {
 		super();
 		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
 		setAlignType(ALIGN_NONE);
@@ -56,7 +56,7 @@ public class NotesNamesList64 extends Structure {
 	 * @param check info from LICENSEID, should be empty
 	 * @param authenticated  Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public NotesNamesList64(short numNames, byte id[], byte product, byte check[], short authenticated) {
+	public NotesNamesListHeader(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
 		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
 		setAlignType(ALIGN_NONE);
@@ -70,14 +70,14 @@ public class NotesNamesList64 extends Structure {
 		this.Check = check;
 		this.Authenticated = authenticated;
 	}
-	public NotesNamesList64(Pointer peer) {
+	public NotesNamesListHeader(Pointer peer) {
 		super(peer);
 		setAlignType(ALIGN_NONE);
 	}
-	public static class ByReference extends NotesNamesList32 implements Structure.ByReference {
+	public static class ByReference extends NotesNamesListHeader implements Structure.ByReference {
 		
 	};
-	public static class ByValue extends NotesNamesList32 implements Structure.ByValue {
+	public static class ByValue extends NotesNamesListHeader implements Structure.ByValue {
 		
 	};
 }

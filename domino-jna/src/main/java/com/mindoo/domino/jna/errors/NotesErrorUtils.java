@@ -57,7 +57,7 @@ public class NotesErrorUtils {
 			newRetBuffer.setByte(i, retBuffer.getByte(i));
 		}
 		
-		String message = NotesStringUtils.fromLMBCS(newRetBuffer);
+		String message = NotesStringUtils.fromLMBCS(newRetBuffer, outStrLength);
 		return message;
 	}
 

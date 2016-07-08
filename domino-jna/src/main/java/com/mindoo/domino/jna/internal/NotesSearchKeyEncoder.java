@@ -6,15 +6,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
 
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-
-import com.mindoo.domino.jna.structs.NotesItem;
+import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
 import com.mindoo.domino.jna.structs.NotesNumberPair;
 import com.mindoo.domino.jna.structs.NotesRange;
+import com.mindoo.domino.jna.structs.NotesTableItem;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesTimeDatePair;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -27,7 +24,7 @@ public class NotesSearchKeyEncoder {
 	/**
 	 * Produces the keybuffer for NIFFindByKey
 	 * 
-	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper), {@link Interval}
+	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper)
 	 * @return buffer with encoded keys
 	 * @throws Exception in case of errors
 	 */
@@ -38,7 +35,7 @@ public class NotesSearchKeyEncoder {
 	/**
 	 * Produces the keybuffer for NIFFindByKey
 	 * 
-	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper), {@link Interval}
+	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper)
 	 * @return buffer with encoded keys
 	 * @throws Exception in case of errors
 	 */
@@ -95,13 +92,13 @@ public class NotesSearchKeyEncoder {
 				//date range
 				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, (Calendar[]) currKey);
 			}
-			else if (currKey instanceof Interval) {
-				Interval interval = (Interval) currKey;
-				DateTime startDateTime = interval.getStart();
-				DateTime endDateTime = interval.getEnd();
-				
-				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, new Calendar[] {startDateTime.toCalendar(Locale.getDefault()), endDateTime.toCalendar(Locale.getDefault())});
-			}
+//			else if (currKey instanceof Interval) {
+//				Interval interval = (Interval) currKey;
+//				DateTime startDateTime = interval.getStart();
+//				DateTime endDateTime = interval.getEnd();
+//				
+//				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, new Calendar[] {startDateTime.toCalendar(Locale.getDefault()), endDateTime.toCalendar(Locale.getDefault())});
+//			}
 			else if (currKey instanceof double[]) {
 				//looks like this does not work (the C API documentation says it does not work either)
 				addNumberRangeKey(metaDataByteOut, valueDataByteOut, (double[]) currKey);
@@ -186,19 +183,19 @@ public class NotesSearchKeyEncoder {
 	 * @throws Exception in case of errors
 	 */
 	private static void addCalendarKey(OutputStream itemOut, OutputStream valueDataOut, Calendar currKey) throws Exception {
-		Memory itemMem = new Memory(NotesCAPI.itemSize);
-		NotesItem item = new NotesItem(itemMem);
+		Memory itemMem = new Memory(NotesCAPI.tableItemSize);
+		NotesTableItem item = new NotesTableItem(itemMem);
 		item.NameLength = 0;
 		item.ValueLength = (short) (NotesCAPI.timeSize + 2);
 		item.write();
 		
-		for (int i=0; i<NotesCAPI.itemSize; i++) {
+		for (int i=0; i<NotesCAPI.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 		
 		//write data type
 		Memory valueMem = new Memory(2 + 8);
-		valueMem.setShort(0, (short) NotesCAPI.TYPE_TIME);
+		valueMem.setShort(0, (short) NotesItem.TYPE_TIME);
 		
 		boolean hasDate = NotesDateTimeUtils.hasDate(currKey);
 		boolean hasTime = NotesDateTimeUtils.hasTime(currKey);
@@ -228,18 +225,18 @@ public class NotesSearchKeyEncoder {
 		if (currKey.length!=2)
 			throw new IllegalArgumentException("Double search key array must have exactly 2 elements. We found "+currKey.length);
 		
-		Memory itemMem = new Memory(NotesCAPI.itemSize);
-		NotesItem item = new NotesItem(itemMem);
+		Memory itemMem = new Memory(NotesCAPI.tableItemSize);
+		NotesTableItem item = new NotesTableItem(itemMem);
 		item.NameLength = 0;
 		item.ValueLength = (short) ((NotesCAPI.rangeSize + NotesCAPI.numberPairSize + 2) & 0xffff);
 		item.write();
 
-		for (int i=0; i<NotesCAPI.itemSize; i++) {
+		for (int i=0; i<NotesCAPI.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 
 		Memory valueMem = new Memory(NotesCAPI.rangeSize + NotesCAPI.numberPairSize + 2);
-		valueMem.setShort(0, (short) NotesCAPI.TYPE_NUMBER_RANGE);
+		valueMem.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
 
 		Pointer rangePtr = valueMem.share(2);
 		NotesRange range = new NotesRange(rangePtr);
@@ -270,18 +267,18 @@ public class NotesSearchKeyEncoder {
 		if (currKey.length!=2)
 			throw new IllegalArgumentException("Calendar search key array must have exactly 2 elements. We found "+currKey.length);
 		
-		Memory itemMem = new Memory(NotesCAPI.itemSize);
-		NotesItem item = new NotesItem(itemMem);
+		Memory itemMem = new Memory(NotesCAPI.tableItemSize);
+		NotesTableItem item = new NotesTableItem(itemMem);
 		item.NameLength = 0;
 		item.ValueLength = (short) ((NotesCAPI.rangeSize + NotesCAPI.timeDatePairSize + 2) & 0xffff);
 		item.write();
 
-		for (int i=0; i<NotesCAPI.itemSize; i++) {
+		for (int i=0; i<NotesCAPI.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 
 		Memory valueMem = new Memory(NotesCAPI.rangeSize + NotesCAPI.timeDatePairSize + 2);
-		valueMem.setShort(0, (short) NotesCAPI.TYPE_TIME_RANGE);
+		valueMem.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
 		
 		Pointer rangePtr = valueMem.share(2);
 		NotesRange range = new NotesRange(rangePtr);
@@ -314,26 +311,25 @@ public class NotesSearchKeyEncoder {
 	 * @throws Exception in case of errors
 	 */
 	private static void addStringKey(OutputStream itemOut, OutputStream valueDataOut, String currKey) throws Exception {
-		Memory strValueMem = NotesStringUtils.toLMBCS(currKey);
+		Memory strValueMem = NotesStringUtils.toLMBCS(currKey, false);
 		
-		Memory itemMem = new Memory(NotesCAPI.itemSize);
-		NotesItem item = new NotesItem(itemMem);
+		Memory itemMem = new Memory(NotesCAPI.tableItemSize);
+		NotesTableItem item = new NotesTableItem(itemMem);
 		item.NameLength = 0;
-		//-1 => remove 0 byte at the end
-		item.ValueLength = (short) ((strValueMem.size()-1 + 2) & 0xffff);
+		item.ValueLength = (short) ((strValueMem.size() + 2) & 0xffff);
 		item.write();
 
-		for (int i=0; i<NotesCAPI.itemSize; i++) {
+		for (int i=0; i<NotesCAPI.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 
-		Memory valueMem = new Memory(strValueMem.size()-1 + 2);
-		short txtType = (short) NotesCAPI.TYPE_TEXT;
+		Memory valueMem = new Memory(strValueMem.size() + 2);
+		short txtType = (short) NotesItem.TYPE_TEXT;
 		valueMem.setShort(0, txtType);
 
 		Pointer strValuePtr = valueMem.share(2);
 		
-		for (int i=0; i<strValueMem.size()-1; i++) {
+		for (int i=0; i<strValueMem.size(); i++) {
 			strValuePtr.setByte(i, strValueMem.getByte(i));
 		}
 		
@@ -351,18 +347,18 @@ public class NotesSearchKeyEncoder {
 	 * @throws Exception in case of errors
 	 */
 	private static void addNumberKey(OutputStream itemOut, OutputStream valueDataOut, double doubleValue) throws Exception {
-		Memory itemMem = new Memory(NotesCAPI.itemSize);
-		NotesItem item = new NotesItem(itemMem);
+		Memory itemMem = new Memory(NotesCAPI.tableItemSize);
+		NotesTableItem item = new NotesTableItem(itemMem);
 		item.NameLength = 0;
 		item.ValueLength = (short) (8 + 2);
 		item.write();
 
-		for (int i=0; i<NotesCAPI.itemSize; i++) {
+		for (int i=0; i<NotesCAPI.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 
 		Memory valueMem = new Memory(8 + 2);
-		valueMem.setShort(0, (short) NotesCAPI.TYPE_NUMBER);
+		valueMem.setShort(0, (short) NotesItem.TYPE_NUMBER);
 		
 		Pointer doubleValPtr = valueMem.share(2);
 		doubleValPtr.setDouble(0, doubleValue);

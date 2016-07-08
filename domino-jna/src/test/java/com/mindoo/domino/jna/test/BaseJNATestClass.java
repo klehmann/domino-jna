@@ -5,6 +5,7 @@ import java.util.concurrent.Callable;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
+import com.sun.jna.Native;
 
 import lotus.domino.NotesException;
 import lotus.domino.NotesFactory;
@@ -31,6 +32,7 @@ public class BaseJNATestClass {
 			m_notesInitExtendedCalled = true;
 		}
 		NotesThread.sinitThread();
+		Native.setProtected(true);
 	}
 	
 	@AfterClass
@@ -59,6 +61,7 @@ public class BaseJNATestClass {
 		final Session[] session = new Session[1];
 		try {
 			session[0] = NotesFactory.createSession();
+			session[0].setTrackMillisecInJavaDates(true);
 			m_threadSession.set(session[0]);
 			
 			T result = NotesGC.runWithAutoGC(new Callable<T>() {

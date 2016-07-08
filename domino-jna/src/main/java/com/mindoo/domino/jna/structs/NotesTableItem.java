@@ -9,13 +9,13 @@ import java.util.List;
  * 
  * @author Karsten Lehmann
  */
-public class NotesItem extends Structure {
+public class NotesTableItem extends Structure {
 	/** Length of Item Name following this struct. may be zero (0) if not required by func(s)*/
 	public short NameLength;
 	/** Length of Item Value following this struct, incl. Notes data type.        */
 	public short ValueLength;
 	
-	public NotesItem() {
+	public NotesTableItem() {
 		super();
 	}
 	
@@ -27,21 +27,21 @@ public class NotesItem extends Structure {
 	 * @param NameLength length of item name
 	 * @param ValueLength length of item value
 	 */
-	public NotesItem(short NameLength, short ValueLength) {
+	public NotesTableItem(short NameLength, short ValueLength) {
 		super();
 		this.NameLength = NameLength;
 		this.ValueLength = ValueLength;
 	}
 	
-	public NotesItem(Pointer peer) {
+	public NotesTableItem(Pointer peer) {
 		super(peer);
 	}
 	
-	public static class ByReference extends NotesItem implements Structure.ByReference {
+	public static class ByReference extends NotesTableItem implements Structure.ByReference {
 		
 	};
 	
-	public static class ByValue extends NotesItem implements Structure.ByValue {
+	public static class ByValue extends NotesTableItem implements Structure.ByValue {
 		
 	};
 	

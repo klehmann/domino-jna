@@ -9,11 +9,12 @@ import java.util.Map;
 import java.util.Set;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
-import com.mindoo.domino.jna.NotesDatabase.ISignCallback.Action;
+import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.OpenCollection;
+import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
@@ -34,12 +35,12 @@ import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesNamesList32;
-import com.mindoo.domino.jna.structs.NotesNamesList64;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -68,6 +69,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String[] m_paths;
 	private Session m_session;
 	private String m_replicaID;
+	private boolean m_isOnServer;
+	private boolean m_authenticateUser;
+	private NotesNamesList m_namesList;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -93,6 +97,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
 		}
 	}
+
+	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param session session to read the name of the server the API is running on
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param asUserCanonical user context to open database or null to run as server
+	 */
+	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) {
+		this(session, server, filePath, (List<String>) null, asUserCanonical);
+	}
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -100,14 +116,30 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
+	 * @param namesForNamesList optional names list for the user to open the database; same content as @Usernameslist, but can be any combination of names, groups or roles (does not have to exist in the directory)
+	 */
+	public NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList) {
+		this(session, server, filePath, namesForNamesList, null);
+	}
+
+	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param session session to read the name of the server the API is running on
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param namesForNamesList optional names list
 	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
 	 */
-	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) {
+	private NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList, String asUserCanonical) {
 		m_session = session;
 		
 		try {
 			//make sure server and username are in canonical format
-			m_asUserCanonical = !session.isOnServer() ? "" : NotesNamingUtils.toCanonicalName(asUserCanonical);
+			m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
+			//TODO fix this
+			m_isOnServer = true;//session.isOnServer();
+			
 			if (server==null)
 				server = "";
 			if (filePath==null)
@@ -125,14 +157,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					}
 				}
 			}
+			
+			if ("".equals(server)) {
+				m_authenticateUser = true;
+			}
 		}
 		catch (NotesException e) {
 			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
 		}
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server);
-		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath);
+		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server, true);
+		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath, true);
 		Memory retFullNetPath = new Memory(NotesCAPI.MAXPATH);
 
 		short result = notesAPI.OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retFullNetPath);
@@ -158,7 +194,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongBuffer hDB = LongBuffer.allocate(1);
-			if (StringUtil.isEmpty(m_asUserCanonical)) {
+			if (!m_isOnServer || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
 				//open database as server
 				result = notesAPI.b64_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
@@ -167,34 +203,37 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//open database as user
 				
 				//first build usernames list
-				Memory userNameLMBCS = NotesStringUtils.toLMBCS(m_asUserCanonical);
-				LongByReference rethNamesList = new LongByReference();
-				result = notesAPI.b64_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
-				NotesErrorUtils.checkResult(result);
-				long hUserNamesList64 = rethNamesList.getValue();
+				if (namesForNamesList!=null) {
+					m_namesList = NotesNamingUtils.writeNewNamesList(namesForNamesList);
+				}
+				else {
+					m_namesList = NotesNamingUtils.buildNamesList(m_asUserCanonical);
+				}
 				
-				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(hUserNamesList64);
+				
+				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(m_namesList.getHandle64());
 				
 				try {
-					NotesNamesList64 namesList = new NotesNamesList64(namesListBufferPtr);
+					NotesNamesListHeader namesList = new NotesNamesListHeader(namesListBufferPtr);
 					namesList.read();
 
-					//setting authenticated flag for the user is required
-					namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-					namesList.write();
-					namesList.read();
+					if (m_authenticateUser) {
+						//setting authenticated flag for the user is required when running on the server
+						namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
+						namesList.write();
+						namesList.read();
+					}
 					
 					//now try to open the database as this user
 					short openOptions = 0;
 					NotesTimeDate modifiedTime = null;
 					NotesTimeDate retDataModified = new NotesTimeDate();
 					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(hUserNamesList64);
-					notesAPI.b64_OSMemFree(hUserNamesList64);
+					notesAPI.b64_OSUnlockObject(m_namesList.getHandle64());
 				}
 			}
 
@@ -202,7 +241,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntBuffer hDB = IntBuffer.allocate(1);
-			if (StringUtil.isEmpty(m_asUserCanonical)) {
+			if (!m_isOnServer || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
 				result = notesAPI.b32_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
@@ -210,33 +249,36 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//open database as user
 				
 				//first build usernames list
-				Memory userNameLMBCS = NotesStringUtils.toLMBCS(m_asUserCanonical);
-				IntByReference rethNamesList = new IntByReference();
-				result = notesAPI.b32_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
-				NotesErrorUtils.checkResult(result);
-				int hUserNamesList32 = rethNamesList.getValue();
+				if (namesForNamesList!=null) {
+					m_namesList = NotesNamingUtils.writeNewNamesList(namesForNamesList);
+				}
+				else {
+					m_namesList = NotesNamingUtils.buildNamesList(m_asUserCanonical);
+				}
 				
-				Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(hUserNamesList32);
+				Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(m_namesList.getHandle32());
 				
 				try {
-					NotesNamesList32 namesList = new NotesNamesList32(namesListBufferPtr);
+					NotesNamesListHeader namesList = new NotesNamesListHeader(namesListBufferPtr);
 					namesList.read();
-					//setting authenticated flag for the user is required
-					namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-					namesList.write();
-					namesList.read();
-
+					
+					if (m_authenticateUser) {
+						//setting authenticated flag for the user is required when running on the server
+						namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
+						namesList.write();
+						namesList.read();
+					}
+					
 					//now try to open the database as this user
 					short openOptions = 0;
 					NotesTimeDate modifiedTime = null;
 					NotesTimeDate retDataModified = new NotesTimeDate();
 					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, hUserNamesList32, modifiedTime, hDB, retDataModified, retNonDataModified);
+					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(hUserNamesList32);
-					notesAPI.b32_OSMemFree(hUserNamesList32);
+					notesAPI.b32_OSUnlockObject(m_namesList.getHandle32());
 				}
 			}
 			
@@ -263,7 +305,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public static void createDatabase(Session session, String serverName, String filePath, short dbClass, boolean forceCreation, short options, Encryption encryption, long maxFileSize) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
-		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath);
+		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath, true);
 		
 		byte encryptStrengthByte;
 		switch (encryption) {
@@ -407,6 +449,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return m_paths[1];
 	}
 	
+	@Override
+	public String toString() {
+		if (isRecycled()) {
+			return "NotesDatabase [recycled]";
+		}
+		else {
+			return "NotesDatabase [handle="+(NotesJNAContext.is64Bit() ? m_hDB64 : m_hDB32)+", server="+getServer()+", filepath="+getRelativeFilePath()+"]";
+		}
+	}
+	
 	/**
 	 * Loads the path information from Notes
 	 */
@@ -423,8 +475,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				notesAPI.b32_NSFDbPathGet(m_hDB32, retCanonicalPathName, retExpandedPathName);
 			}
 
-			String canonicalPathName = NotesStringUtils.fromLMBCS(retCanonicalPathName);
-			String expandedPathName = NotesStringUtils.fromLMBCS(retExpandedPathName);
+			String canonicalPathName = NotesStringUtils.fromLMBCS(retCanonicalPathName, NotesStringUtils.getNullTerminatedLength(retCanonicalPathName));
+			String expandedPathName = NotesStringUtils.fromLMBCS(retExpandedPathName, NotesStringUtils.getNullTerminatedLength(retExpandedPathName));
 			String relDbPath;
 			String absDbPath;
 			
@@ -490,6 +542,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB64!=0) {
 					short result = notesAPI.b64_NSFDbClose(m_hDB64);
 					NotesErrorUtils.checkResult(result);
+					NotesGC.__objectRecycled(this);
 					m_hDB64=0;
 				}
 			}
@@ -497,7 +550,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB32!=0) {
 					short result = notesAPI.b32_NSFDbClose(m_hDB32);
 					NotesErrorUtils.checkResult(result);
+					NotesGC.__objectRecycled(this);
 					m_hDB32=0;
+				}
+			}
+			
+			if (m_namesList!=null) {
+				if (!m_namesList.isRecycled()) {
+					m_namesList.recycle();
+					m_namesList = null;
 				}
 			}
 		}
@@ -519,12 +580,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hDB64==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b64_checkValidHandle(m_hDB64);
+			NotesGC.__b64_checkValidHandle(getClass(), m_hDB64);
 		}
 		else {
 			if (m_hDB32==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b32_checkValidHandle(m_hDB32);
+			NotesGC.__b32_checkValidHandle(getClass(), m_hDB32);
 		}
 	}
 
@@ -615,7 +676,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		NotesIDTable unreadTable = new NotesIDTable();
 		
-		short openFlags = OpenCollection.toBitMask(openFlagSet); //NotesCAPI.OPEN_NOUPDATE;
+		//always enforce reopening; funny things can happen on a Domino server
+		//without this flag like sharing collections between users resulting in
+		//users seeing the wrong data *sometimes*...
+		EnumSet<OpenCollection> openFlagSetClone = openFlagSet==null ? EnumSet.noneOf(OpenCollection.class) : openFlagSet.clone();
+		openFlagSetClone.add(OpenCollection.OPEN_REOPEN_COLLECTION);
+		
+		short openFlags = OpenCollection.toBitMask(openFlagSetClone); //NotesCAPI.OPEN_NOUPDATE;
 
 		short result;
 		NotesCollection newCol;
@@ -626,39 +693,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			LongByReference selectedList = new LongByReference();
 			selectedList.setValue(0);
 			
-			if (StringUtil.isEmpty(m_asUserCanonical)) {
+			if (m_namesList==null) {
 				//open view as server
 				result = notesAPI.b64_NIFOpenCollection(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				//open view as user
-				
-				//first build usernames list
-				Memory userNameLMBCS = NotesStringUtils.toLMBCS(m_asUserCanonical);
-				LongByReference rethNamesList = new LongByReference();
-				result = notesAPI.b64_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+				//now try to open collection as this user
+				result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle64());
 				NotesErrorUtils.checkResult(result);
-				long hUserNamesList64 = rethNamesList.getValue();
-				
-				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(hUserNamesList64);
-				
-				try {
-					NotesNamesList64 namesList = new NotesNamesList64(namesListBufferPtr);
-					namesList.read();
-					//setting authenticated flag for the user is required
-					namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-					namesList.write();
-					namesList.read();
-
-					//now try to open collection as this user
-					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList64);
-					NotesErrorUtils.checkResult(result);
-				}
-				finally {
-					notesAPI.b64_OSUnlockObject(hUserNamesList64);
-					notesAPI.b64_OSMemFree(hUserNamesList64);
-				}
 			}
 			
 			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
@@ -671,38 +714,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			IntByReference selectedList = new IntByReference();
 			selectedList.setValue(0);
 			
-			if (StringUtil.isEmpty(m_asUserCanonical)) {
+			if (m_namesList==null) {
 				result = notesAPI.b32_NIFOpenCollection(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				//open view as user
-				
-				//first build usernames list
-				Memory userNameLMBCS = NotesStringUtils.toLMBCS(m_asUserCanonical);
-				IntByReference rethNamesList = new IntByReference();
-				result = notesAPI.b32_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+				//now try to open collection as this user
+				result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle32());
 				NotesErrorUtils.checkResult(result);
-				int hUserNamesList32 = rethNamesList.getValue();
-				
-				Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(hUserNamesList32);
-				
-				try {
-					NotesNamesList32 namesList = new NotesNamesList32(namesListBufferPtr);
-					namesList.read();
-					//setting authenticated flag for the user is required
-					namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-					namesList.write();
-					namesList.read();
-
-					//now try to open collection as this user
-					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, hUserNamesList32);
-					NotesErrorUtils.checkResult(result);
-				}
-				finally {
-					notesAPI.b32_OSUnlockObject(hUserNamesList32);
-					notesAPI.b32_OSMemFree(hUserNamesList32);
-				}
 			}
 			
 			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
@@ -722,16 +741,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public int findCollection(String collectionName) {
 		checkHandle();
 		
-		Memory viewNameLMBCS = NotesStringUtils.toLMBCS(collectionName);
+		Memory viewNameLMBCS = NotesStringUtils.toLMBCS(collectionName, true);
 
 		IntBuffer viewNoteID = IntBuffer.allocate(1);
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesCAPI.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_VIEWS_AND_FOLDERS), viewNoteID, 0);
+			result = notesAPI.b64_NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesCAPI.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
 		}
 		else {
-			result = notesAPI.b32_NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesCAPI.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_VIEWS_AND_FOLDERS), viewNoteID, 0);
+			result = notesAPI.b32_NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesCAPI.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
 		}
 		//throws an error if view cannot be found:
 		NotesErrorUtils.checkResult(result);
@@ -748,6 +767,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return search result
 	 */
 	public SearchResult ftSearch(String query, short limit, NotesIDTable filterIDTable) {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		EnumSet<FTSearch> searchOptions = EnumSet.of(FTSearch.RET_IDTABLE);
@@ -759,7 +780,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b64_FTOpenSearch(rethSearch);
 			NotesErrorUtils.checkResult(result);
 
-			Memory queryLMBCS = NotesStringUtils.toLMBCS(query);
+			Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 			IntByReference retNumDocs = new IntByReference();
 			LongByReference rethResults = new LongByReference();
 			
@@ -787,7 +808,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b32_FTOpenSearch(rethSearch);
 			NotesErrorUtils.checkResult(result);
 
-			Memory queryLMBCS = NotesStringUtils.toLMBCS(query);
+			Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 			IntByReference retNumDocs = new IntByReference();
 			IntByReference rethResults = new IntByReference();
 			
@@ -822,6 +843,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param idTable ID table of Notes to be deleted
 	 */
 	public void deleteNotes(NotesIDTable idTable) {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
@@ -839,6 +862,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * This can also be done using the Notes user interface via the File/Replication/History menu item selection.
 	 */
 	public void clearReplicationHistory() {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
@@ -872,6 +897,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
 	 */
 	public NotesIDTable getModifiedNoteTable(short noteClassMask, NotesTimeDate since, NotesTimeDate retUntil) {
+		checkHandle();
+
 		//make sure retUntil is not null
 		if (retUntil==null)
 			retUntil = new NotesTimeDate();
@@ -913,17 +940,29 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public static interface ISignCallback {
+	public static abstract class SignCallback {
 		/** Values to control sign process */
 		public enum Action {Stop, Continue}
 
 		/**
+		 * Override this method to get the full summary data in the callback
+		 * {@link #shouldSign(NotesViewEntryData, String)}. For performance reasons,
+		 * the default implementation returns false.
+		 * 
+		 * @return true to retrieve summary data for design elements
+		 */
+		public boolean shouldReadSummaryDataFromDesignCollection() {
+			return false;
+		}
+		
+		/**
 		 * Method to skip signing for specific notes
 		 * 
 		 * @param noteData note data from design collection
+		 * @param currentSigner current design element signer
 		 * @return true to sign
 		 */
-		public boolean shouldSign(NotesViewEntryData noteData);
+		public abstract boolean shouldSign(NotesViewEntryData noteData, String currentSigner);
 		
 		/**
 		 * Method is called after signing a note
@@ -931,7 +970,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @param noteData note data from design collection
 		 * @return return value to stop signing
 		 */
-		public Action noteSigned(NotesViewEntryData noteData);
+		public abstract Action noteSigned(NotesViewEntryData noteData);
 	}
 
 	/**
@@ -940,9 +979,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param noteClasses bitmask of note classes to sign
 	 * @param callback optional callback to get notified about signed notes or null
 	 */
-	public void signAll(int noteClasses, ISignCallback callback) {
+	public void signAll(int noteClasses, SignCallback callback) {
+		checkHandle();
+
 		//TODO improve performance by checking first if the current signer has already signed the documents (like in the legacy API)
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		String signer;
+		try {
+			signer = m_session.getUserName();
+		} catch (NotesException e) {
+			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
+		}
 		
 		NotesCollection col = openDesignCollection();
 		try {
@@ -950,7 +998,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
-				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS, ReadMask.SUMMARY));
+				boolean shouldReadSummaryDataFromDesignCollection = callback!=null ? callback.shouldReadSummaryDataFromDesignCollection() : false;
+				EnumSet<ReadMask> readMask = EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS);
+				if (shouldReadSummaryDataFromDesignCollection) {
+					readMask.add(ReadMask.SUMMARY);
+				}
+				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, readMask);
 				moreToDo = data.hasMoreToDo();
 				isFirstRun=false;
 				
@@ -958,10 +1011,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				for (NotesViewEntryData currEntry : entries) {
 					int currNoteClass = currEntry.getNoteClass();
 					if ((currNoteClass & noteClasses)!=0) {
-						if (callback!=null && !callback.shouldSign(currEntry)) {
-							continue;
-						}
-						
 						int currNoteId = currEntry.getNoteId();
 						
 						boolean expandNote = false;
@@ -979,16 +1028,43 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							short result = notesAPI.b64_NSFNoteOpen(m_hDB64, currNoteId, expandNote ? NotesCAPI.OPEN_EXPAND : 0, rethNote);
 							NotesErrorUtils.checkResult(result);
 							try {
-								result = notesAPI.b64_NSFNoteSign(rethNote.getValue());
-								NotesErrorUtils.checkResult(result);
-
-								if (expandNote) {
-									result = notesAPI.b64_NSFNoteContract(rethNote.getValue());
-									NotesErrorUtils.checkResult(result);
+								NotesTimeDate retWhenSigned = new NotesTimeDate();
+								Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
+								Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+								
+								result = notesAPI.b64_NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
+								
+								boolean signRequired = false;
+								String currNoteSigner;
+								if (result != 0) {
+									signRequired = true;
+									currNoteSigner = "";
+								}
+								else {
+									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
+									if (signer.equalsIgnoreCase(currNoteSigner)) {
+										//already signed by current user
+										continue;
+									}
 								}
 								
-								result = notesAPI.b64_NSFNoteUpdate(rethNote.getValue(), (short) 0);
-								NotesErrorUtils.checkResult(result);
+								if (callback!=null && !callback.shouldSign(currEntry, currNoteSigner)) {
+									signRequired = false;
+								}
+								
+								if (signRequired) {
+
+									result = notesAPI.b64_NSFNoteSign(rethNote.getValue());
+									NotesErrorUtils.checkResult(result);
+
+									if (expandNote) {
+										result = notesAPI.b64_NSFNoteContract(rethNote.getValue());
+										NotesErrorUtils.checkResult(result);
+									}
+									
+									result = notesAPI.b64_NSFNoteUpdateExtended(rethNote.getValue(), 0);
+									NotesErrorUtils.checkResult(result);
+								}
 							}
 							finally {
 								result = notesAPI.b64_NSFNoteClose(rethNote.getValue());
@@ -1000,16 +1076,42 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							short result = notesAPI.b32_NSFNoteOpen(m_hDB32, currNoteId, expandNote ? NotesCAPI.OPEN_EXPAND : 0, rethNote);
 							NotesErrorUtils.checkResult(result);
 							try {
-								result = notesAPI.b32_NSFNoteSign(rethNote.getValue());
-								NotesErrorUtils.checkResult(result);
-
-								if (expandNote) {
-									result = notesAPI.b32_NSFNoteContract(rethNote.getValue());
-									NotesErrorUtils.checkResult(result);
+								NotesTimeDate retWhenSigned = new NotesTimeDate();
+								Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
+								Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+								
+								result = notesAPI.b64_NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
+								
+								boolean signRequired = false;
+								String currNoteSigner;
+								if (result != 0) {
+									signRequired = true;
+									currNoteSigner = "";
+								}
+								else {
+									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
+									if (signer.equalsIgnoreCase(currNoteSigner)) {
+										//already signed by current user
+										continue;
+									}
 								}
 								
-								result = notesAPI.b32_NSFNoteUpdate(rethNote.getValue(), (short) 0);
-								NotesErrorUtils.checkResult(result);
+								if (callback!=null && !callback.shouldSign(currEntry, currNoteSigner)) {
+									signRequired = false;
+								}
+
+								if (signRequired) {
+									result = notesAPI.b32_NSFNoteSign(rethNote.getValue());
+									NotesErrorUtils.checkResult(result);
+
+									if (expandNote) {
+										result = notesAPI.b32_NSFNoteContract(rethNote.getValue());
+										NotesErrorUtils.checkResult(result);
+									}
+									
+									result = notesAPI.b32_NSFNoteUpdateExtended(rethNote.getValue(), 0);
+									NotesErrorUtils.checkResult(result);
+								}
 							}
 							finally {
 								result = notesAPI.b32_NSFNoteClose(rethNote.getValue());
@@ -1043,6 +1145,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return indexing statistics
 	 */
 	public NotesFTIndexStats FTIndex(EnumSet<FTIndex> options) {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short optionsBitMask = FTIndex.toBitMask(options);
 		
@@ -1069,6 +1173,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * NSFDbSetOption(hDb, 0, DBOPTION_FT_INDEX);
 	 */
 	public void FTDeleteIndex() {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
@@ -1100,6 +1206,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return last index time or null if not indexed
 	 */
 	public Calendar getFTLastIndexTime() {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
         int gmtOffset = NotesDateTimeUtils.getGMTOffset();
@@ -1160,6 +1268,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return build version
 	 */
 	public short getParentServerBuildVersion() {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		ShortByReference retVersion = new ShortByReference();
@@ -1183,6 +1293,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return version
 	 */
 	public NotesBuildVersion getParentServerMajMinVersion() {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		NotesBuildVersion retVersion = new NotesBuildVersion();
@@ -1261,6 +1373,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
@@ -1291,7 +1405,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST);
+									boolean convertStringsLazily = true;
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
 								}
 							}
 
@@ -1324,7 +1439,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST);
+									boolean convertStringsLazily = true;
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
 								}
 							}
 
@@ -1348,7 +1464,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//formulaName only required if formula is used for collection columns
 				Memory formulaName = null;
 				short formulaNameLength = 0;
-				Memory formulaText = NotesStringUtils.toLMBCS(formula);
+				Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
 				short formulaTextLength = (short) formulaText.size();
 
 				LongByReference rethFormula = new LongByReference();
@@ -1380,9 +1496,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			try {
 				NotesTimeDate retUntil = new NotesTimeDate();
 
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle) : null;
+				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
 
-				short result = notesAPI.b64_NSFSearch(m_hDB64, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
+				short result;
+				if (m_namesList!=null) {
+					result = notesAPI.b64_NSFSearchWithUserNameList(m_hDB64, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, m_namesList.getHandle64());
+				}
+				else {
+					result = notesAPI.b64_NSFSearch(m_hDB64, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
+					
+				}
 				NotesErrorUtils.checkResult(result);
 
 				if (invocationEx[0]!=null) {
@@ -1424,7 +1547,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST);
+									boolean convertStringsLazily = true;
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
 								}
 							}
 
@@ -1458,7 +1582,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST);
+									boolean convertStringsLazily = true;
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
 								}
 							}
 
@@ -1483,7 +1608,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			if (!StringUtil.isEmpty(formula)) {
 				Memory formulaName = null;
 				short formulaNameLength = 0;
-				Memory formulaText = NotesStringUtils.toLMBCS(formula);
+				Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
 				short formulaTextLength = (short) formulaText.size();
 
 				IntByReference rethFormula = new IntByReference();
@@ -1515,9 +1640,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			try {
 				NotesTimeDate retUntil = new NotesTimeDate();
 
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle) : null;
+				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
 
-				short result = notesAPI.b32_NSFSearch(m_hDB32, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
+				short result;
+				if (m_namesList!=null) {
+					result = notesAPI.b32_NSFSearchWithUserNameList(m_hDB32, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, m_namesList.getHandle32());
+				}
+				else {
+					result = notesAPI.b32_NSFSearch(m_hDB32, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
+				}
 				NotesErrorUtils.checkResult(result);
 
 				if (invocationEx[0]!=null) {
@@ -1601,7 +1732,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return UNID or null if the note could not be found
 		 */
 		public String getUnid() {
-			return m_oid!=null ? m_oid.getUNID() : null;
+			return m_oid!=null ? m_oid.getUNIDAsString() : null;
 		}
 		
 		/**
@@ -1723,6 +1854,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return info object with data
 	 */
 	public NoteInfoExt getNoteInfoExt(int noteId) {
+		checkHandle();
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		NotesOriginatorId retNoteOID = new NotesOriginatorId();
@@ -1782,6 +1915,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @throws IllegalArgumentException if note id array has too many entries (more than 65535)
 	 */
 	public NoteInfo[] getMultiNoteInfo(int[] noteIds) {
+		checkHandle();
+
 		if (noteIds.length ==0) {
 			return new NoteInfo[0];
 		}
@@ -1953,5 +2088,126 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retNoteInfo[i] = new NoteInfo(currNoteId, oid, isDeleted, isNotPresent);
 		}
 		return retNoteInfo;
+	}
+	
+	/**
+	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
+	 * <br>
+	 * If the note is marked as unread, by default this function does not change the unread mark.<br>
+	 * You can use the {@link OpenNote#MARK_READ} flag to change an unread mark to read for remote databases.
+	 * 
+	 * @param noteIdStr The note ID as hex string of the note that you want to open.
+	 * @param openFlags Flags that control the manner in which the note is opened. This, in turn, controls what information about the note is available to you and how it is structured. The flags are defined in {@link OpenNote}.
+	 * @return note
+	 */
+	public NotesNote openNoteById(String noteIdStr, EnumSet<OpenNote> openFlags) {
+		return openNoteById(Integer.parseInt(noteIdStr, 16), openFlags);
+	}
+	
+	/**
+	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
+	 * <br>
+	 * If the note is marked as unread, by default this function does not change the unread mark.<br>
+	 * You can use the {@link OpenNote#MARK_READ} flag to change an unread mark to read for remote databases.
+	 * 
+	 * @param noteId The note ID of the note that you want to open.
+	 * @param openFlags Flags that control the manner in which the note is opened. This, in turn, controls what information about the note is available to you and how it is structured. The flags are defined in {@link OpenNote}.
+	 * @return note
+	 */
+	public NotesNote openNoteById(int noteId, EnumSet<OpenNote> openFlags) {
+		checkHandle();
+
+		int openFlagsBitmask = OpenNote.toBitMaskForOpenExt(openFlags);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethNote = new LongByReference();
+			short result = notesAPI.b64_NSFNoteOpenExt(m_hDB64, noteId, openFlagsBitmask, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			long hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(note);
+			
+			return note;
+		}
+		else {
+			IntByReference rethNote = new IntByReference();
+			short result = notesAPI.b32_NSFNoteOpenExt(m_hDB32, noteId, openFlagsBitmask, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			int hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(note);
+			
+			return note;
+		}
+	}
+	
+	/**
+	 * This function takes the Universal Note ID and reads the note into memory and returns
+	 * a handle to the in-memory copy.<br>
+	 * This function only supports the set of 16-bit WORD options described in the entry {@link OpenNote}.
+
+	 * @param unid UNID
+	 * @param openFlags open flags
+	 * @return note
+	 */
+	public NotesNote openNoteByUnid(String unid, EnumSet<OpenNote> openFlags) {
+		checkHandle();
+
+		short openFlagsBitmask = OpenNote.toBitMaskForOpen(openFlags);
+		NotesUniversalNoteId unidObj = NotesUniversalNoteId.fromString(unid);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethNote = new LongByReference();
+			short result = notesAPI.b64_NSFNoteOpenByUNID(m_hDB64, unidObj, openFlagsBitmask, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			long hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(note);
+			
+			return note;
+		}
+		else {
+			IntByReference rethNote = new IntByReference();
+			short result = notesAPI.b32_NSFNoteOpenByUNID(m_hDB32, unidObj, openFlagsBitmask, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			int hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(note);
+			
+			return note;
+		}
+	}
+	
+	/**
+	 * Creates a new in-memory note
+	 * 
+	 * @return note
+	 */
+	public NotesNote createNote() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retNoteHandle = new LongByReference();
+			short result = notesAPI.b64_NSFNoteCreate(m_hDB64, retNoteHandle);
+			NotesErrorUtils.checkResult(result);
+			NotesNote note = new NotesNote(this, retNoteHandle.getValue());
+			NotesGC.__objectCreated(note);
+			return note;
+		}
+		else {
+			IntByReference retNoteHandle = new IntByReference();
+			short result = notesAPI.b32_NSFNoteCreate(m_hDB32, retNoteHandle);
+			NotesErrorUtils.checkResult(result);
+			NotesNote note = new NotesNote(this, retNoteHandle.getValue());
+			NotesGC.__objectCreated(note);
+			return note;
+		}
 	}
 }

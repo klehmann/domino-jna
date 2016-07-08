@@ -4,28 +4,36 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
+import com.mindoo.domino.jna.structs.NotesBlockId;
 import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
-import com.mindoo.domino.jna.structs.NotesItem;
+import com.mindoo.domino.jna.structs.NotesFileObject;
 import com.mindoo.domino.jna.structs.NotesItemTable;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader;
 import com.mindoo.domino.jna.structs.NotesNumberPair;
+import com.mindoo.domino.jna.structs.NotesObjectDescriptor;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesRange;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
+import com.mindoo.domino.jna.structs.NotesTableItem;
 import com.mindoo.domino.jna.structs.NotesTime;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesTimeDatePair;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.StringArray;
+import com.sun.jna.ptr.ByteByReference;
+import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -42,8 +50,11 @@ public interface NotesCAPI extends Library {
 	public final int timeDatePairSize = new NotesTimeDatePair().size();
 	public final int collectionPositionSize = new NotesCollectionPosition().size();
 	public final int itemValueTableSize = new NotesItemValueTable().size();
-	public final int itemSize = new NotesItem().size();
+	public final int tableItemSize = new NotesTableItem().size();
 	public final int oidSize = new NotesOriginatorId().size();
+	public final int namesListHeaderSize = new NotesNamesListHeader().size();
+	public final int objectDescriptorSize = new NotesObjectDescriptor().size();
+	public final int fileObjectSize = new NotesFileObject().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -51,13 +62,12 @@ public interface NotesCAPI extends Library {
 
 	/*	Defines for Authentication flags */
 
-	public static final short NAMES_LIST_AUTHENTICATED = 0x0001;	/* 	Set if names list has been 	*/
-														/*	authenticated via Notes		*/
-	public static final short NAMES_LIST_PASSWORD_AUTHENTICATED = 0x0002;	/* 	Set if names list has been 	*/
-														/*	authenticated using external */
-														/*	password -- Triggers "maximum */
-														/*	password access allowed" feature */
-	public static final short NAMES_LIST_FULL_ADMIN_ACCESS = 0x0004;	/* 	Set if user requested full admin access and it was granted */
+	/** Set if names list has been authenticated via Notes */
+	public static final short NAMES_LIST_AUTHENTICATED = 0x0001;	
+	/**	Set if names list has been authenticated using external password -- Triggers "maximum password access allowed" feature */
+	public static final short NAMES_LIST_PASSWORD_AUTHENTICATED = 0x0002;
+	/**	Set if user requested full admin access and it was granted */
+	public static final short NAMES_LIST_FULL_ADMIN_ACCESS = 0x0004;
 
 	//	WORD LNPUBLIC OSLoadString(
 	//			HMODULE  hModule,
@@ -252,6 +262,9 @@ public interface NotesCAPI extends Library {
 
 	public short b32_OSMemFree(int handle);
 	public short b64_OSMemFree(long handle);
+
+	public short b32_OSMemGetSize(int handle, IntByReference retSize);
+	public short b64_OSMemGetSize(long handle, IntByReference retSize);
 
 	public void ODSWriteMemory(
 			Pointer ppDest,
@@ -836,8 +849,8 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public void b32_NSFNoteGetInfo(int hNote, short type, Memory retValue);
 	public void b64_NSFNoteGetInfo(long hNote, short type, Memory retValue);
-	public void b32_NSFNoteSetInfo(int hNote, short type, Memory value);
-	public void b64_NSFNoteSetInfo(long hNote, short type, Memory value);
+	public void b32_NSFNoteSetInfo(int hNote, short type, Pointer value);
+	public void b64_NSFNoteSetInfo(long hNote, short type, Pointer value);
 
 	public short b32_NSFNoteContract(int hNote);
 	public short b64_NSFNoteContract(long hNote);
@@ -848,14 +861,315 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFNoteSign(int hNote);
 	public short b64_NSFNoteSign(long hNote);
 
-	public short b32_NSFNoteUpdate(int hNote, short updateFlags);
-	public short b64_NSFNoteUpdate(long hNote, short updateFlags);
+	public short b32_NSFNoteUpdateExtended(int hNote, int updateFlags);
+	public short b64_NSFNoteUpdateExtended(long hNote, int updateFlags);
+
+	public short b64_NSFNoteUpdate(long note_handle, short update_flags);
+	public short b32_NSFNoteUpdate(int note_handle, short update_flags);
+	
+	public short b32_NSFNoteCreate(int db_handle, IntByReference note_handle);
+	public short b64_NSFNoteCreate(long db_handle, LongByReference note_handle);
 
 	public short b32_NSFNoteOpen(int hDB, int noteId, short openFlags, IntByReference rethNote);
 	public short b64_NSFNoteOpen(long hDB, int noteId, short openFlags, LongByReference rethNote);
 	public short b32_NSFNoteOpenExt(int hDB, int noteId, int flags, IntByReference rethNote);
 	public short b64_NSFNoteOpenExt(long hDB, int noteId, int flags, LongByReference rethNote);
+	
+	public short b32_NSFNoteDeleteExtended(int hDB, int NoteID, int UpdateFlags);
+	public short b64_NSFNoteDeleteExtended(long hDB, int NoteID, int UpdateFlags);
+	
+	public short b64_NSFNoteDetachFile(long note_handle, NotesBlockId.ByValue item_blockid);
+	public short b32_NSFNoteDetachFile(int note_handle, NotesBlockId.ByValue item_blockid);
+	
+	public boolean b64_NSFNoteIsSignedOrSealed(long note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
+	public boolean b32_NSFNoteIsSignedOrSealed(int note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
+	
+	public short b32_NSFNoteOpenByUNID(
+			int hDB,
+			NotesUniversalNoteId pUNID,
+			short  flags,
+			IntByReference rethNote);
+	public short b64_NSFNoteOpenByUNID(
+			long  hDB,
+			NotesUniversalNoteId pUNID,
+			short  flags,
+			LongByReference rethNote);
 
+	public short b32_NSFNoteUnsign(int hNote);
+	public short b64_NSFNoteUnsign(long hNote);
+
+	public short b32_NSFItemInfo(
+			int  note_handle,
+			Memory item_name,
+			short name_len,
+			NotesBlockId retbhItem,
+			ShortByReference retDataType,
+			NotesBlockId retbhValue,
+			IntByReference retValueLength);
+	
+	public short b64_NSFItemInfo(
+			long note_handle,
+			Memory item_name,
+			short  name_len,
+			NotesBlockId retbhItem,
+			ShortByReference retDataType,
+			NotesBlockId retbhValue,
+			IntByReference retValueLength);
+	
+//	STATUS LNPUBLIC NSFItemInfo(
+//			NOTEHANDLE  note_handle,
+//			const char far *item_name,
+//			WORD  name_len,
+//			BLOCKID far *item_blockid,
+//			WORD far *value_datatype,
+//			BLOCKID far *value_blockid,
+//			DWORD far *value_len);
+	
+	public short b32_NSFItemInfoNext(
+			int  note_handle,
+			NotesBlockId.ByValue NextItem,
+			Memory item_name,
+			short name_len,
+			NotesBlockId retbhItem,
+			ShortByReference retDataType,
+			NotesBlockId retbhValue,
+			IntByReference retValueLength);
+	
+	public short b64_NSFItemInfoNext(
+			long  note_handle,
+			NotesBlockId.ByValue NextItem,
+			Memory item_name,
+			short  name_len,
+			NotesBlockId retbhItem,
+			ShortByReference retDataType,
+			NotesBlockId retbhValue,
+			IntByReference retValueLength);
+	
+	public short b32_NSFItemInfoPrev(
+			int  note_handle,
+			NotesBlockId.ByValue  CurrItem,
+			Memory item_name,
+			short  name_len,
+			NotesBlockId item_blockid_ptr,
+			ShortByReference value_type_ptr,
+			NotesBlockId value_blockid_ptr,
+			IntByReference value_len_ptr);
+	
+	public short b64_NSFItemInfoPrev(
+			long  note_handle,
+			NotesBlockId.ByValue  CurrItem,
+			Memory item_name,
+			short  name_len,
+			NotesBlockId item_blockid_ptr,
+			ShortByReference value_type_ptr,
+			NotesBlockId value_blockid_ptr,
+			IntByReference value_len_ptr);
+	
+	public short b64_NSFItemScan(
+			long  note_handle,
+			NoteNsfItemScanProc ActionRoutine,
+			Pointer funcParam);
+
+	public short b32_NSFItemScan(
+			int  note_handle,
+			NoteNsfItemScanProc ActionRoutine,
+			Pointer funcParam);
+
+	public void b32_NSFItemQueryEx(
+			int  note_handle,
+			NotesBlockId.ByValue item_bid,
+			Memory item_name,
+			short  return_buf_len,
+			ShortByReference name_len_ptr,
+			ShortByReference item_flags_ptr,
+			ShortByReference value_datatype_ptr,
+			NotesBlockId value_bid_ptr,
+			IntByReference value_len_ptr,
+			ByteByReference retSeqByte,
+			ByteByReference retDupItemID);
+	
+	public void b64_NSFItemQueryEx(
+			long  note_handle,
+			NotesBlockId.ByValue item_bid,
+			Memory item_name,
+			short  return_buf_len,
+			ShortByReference name_len_ptr,
+			ShortByReference item_flags_ptr,
+			ShortByReference value_datatype_ptr,
+			NotesBlockId value_bid_ptr,
+			IntByReference value_len_ptr,
+			ByteByReference retSeqByte,
+			ByteByReference retDupItemID);
+	
+	public short b32_NSFItemGetModifiedTime(
+			int hNote,
+			Memory ItemName,
+			short  ItemNameLength,
+			int  Flags,
+			NotesTimeDate retTime);
+	
+	public short b64_NSFItemGetModifiedTime(
+			long hNote,
+			Memory ItemName,
+			short  ItemNameLength,
+			int  Flags,
+			NotesTimeDate retTime);
+	
+	public short b32_NSFItemGetModifiedTimeByBLOCKID(
+			int  hNote,
+			NotesBlockId.ByValue bhItem,
+			int  Flags,
+			NotesTimeDate retTime);
+	
+	public short b64_NSFItemGetModifiedTimeByBLOCKID(
+			long  hNote,
+			NotesBlockId.ByValue bhItem,
+			int  Flags,
+			NotesTimeDate retTime);
+	
+	public short b32_NSFItemGetText(
+			int  note_handle,
+			Memory item_name,
+			Memory item_text,
+			short text_len);
+	
+	public short b64_NSFItemGetText(
+			long  note_handle,
+			Memory item_name,
+			Memory item_text,
+			short text_len);
+	
+	public short b64_NSFItemGetTextListEntries(
+			long note_handle,
+			Memory item_name);
+
+	public short b32_NSFItemGetTextListEntries(
+			int note_handle,
+			Memory item_name);
+	
+	public short b64_NSFItemGetTextListEntry(
+			long note_handle,
+			Memory item_name,
+			short entry_position,
+			Memory retEntry_text,
+			short  text_len);
+
+	public short b32_NSFItemGetTextListEntry(
+			int note_handle,
+			Memory item_name,
+			short entry_position,
+			Memory retEntry_text,
+			short  text_len);
+
+	public short b32_NSFItemSetTextSummary(
+			int hNote,
+			Memory ItemName,
+			Memory ItemText,
+			short TextLength,
+			boolean summary);
+	
+	public short b64_NSFItemSetTextSummary(
+			long  hNote,
+			Memory ItemName,
+			Memory ItemText,
+			short TextLength,
+			boolean summary);
+
+	public boolean b32_NSFItemGetTime(
+			int  note_handle,
+			Memory td_item_name,
+			NotesTimeDate td_item_value);
+	
+	public boolean b64_NSFItemGetTime(
+			long  note_handle,
+			Memory td_item_name,
+			NotesTimeDate td_item_value);
+	
+	public short b32_NSFItemSetTime(
+			int  note_handle,
+			Memory td_item_name,
+			NotesTimeDate td_item_ptr);
+	
+	public short b64_NSFItemSetTime(
+			long  note_handle,
+			Memory td_item_name,
+			NotesTimeDate td_item_ptr);
+
+	public boolean b32_NSFItemGetNumber(
+			int hNote,
+			Memory ItemName,
+			DoubleByReference retNumber);
+	
+	public boolean b64_NSFItemGetNumber(
+			long  hNote,
+			Memory ItemName,
+			DoubleByReference retNumber);
+	
+	public long b32_NSFItemGetLong(
+			int note_handle,
+			Memory number_item_name,
+			LongByReference number_item_default);
+
+	public long b64_NSFItemGetLong(
+			long note_handle,
+			Memory number_item_name,
+			LongByReference number_item_default);
+
+	public short b32_NSFItemSetNumber(
+			int  hNote,
+			Memory ItemName,
+			double Number);
+
+	public short b64_NSFItemSetNumber(
+			long hNote,
+			Memory ItemName,
+			double Number);
+
+	public short b64_NSFItemConvertToText(
+			long note_handle,
+			Memory item_name_ptr,
+			Memory retText_buf_ptr,
+			short  text_buf_len,
+			char separator);
+	
+	public short b32_NSFItemConvertToText(
+			int note_handle,
+			Memory item_name_ptr,
+			Memory retText_buf_ptr,
+			short  text_buf_len,
+			char separator);
+
+	public short b64_NSFItemConvertValueToText(
+			short value_type,
+			NotesBlockId.ByValue value_bid,
+			int  value_len,
+			Memory text_buf_ptr,
+			short  text_buf_len,
+			char separator);
+
+	public short b32_NSFItemConvertValueToText(
+			short value_type,
+			NotesBlockId.ByValue value_bid,
+			int  value_len,
+			Memory text_buf_ptr,
+			short  text_buf_len,
+			char separator);
+
+	public short b64_NSFItemDelete(
+			long note_handle,
+			Memory item_name,
+			short name_len);
+
+	public short b32_NSFItemDelete(
+			int note_handle,
+			Memory item_name,
+			short name_len);
+
+	public short b64_NSFItemDeleteByBLOCKID(long note_handle, NotesBlockId.ByValue item_blockid);
+	public short b32_NSFItemDeleteByBLOCKID(int note_handle, NotesBlockId.ByValue item_blockid);
+	
+	public short b64_NSFItemCopy(long note_handle, NotesBlockId.ByValue item_blockid);
+	public short b32_NSFItemCopy(int note_handle, NotesBlockId.ByValue item_blockid);
 
 	public short b32_NSFDbGetMultNoteInfo(
 			int  hDb,
@@ -893,6 +1207,20 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			ShortByReference retResponseCount,
 			IntByReference retParentNoteID);
 
+	public short b32_NSFNoteVerifySignature(
+			int  hNote,
+			Memory SignatureItemName,
+			NotesTimeDate retWhenSigned,
+			Memory retSigner,
+			Memory retCertifier);
+	
+	public short b64_NSFNoteVerifySignature(
+			long  hNote,
+			Memory SignatureItemName,
+			NotesTimeDate retWhenSigned,
+			Memory retSigner,
+			Memory retCertifier);
+	
 	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
 
 	/** Return NoteID */
@@ -1039,59 +1367,48 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public static final int CLASS_MASK = (int)0xff00;
 
-	/*  All datatypes below are passed to NSF in either host (machine-specific
-		byte ordering and padding) or canonical form (Intel 86 packed form).
-		The format of each datatype, as it is passed to and from NSF functions,
-		is listed below in the comment field next to each of the data types.
-		(This host/canonical issue is NOT applicable to Intel86 machines,
-		because on that machine, they are the same and no conversion is required).
-		On all other machines, use the ODS subroutine package to perform
-		conversions of those datatypes in canonical format before they can
-		be interpreted. */
-
-	/*	"Computable" Data Types */
-
-	public static final int TYPE_ERROR = (int)(0 + (1 << 8));
-	public static final int TYPE_UNAVAILABLE = (int)(0 + (2 << 8));
-	public static final int TYPE_TEXT = (int)(0 + (5 << 8));
-	public static final int TYPE_TEXT_LIST = (int)(1 + (5 << 8));
-	public static final int TYPE_NUMBER = (int)(0 + (3 << 8));
-	public static final int TYPE_NUMBER_RANGE = (int)(1 + (3 << 8));
-	public static final int TYPE_TIME = (int)(0 + (4 << 8));
-	public static final int TYPE_TIME_RANGE = (int)(1 + (4 << 8));
-	public static final int TYPE_FORMULA = (int)(0 + (6 << 8));
-	public static final int TYPE_USERID = (int)(0 + (7 << 8));
-
-	/*	"Non-Computable" Data Types */
-
-	public static final int TYPE_SIGNATURE = (int)(8 + (0 << 8));
-	public static final int TYPE_ACTION = (int)(16 + (0 << 8));
-	public static final int TYPE_WORKSHEET_DATA = (int)(13 + (0 << 8));
-	public static final int TYPE_VIEWMAP_LAYOUT = (int)(19 + (0 << 8));
-	public static final int TYPE_SEAL2 = (int)(31 + (0 << 8));
-	public static final int TYPE_LSOBJECT = (int)(20 + (0 << 8));
-	public static final int TYPE_ICON = (int)(6 + (0 << 8));
-	public static final int TYPE_VIEW_FORMAT = (int)(5 + (0 << 8));
-	public static final int TYPE_SCHED_LIST = (int)(22 + (0 << 8));
-	public static final int TYPE_VIEWMAP_DATASET = (int)(18 + (0 << 8));
-	public static final int TYPE_SEAL = (int)(9 + (0 << 8));
-	public static final int TYPE_MIME_PART = (int)(25 + (0 << 8));
-	public static final int TYPE_SEALDATA = (int)(10 + (0 << 8));
-	public static final int TYPE_NOTELINK_LIST = (int)(7 + (0 << 8));
-	public static final int TYPE_COLLATION = (int)(2 + (0 << 8));
-	public static final int TYPE_RFC822_TEXT = (int)(2 + (5 << 8));
-	public static final int TYPE_COMPOSITE = (int)(1 + (0 << 8));
-	public static final int TYPE_OBJECT = (int)(3 + (0 << 8));
-	public static final int TYPE_HTML = (int)(21 + (0 << 8));
-	public static final int TYPE_ASSISTANT_INFO = (int)(17 + (0 << 8));
-	public static final int TYPE_HIGHLIGHTS = (int)(12 + (0 << 8));
-	public static final int TYPE_NOTEREF_LIST = (int)(4 + (0 << 8));
-	public static final int TYPE_QUERY = (int)(15 + (0 << 8));
-	public static final int TYPE_USERDATA = (int)(14 + (0 << 8));
-	public static final int TYPE_INVALID_OR_UNKNOWN = (int)(0 + (0 << 8));
-	public static final int TYPE_SEAL_LIST = (int)(11 + (0 << 8));
-	public static final int TYPE_CALENDAR_FORMAT = (int)(24 + (0 << 8));
-
+	/*	Item Flags */
+	// These flags define the characteristics of an item (field) in a note.  The flags may be bitwise or'ed together for combined functionality.
+	
+	/** This item is signed. */
+	public static final short ITEM_SIGN = 0x0001;
+	
+	/** This item is sealed. When used in NSFItemAppend, the item is encryption
+	 * enabled; it can later be encrypted if edited from the Notes UI and saved
+	 * in a form that specifies Encryption. */
+	public static final short ITEM_SEAL = 0x0002;
+	
+	/** This item is stored in the note's summary buffer. Summary items may be used
+	 * in view columns, selection formulas, and @-functions. Summary items may be
+	 * accessed via the SEARCH_MATCH structure provided by NSFSearch or in the
+	 * buffer returned by NIFReadEntries. API program may read, modify, and write
+	 * items in the summary buffer without opening the note first. The maximum size
+	 * of the summary buffer is 32K. Items of TYPE_COMPOSITE may not have the
+	 * ITEM_SUMMARY flag set. */
+	public static final short ITEM_SUMMARY	= 0x0004;
+	
+	/** This item is an Author Names field as indicated by the READ/WRITE-ACCESS
+	 * flag. Item is TYPE_TEXT or TYPE_TEXT_LIST. Author Names fields have the
+	 * ITEM_READWRITERS flag or'd with the ITEM_NAMES flag. */
+	public static final short ITEM_READWRITERS = 0x0020;
+	
+	/** This item is a Names field. Indicated by the NAMES (distinguished names)
+	 * flag. Item is TYPE_TEXT or TYPE_TEXT_LIST. */
+	public static final short ITEM_NAMES = 0x0040;
+	
+	/** This item is a placeholder field in a form note. Item is TYPE_INVALID_OR_UNKNOWN. */
+	public static final short ITEM_PLACEHOLDER = 0x0100;
+	
+	/** A user requires editor access to change this field. */
+	public static final short ITEM_PROTECTED = 0x0200;
+	
+	/** This is a Reader Names field. Indicated by the READER-ACCESS flag. Item is
+	 * TYPE_TEXT or TYPE_TEXT_LIST. */
+	public static final short ITEM_READERS = 0x0400;
+	
+	/**  Item is same as on-disk. */
+	public static final short ITEM_UNCHANGED = 0x1000;
+	
 	public static final int ALLDAY = 0xffffffff;
 	public static final int ANYDAY = 0xffffffff;
 
@@ -1155,6 +1472,30 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Pointer EnumRoutineParameter,
 			NotesTimeDate retUntil);
 
+	public short b64_NSFSearchWithUserNameList(
+			long hDB,
+			long hFormula,
+			Memory ViewTitle,
+			short  SearchFlags,
+			short  NoteClassMask,
+			NotesTimeDate Since,
+			b64_NsfSearchProc  EnumRoutine,
+			Pointer EnumRoutineParameter,
+			NotesTimeDate retUntil,
+			long  nameList);
+
+	public short b32_NSFSearchWithUserNameList(
+			int hDB,
+			int hFormula,
+			Memory ViewTitle,
+			short  SearchFlags,
+			short  NoteClassMask,
+			NotesTimeDate Since,
+			b32_NsfSearchProc  EnumRoutine,
+			Pointer EnumRoutineParameter,
+			NotesTimeDate retUntil,
+			long  nameList);
+
 	public interface b32_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
         void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
     }
@@ -1162,7 +1503,25 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public interface b64_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
         void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch, NotesItemTable summaryBuffer); 
     }
-	
+
+	public interface NoteExtractCallback extends Callback { /* StdCallCallback if using __stdcall__ */
+        short invoke(Pointer data, int length, Pointer param); 
+    }
+
+	public interface NoteNsfItemScanProc extends Callback { /* StdCallCallback if using __stdcall__ */
+        void invoke(short spare, short itemFlags, Pointer name, short nameLength, Pointer value, int valueLength, Pointer routineParameter); 
+    }
+
+	public short b64_NSFNoteCipherExtractWithCallback (long hNote, NotesBlockId.ByValue bhItem,
+			int ExtractFlags, int hDecryptionCipher,
+			NoteExtractCallback pNoteExtractCallback, Pointer pParam,
+			int Reserved, Pointer pReserved);
+
+	public short b32_NSFNoteCipherExtractWithCallback (int hNote, NotesBlockId.ByValue bhItem,
+			int ExtractFlags, int hDecryptionCipher,
+			NoteExtractCallback pNoteExtractCallback, Pointer pParam,
+			int Reserved, Pointer pReserved);
+
 	public short b64_NSFFormulaCompile(
 			Memory FormulaName,
 			short FormulaNameLength,
@@ -1270,5 +1629,256 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			short  BlkType,
 			long  dwSize,
 			LongByReference retHandle);
+
+	public static final int _TIMEDATE = 10;
+	public static final int _TIMEDATE_PAIR = 11;
+	public static final int _ALIGNED_NUMBER_PAIR = 12;
+	public static final int _LIST = 13;
+	public static final int _RANGE = 14;
+	public static final int _DBID = 15;
+	public static final int _ITEM = 17;
+	public static final int _ITEM_TABLE = 18;
+	public static final int _SEARCH_MATCH = 24;
+	public static final int _ORIGINATORID = 26;
+	public static final int _OID = _ORIGINATORID;
+	public static final int _OBJECT_DESCRIPTOR = 27;
+	public static final int _UNIVERSALNOTEID = 28;
+	public static final int _UNID = _UNIVERSALNOTEID;
+	public static final int _VIEW_TABLE_FORMAT = 29;
+	public static final int _VIEW_COLUMN_FORMAT = 30;
+	public static final int _NOTELINK = 33;
+	public static final int _LICENSEID = 34;
+	public static final int _VIEW_FORMAT_HEADER = 42;
+	public static final int _VIEW_TABLE_FORMAT2 = 43;
+	public static final int _DBREPLICAINFO = 56;
+	public static final int _FILEOBJECT = 58;
+	public static final int _COLLATION = 59;
+	public static final int _COLLATE_DESCRIPTOR = 60;
+	public static final int _CDKEYWORD = 68;
+	public static final int _CDLINK2 = 72;
+	public static final int _CDLINKEXPORT2 = 97;
+	public static final int _CDPARAGRAPH = 109;
+	public static final int _CDPABDEFINITION = 110;
+	public static final int _CDPABREFERENCE = 111;
+	public static final int _CDFIELD_PRE_36 = 112;
+	public static final int _CDTEXT = 113;
+	public static final int _CDDOCUMENT = 114;
+	public static final int _CDMETAFILE = 115;
+	public static final int _CDBITMAP = 116;
+	public static final int _CDHEADER = 117;
+	public static final int _CDFIELD = 118;
+	public static final int _CDFONTTABLE = 119;
+	public static final int _CDFACE = 120;
+	public static final int _CDCGM = 156;
+	public static final int _CDTIFF = 159;
+	public static final int _CDBITMAPHEADER = 162;
+	public static final int _CDBITMAPSEGMENT = 163;
+	public static final int _CDCOLORTABLE = 164;
+	public static final int _CDPATTERNTABLE = 165;
+	public static final int _CDGRAPHIC = 166;
+	public static final int _CDPMMETAHEADER = 167;
+	public static final int _CDWINMETAHEADER = 168;
+	public static final int _CDMACMETAHEADER = 169;
+	public static final int _CDCGMMETA = 170;
+	public static final int _CDPMMETASEG = 171;
+	public static final int _CDWINMETASEG = 172;
+	public static final int _CDMACMETASEG = 173;
+	public static final int _CDDDEBEGIN = 174;
+	public static final int _CDDDEEND = 175;
+	public static final int _CDTABLEBEGIN = 176;
+	public static final int _CDTABLECELL = 177;
+	public static final int _CDTABLEEND = 178;
+	public static final int _CDSTYLENAME = 188;
+	public static final int _FILEOBJECT_MACEXT = 192;
+	public static final int _FILEOBJECT_HPFSEXT = 193;
+	public static final int _CDOLEBEGIN = 218;
+	public static final int _CDOLEEND = 219;
+	public static final int _CDHOTSPOTBEGIN = 230;
+	public static final int _CDHOTSPOTEND = 231;
+	public static final int _CDBUTTON = 237;
+	public static final int _CDBAR = 308;
+	public static final int _CDQUERYHEADER = 314;
+	public static final int _CDQUERYTEXTTERM = 315;
+	public static final int _CDACTIONHEADER = 316;
+	public static final int _CDACTIONMODIFYFIELD = 317;
+	public static final int _ODS_ASSISTSTRUCT = 318;
+	public static final int _VIEWMAP_HEADER_RECORD = 319;
+	public static final int _VIEWMAP_RECT_RECORD = 320;
+	public static final int _VIEWMAP_BITMAP_RECORD = 321;
+	public static final int _VIEWMAP_REGION_RECORD = 322;
+	public static final int _VIEWMAP_POLYGON_RECORD_BYTE = 323;
+	public static final int _VIEWMAP_POLYLINE_RECORD_BYTE = 324;
+	public static final int _VIEWMAP_ACTION_RECORD = 325;
+	public static final int _ODS_ASSISTRUNINFO = 326;
+	public static final int _CDACTIONREPLY = 327;
+	public static final int _CDACTIONFORMULA = 332;
+	public static final int _CDACTIONLOTUSSCRIPT = 333;
+	public static final int _CDQUERYBYFIELD = 334;
+	public static final int _CDACTIONSENDMAIL = 335;
+	public static final int _CDACTIONDBCOPY = 336;
+	public static final int _CDACTIONDELETE = 337;
+	public static final int _CDACTIONBYFORM = 338;
+	public static final int _ODS_ASSISTFIELDSTRUCT = 339;
+	public static final int _CDACTION = 340;
+	public static final int _CDACTIONREADMARKS = 341;
+	public static final int _CDEXTFIELD = 342;
+	public static final int _CDLAYOUT = 343;
+	public static final int _CDLAYOUTTEXT = 344;
+	public static final int _CDLAYOUTEND = 345;
+	public static final int _CDLAYOUTFIELD = 346;
+	public static final int _VIEWMAP_DATASET_RECORD = 347;
+	public static final int _CDDOCAUTOLAUNCH = 350;
+	public static final int _CDPABHIDE = 358;
+	public static final int _CDPABFORMULAREF = 359;
+	public static final int _CDACTIONBAR = 360;
+	public static final int _CDACTIONFOLDER = 361;
+	public static final int _CDACTIONNEWSLETTER = 362;
+	public static final int _CDACTIONRUNAGENT = 363;
+	public static final int _CDACTIONSENDDOCUMENT = 364;
+	public static final int _CDQUERYFORMULA = 365;
+	public static final int _CDQUERYBYFORM = 373;
+	public static final int _ODS_ASSISTRUNOBJECTHEADER = 374;
+	public static final int _ODS_ASSISTRUNOBJECTENTRY=375;
+	public static final int _CDOLEOBJ_INFO=379;
+	public static final int _CDLAYOUTGRAPHIC=407;
+	public static final int _CDQUERYBYFOLDER=413;
+	public static final int _CDQUERYUSESFORM=423;
+	public static final int _VIEW_COLUMN_FORMAT2=428;
+	public static final int _VIEWMAP_TEXT_RECORD=464;
+	public static final int _CDLAYOUTBUTTON=466;
+	public static final int _CDQUERYTOPIC=471;
+	public static final int _CDLSOBJECT=482;
+	public static final int _CDHTMLHEADER=492;
+	public static final int _CDHTMLSEGMENT=493;
+	public static final int _SCHED_LIST=502;
+	public static final int  _SCHED_LIST_OBJ = _SCHED_LIST;
+	public static final int _SCHED_ENTRY=503;
+	public static final int _SCHEDULE=504;
+	public static final int _CDTEXTEFFECT=508;
+	public static final int _VIEW_CALENDAR_FORMAT=513;
+	public static final int _CDSTORAGELINK=515;
+	public static final int _ACTIVEOBJECT=516;
+	public static final int _ACTIVEOBJECTPARAM=517;
+	public static final int _ACTIVEOBJECTSTORAGELINK=518;
+	public static final int _CDTRANSPARENTTABLE=541;
+	/* modified viewmap records, changed CD record from byte to word */
+	public static final int _VIEWMAP_POLYGON_RECORD=551;
+	public static final int _VIEWMAP_POLYLINE_RECORD=552;
+	public static final int _SCHED_DETAIL_LIST=553;
+	public static final int _CDALTERNATEBEGIN=554;
+	public static final int _CDALTERNATEEND=555;
+	public static final int _CDOLERTMARKER=556;
+	public static final int _HSOLERICHTEXT=557;
+	public static final int _CDANCHOR=559;
+	public static final int _CDHRULE=560;
+	public static final int _CDALTTEXT=561;
+	public static final int _CDACTIONJAVAAGENT=562;
+	public static final int _CDHTMLBEGIN=564;
+	public static final int _CDHTMLEND=565;
+	public static final int _CDHTMLFORMULA=566;
+	public static final int _CDBEGINRECORD=577;
+	public static final int _CDENDRECORD=578;
+	public static final int _CDVERTICALALIGN=579;
+	public static final int _CDFLOAT=580;
+	public static final int _CDTIMERINFO=581;
+	public static final int _CDTABLEROWHEIGHT=582;
+	public static final int _CDTABLELABEL=583;
+	public static final int _CDTRANSITION=610;
+	public static final int _CDPLACEHOLDER=611;
+	public static final int _CDEMBEDDEDVIEW=615;
+	public static final int _CDEMBEDDEDOUTLINE=620;
+	public static final int _CDREGIONBEGIN=621;
+	public static final int _CDREGIONEND=622;
+	public static final int _CDCELLBACKGROUNDDATA=623;
+	public static final int _FRAMESETLENGTH=625;
+	public static final int _CDFRAMESETHEADER=626;
+	public static final int _CDFRAMESET=627;
+	public static final int _CDFRAME=628;
+	public static final int _CDTARGET=629;
+	public static final int _CDRESOURCE=631;
+	public static final int _CDMAPELEMENT=632;
+	public static final int _CDAREAELEMENT=633;
+	public static final int _CDRECT=634;
+	public static final int _CDPOINT=635;
+	public static final int _CDEMBEDDEDCTL=636;
+	public static final int _CDEVENT=637;
+	public static final int _MIME_PART=639;
+	public static final int _CDPRETABLEBEGIN=640;
+	public static final int _CDCOLOR=645;
+	public static final int _CDBORDERINFO=646;
+	public static final int _CDEXT2FIELD=672;
+	public static final int _CDEMBEDDEDSCHEDCTL=674;
+	public static final int _RFC822ITEMDESC=675;
+	public static final int _COLOR_VALUE=690;
+	public static final int _CDBLOBPART=695;
+	public static final int _CDIMAGEHEADER=705;
+	public static final int _CDIMAGESEGMENT=706;
+	public static final int _VIEW_TABLE_FORMAT3=707;
+	public static final int _CDIDNAME=708;
+	public static final int _CDACTIONBAREXT=719;
+	public static final int _CDLINKCOLORS=722;
+	public static final int _CDCAPTION=728;
+	public static final int _CDFIELDHINT=742;
+	public static final int _CDLSOBJECT_R6=744;
+	public static final int _CDINLINE=756;
+	public static final int _CDTEXTPROPERTIESTABLE=765;
+	public static final int _CDSPANRECORD=766;
+	public static final int _CDDECSFIELD=767;
+	public static final int _CDLAYER=808;
+	public static final int _CDPOSITIONING=809;
+	public static final int _CDBOXSIZE=810;
+	public static final int _CDEMBEDDEDEDITCTL=816;
+	public static final int _CDEMBEDDEDSCHEDCTLEXTRA=818;
+	public static final int _LOG_SEARCHR6_REQ=821;
+	public static final int _CDBACKGROUNDPROPERTIES=822;
+	public static final int _CDTEXTPROPERTY=833;
+	public static final int _CDDATAFLAGS=834;
+	public static final int _CDFILEHEADER=835;
+	public static final int _CDFILESEGMENT=836;
+	public static final int _CDEVENTENTRY=847;
+	public static final int _CDACTIONEXT=848;
+	public static final int _CDEMBEDDEDCALCTL=849;
+	public static final int _CDTABLEDATAEXTENSION=857;
+	public static final int _CDLARGEPARAGRAPH=909;
+	public static final int _CDIGNORE=912;
+	public static final int _VIEW_COLUMN_FORMAT5=914;
+	public static final int _CDEMBEDEXTRAINFO=934;
+	public static final int _CDEMBEDDEDCONTACTLIST=935;
+	public static final int _NOTE_SEAL2_HDR=1031;
+	public static final int _NOTE_SEAL2=1032;
+	public static final int _NOTE_RECORD_DESC=1033;
+	
+	
+	/*	These must be OR-ed into the ObjectType below in order to get the
+	desired behavior.  Note that OBJECT_COLLECTION implicitly has
+	both of these bits implied, because that was the desired behavior
+	before these bits were invented. */
+
+	/** do not copy object when updating to new note or database */
+	public static final int OBJECT_NO_COPY = 0x8000;
+	/** keep object around even if hNote doesn't have it when NoteUpdating */
+	public static final int OBJECT_PRESERVE	= 0x4000;
+	/** Public access object being allocated. */
+	public static final int OBJECT_PUBLIC = 0x2000;
+
+	/*	Object Types, a sub-category of TYPE_OBJECT */
+
+	/** File Attachment */
+	public static final int OBJECT_FILE = 0;
+	/** IDTable of "done" docs attached to filter */
+	public static final int OBJECT_FILTER_LEFTTODO = 3;
+	/** Assistant run data object */
+	public static final int OBJECT_ASSIST_RUNDATA = 8;
+	/** Used as input to NSFDbGetObjectSize */
+	public static final int OBJECT_UNKNOWN = 0xffff;
+
+	/** file object has object digest appended */
+	public static final short FILEFLAG_SIGN = 0x0001;
+	/** file is represented by an editor run in the document */
+	public static final short FILEFLAG_INDOC = 0x0002;
+	/** file object has mime data appended */
+	public static final short FILEFLAG_MIME	= 0x0004;
+	/** file is a folder automaticly compressed by Notes */
+	public static final short FILEFLAG_AUTOCOMPRESSED = 0x0080;
 
 }

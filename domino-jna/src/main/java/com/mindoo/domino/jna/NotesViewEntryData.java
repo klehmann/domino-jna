@@ -1,11 +1,16 @@
 package com.mindoo.domino.jna;
 
+import java.lang.ref.SoftReference;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.utils.LMBCSString;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
 
 /**
  * Data object that contains all data read from collection entries
@@ -13,10 +18,12 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
  * @author Karsten Lehmann
  */
 public class NotesViewEntryData {
+	private NotesCollection m_parentCollection;
 	private int[] m_pos;
 	private String m_posStr;
 	private Integer m_noteId;
 	private String m_unid;
+	private long[] m_unidAsLongs;
 	private Integer m_noteClass;
 	private Integer m_siblingCount;
 	private Integer m_childCount;
@@ -28,9 +35,24 @@ public class NotesViewEntryData {
 	private Object[] m_columnValues;
 	private int[] m_columnValueSizes;
 	private Map<String, Object> m_summaryData;
+	private SoftReference<Map<String, Object>> m_convertedDataRef;
 	
-	public NotesViewEntryData() {
-		
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param parentCollection parent notes collection
+	 */
+	public NotesViewEntryData(NotesCollection parentCollection) {
+		m_parentCollection = parentCollection;
+	}
+	
+	/**
+	 * Returns the parent collection
+	 * 
+	 * @return parent collection
+	 */
+	public NotesCollection getParent() {
+		return m_parentCollection;
 	}
 	
 	/**
@@ -191,6 +213,11 @@ public class NotesViewEntryData {
 	 * @return UNID or null
 	 */
 	public String getUNID() {
+		if (m_unid==null) {
+			if (m_unidAsLongs!=null) {
+				m_unid = NotesStringUtils.toUNID(m_unidAsLongs[0], m_unidAsLongs[1]);
+			}
+		}
 		return m_unid;
 	}
 
@@ -203,6 +230,15 @@ public class NotesViewEntryData {
 		m_unid = unid;
 	}
 
+	/**
+	 * Sets the UNID as a long array
+	 * 
+	 * @param unidAsLongs long array with file / note timedates
+	 */
+	public void setUNID(long[] unidAsLongs) {
+		m_unidAsLongs = unidAsLongs;
+	}
+	
 	/**
 	 * Returns the entry's note class. Only returns a value if {@link ReadMask#NOTECLASS}
 	 * is used for the lookup
@@ -363,26 +399,122 @@ public class NotesViewEntryData {
 	public void setColumnValues(Object[] itemValues) {
 		m_columnValues = itemValues;
 	}
+	
+	/**
+	 * Returns an iterator of all available columns for which we can read column values
+	 * (e.g. does not return static column names).<br>
+	 * Convenience function that simply calls {@link NotesCollection#getColumnNames()} on the parent collection
+	 * 
+	 * @return programmatic column names converted to lowercase
+	 */
+	public Iterator<String> getColumnNames() {
+		return m_parentCollection.getColumnNames();
+	}
 
 	/**
-	 * Returns the collection entry column values. Only returns a non-null value if {@link ReadMask#SUMMARYVALUES}
-	 * is used for the lookup. The column values array contains two additional columns that Domino uses to
-	 * report {@link #isConflict()} and {@link #isResponse()}<br>
+	 * Returns the number of columns for which we can read column data (e.g. does not count columns
+	 * with static values)<br>
+	 * Convenience function that simply calls {@link NotesCollection#getNumberOfColumns()} on the parent collection
+	 * 
+	 * @return number of columns
+	 */
+	public int getNumberOfColumnsWithValues() {
+		return m_parentCollection.getNumberOfColumns();
+	}
+	
+	/**
+	 * Converts the column values to a map. If you are only interested in specific columns,
+	 * you get way better performance calling {@link #get(String)} for those columns
+	 * directly, because we lazily convert text/text list column data from LMBCS format to Java String format.<br>
+	 * Calling this method converts all string columns at once.
+	 * 
+	 * @return map with programmatic column names as keys
+	 */
+	public Map<String,Object> getColumnDataAsMap() {
+		Map<String,Object> data = m_convertedDataRef==null ? null : m_convertedDataRef.get();
+		if (data==null) {
+			data = new HashMap<String, Object>();
+			Iterator<String> colNames = getColumnNames();
+			while (colNames.hasNext()) {
+				String currColName = colNames.next();
+				Object currColValue = get(currColName);
+				
+				data.put(currColName, currColValue);
+			}
+			m_convertedDataRef = new SoftReference<Map<String,Object>>(data);
+		}
+		return data;
+	}
+	
+	/**
+	 * Method to check whether the the view entry contains a non-null value for a programmatic column
+	 * name
+	 * 
+	 * @param columnName column name
+	 * @return true if exists
+	 */
+	public boolean has(String columnName) {
+		if (m_summaryData!=null) {
+			return m_summaryData.containsKey(columnName);
+		}
+		else if (m_columnValues!=null) {
+			int colIdx = m_parentCollection.getColumnValuesIndex(columnName);
+			if (colIdx==-1) {
+				return false;
+			}
+			else {
+				return m_columnValues[colIdx] != null;
+			}
+		}
+		else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Returns a column value. Only returns data of either {@link ReadMask#SUMMARY} or {@link ReadMask#SUMMARYVALUES}
+	 * was used to read the collection data
 	 * <br>
 	 * The following data types are returned for the different column data types:<br>
 	 * <ul>
-	 * <li>{@link NotesCAPI#TYPE_TEXT} - {@link String}</li>
-	 * <li>{@link NotesCAPI#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
-	 * <li>{@link NotesCAPI#TYPE_NUMBER} - {@link Double}</li>
-	 * <li>{@link NotesCAPI#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-	 * <li>{@link NotesCAPI#TYPE_TIME} - {@link Calendar}</li>
-	 * <li>{@link NotesCAPI#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
 	 * </ul>
 	 * 
-	 * @return column values or null
+	 * @param columnName programatic column name
+	 * @return column value or null
 	 */
-	public Object[] getColumnValues() {
-		return m_columnValues;
+	public Object get(String columnName) {
+		Object val = null;
+		
+		if (m_summaryData!=null) {
+			val = m_summaryData.get(columnName);
+		}
+		else if (m_columnValues!=null) {
+			int colIdx = m_parentCollection.getColumnValuesIndex(columnName);
+			if (colIdx!=-1 && colIdx!=65535) {
+				val = m_columnValues[colIdx];
+			}
+		}
+		
+		if (val instanceof List) {
+			List<Object> valAsList = (List<Object>) val;
+			for (int i=0; i<valAsList.size(); i++) {
+				Object currListValue = valAsList.get(i);
+				
+				if (currListValue instanceof LMBCSString) {
+					valAsList.set(i, ((LMBCSString)currListValue).getValue());
+				}
+			}
+		}
+		else if (val instanceof LMBCSString) {
+			val = ((LMBCSString)val).getValue();
+		}
+		return val;
 	}
 	
 	/**
@@ -421,19 +553,19 @@ public class NotesViewEntryData {
 	 * The following values are returned for the different column data types:<br>
 	 * <br>
 	 * <ul>
-	 * <li>{@link NotesCAPI#TYPE_TEXT} - {@link String}</li>
-	 * <li>{@link NotesCAPI#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
-	 * <li>{@link NotesCAPI#TYPE_NUMBER} - {@link Double}</li>
-	 * <li>{@link NotesCAPI#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-	 * <li>{@link NotesCAPI#TYPE_TIME} - {@link Calendar}</li>
-	 * <li>{@link NotesCAPI#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
 	 * </ul>
 	 * 
 	 * @return summary data or null
-	 */
-	public Map<String,Object> getSummaryData() {
-		return m_summaryData;
-	}
+//	 */
+//	public Map<String,Object> getSummaryData() {
+//		return m_summaryData;
+//	}
 	
 	@Override
 	public String toString() {
@@ -443,7 +575,7 @@ public class NotesViewEntryData {
 		}
 		
 		if (m_unid!=null) {
-			sb.append("unid="+m_unid);
+			sb.append(",unid="+m_unid);
 		}
 		
 		String posStr = getPositionStr();

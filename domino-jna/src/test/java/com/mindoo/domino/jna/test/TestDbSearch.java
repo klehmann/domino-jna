@@ -27,7 +27,7 @@ import lotus.domino.Session;
  */
 public class TestDbSearch extends BaseJNATestClass {
 
-	@Test
+	//@Test
 	public void testDbSearch_search() {
 
 		runWithSession(new IDominoCallable<Object>() {

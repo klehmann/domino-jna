@@ -16,4 +16,10 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 	public interface b64_NsfSearchProcWin extends b64_NsfSearchProc, StdCallCallback { /* StdCallCallback if using __stdcall__ */
     }
 
+	public interface NoteExtractCallbackWin extends NoteExtractCallback, StdCallCallback { /* StdCallCallback if using __stdcall__ */
+    }
+
+	public interface NoteNsfItemScanProcWin extends NoteNsfItemScanProc, StdCallCallback { /* StdCallCallback if using __stdcall__ */
+    }
+
 }

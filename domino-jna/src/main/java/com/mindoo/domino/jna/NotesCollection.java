@@ -5,13 +5,14 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.Vector;
-
-import org.joda.time.Interval;
 
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
 import com.mindoo.domino.jna.constants.FTSearch;
@@ -63,6 +64,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private boolean m_autoUpdate;
 	private CollationInfo m_collationInfo;
+	private Map<String, Integer> m_columnIndices;
+	private Map<Integer, String> m_columnNamesByIndex;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -142,6 +145,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public NotesDatabase getParent() {
 		return m_parentDb;
+	}
+
+	/**
+	 * Returns the column values index for the specified programmatic column name
+	 * 
+	 * @param columnName column name
+	 * @return index or null for unknown columns; returns 65535 for static column values that are not returned as column values
+	 */
+	public int getColumnValuesIndex(String columnName) {
+		if (m_columnIndices==null) {
+			scanColumns();
+		}
+		Integer idx = m_columnIndices.get(columnName.toLowerCase());
+		return idx==null ? -1 : idx.intValue();
 	}
 	
 	/**
@@ -329,7 +346,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public void renameFolder(String name) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		Memory pszName = NotesStringUtils.toLMBCS(name);
+		Memory pszName = NotesStringUtils.toLMBCS(name, false);
 		if (pszName.size() > NotesCAPI.DESIGN_FOLDER_MAX_NAME) {
 			throw new IllegalArgumentException("Folder name too long (max "+NotesCAPI.DESIGN_FOLDER_MAX_NAME+" bytes, found "+pszName.size()+" bytes)");
 		}
@@ -570,12 +587,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b64_checkValidHandle(m_hCollection64);
+			NotesGC.__b64_checkValidHandle(getClass(), m_hCollection64);
 		}
 		else {
 			if (m_hCollection32==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b32_checkValidHandle(m_hCollection32);
+			NotesGC.__b32_checkValidHandle(getClass(), m_hCollection32);
 		}
 	}
 
@@ -660,7 +677,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		
 		
-		Memory queryLMBCS = NotesStringUtils.toLMBCS(query);
+		Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 		IntByReference retNumDocs = new IntByReference();
 		
 		//always filter view data
@@ -1058,7 +1075,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					break;
 				}
 				
-				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, columnsToDecode);
+				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask);
 				if (data.getReturnCount()==0) {
 					//no more data found
 					result = callback.lookupDone(result);
@@ -1219,7 +1236,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				while (remainingEntries>0) {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
-					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask, columnsToDecode);
+					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask);
 					
 					if (isFirstLookup || isAutoUpdate()) {
 						//for the first lookup, make sure we start at the right position
@@ -1364,7 +1381,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
 				}
 				else {
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					boolean convertStringsLazily = true;
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), convertStringsLazily);
 					return viewData;
 				}
 			}
@@ -1394,7 +1412,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
 				}
 				else {
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, retIndexPos.toPosString(), retSequence.getValue());
+					boolean convertStringsLazily = true;
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), convertStringsLazily);
 					return viewData;
 				}
 			}
@@ -1423,7 +1442,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * of notes that match the keys. Since all notes that match the keys
 	 * appear contiguously in the view or folder, you may pass the resulting
 	 * {@link NotesCollectionPosition} and match count as inputs to
-	 * {@link NotesCollection#readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, boolean[])}
+	 * {@link NotesCollection#readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet)}
 	 * to read all the entries in the collection that match the keys.<br>
 	 * <br>
 	 * If multiple notes match the specified (partial) keys, and
@@ -1473,7 +1492,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * value returned by {@link FindResult#getEntriesFound()}.
 
 	 * @param findFlags {@link Find}
-	 * @param keys lookup keys, can be {@link String}, double / {@link Double}, int / {@link Integer}, {@link Date}, {@link Calendar}, {@link Date}[] or {@link Calendar}[] with two elements or {@link Interval} for date ranges
+	 * @param keys lookup keys, can be {@link String}, double / {@link Double}, int / {@link Integer}, {@link Date}, {@link Calendar}, {@link Date}[] or {@link Calendar}[] with two elements for date ranges
 	 * @return result
 	 */
 	public FindResult findByKey(EnumSet<Find> findFlags, Object... keys) {
@@ -1542,7 +1561,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * match the string appear contiguously in the view or folder.<br>
 	 * <br>
 	 * This means you may pass the resulting {@link NotesCollectionPosition} and match count
-	 * as inputs to {@link #readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, boolean[])}
+	 * as inputs to {@link #readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet)}
 	 * to read all the entries in the collection that match the string.<br>
 	 * <br>
 	 * This routine returns limited results if the view is categorized.<br>
@@ -1579,7 +1598,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public FindResult findByName(String name, EnumSet<Find> findFlags) {
 		checkHandle();
 		
-		Memory nameLMBCS = NotesStringUtils.toLMBCS(name);
+		Memory nameLMBCS = NotesStringUtils.toLMBCS(name, true);
 
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
@@ -1699,22 +1718,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return read data
 	 */
 	public NotesViewLookupResultData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask) {
-		return readEntries(startPos, skipNavigator, skipCount, returnNavigator, returnCount, returnMask, null);
-	}
-	
-	/**
-	 * Reads collection entries (using NIFReadEntries method)
-	 * 
-	 * @param startPos start position for the scan; will be modified by the method to reflect the current position
-	 * @param skipNavigator navigator to use for the skip operation
-	 * @param skipCount number of entries to skip
-	 * @param returnNavigator navigator to use for the read operation
-	 * @param returnCount number of entries to read
-	 * @param returnMask bitmask of data to read
-	 * @param decodeColumns optional array with columns to be decoded
-	 * @return read data
-	 */
-	public NotesViewLookupResultData readEntries(NotesCollectionPosition startPos, EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator, int returnCount, EnumSet<ReadMask> returnMask, boolean[] decodeColumns) {
 		checkHandle();
 
 		IntByReference retNumEntriesSkipped = new IntByReference();
@@ -1752,7 +1755,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
+				boolean convertStringsLazily = true;
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, convertStringsLazily);
 				return viewData;
 			}
 		}
@@ -1779,7 +1783,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
 			}
 			else {
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), decodeColumns, null, indexModifiedSequenceNo);
+				boolean convertStringsLazily = true;
+
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, convertStringsLazily);
 				return viewData;
 			}
 		}
@@ -1898,50 +1904,97 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	private CollationInfo getCollationsInfo() {
 		if (m_collationInfo==null) {
-			try {
-				//TODO implement this in pure JNA code
-				Database db = m_parentDb.getSession().getDatabase(m_parentDb.getServer(), m_parentDb.getRelativeFilePath());
-				View view = db.getView(getName());
-				if (view==null) {
-					throw new NotesError(0, "View "+getName()+" not found using legacy API");
-				}
-
-				CollationInfo collationInfo = new CollationInfo();
-
-				Vector<?> columns = view.getColumns();
-				try {
-					short collation = 1;
-					for (int i=0; i<columns.size(); i++) {
-						ViewColumn currCol = (ViewColumn) columns.get(i);
-						boolean isResortAscending = currCol.isResortAscending();
-						boolean isResortDescending = currCol.isResortDescending();
-
-						if (isResortAscending || isResortDescending) {
-							String currItemName = currCol.getItemName();
-
-							if (isResortAscending) {
-								collationInfo.addCollation(collation, currItemName, Direction.Ascending);
-								collation++;
-							}
-							if (isResortDescending) {
-								collationInfo.addCollation(collation, currItemName, Direction.Descending);
-								collation++;
-							}
-						}
-					}
-
-					m_collationInfo = collationInfo;
-				}
-				finally {
-					view.recycle(columns);
-				}
-			}
-			catch (Throwable t) {
-				throw new NotesError(0, "Could not read collation information for view "+getName(), t);
-			}
+			scanColumns();
 		}
 		return m_collationInfo;
 	}
+	
+	/**
+	 * Returns an iterator of all available columns for which we can read column values
+	 * (e.g. does not return static column names)
+	 * 
+	 * @return programmatic column names converted to lowercase in the order they appear in the view
+	 */
+	public Iterator<String> getColumnNames() {
+		if (m_columnIndices==null) {
+			scanColumns();
+		}
+		return m_columnIndices.keySet().iterator();
+	}
+	
+	/**
+	 * Returns the number of columns for which we can read column data (e.g. does not count columns
+	 * with static values)
+	 * 
+	 * @return number of columns
+	 */
+	public int getNumberOfColumns() {
+		if (m_columnIndices==null) {
+			scanColumns();
+		}
+		return m_columnIndices.size();
+	}
+	
+	/**
+	 * Returns programmatic names and sorting of sortable columns
+	 * 
+	 * @return info object with collation info
+	 */
+	private void scanColumns() {
+		m_columnIndices = new LinkedHashMap<String, Integer>();
+		m_columnNamesByIndex = new TreeMap<Integer, String>();
+		
+		try {
+			//TODO implement this in pure JNA code
+			Database db = m_parentDb.getSession().getDatabase(m_parentDb.getServer(), m_parentDb.getRelativeFilePath());
+			View view = db.getView(getName());
+			if (view==null) {
+				throw new NotesError(0, "View "+getName()+" not found using legacy API");
+			}
+
+			CollationInfo collationInfo = new CollationInfo();
+
+			Vector<?> columns = view.getColumns();
+			try {
+				short collation = 1;
+				for (int i=0; i<columns.size(); i++) {
+					ViewColumn currCol = (ViewColumn) columns.get(i);
+					
+					String currItemName = currCol.getItemName();
+					String currItemNameLC = currItemName.toLowerCase();
+					
+					int currColumnValuesIndex = currCol.getColumnValuesIndex();
+					m_columnIndices.put(currItemNameLC, currColumnValuesIndex);
+					if (currColumnValuesIndex != ViewColumn.VC_NOT_PRESENT) {
+						m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+					}
+					
+					boolean isResortAscending = currCol.isResortAscending();
+					boolean isResortDescending = currCol.isResortDescending();
+
+					if (isResortAscending || isResortDescending) {
+
+						if (isResortAscending) {
+							collationInfo.addCollation(collation, currItemName, Direction.Ascending);
+							collation++;
+						}
+						if (isResortDescending) {
+							collationInfo.addCollation(collation, currItemName, Direction.Descending);
+							collation++;
+						}
+					}
+				}
+
+				m_collationInfo = collationInfo;
+			}
+			finally {
+				view.recycle(columns);
+			}
+		}
+		catch (Throwable t) {
+			throw new NotesError(0, "Could not read collation information for view "+getName(), t);
+		}
+		}
 	
 	/**
 	 * Container class with view collation information (collation index vs. sort item name and sort direction)
@@ -2078,6 +2131,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 	
 		String[] columnsArr = columnsList.toArray(new String[columnsList.size()]);
 		return new Selection(columnsArr);
+	}
+
+	@Override
+	public String toString() {
+		if (isRecycled()) {
+			return "NotesCollection [recycled]";
+		}
+		else {
+			return "NotesCollection [handle="+(NotesJNAContext.is64Bit() ? m_hCollection64 : m_hCollection32)+", noteid="+getNoteId()+"]";
+		}
 	}
 
 }
