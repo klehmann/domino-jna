@@ -13,6 +13,10 @@ The project provides functionality that is not available in the classic Java API
     * **reading categorized views** with expanded/collapsed entries and min/max level
 * read **design collection** with design elements in a database
 * support for view resorting (changing the collation in C API terms)
+* **direct attachment streaming** (IBM's Java API extracts files to temp disk space first to read attachment data)
+* basic APIs to read note (document) item values like String/Double/Calendar single and multiple values
+* a few APIs to write values (needs more work)
+* **quick check if a document is editable** by a specified user (without the need to scan through author items)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
 * searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does**
@@ -91,10 +95,10 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 			Assert.assertTrue("Entry read from view is contained in selected list",
 				pickedNoteIds.contains(currEntry.getNoteId()));
 				
-			//read map of column names and values
-			Map<String,Object> summaryData = currEntry.getSummaryData();
+			//read column values with their programmatic name
+			String firstName = (String) currEntry.get("firstname");
+			String lastName = (String) currEntry.get("lastname");
 			//...
-			
 		}
 		
 		//now remove all read ids from pickedNoteIds and make sure that we found everything
@@ -209,7 +213,7 @@ Here are some of the things that we plan to do:
 
 * write [blog entries](http://blog.mindoo.com) explaining the API internals
 * add the API to an XPages Extension Library plugin for easier consumption from XPages applications
-* add more API methods
+* add more API methods, e.g. more Setters to write document items
 * write more testcases
 * add more syntactical sugar, hide complexity
 
