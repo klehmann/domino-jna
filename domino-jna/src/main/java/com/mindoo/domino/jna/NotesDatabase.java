@@ -1081,7 +1081,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
 								Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
 								
-								result = notesAPI.b64_NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
+								result = notesAPI.b32_NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
 								
 								boolean signRequired = false;
 								String currNoteSigner;
