@@ -16,7 +16,7 @@ public class TestSignDb extends BaseJNATestClass {
 
 	//commented out; requires native reading of DESIGN view collation structure
 	//@Test
-	public void testDbSearch_search() {
+	public void testSignDb() {
 
 		runWithSession(new IDominoCallable<Object>() {
 
