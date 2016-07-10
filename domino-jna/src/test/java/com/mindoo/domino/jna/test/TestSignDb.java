@@ -1,10 +1,7 @@
 package com.mindoo.domino.jna.test;
 
-import org.junit.Test;
-
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback;
-import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 
@@ -17,7 +14,8 @@ import lotus.domino.Session;
  */
 public class TestSignDb extends BaseJNATestClass {
 
-	@Test
+	//commented out; requires native reading of DESIGN view collation structure
+	//@Test
 	public void testDbSearch_search() {
 
 		runWithSession(new IDominoCallable<Object>() {
