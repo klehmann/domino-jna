@@ -74,6 +74,8 @@ public class TestNoteAccess extends BaseJNATestClass {
 				
 				if (aclModified) {
 					acl.save();
+					dbLegacyAPI.recycle();
+					dbLegacyAPI = session.getDatabase("", "fakenames.nsf");
 				}
 				
 				NotesDatabase dbData = new NotesDatabase(getSession(), "", "fakenames.nsf", userNameReadOnly);
@@ -402,7 +404,14 @@ public class TestNoteAccess extends BaseJNATestClass {
 					String itemName = "XXXX";
 					
 					//round trip check with linebreak
-					String testVal = "line1\nline2\nline3";
+					String osName = System.getProperty("os.name");
+					String testVal;
+					if (osName.toLowerCase().indexOf("win") >= 0) {
+						testVal = "line1\r\nline2\r\nline3";
+					}
+					else {
+						testVal = "line1\nline2\nline3";
+					}
 					note.setItemValueString(itemName, testVal, true);
 					String checkTestVal = note.getItemValueString(itemName);
 					

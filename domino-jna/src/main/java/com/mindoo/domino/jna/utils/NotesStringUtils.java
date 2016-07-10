@@ -9,6 +9,7 @@ import java.util.Formatter;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
 import com.sun.jna.Memory;
@@ -79,7 +80,12 @@ public class NotesStringUtils {
 				currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
 				if (currConvertedStr.contains("\0")) {
 					//Notes uses \0 for multiline strings
-					currConvertedStr = currConvertedStr.replace("\0", "\n");
+					if (notesAPI instanceof WinNotesCAPI) {
+						currConvertedStr = currConvertedStr.replace("\0", "\r\n");
+					}
+					else {
+						currConvertedStr = currConvertedStr.replace("\0", "\n");
+					}
 				}
 			} catch (UnsupportedEncodingException e) {
 				throw new RuntimeException("Unknown encoding UTF-8", e);

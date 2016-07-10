@@ -98,7 +98,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retNoteId);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retNoteId);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retNoteId);
 		}
 		return retNoteId.getInt(0);
 	}
@@ -139,7 +139,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retOid);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retOid);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retOid);
 		}
 		NotesOriginatorId oid = new NotesOriginatorId(retOid);
 		oid.read();
@@ -163,7 +163,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_MODIFIED, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_MODIFIED, retModified);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_MODIFIED, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -187,7 +187,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ACCESSED, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ACCESSED, retModified);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ACCESSED, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -211,7 +211,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -260,7 +260,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_FLAGS, retFlags);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_FLAGS, retFlags);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_FLAGS, retFlags);
 		}
 		short flags = retFlags.getShort(0);
 		return flags;
@@ -786,7 +786,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		}
 		else {
-			boolean exists = notesAPI.b64_NSFItemGetNumber(m_hNote32, itemNameMem, retNumber);
+			boolean exists = notesAPI.b32_NSFItemGetNumber(m_hNote32, itemNameMem, retNumber);
 			if (!exists) {
 				return 0;
 			}
@@ -819,7 +819,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			return longVal;
 		}
 		else {
-			long longVal = notesAPI.b64_NSFItemGetLong(m_hNote32, itemNameMem, number_item_default);
+			long longVal = notesAPI.b32_NSFItemGetLong(m_hNote32, itemNameMem, number_item_default);
 			return longVal;
 		}
 	}

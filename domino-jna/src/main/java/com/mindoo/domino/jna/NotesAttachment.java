@@ -178,7 +178,7 @@ public class NotesAttachment {
 					extractCallback, null, 0, null);
 		}
 		else {
-			result = notesAPI.b64_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle64(), 
+			result = notesAPI.b32_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle32(), 
 					itemBlockIdByVal, extractFlags, hDecryptionCipher, 
 					extractCallback, null, 0, null);
 		}
