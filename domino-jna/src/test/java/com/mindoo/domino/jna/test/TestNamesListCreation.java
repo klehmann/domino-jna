@@ -20,6 +20,7 @@ import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import lotus.domino.Database;
 import lotus.domino.Document;
 import lotus.domino.Item;
+import lotus.domino.Name;
 import lotus.domino.Session;
 
 public class TestNamesListCreation extends BaseJNATestClass {
@@ -32,17 +33,18 @@ public class TestNamesListCreation extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
 				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
-				Document docTmp = dbLegacyAPI.createDocument();
-				
-				Vector<?> userNamesListLegacy = session.evaluate("@UserNamesList", docTmp);
-				docTmp.recycle();
 				
 				List<String> userNamesListJNA = NotesNamingUtils.getUserNamesList(session.getEffectiveUserName());
 				Assert.assertTrue("JNA names list contains the current username", userNamesListJNA.contains(session.getEffectiveUserName()));
 				
-				for (String currName : userNamesListJNA) {
-					Assert.assertTrue("Legacy usernames list contains the value '"+currName+"' returned by JNA", userNamesListLegacy.contains(currName));
+				Vector<Name> userGroupNamesList = session.getUserGroupNameList();
+				for (Name currNameLegacy : userGroupNamesList) {
+					Assert.assertTrue("JNA list contains "+currNameLegacy.getCanonical(), userNamesListJNA.contains(currNameLegacy.getCanonical()));
 				}
+				Name currUserName = session.getUserNameObject();
+				Assert.assertTrue("JNA usernames list contains "+currUserName.getCanonical(), userNamesListJNA.contains(currUserName.getCanonical()));
+				Assert.assertTrue("JNA usernames list contains "+currUserName.getCommon(), userNamesListJNA.contains(currUserName.getCanonical()));
+				Assert.assertTrue("JNA usernames list contains *", userNamesListJNA.contains("*"));
 				
 				return null;
 			}

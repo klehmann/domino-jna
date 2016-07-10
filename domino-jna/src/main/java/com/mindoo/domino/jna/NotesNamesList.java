@@ -9,7 +9,8 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -117,7 +118,7 @@ public class NotesNamesList implements IRecyclableNotesObject {
 					m_names = readNamesList(ptr);
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(m_handle32);
+					notesAPI.b32_OSUnlockObject(m_handle32);
 				}
 			}
 		}
@@ -131,16 +132,34 @@ public class NotesNamesList implements IRecyclableNotesObject {
 	 * @return usernames list
 	 */
 	private static List<String> readNamesList(Pointer namesListBufferPtr) {
-		NotesNamesListHeader namesList = new NotesNamesListHeader(namesListBufferPtr);
-		namesList.read();
-
-		List<String> names = new ArrayList<String>(namesList.NumNames);
+		long offset;
+		int numNames;
+		List<String> names;
 
 		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 
-		long offset = namesList.size();
+		if (NotesJNAContext.is64Bit()) {
+			NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
+			namesList.read();
 
-		while (names.size() < namesList.NumNames) {
+			names = new ArrayList<String>(namesList.NumNames);
+
+
+			offset = NotesCAPI.namesListHeaderSize64;
+			numNames = (int) (namesList.NumNames & 0xffff);
+		}
+		else {
+			NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
+			namesList.read();
+
+			names = new ArrayList<String>(namesList.NumNames);
+
+			offset = NotesCAPI.namesListHeaderSize32;
+			numNames = (int) (namesList.NumNames & 0xffff);
+		}
+		
+
+		while (names.size() < numNames) {
 			byte b = namesListBufferPtr.getByte(offset);
 
 			if (b == 0) {

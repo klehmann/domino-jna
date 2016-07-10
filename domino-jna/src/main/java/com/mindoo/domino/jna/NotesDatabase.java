@@ -35,7 +35,8 @@ import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
@@ -214,7 +215,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(m_namesList.getHandle64());
 				
 				try {
-					NotesNamesListHeader namesList = new NotesNamesListHeader(namesListBufferPtr);
+					NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
 					namesList.read();
 
 					if (m_authenticateUser) {
@@ -259,7 +260,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(m_namesList.getHandle32());
 				
 				try {
-					NotesNamesListHeader namesList = new NotesNamesListHeader(namesListBufferPtr);
+					NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
 					namesList.read();
 					
 					if (m_authenticateUser) {

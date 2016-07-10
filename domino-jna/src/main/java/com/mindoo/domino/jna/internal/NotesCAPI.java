@@ -12,7 +12,8 @@ import com.mindoo.domino.jna.structs.NotesFTIndexStats;
 import com.mindoo.domino.jna.structs.NotesFileObject;
 import com.mindoo.domino.jna.structs.NotesItemTable;
 import com.mindoo.domino.jna.structs.NotesItemValueTable;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
 import com.mindoo.domino.jna.structs.NotesNumberPair;
 import com.mindoo.domino.jna.structs.NotesObjectDescriptor;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
@@ -33,7 +34,6 @@ import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
-import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -52,7 +52,8 @@ public interface NotesCAPI extends Library {
 	public final int itemValueTableSize = new NotesItemValueTable().size();
 	public final int tableItemSize = new NotesTableItem().size();
 	public final int oidSize = new NotesOriginatorId().size();
-	public final int namesListHeaderSize = new NotesNamesListHeader().size();
+	public final int namesListHeaderSize32 = new NotesNamesListHeader32().size();
+	public final int namesListHeaderSize64 = new NotesNamesListHeader64().size();
 	public final int objectDescriptorSize = new NotesObjectDescriptor().size();
 	public final int fileObjectSize = new NotesFileObject().size();
 	
@@ -1622,12 +1623,12 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public short b32_OSMemAlloc(
 			short  BlkType,
-			long  dwSize,
+			int  dwSize,
 			IntByReference retHandle);
 	
 	public short b64_OSMemAlloc(
 			short  BlkType,
-			long  dwSize,
+			int  dwSize,
 			LongByReference retHandle);
 
 	public static final int _TIMEDATE = 10;
