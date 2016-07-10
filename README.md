@@ -214,7 +214,6 @@ Here are some of the things that we plan to do:
 * write [blog entries](http://blog.mindoo.com) explaining the API internals
 * add the API to an XPages Extension Library plugin for easier consumption from XPages applications
 * add more API methods, e.g. more Setters to write document items
-* fix DB sign function (requires native reading of view COLLATION info for DESIGN view to work) 
 * write more testcases
 * add more syntactical sugar, hide complexity
 
