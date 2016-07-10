@@ -408,7 +408,12 @@ public class NotesViewEntryData {
 	 * @return programmatic column names converted to lowercase
 	 */
 	public Iterator<String> getColumnNames() {
-		return m_parentCollection.getColumnNames();
+		if (m_summaryData!=null) {
+			return m_summaryData.keySet().iterator();
+		}
+		else {
+			return m_parentCollection.getColumnNames();
+		}
 	}
 
 	/**
@@ -434,7 +439,9 @@ public class NotesViewEntryData {
 		Map<String,Object> data = m_convertedDataRef==null ? null : m_convertedDataRef.get();
 		if (data==null) {
 			data = new HashMap<String, Object>();
+			
 			Iterator<String> colNames = getColumnNames();
+			
 			while (colNames.hasNext()) {
 				String currColName = colNames.next();
 				Object currColValue = get(currColName);
