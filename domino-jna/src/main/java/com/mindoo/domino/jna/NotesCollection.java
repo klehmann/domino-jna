@@ -769,7 +769,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		else {
 			if (m_activeFTSearchHandle32!=null) {
-				short result = notesAPI.b64_FTCloseSearch(m_activeFTSearchHandle32.getValue());
+				short result = notesAPI.b32_FTCloseSearch(m_activeFTSearchHandle32.getValue());
 				NotesErrorUtils.checkResult(result);
 				m_activeFTSearchHandle32=null;
 			}

@@ -670,7 +670,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			return notesAPI.b64_IDIsPresent(m_idTableHandle64, noteId);
 		}
 		else {
-			return notesAPI.b64_IDIsPresent(m_idTableHandle32, noteId);
+			return notesAPI.b32_IDIsPresent(m_idTableHandle32, noteId);
 		}
 	}
 	
