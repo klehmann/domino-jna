@@ -826,7 +826,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					rethResults);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b64_FTCloseSearch(rethSearch.getValue());
+			result = notesAPI.b32_FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
 			
 			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
@@ -1665,7 +1665,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			finally {
 				//free handle of formula
 				if (hFormula!=0) {
-					notesAPI.b64_OSMemFree(hFormula);
+					notesAPI.b32_OSMemFree(hFormula);
 				}
 			}
 
