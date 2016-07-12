@@ -207,6 +207,10 @@ PATH = /Applications/IBM Notes.app/Contents/MacOS
 NotesINI = ~/Library/Preferences/Notes Preferences
 ```
 
+## Further information
+* [New on Github: Domino JNA - Cross-platform access to IBM Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
+* [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
+
 ## Next steps
 This project is not done yet, this is just the beginning.
 Here are some of the things that we plan to do:
