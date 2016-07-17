@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna;
 
 import java.lang.ref.SoftReference;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -522,6 +524,189 @@ public class NotesViewEntryData {
 			val = ((LMBCSString)val).getValue();
 		}
 		return val;
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a string
+	 * 
+	 * @param columnName programatic column name
+	 * @return string value or null
+	 */
+	public String getAsString(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof String) {
+			return (String) val;
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (valAsList.isEmpty()) {
+				return "";
+			}
+			else {
+				return valAsList.get(0).toString();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Convenience function that converts a column value to a string list
+	 * 
+	 * @param columnName programatic column name
+	 * @return string list value or null
+	 */
+	public List<String> getAsStringList(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof String) {
+			return Arrays.asList((String) val);
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType=true;
+			for (int i=0; i<valAsList.size(); i++) {
+				if (!(valAsList.get(i) instanceof String)) {
+					correctType=false;
+					break;
+				}
+			}
+			
+			if (correctType) {
+				return (List<String>) valAsList;
+			}
+			else {
+				List<String> strList = new ArrayList<String>();
+				for (int i=0; i<valAsList.size(); i++) {
+					strList.add(valAsList.get(i).toString());
+				}
+				return strList;
+			}
+		}
+		else if (val!=null) {
+			return Arrays.asList(val.toString());
+		}
+		return null;
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a {@link Calendar}
+	 * 
+	 * @param columnName programatic column name
+	 * @return calandar value or null
+	 */
+	public Calendar getAsCalendar(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Calendar) {
+			return (Calendar) val;
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (!valAsList.isEmpty()) {
+				Object firstVal = valAsList.get(0);
+				if (firstVal instanceof Calendar) {
+					return (Calendar) firstVal;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Convenience function that converts a column value to a {@link Calendar} list
+	 * 
+	 * @param columnName programatic column name
+	 * @return calandar list value or null
+	 */
+	public List<Calendar> getAsCalendarList(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Calendar) {
+			return Arrays.asList((Calendar) val);
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType=true;
+			for (int i=0; i<valAsList.size(); i++) {
+				if (!(valAsList.get(i) instanceof Calendar)) {
+					correctType=false;
+					break;
+				}
+			}
+			
+			if (correctType) {
+				return (List<Calendar>) valAsList;
+			}
+			else {
+				return null;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a double
+	 * 
+	 * @param columnName programatic column name
+	 * @return double
+	 */
+	public double getAsDouble(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return ((Number) val).doubleValue();
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (!valAsList.isEmpty()) {
+				Object firstVal = valAsList.get(0);
+				if (firstVal instanceof Number) {
+					return ((Number) val).doubleValue();
+				}
+			}
+		}
+		return 0;
+		
+	}
+	
+	public List<Double> getAsDoubleList(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return Arrays.asList(((Number) val).doubleValue());
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType=true;
+			boolean numberList=true;
+			
+			for (int i=0; i<valAsList.size(); i++) {
+				Object currObj = valAsList.get(i);
+				
+				if (currObj instanceof Double) {
+					//ok
+				}
+				else if (currObj instanceof Number) {
+					correctType=false;
+					numberList=true;
+				}
+				else {
+					correctType=false;
+					numberList=false;
+				}
+			}
+			
+			if (correctType) {
+				return (List<Double>) valAsList;
+			}
+			else if (numberList) {
+				List<Double> dblList = new ArrayList<Double>(valAsList.size());
+				for (int i=0; i<valAsList.size(); i++) {
+					dblList.add(((Number)valAsList.get(i)).doubleValue());
+				}
+				return dblList;
+			}
+			else {
+				return null;
+			}
+		}
+		return null;
+	
 	}
 	
 	/**
