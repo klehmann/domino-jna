@@ -93,6 +93,9 @@ public interface NotesCAPI extends Library {
 	short b32_NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	short b64_NSFDbSpaceUsage(long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 
+	short b32_NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
+	short b64_NSFDbSpaceUsageScaled (long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
+	
 	short b32_NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
 	short b64_NSFDbDeleteNotes(long hDB, long hTable, Memory retUNIDArray);
 
