@@ -223,7 +223,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				colFromDbView.update();
 				
 				//and open the same view in the external database
-				NotesCollection colFromDbData = dbView.openCollectionByName("People");
+				NotesCollection colFromDbData = dbData.openCollectionByName("People");
 				colFromDbData.update();
 				
 				
@@ -235,10 +235,14 @@ public class TestViewTraversal extends BaseJNATestClass {
 				long t1=System.currentTimeMillis();
 				System.out.println("Reading summary data and note ids of "+entriesFromDbView.size()+" top level entries took "+(t1-t0)+"ms");
 
+
 				List<NotesViewEntryData> entriesFromDbData = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_PEER),
 						Integer.MAX_VALUE,
 						returnValues, new EntriesAsListCallback(Integer.MAX_VALUE));
+
+				Assert.assertTrue("View opened with remote database is not empty", entriesFromDbView.size()!=0);
+				Assert.assertTrue("View opened in data db is not empty", entriesFromDbData.size()!=0);
 
 				Assert.assertEquals("Same number of view entries in view db and data db collection",
 						entriesFromDbData.size(), entriesFromDbView.size());
