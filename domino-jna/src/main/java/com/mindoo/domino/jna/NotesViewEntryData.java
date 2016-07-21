@@ -4,6 +4,7 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.utils.LMBCSString;
+import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 
 /**
@@ -410,8 +412,16 @@ public class NotesViewEntryData {
 	 * @return programmatic column names converted to lowercase
 	 */
 	public Iterator<String> getColumnNames() {
-		if (m_summaryData!=null) {
-			return m_summaryData.keySet().iterator();
+		if ((m_parentCollection.getNoteId() & NotesCAPI.NOTE_ID_SPECIAL) == NotesCAPI.NOTE_ID_SPECIAL) {
+			//special collection (e.g. design collection) where we cannot use the legacy API to read
+			//the column names
+			if (m_summaryData!=null) {
+				//if we have used ReadMask.SUMMARY to read the data, we can take the summary map keys
+				return m_summaryData.keySet().iterator();
+			}
+			else {
+				return Collections.emptyIterator();
+			}
 		}
 		else {
 			return m_parentCollection.getColumnNames();
@@ -550,6 +560,36 @@ public class NotesViewEntryData {
 	}
 
 	/**
+	 * Convenience function that converts a column value to an abbreviated name
+	 * 
+	 * @param columnName programatic column name
+	 * @return name or null
+	 */
+	public String getAsNameAbbreviated(String columnName) {
+		String nameStr = getAsString(columnName);
+		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a list of abbreviated names
+	 * 
+	 * @param columnName programatic column name
+	 * @return names or null
+	 */
+	public List<String> getAsNamesListAbbreviated(String columnName) {
+		List<String> strList = getAsStringList(columnName);
+		if (strList!=null) {
+			List<String> namesAbbr = new ArrayList<String>(strList.size());
+			for (int i=0; i<strList.size(); i++) {
+				namesAbbr.add(NotesNamingUtils.toAbbreviatedName(strList.get(i)));
+			}
+			return namesAbbr;
+		}
+		else
+			return null;
+	}
+	
+	/**
 	 * Convenience function that converts a column value to a string list
 	 * 
 	 * @param columnName programatic column name
@@ -662,9 +702,37 @@ public class NotesViewEntryData {
 			}
 		}
 		return 0;
-		
 	}
-	
+
+	/**
+	 * Convenience function that converts a column value to a double
+	 * 
+	 * @param columnName programatic column name
+	 * @return double
+	 */
+	public int getAsInteger(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return ((Number) val).intValue();
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (!valAsList.isEmpty()) {
+				Object firstVal = valAsList.get(0);
+				if (firstVal instanceof Number) {
+					return ((Number) val).intValue();
+				}
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * Convenience function that converts a column value to a double list
+	 * 
+	 * @param columnName programatic column name
+	 * @return double list
+	 */
 	public List<Double> getAsDoubleList(String columnName) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -706,9 +774,57 @@ public class NotesViewEntryData {
 			}
 		}
 		return null;
-	
 	}
-	
+
+	/**
+	 * Convenience function that converts a column value to a integer list
+	 * 
+	 * @param columnName programatic column name
+	 * @return integer list
+	 */
+	public List<Integer> getAsIntegerList(String columnName) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return Arrays.asList(((Number) val).intValue());
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType=true;
+			boolean numberList=true;
+			
+			for (int i=0; i<valAsList.size(); i++) {
+				Object currObj = valAsList.get(i);
+				
+				if (currObj instanceof Integer) {
+					//ok
+				}
+				else if (currObj instanceof Number) {
+					correctType=false;
+					numberList=true;
+				}
+				else {
+					correctType=false;
+					numberList=false;
+				}
+			}
+			
+			if (correctType) {
+				return (List<Integer>) valAsList;
+			}
+			else if (numberList) {
+				List<Integer> intList = new ArrayList<Integer>(valAsList.size());
+				for (int i=0; i<valAsList.size(); i++) {
+					intList.add(((Number)valAsList.get(i)).intValue());
+				}
+				return intList;
+			}
+			else {
+				return null;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Sets the sizes in bytes of the collection entry column values
 	 * 
