@@ -3,7 +3,9 @@ package com.mindoo.domino.jna.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -26,7 +28,36 @@ import com.sun.jna.ptr.ShortByReference;
  * @author Karsten Lehmann
  */
 public class NotesNamingUtils {
+	private static final int MAX_STRINGCACHE_SIZE = 500;
+	
+	private static LinkedHashMap<String, String> m_nameAbbrCache = new LinkedHashMap<String, String>(16,0.75f, true) {
+		private static final long serialVersionUID = -5818239831757810895L;
 
+		@Override
+		protected boolean removeEldestEntry (Map.Entry<String,String> eldest) {
+			if (size() > MAX_STRINGCACHE_SIZE) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	};
+	private static LinkedHashMap<String, String> m_nameCanonicalCache = new LinkedHashMap<String, String>(16,0.75f, true) {
+		private static final long serialVersionUID = -5818239831757810895L;
+
+		@Override
+		protected boolean removeEldestEntry (Map.Entry<String,String> eldest) {
+			if (size() > MAX_STRINGCACHE_SIZE) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	};
+
+	
 	/**
 	 * This function converts a distinguished name in abbreviated format to canonical format.
 	 * A fully distinguished name is in canonical format - it contains all possible naming components.
@@ -53,7 +84,13 @@ public class NotesNamingUtils {
 			return null;
 		if (name.length()==0)
 			return name;
-		
+
+		String cacheKey = name + ((templateName!=null && templateName.length()>0) ? ("|" + templateName) : "");
+		String abbrName = m_nameCanonicalCache.get(cacheKey);
+		if (abbrName!=null) {
+			return abbrName;
+		}
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
@@ -64,6 +101,9 @@ public class NotesNamingUtils {
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
+		
+		m_nameCanonicalCache.put(cacheKey, sOutName);
+		
 		return sOutName;
 	}
 	
@@ -94,8 +134,14 @@ public class NotesNamingUtils {
 		if (name.length()==0)
 			return name;
 		
+		String cacheKey = name + ((templateName!=null && templateName.length()>0) ? ("|" + templateName) : "");
+		String abbrName = m_nameAbbrCache.get(cacheKey);
+		if (abbrName!=null) {
+			return abbrName;
+		}
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
+		Memory templateNameMem = templateName==null || templateName.length()==0 ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
 		Memory outNameMem = new Memory(NotesCAPI.MAXUSERNAME);
 		ShortByReference outLength = new ShortByReference();
@@ -104,6 +150,9 @@ public class NotesNamingUtils {
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
+		
+		m_nameAbbrCache.put(cacheKey, sOutName);
+		
 		return sOutName;
 	}
 
