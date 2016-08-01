@@ -975,6 +975,63 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Opens an agent in the databaser
+	 * 
+	 * @param agentName agent name
+	 * @return agent or null if not found
+	 */
+	public NotesAgent getAgent(String agentName) {
+		checkHandle();
+
+		Memory agentNameLMBCS = NotesStringUtils.toLMBCS(agentName, true);
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		IntBuffer retAgentNoteID = IntBuffer.allocate(1);
+		retAgentNoteID.clear();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NIFFindDesignNoteExt(m_hDB64, agentNameLMBCS, NotesCAPI.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
+		}
+		else {
+			result = notesAPI.b32_NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesCAPI.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
+		}
+		if (result==1028) {
+			//Entry not found in index
+			return null;
+		}
+		
+		//throws an error if agent cannot be found:
+		NotesErrorUtils.checkResult(result);
+		
+		int agentNoteId = retAgentNoteID.get(0);
+		if (agentNoteId==0) {
+			throw new NotesError(0, "Agent not found in database: "+agentName);
+		}
+		
+		NotesAgent agent;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethAgent = new LongByReference();
+			
+			result = notesAPI.b64_AgentOpen(m_hDB64, agentNoteId, rethAgent);
+			NotesErrorUtils.checkResult(result);
+			
+			agent = new NotesAgent(this, agentNoteId, rethAgent.getValue());
+		}
+		else {
+			IntByReference rethAgent = new IntByReference();
+			
+			result = notesAPI.b32_AgentOpen(m_hDB32, agentNoteId, rethAgent);
+			NotesErrorUtils.checkResult(result);
+			
+			agent = new NotesAgent(this, agentNoteId, rethAgent.getValue());
+		}
+		NotesGC.__objectCreated(agent);
+		
+		return agent;
+	}
+	
+	/**
 	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesCAPI}.
 	 * 
 	 * @param noteClasses bitmask of note classes to sign

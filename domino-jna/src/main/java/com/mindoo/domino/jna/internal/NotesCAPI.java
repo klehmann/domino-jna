@@ -467,8 +467,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	/** DBHANDLE of object store used by linked items */
 	public static short _NOTE_OBJSTORE_DB = 14;
 
-	
+	/** display only views and folder; version filtering */
 	public static final String DFLAGPAT_VIEWS_AND_FOLDERS = "-G40n^";
+	/** display things that are runnable; version filtering */
+	public static final String DFLAGPAT_TOOLSRUNMACRO = "-QXMBESIst5nmz{";
 
 	/** At least one of the "definition"
 	 * view items ($FORMULA, $COLLATION,
@@ -1552,6 +1554,90 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			ShortByReference retCompileErrorOffset,
 			ShortByReference retCompileErrorLength);
 
+	public short b32_AgentOpen (int hDB, int AgentNoteID, IntByReference rethAgent);
+	public short b64_AgentOpen (long hDB, int AgentNoteID, LongByReference rethAgent);
+	
+	public void b32_AgentClose (int hAgent);
+	public void b64_AgentClose (long hAgent);
+	
+	/* Use this flag to tell the run context that when it runs an
+		agent, you want it to check the privileges of the signer of
+		that agent and apply them. For example, if the signer of the
+		agent has "restricted" agent privileges, then the agent will
+		be restricted. If you don't set this flag, all agents run as
+		unrestricted.
+
+		List of security checks enabled by this flag:
+			Restricted/unrestricted agent
+			Can create databases
+			Is agent targeted to this machine
+			Is user allowed to access this machine
+			Can user run personal agents
+	*/
+
+	public static final int AGENT_SECURITY_OFF = 0x00;		/* CreateRunContext */
+	public static final int AGENT_SECURITY_ON = 0x01;		/* CreateRunContext */
+	public static final int AGENT_REOPEN_DB = 0x10;		/* AgentRun */
+
+	public short b32_AgentCreateRunContext (int hAgent,
+											 Pointer pReserved,
+											 int dwFlags,
+											 IntByReference rethContext);
+	
+	public short b64_AgentCreateRunContext (long hAgent,
+			 Pointer pReserved,
+			 int dwFlags,
+			 LongByReference rethContext);
+	
+	public short b32_AgentSetDocumentContext(int hAgentCtx, int hNote);
+	public short b64_AgentSetDocumentContext(long hAgentCtx, long hNote);
+	
+	/* allow api users to set time execution limit. if not set, default is 0 which means no limit */
+	public short b32_AgentSetTimeExecutionLimit(int hAgentCtx, int timeLimit);
+	public short b64_AgentSetTimeExecutionLimit(long hAgentCtx, int timeLimit);
+
+	/* allow api users to find out if the agent is enabled */
+	public boolean b32_AgentIsEnabled(int hAgent);
+	public boolean b64_AgentIsEnabled(long hAgent);
+
+	/* Definitions for stdout redirection types. This specifies where
+		output from the LotusScript "print" statement will go */
+
+	public static short AGENT_REDIR_NONE = 0;		/* goes to the bit bucket */
+	public static short AGENT_REDIR_LOG	= 1;		/* goes to the Notes log (default) */
+	public static short AGENT_REDIR_MEMORY = 2;		/* goes to a memory buffer, cleared each AgentRun */
+	public static short AGENT_REDIR_MEMAPPEND = 3;		/* goes to buffer, append mode for each agent */
+
+	public short b32_AgentRedirectStdout(int hAgentCtx, short redirType);
+	public short b64_AgentRedirectStdout(long hAgentCtx, short redirType);
+	
+	public void b32_AgentQueryStdoutBuffer(int hAgentCtx, IntByReference retHdl, IntByReference retSize);
+	public void b64_AgentQueryStdoutBuffer(long hAgentCtx, LongByReference retHdl, IntByReference retSize);
+	
+	public void b32_AgentDestroyRunContext (int hAgentCtx);
+	public void b64_AgentDestroyRunContext (long hAgentCtx);
+	
+	public short AgentDelete (int hAgent); /* delete agent */
+	public short AgentDelete (long hAgent); /* delete agent */
+	
+
+	/* If AGENT_REOPEN_DB is set, the AgentRun call will reopen
+		the agent's database with the privileges of the signer of
+		the agent. If the flag is not set, the agent's "context"
+		database will be open with the privileges of the current
+		user (meaning, the current Notes id, or the current Domino
+		web user). */
+
+	public short b32_AgentRun (int hAgent,
+								int hAgentCtx,
+							    int hSelection,
+								int dwFlags);
+	public short b64_AgentRun (long hAgent,
+			long hAgentCtx,
+		    int hSelection,
+			int dwFlags);
+
+	
 	/** does not match formula (deleted or updated) */
 	public static byte SE_FNOMATCH = 0x00;
 	/** matches formula */
