@@ -540,9 +540,10 @@ public class NotesViewEntryData {
 	 * Convenience function that converts a column value to a string
 	 * 
 	 * @param columnName programatic column name
+	 * @param defaultValue default value if column is empty or is not a number
 	 * @return string value or null
 	 */
-	public String getAsString(String columnName) {
+	public String getAsString(String columnName, String defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof String) {
 			return (String) val;
@@ -550,13 +551,13 @@ public class NotesViewEntryData {
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
 			if (valAsList.isEmpty()) {
-				return "";
+				return defaultValue;
 			}
 			else {
 				return valAsList.get(0).toString();
 			}
 		}
-		return null;
+		return defaultValue;
 	}
 
 	/**
@@ -566,7 +567,7 @@ public class NotesViewEntryData {
 	 * @return name or null
 	 */
 	public String getAsNameAbbreviated(String columnName) {
-		String nameStr = getAsString(columnName);
+		String nameStr = getAsString(columnName, null);
 		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
 	}
 	
@@ -577,7 +578,7 @@ public class NotesViewEntryData {
 	 * @return names or null
 	 */
 	public List<String> getAsNamesListAbbreviated(String columnName) {
-		List<String> strList = getAsStringList(columnName);
+		List<String> strList = getAsStringList(columnName, null);
 		if (strList!=null) {
 			List<String> namesAbbr = new ArrayList<String>(strList.size());
 			for (int i=0; i<strList.size(); i++) {
@@ -593,9 +594,10 @@ public class NotesViewEntryData {
 	 * Convenience function that converts a column value to a string list
 	 * 
 	 * @param columnName programatic column name
+	 * @param defaultValue default value if column is empty or is not a number
 	 * @return string list value or null
 	 */
-	public List<String> getAsStringList(String columnName) {
+	public List<String> getAsStringList(String columnName, List<String> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof String) {
 			return Arrays.asList((String) val);
@@ -624,16 +626,17 @@ public class NotesViewEntryData {
 		else if (val!=null) {
 			return Arrays.asList(val.toString());
 		}
-		return null;
+		return defaultValue;
 	}
 	
 	/**
 	 * Convenience function that converts a column value to a {@link Calendar}
 	 * 
 	 * @param columnName programatic column name
-	 * @return calandar value or null
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return calendar value or null
 	 */
-	public Calendar getAsCalendar(String columnName) {
+	public Calendar getAsCalendar(String columnName, Calendar defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Calendar) {
 			return (Calendar) val;
@@ -647,16 +650,17 @@ public class NotesViewEntryData {
 				}
 			}
 		}
-		return null;
+		return defaultValue;
 	}
 
 	/**
 	 * Convenience function that converts a column value to a {@link Calendar} list
 	 * 
 	 * @param columnName programatic column name
-	 * @return calandar list value or null
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return calendar list value or null
 	 */
-	public List<Calendar> getAsCalendarList(String columnName) {
+	public List<Calendar> getAsCalendarList(String columnName, List<Calendar> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Calendar) {
 			return Arrays.asList((Calendar) val);
@@ -675,19 +679,20 @@ public class NotesViewEntryData {
 				return (List<Calendar>) valAsList;
 			}
 			else {
-				return null;
+				return defaultValue;
 			}
 		}
-		return null;
+		return defaultValue;
 	}
 	
 	/**
 	 * Convenience function that converts a column value to a double
 	 * 
 	 * @param columnName programatic column name
+	 * @param defaultValue default value if column is empty or is not a number
 	 * @return double
 	 */
-	public double getAsDouble(String columnName) {
+	public Double getAsDouble(String columnName, Double defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
 			return ((Number) val).doubleValue();
@@ -701,16 +706,17 @@ public class NotesViewEntryData {
 				}
 			}
 		}
-		return 0;
+		return defaultValue;
 	}
 
 	/**
 	 * Convenience function that converts a column value to a double
 	 * 
 	 * @param columnName programatic column name
-	 * @return double
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return integer
 	 */
-	public int getAsInteger(String columnName) {
+	public Integer getAsInteger(String columnName, Integer defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
 			return ((Number) val).intValue();
@@ -724,16 +730,17 @@ public class NotesViewEntryData {
 				}
 			}
 		}
-		return 0;
+		return defaultValue;
 	}
 
 	/**
 	 * Convenience function that converts a column value to a double list
 	 * 
 	 * @param columnName programatic column name
+	 * @param defaultValue default value if column is empty or is not a number
 	 * @return double list
 	 */
-	public List<Double> getAsDoubleList(String columnName) {
+	public List<Double> getAsDoubleList(String columnName, List<Double> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
 			return Arrays.asList(((Number) val).doubleValue());
@@ -770,19 +777,20 @@ public class NotesViewEntryData {
 				return dblList;
 			}
 			else {
-				return null;
+				return defaultValue;
 			}
 		}
-		return null;
+		return defaultValue;
 	}
 
 	/**
 	 * Convenience function that converts a column value to a integer list
 	 * 
 	 * @param columnName programatic column name
+	 * @param defaultValue default value if column is empty or is not a number
 	 * @return integer list
 	 */
-	public List<Integer> getAsIntegerList(String columnName) {
+	public List<Integer> getAsIntegerList(String columnName, List<Integer> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
 			return Arrays.asList(((Number) val).intValue());
@@ -819,10 +827,10 @@ public class NotesViewEntryData {
 				return intList;
 			}
 			else {
-				return null;
+				return defaultValue;
 			}
 		}
-		return null;
+		return defaultValue;
 	}
 
 	/**
