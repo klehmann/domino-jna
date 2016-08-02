@@ -190,17 +190,19 @@ public class NotesAgent implements IRecyclableNotesObject {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-		int flags = 0;
+		int ctxFlags = 0;
+		int runFlags = 0;
+		
 		if (runAsSigner) {
-			flags = flags | NotesCAPI.AGENT_REOPEN_DB;
+			runFlags = NotesCAPI.AGENT_REOPEN_DB;
 		}
 		if (checkSecurity) {
-			flags = flags | NotesCAPI.AGENT_SECURITY_ON;
+			ctxFlags = NotesCAPI.AGENT_SECURITY_ON;
 		}
 
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethContext = new LongByReference();
-			short result = notesAPI.b64_AgentCreateRunContext(m_hAgentB64, null, flags, rethContext);
+			short result = notesAPI.b64_AgentCreateRunContext(m_hAgentB64, null, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
 			try {
@@ -219,7 +221,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), note.getHandle64());
 				}
 				
-				result = notesAPI.b64_AgentRun(m_hAgentB64, rethContext.getValue(), 0, 0);
+				result = notesAPI.b64_AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
@@ -247,7 +249,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethContext = new IntByReference();
-			short result = notesAPI.b32_AgentCreateRunContext(m_hAgentB32, null, flags, rethContext);
+			short result = notesAPI.b32_AgentCreateRunContext(m_hAgentB32, null, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
 			try {
@@ -266,7 +268,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 					notesAPI.b32_AgentSetDocumentContext(rethContext.getValue(), note.getHandle32());
 				}
 
-				result = notesAPI.b32_AgentRun(m_hAgentB32, rethContext.getValue(), 0, 0);
+				result = notesAPI.b32_AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
