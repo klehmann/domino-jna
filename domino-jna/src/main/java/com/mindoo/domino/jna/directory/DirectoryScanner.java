@@ -55,7 +55,7 @@ public abstract class DirectoryScanner {
 				public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate created,
 						NotesTimeDate modified, ItemTableData summaryBufferData) {
 
-					Map<String,Object> dataAsMap = summaryBufferData.asMap();
+					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);
 					
 					Object typeObj = dataAsMap.get("$type");
 					if (typeObj instanceof String) {

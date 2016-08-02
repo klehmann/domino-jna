@@ -219,7 +219,7 @@ public class NotesLookupResultBufferDecoder {
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
 
-					Map<String,Object> itemValues = itemTableData.asMap();
+					Map<String,Object> itemValues = itemTableData.asMap(false);
 					newData.setSummaryData(itemValues);
 				}
 			}
@@ -671,38 +671,58 @@ public class NotesLookupResultBufferDecoder {
 		 * @return data as map
 		 */
 		public Map<String,Object> asMap() {
+			return asMap(true);
+		}
+		
+		/**
+		 * Converts the values to a Java {@link Map}
+		 * 
+		 * @param decodeLMBCS true to convert {@link LMBCSString} objects and lists to Java Strings
+		 * @return data as map
+		 */
+		public Map<String,Object> asMap(boolean decodeLMBCS) {
 			Map<String,Object> data = new CaseInsensitiveMap<String, Object>();
 			int itemCount = getItemsCount();
 			for (int i=0; i<itemCount; i++) {
 				Object val = m_itemValues[i];
 				
 				if (val instanceof LMBCSString) {
-					data.put(m_itemNames[i], ((LMBCSString)val).getValue());
+					if (decodeLMBCS) {
+						data.put(m_itemNames[i], ((LMBCSString)val).getValue());
+					}
+					else {
+						data.put(m_itemNames[i], val);
+					}
 				}
 				else if (val instanceof List) {
-					//check for LMBCS strings
-					List valAsList = (List) val;
-					boolean hasLMBCS = false;
-					
-					for (int j=0; j<valAsList.size(); j++) {
-						if (valAsList.get(j) instanceof LMBCSString) {
-							hasLMBCS = true;
-							break;
-						}
-					}
-					
-					if (hasLMBCS) {
-						List<Object> convList = new ArrayList<Object>(valAsList.size());
+					if (decodeLMBCS) {
+						//check for LMBCS strings
+						List valAsList = (List) val;
+						boolean hasLMBCS = false;
+						
 						for (int j=0; j<valAsList.size(); j++) {
-							Object currObj = valAsList.get(j);
-							if (currObj instanceof LMBCSString) {
-								convList.add(((LMBCSString)currObj).getValue());
-							}
-							else {
-								convList.add(currObj);
+							if (valAsList.get(j) instanceof LMBCSString) {
+								hasLMBCS = true;
+								break;
 							}
 						}
-						data.put(m_itemNames[i], convList);
+						
+						if (hasLMBCS) {
+							List<Object> convList = new ArrayList<Object>(valAsList.size());
+							for (int j=0; j<valAsList.size(); j++) {
+								Object currObj = valAsList.get(j);
+								if (currObj instanceof LMBCSString) {
+									convList.add(((LMBCSString)currObj).getValue());
+								}
+								else {
+									convList.add(currObj);
+								}
+							}
+							data.put(m_itemNames[i], convList);
+						}
+						else {
+							data.put(m_itemNames[i], val);
+						}
 					}
 					else {
 						data.put(m_itemNames[i], val);
