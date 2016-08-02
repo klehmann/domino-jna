@@ -42,6 +42,7 @@ import com.mindoo.domino.jna.structs.NotesSearchMatch32;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -215,14 +216,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(m_namesList.getHandle64());
 				
 				try {
-					NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
-					namesList.read();
-
 					if (m_authenticateUser) {
-						//setting authenticated flag for the user is required when running on the server
-						namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-						namesList.write();
-						namesList.read();
+						if (notesAPI instanceof WinNotesCAPI) {
+							WinNotesNamesListHeader64 namesList = new WinNotesNamesListHeader64(namesListBufferPtr);
+							namesList.read();
+							//setting authenticated flag for the user is required when running on the server
+							namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
+							namesList.write();
+							namesList.read();
+						}
+						else {
+							NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
+							namesList.read();
+							//setting authenticated flag for the user is required when running on the server
+							namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
+							namesList.write();
+							namesList.read();
+						}
 					}
 					
 					//now try to open the database as this user
