@@ -24,7 +24,7 @@ public class LMBCSStringConversionCache {
 	public static String get(LMBCSString lmbcsString) {
 		@SuppressWarnings("unchecked")
 		Map<LMBCSString,String> cache = (Map<LMBCSString, String>) NotesGC.getCustomValue(CACHE_KEY);
-		String convertedString;
+		String stringFromCache;
 		
 		if (cache==null) {
 			cache = new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
@@ -41,19 +41,24 @@ public class LMBCSStringConversionCache {
 				}
 			};
 			NotesGC.setCustomValue(CACHE_KEY, cache);
-			convertedString = null;
+			stringFromCache = null;
 		}
 		else {
-			convertedString = cache.get(lmbcsString);
+			stringFromCache = cache.get(lmbcsString);
 		}
 
-		if (convertedString==null) {
+		String convertedString;
+		
+		if (stringFromCache==null) {
 			byte[] dataArr = lmbcsString.getData();
 			Memory dataMem = new Memory(dataArr.length);
 			dataMem.write(0, dataArr, 0, dataArr.length);
 			
 			convertedString = NotesStringUtils.fromLMBCS(dataMem, dataArr.length);
 			cache.put(lmbcsString, convertedString);
+		}
+		else {
+			convertedString = stringFromCache;
 		}
 		return convertedString;
 	}
