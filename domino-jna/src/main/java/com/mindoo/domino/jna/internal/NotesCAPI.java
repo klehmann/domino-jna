@@ -25,6 +25,7 @@ import com.mindoo.domino.jna.structs.NotesTime;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesTimeDatePair;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
@@ -52,6 +53,7 @@ public interface NotesCAPI extends Library {
 	public final int itemValueTableSize = new NotesItemValueTable().size();
 	public final int tableItemSize = new NotesTableItem().size();
 	public final int oidSize = new NotesOriginatorId().size();
+	public final int winNamesListHeaderSize64 = new WinNotesNamesListHeader64().size();
 	public final int namesListHeaderSize32 = new NotesNamesListHeader32().size();
 	public final int namesListHeaderSize64 = new NotesNamesListHeader64().size();
 	public final int objectDescriptorSize = new NotesObjectDescriptor().size();

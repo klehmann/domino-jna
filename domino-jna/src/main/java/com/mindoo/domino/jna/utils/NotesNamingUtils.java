@@ -13,8 +13,10 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -240,13 +242,22 @@ public class NotesNamingUtils {
 			throw new IllegalStateException("Only supported for 64 bit");
 		}
 		
-		Memory namesListMem = new Memory(NotesCAPI.namesListHeaderSize64);
-		NotesNamesListHeader64 namesListHeader = new NotesNamesListHeader64(namesListMem);
-		namesListHeader.NumNames = (short) (names.size() & 0xffff);
-		namesListHeader.write();
+		Memory namesListMem;
+		if (notesAPI instanceof WinNotesCAPI) {
+			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize64);
+			WinNotesNamesListHeader64 namesListHeader = new WinNotesNamesListHeader64(namesListMem);
+			namesListHeader.NumNames = (short) (names.size() & 0xffff);
+			namesListHeader.write();
+		}
+		else {
+			namesListMem = new Memory(NotesCAPI.namesListHeaderSize64);
+			NotesNamesListHeader64 namesListHeader = new NotesNamesListHeader64(namesListMem);
+			namesListHeader.NumNames = (short) (names.size() & 0xffff);
+			namesListHeader.write();
+		}
 
 		LongByReference retHandle = new LongByReference();
-		short result = notesAPI.b64_OSMemAlloc((short) 0, NotesCAPI.namesListHeaderSize64 + bOut.size(), retHandle);
+		short result = notesAPI.b64_OSMemAlloc((short) 0, (int) namesListMem.size() + bOut.size(), retHandle);
 		NotesErrorUtils.checkResult(result);
 		
 		long retHandleAsLong = retHandle.getValue();

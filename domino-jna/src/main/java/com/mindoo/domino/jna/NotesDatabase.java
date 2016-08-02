@@ -139,7 +139,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			//make sure server and username are in canonical format
 			m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
 			//TODO fix this
-			m_isOnServer = true;//session.isOnServer();
+			m_isOnServer = session.isOnServer();
 			
 			if (server==null)
 				server = "";
@@ -195,7 +195,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongBuffer hDB = LongBuffer.allocate(1);
-			if (!m_isOnServer || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+			if (/* !m_isOnServer || */ (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
 				//open database as server
 				result = notesAPI.b64_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
@@ -242,7 +242,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntBuffer hDB = IntBuffer.allocate(1);
-			if (!m_isOnServer || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+			if (/*!m_isOnServer || */ (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
 				result = notesAPI.b32_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
