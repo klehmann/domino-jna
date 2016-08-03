@@ -17,6 +17,7 @@ public class NotesError extends RuntimeException {
 	 */
 	public NotesError(int id, String message) {
 		super(message);
+		m_id = id;
 	}
 
 	/**
@@ -28,6 +29,7 @@ public class NotesError extends RuntimeException {
 	 */
 	public NotesError(int id, String message, Throwable cause) {
 		super(message, cause);
+		m_id = id;
 	}
 
 	/**
