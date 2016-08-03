@@ -17,14 +17,14 @@ import lotus.domino.Session;
  */
 public class TestAgentExecution extends BaseJNATestClass {
 
-//	@Test
+	@Test
 	public void testAgentExecution_runAgent() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
-				NotesAgent testAgent = dbData.getAgent("(RunAgentTestLS)");
+				NotesAgent testAgent = dbData.getAgent("AgentRun Test LS");
 				
 				StringWriter stdOut = new StringWriter();
 				
