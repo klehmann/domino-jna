@@ -136,10 +136,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retOid);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retOid);
+			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
 		}
 		NotesOriginatorId oid = new NotesOriginatorId(retOid);
 		oid.read();

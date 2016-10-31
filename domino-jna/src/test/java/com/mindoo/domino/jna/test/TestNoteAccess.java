@@ -89,6 +89,8 @@ public class TestNoteAccess extends BaseJNATestClass {
 				NotesNote note = dbData.openNoteById(Integer.parseInt(doc.getNoteID(), 16),
 						EnumSet.noneOf(OpenNote.class));
 
+				Assert.assertEquals("NotesNote.getUNID returns a correct value", doc.getUniversalID(), note.getUNID());
+				
 				//check if read-only flag is set as expected
 				Assert.assertTrue("The note is read-only for "+userNameReadOnly, note.isReadOnly());
 				
