@@ -3,8 +3,6 @@ package com.mindoo.domino.jna;
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.constants.OpenNote;
@@ -299,25 +297,6 @@ public class NotesAgent implements IRecyclableNotesObject {
 				notesAPI.b32_AgentDestroyRunContext(rethContext.getValue());
 			}
 		}
-	}
-	
-	/** The get cpp method. */
-	private static Method getCppMethod;
-	
-	static {
-		try {
-			AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-				@Override
-				public Object run() throws Exception {
-					getCppMethod = lotus.domino.local.NotesBase.class.getDeclaredMethod("GetCppObj", (Class<?>[]) null);
-					getCppMethod.setAccessible(true);
-					return null;
-				}
-			});
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
 	}
 	
 	/**
