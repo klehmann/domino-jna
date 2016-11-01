@@ -288,13 +288,13 @@ public class NotesNamingUtils {
 		if (NotesJNAContext.is64Bit()) {
 			long handle64 = b64_writeUserNamesList(names);
 			NotesNamesList namesList = new NotesNamesList(handle64);
-			NotesGC.__objectCreated(namesList);
+			//NotesGC.__objectCreated(namesList);
 			return namesList;
 		}
 		else {
 			int handle32 = b32_writeUserNamesList(names);
 			NotesNamesList namesList = new NotesNamesList(handle32);
-			NotesGC.__objectCreated(namesList);
+			//NotesGC.__objectCreated(namesList);
 			return namesList;
 		}
 	}
@@ -320,7 +320,7 @@ public class NotesNamingUtils {
 			long hUserNamesList64 = rethNamesList.getValue();
 			
 			NotesNamesList newList =  new NotesNamesList(hUserNamesList64);
-			NotesGC.__objectCreated(newList);
+//			NotesGC.__objectCreated(newList);
 			return newList;
 		}
 		else {
@@ -330,7 +330,7 @@ public class NotesNamingUtils {
 			int hUserNamesList32 = rethNamesList.getValue();
 			
 			NotesNamesList newList = new NotesNamesList(hUserNamesList32);
-			NotesGC.__objectCreated(newList);
+//			NotesGC.__objectCreated(newList);
 			return newList;
 		}
 	}
