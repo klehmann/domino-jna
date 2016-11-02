@@ -122,7 +122,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				if (m_idTableHandle64!=0) {
 					short result = notesAPI.b64_IDDestroyTable(m_idTableHandle64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_idTableHandle64=0;
 					m_isRecycled = true;
 				}
@@ -131,7 +131,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				if (m_idTableHandle32!=0) {
 					short result = notesAPI.b32_IDDestroyTable(m_idTableHandle32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_idTableHandle32=0;
 					m_isRecycled = true;
 				}
@@ -156,13 +156,13 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			if (m_idTableHandle64==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b64_checkValidHandle(getClass(), m_idTableHandle64);
+				NotesGC.__b64_checkValidObjectHandle(getClass(), m_idTableHandle64);
 		}
 		else {
 			if (m_idTableHandle32==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b32_checkValidHandle(getClass(), m_idTableHandle32);
+				NotesGC.__b32_checkValidObjectHandle(getClass(), m_idTableHandle32);
 		}
 	}
 	

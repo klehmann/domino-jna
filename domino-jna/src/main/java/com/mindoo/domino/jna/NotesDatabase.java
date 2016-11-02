@@ -553,7 +553,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB64!=0) {
 					short result = notesAPI.b64_NSFDbClose(m_hDB64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_hDB64=0;
 				}
 			}
@@ -561,14 +561,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB32!=0) {
 					short result = notesAPI.b32_NSFDbClose(m_hDB32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_hDB32=0;
 				}
 			}
 			
 			if (m_namesList!=null) {
-				if (!m_namesList.isRecycled()) {
-					m_namesList.recycle();
+				if (!m_namesList.isFreed()) {
+					m_namesList.free();
 					m_namesList = null;
 				}
 			}
@@ -591,12 +591,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hDB64==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b64_checkValidHandle(getClass(), m_hDB64);
+			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hDB64);
 		}
 		else {
 			if (m_hDB32==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b32_checkValidHandle(getClass(), m_hDB32);
+			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hDB32);
 		}
 	}
 

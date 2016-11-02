@@ -93,12 +93,12 @@ public class NotesAgent implements IRecyclableNotesObject {
 
 		if (NotesJNAContext.is64Bit()) {
 			notesAPI.b64_AgentClose(m_hAgentB64);
-			NotesGC.__objectRecycled(this);
+			NotesGC.__objectBeeingBeRecycled(this);
 			m_hAgentB64=0;
 		}
 		else {
 			notesAPI.b32_AgentClose(m_hAgentB32);
-			NotesGC.__objectRecycled(this);
+			NotesGC.__objectBeeingBeRecycled(this);
 			m_hAgentB32=0;
 		}
 	}
@@ -130,12 +130,12 @@ public class NotesAgent implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hAgentB64==0)
 				throw new NotesError(0, "Agent already recycled");
-			NotesGC.__b64_checkValidHandle(getClass(), m_hAgentB64);
+			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hAgentB64);
 		}
 		else {
 			if (m_hAgentB32==0)
 				throw new NotesError(0, "Agent already recycled");
-			NotesGC.__b32_checkValidHandle(getClass(), m_hAgentB32);
+			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hAgentB32);
 		}
 	}
 

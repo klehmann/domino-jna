@@ -565,13 +565,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 				if (NotesJNAContext.is64Bit()) {
 					result = notesAPI.b64_NIFCloseCollection(m_hCollection64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_hCollection64=0;
 				}
 				else {
 					result = notesAPI.b32_NIFCloseCollection(m_hCollection32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(this);
 					m_hCollection32=0;
 				}
 				
@@ -587,12 +587,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b64_checkValidHandle(getClass(), m_hCollection64);
+			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hCollection64);
 		}
 		else {
 			if (m_hCollection32==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b32_checkValidHandle(getClass(), m_hCollection32);
+			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hCollection32);
 		}
 	}
 

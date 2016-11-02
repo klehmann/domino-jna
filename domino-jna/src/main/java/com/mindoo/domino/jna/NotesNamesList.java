@@ -4,8 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
+import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
@@ -22,7 +23,7 @@ import com.sun.jna.Pointer;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNamesList implements IRecyclableNotesObject {
+public class NotesNamesList implements IAllocatedMemory {
 	private int m_handle32;
 	private long m_handle64;
 	private List<String> m_names;
@@ -47,27 +48,27 @@ public class NotesNamesList implements IRecyclableNotesObject {
 	}
 
 	@Override
-	public void recycle() {
-		if (m_noRecycle || isRecycled())
+	public void free() {
+		if (m_noRecycle || isFreed())
 			return;
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
 			short result = notesAPI.b64_OSMemFree(m_handle64);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__objectRecycled(this);
+			NotesGC.__memoryBeeingFreed(this);
 			m_handle64=0;
 		}
 		else {
 			short result = notesAPI.b32_OSMemFree(m_handle32);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__objectRecycled(this);
+			NotesGC.__memoryBeeingFreed(this);
 			m_handle32=0;
 		}
 	}
 
 	@Override
-	public boolean isRecycled() {
+	public boolean isFreed() {
 		if (NotesJNAContext.is64Bit()) {
 			return m_handle64==0;
 		}
@@ -86,10 +87,26 @@ public class NotesNamesList implements IRecyclableNotesObject {
 		return m_handle64;
 	}
 
+	/**
+	 * Checks if the database is already recycled
+	 */
+	private void checkHandle() {
+		if (NotesJNAContext.is64Bit()) {
+			if (m_handle64==0)
+				throw new NotesError(0, "Memory already freed");
+			NotesGC.__b64_checkValidMemHandle(getClass(), m_handle64);
+		}
+		else {
+			if (m_handle32==0)
+				throw new NotesError(0, "Memory already freed");
+			NotesGC.__b64_checkValidMemHandle(getClass(), m_handle32);
+		}
+	}
+
 	@Override
 	public String toString() {
-		if (isRecycled()) {
-			return "NotesNamesList [recycled]";
+		if (isFreed()) {
+			return "NotesNamesList [freed]";
 		}
 		else {
 			return "NotesNamesList [handle="+(NotesJNAContext.is64Bit() ? m_handle64 : m_handle32)+", values="+getNames()+"]";
@@ -102,6 +119,8 @@ public class NotesNamesList implements IRecyclableNotesObject {
 	 * @return names
 	 */
 	public List<String> getNames() {
+		checkHandle();
+		
 		if (m_names==null) {
 			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 

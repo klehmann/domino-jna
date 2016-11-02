@@ -68,6 +68,8 @@ public class BaseJNATestClass {
 
 				@Override
 				public T call() throws Exception {
+					NotesGC.setDebugLoggingEnabled(true);
+					
 					T result = callable.call(session[0]);
 					return result;
 				}
