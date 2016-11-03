@@ -26,6 +26,7 @@ The project provides functionality that is not available in the classic Java API
 * clearing the replication history
 * fast noteid / UNID conversion
 * compute @Usernameslist values for any Notes user
+* faster **formula execution on documents** with document modified/selected/deleted by formula check
 
 **Please note:**
 
