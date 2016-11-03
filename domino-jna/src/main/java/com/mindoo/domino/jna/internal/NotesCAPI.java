@@ -1556,6 +1556,37 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			ShortByReference retCompileErrorOffset,
 			ShortByReference retCompileErrorLength);
 
+	public short b64_NSFComputeStart(
+			short Flags,
+			Pointer lpCompiledFormula,
+			LongByReference rethCompute);
+
+	public short b32_NSFComputeStart(
+			short Flags,
+			Pointer lpCompiledFormula,
+			IntByReference rethCompute);
+
+	public short b64_NSFComputeStop(long hCompute);
+	public short b32_NSFComputeStop(int hCompute);
+
+	public short b64_NSFComputeEvaluate(
+			long  hCompute,
+			long hNote,
+			LongByReference rethResult,
+			ShortByReference retResultLength,
+			IntByReference retNoteMatchesFormula,
+			IntByReference retNoteShouldBeDeleted,
+			IntByReference retNoteModified);
+	
+	public short b32_NSFComputeEvaluate(
+			int  hCompute,
+			int hNote,
+			IntByReference rethResult,
+			ShortByReference retResultLength,
+			IntByReference retNoteMatchesFormula,
+			IntByReference retNoteShouldBeDeleted,
+			IntByReference retNoteModified);
+
 	public short b32_AgentOpen (int hDB, int AgentNoteID, IntByReference rethAgent);
 	public short b64_AgentOpen (long hDB, int AgentNoteID, LongByReference rethAgent);
 	
