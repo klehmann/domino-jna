@@ -890,8 +890,9 @@ public class NotesViewEntryData {
 			sb.append(",id="+m_noteId);
 		}
 		
-		if (m_unid!=null) {
-			sb.append(",unid="+m_unid);
+		String unid = getUNID();
+		if (unid!=null) {
+			sb.append(",unid="+unid);
 		}
 		
 		String posStr = getPositionStr();
