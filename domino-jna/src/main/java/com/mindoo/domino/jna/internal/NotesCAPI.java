@@ -2004,4 +2004,5 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** file is a folder automaticly compressed by Notes */
 	public static final short FILEFLAG_AUTOCOMPRESSED = 0x0080;
 
+	public short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 }
