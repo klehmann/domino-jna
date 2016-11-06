@@ -4,7 +4,6 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +11,7 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -420,7 +420,7 @@ public class NotesViewEntryData {
 				return m_summaryData.keySet().iterator();
 			}
 			else {
-				return Collections.emptyIterator();
+				return new EmptyIterator<String>();
 			}
 		}
 		else {
