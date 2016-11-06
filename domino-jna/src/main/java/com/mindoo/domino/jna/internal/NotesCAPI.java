@@ -2005,4 +2005,12 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final short FILEFLAG_AUTOCOMPRESSED = 0x0080;
 
 	public short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
+	
+	public void OSGetExecutableDirectory(Memory retPathName);
+
+	public void OSGetDataDirectory(Memory retPathName);
+
+	public short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
+
+	public void OSPathAddTrailingPathSep(Memory retPathName);
 }
