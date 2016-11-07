@@ -339,6 +339,26 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Method to check whether the ID table is empty
+	 * 
+	 * @return true if empty
+	 */
+	public boolean isEmpty() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference retID = new IntByReference();
+		boolean first = true;
+		boolean hasData;
+		if (NotesJNAContext.is64Bit()) {
+			hasData = notesAPI.b64_IDScan(m_idTableHandle64, first, retID) && retID.getValue()!=0;
+		}
+		else {
+			hasData = notesAPI.b32_IDScan(m_idTableHandle32, first, retID) && retID.getValue()!=0;
+		}
+		return !hasData;
+	}
+	
+	/**
 	 * Returns the number of entries in this table
 	 * 
 	 * @return count
