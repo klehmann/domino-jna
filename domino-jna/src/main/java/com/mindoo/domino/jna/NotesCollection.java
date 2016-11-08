@@ -1002,15 +1002,42 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return result;
 		}
 	}
-	
+
+	/**
+	 * Very fast scan function that populates a {@link NotesIDTable} with note ids in the
+	 * collection. Uses an undocumented C API call internally. Since the {@link NotesIDTable}
+	 * is sorted in ascending note id order, this method does not keep the original view order.
+	 * Use {@link NotesCollection#getAllIds(Navigate)} to get an ID list sorted in view order.
+	 * 
+	 * @param navigator use {@link Navigate#NEXT} to read documents and categories, {@link Navigate#NEXT_CATEGORY} to only read categories and {@link Navigate#NEXT_NONCATEGORY} to only read documents
+	 * @param filterTable true to filter the ID table to entries visible for the current user
+	 * @param idTable table to populate with note ids
+	 * @return ID table
+	 */
+	public void getAllIds(Navigate navigator, boolean filterTable, NotesIDTable idTable) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NIFGetIDTableExtended(m_hCollection64, Navigate.toBitMask(EnumSet.of(navigator)),
+					(short) (filterTable ? 0 : 1), idTable.getHandle64());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NIFGetIDTableExtended(m_hCollection32, Navigate.toBitMask(EnumSet.of(navigator)),
+					(short) (filterTable ? 0 : 1), idTable.getHandle32());
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+
 	/**
 	 * Convenience method that collects all note ids in the view, in the sort order of the current collation
 	 * 
-	 * @param includeCategories true to also return note ids for category entries, false to just work on documents
+	 * @param navigator use {@link Navigate#NEXT} to read documents and categories, {@link Navigate#NEXT_CATEGORY} to only read categories and {@link Navigate#NEXT_NONCATEGORY} to only read documents
 	 * @return set of note ids, sorted by occurence in the collection
 	 */
-	public LinkedHashSet<Integer> getAllIds(boolean includeCategories) {
-		LinkedHashSet<Integer> ids = getAllEntries("0", 1, includeCategories ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
+	public LinkedHashSet<Integer> getAllIds(Navigate navigator) {
+		LinkedHashSet<Integer> ids = getAllEntries("0", 1, EnumSet.of(navigator), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
 
 			@Override
 			public LinkedHashSet<Integer> startingLookup() {
@@ -2109,6 +2136,46 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	private short findCollation(String columnName, Direction direction) {
 		return getCollationsInfo().findCollation(columnName, direction);
+	}
+	
+	/**
+	 * Method to check if a note is visible in a view for the current user
+	 * 
+	 * @param noteId note id
+	 * @return true if visible
+	 */
+	public boolean isNoteInView(int noteId) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		
+		IntByReference retIsInView = new IntByReference();
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NIFIsNoteInView(m_hCollection64, noteId, retIsInView);
+		}
+		else {
+			result = notesAPI.b32_NIFIsNoteInView(m_hCollection32, noteId, retIsInView);
+		}
+		NotesErrorUtils.checkResult(result);
+		boolean isInView = retIsInView.getValue()==1;
+		return isInView;
+	}
+	
+	/**
+	 * Check if the collection is currently being updated
+	 * 
+	 * @return true if being updated
+	 */
+	public boolean isUpdateInProgress() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NIFIsUpdateInProgress(m_hCollection64);
+		}
+		else {
+			return notesAPI.b64_NIFIsUpdateInProgress(m_hCollection32);
+		}
 	}
 	
 	/**

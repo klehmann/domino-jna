@@ -288,7 +288,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				colFromDbData.update();
 
 				//read all note ids from the collection
-				LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(false);
+				LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(Navigate.NEXT_NONCATEGORY);
 				Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
 				
 				//pick random note ids
@@ -614,6 +614,69 @@ public class TestViewTraversal extends BaseJNATestClass {
 		});
 	}
 
+	@Test
+	public void testViewTraversal_idScan() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				//compare the result of two scan functions, one using NIFGetIDTableExtended and
+				//the other one using NIFReadEntries
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection colFromDbData = dbData.openCollectionByName("CompaniesHierarchical");
+				colFromDbData.update();
+
+				long t0=System.currentTimeMillis();
+				NotesIDTable idTableUnsorted = new NotesIDTable();
+				colFromDbData.getAllIds(Navigate.NEXT_NONCATEGORY, false, idTableUnsorted);
+				long t1=System.currentTimeMillis();
+				System.out.println("Read "+idTableUnsorted.getCount()+" entries unsorted in "+(t1-t0)+"ms");
+				
+				t0=System.currentTimeMillis();
+				LinkedHashSet<Integer> idsSorted = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
+
+					@Override
+					public LinkedHashSet<Integer> startingLookup() {
+						return new LinkedHashSet<Integer>();
+					}
+
+					@Override
+					public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+							LinkedHashSet<Integer> ctx, NotesViewEntryData entryData) {
+						
+						ctx.add(entryData.getNoteId());
+						return Action.Continue;
+					}
+					
+					@Override
+					public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
+						return result;
+					}
+				});
+				t1=System.currentTimeMillis();
+				System.out.println("Read "+idsSorted.size()+" entries sorted in "+(t1-t0)+"ms");
+				
+				//compare both lists
+				Assert.assertEquals("Both id lists have the same size", idTableUnsorted.getCount(), idsSorted.size());
+				for (Integer currNoteId : idsSorted) {
+					Assert.assertTrue("ID table contains note id "+currNoteId, idTableUnsorted.contains(currNoteId));
+				}
+				for (Integer currNoteId : idsSorted) {
+					idTableUnsorted.removeNote(currNoteId);
+				}
+				Assert.assertTrue("ID table is empty after removing all entries from sorted list", idTableUnsorted.isEmpty());
+				
+				//test isNoteInView function
+				for (Integer currNoteId : idsSorted) {
+					Assert.assertTrue("Note with note ID "+currNoteId+" is in view", colFromDbData.isNoteInView(currNoteId));
+				}
+				
+				return null;
+			}
+
+		});
+	}
+	
 	private boolean isListOfType(List<?> list, Class<?> classType) {
 		if (list.size()==0) {
 			return true;

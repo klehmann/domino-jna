@@ -249,7 +249,15 @@ public interface NotesCAPI extends Library {
 			LongByReference rethBuffer,
 			IntByReference retSequence);
 
+	short b64_NIFIsNoteInView(long hCollection, int noteID, IntByReference retIsInView);
+	short b32_NIFIsNoteInView(int hCollection, int noteID, IntByReference retIsInView);
+
+	boolean b64_NIFIsUpdateInProgress(long hCollection);
+	boolean b32_NIFIsUpdateInProgress(int hCollection);
 	
+	public short b64_NIFGetIDTableExtended(long hCollection, short navigator, short Flags, long hIDTable);
+	public short b32_NIFGetIDTableExtended(int hCollection, short navigator, short Flags, int hIDTable);
+
 	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, IntByReference rethTable);
 	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, LongByReference rethTable);
 	
