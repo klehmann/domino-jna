@@ -37,7 +37,7 @@ public class TestAgentExecution extends BaseJNATestClass {
 				NotesNote note = dbData.createNote();
 				note.setItemValueString("testitem", "1234", true);
 				
-				testAgent.run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, note);
+				testAgent.run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, note, 12345);
 				
 				note.recycle();
 				

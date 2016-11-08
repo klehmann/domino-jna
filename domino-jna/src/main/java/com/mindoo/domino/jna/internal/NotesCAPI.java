@@ -1641,6 +1641,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public boolean b32_AgentIsEnabled(int hAgent);
 	public boolean b64_AgentIsEnabled(long hAgent);
 
+	public void b64_SetParamNoteID(long hAgentCtx, int noteId);
+	public void b32_SetParamNoteID(int hAgentCtx, int noteId);
+                        	
 	/* Definitions for stdout redirection types. This specifies where
 		output from the LotusScript "print" statement will go */
 

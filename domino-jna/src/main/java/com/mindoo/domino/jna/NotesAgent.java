@@ -170,7 +170,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 */
 	public void run(boolean checkSecurity, boolean runAsSigner, Writer stdOut,
 			int timeoutSeconds) throws IOException {
-		run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, (NotesNote) null);
+		run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, (NotesNote) null, 0);
 	}
 	
 	/**
@@ -180,11 +180,12 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * @param runAsSigner true to first reopen the database as the agent signer, false to use the current database instance
 	 * @param stdOut optional writer to redirect the standard output content (use PRINT statements in the agent)
 	 * @param timeoutSeconds optional timeout for the agent execution or 0 for no timeout
-	 * @param note, either just in-memory or stored in the database
+	 * @param note, either just in-memory or stored in the database or null if not required, will be passed as Session.DocumentContext
+	 * @param paramDocId optional note ID of parameter document, will be passed as Agent.ParameterDocId
 	 * @throws IOException
 	 */
 	public void run(boolean checkSecurity, boolean runAsSigner, Writer stdOut,
-			int timeoutSeconds, NotesNote note) throws IOException {
+			int timeoutSeconds, NotesNote note, int paramDocId) throws IOException {
 		
 		checkHandle();
 		if (note!=null) {
@@ -222,6 +223,9 @@ public class NotesAgent implements IRecyclableNotesObject {
 
 				if (note!=null) {
 					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), note.getHandle64());
+				}
+				if (paramDocId!=0) {
+					notesAPI.b64_SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
 				
 				result = notesAPI.b64_AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
@@ -270,7 +274,10 @@ public class NotesAgent implements IRecyclableNotesObject {
 				if (note!=null) {
 					notesAPI.b32_AgentSetDocumentContext(rethContext.getValue(), note.getHandle32());
 				}
-
+				if (paramDocId!=0) {
+					notesAPI.b32_SetParamNoteID(rethContext.getValue(), paramDocId);
+				}
+				
 				result = notesAPI.b32_AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
