@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 
 import lotus.domino.Database;
 import lotus.domino.Document;
@@ -67,6 +68,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 				selectedList.clear();
 				selectedList.addNotes(noteIdsInRange);
 				selectedList.setInverted(true);
+				
+				//for remote databases, re-send modified SelectedList
+				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
 				
 				//now do an inverted lookup to find every entry not in range
 				List<NotesViewEntryData> entriesNotGreaterOrEqualMinVal = colFromDbData.getAllEntries("0", 1,
@@ -124,6 +128,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 				selectedList.addNotes(noteIdsInRange);
 				selectedList.setInverted(true);
 				
+				//for remote databases, re-send modified SelectedList
+				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+
 				//now do an inverted lookup to find every entry not in range
 				List<NotesViewEntryData> entriesNotGreaterOrEqualMinVal = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
@@ -304,6 +311,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 				selectedList.clear();
 				selectedList.addNotes(pickedNoteIds);
 
+				//for remote databases, re-send modified SelectedList
+				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+
 				//next, traverse selected entries only
 				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,
@@ -364,6 +374,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 				}
 				selectedList.setInverted(true);
 				
+				//for remote databases, re-send modified SelectedList
+				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+
 				//next, traverse selected entries
 				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_SELECTED), Integer.MAX_VALUE,

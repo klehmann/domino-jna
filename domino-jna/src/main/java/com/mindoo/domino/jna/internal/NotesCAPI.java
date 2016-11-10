@@ -281,6 +281,43 @@ public interface NotesCAPI extends Library {
 	public boolean b64_NIFCollectionUpToDate(long hCollection);
 	public boolean b32_NIFCollectionUpToDate(int hCollection);
 	
+	/**
+	 * NIFSetCollectionInfo - Special kludge for server to set collection info
+	 *
+	 * @param hCollection Per-user collection context handle to be validated
+	 * @param SessionID pointer to SessionID of session, or 0 if you don't know or don't care
+	 * @param hUnreadList Address to store unread list handle (optional)
+	 * @param hCollapsedList Address to store collapsed list handle (optional)
+	 * @param hSelectedList = Address to store selected list handle (optional)
+	 */
+	public boolean b64_NIFSetCollectionInfo (long hCollection, Pointer SessionID,
+            long hUnreadList, long hCollapsedList, long hSelectedList);
+            
+    public boolean b32_NIFSetCollectionInfo (int hCollection, Pointer SessionID,
+                    int hUnreadList, int hCollapsedList, int hSelectedList);
+
+    public short b64_NIFUpdateFilters (long hCollection, short ModifyFlags);
+    public short b32_NIFUpdateFilters (int hCollection, short ModifyFlags);
+    
+    /** UnreadList has been modified */
+    public static short FILTER_UNREAD = 0x0001;
+    /** CollpasedList has been modified */
+    public static short FILTER_COLLAPSED = 0x0002;
+    /** SelectedList has been modified */
+    public static short FILTER_SELECTED = 0x0004;
+    /** UNID table has been modified. */
+    public static short FILTER_UNID_TABLE = 0x0008;
+    /** Conditionaly do FILTER_UNREAD if current unread list indicates it - see NSFDbUpdateUnread */
+    public static short FILTER_UPDATE_UNREAD = 0x0010;
+    /** Mark specified ID table Read */
+    public static short FILTER_MARK_READ = 0x0020;
+    /** Mark specified ID table Unread */
+    public static short FILTER_MARK_UNREAD = 0x0040;
+    /** Mark all read */
+    public static short FILTER_MARK_READ_ALL = 0x0080;
+    /** Mark all unread */
+    public static short FILTER_MARK_UNREAD_ALL = 0x0100;
+    
 	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, IntByReference rethTable);
 	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, LongByReference rethTable);
 	

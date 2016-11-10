@@ -59,13 +59,13 @@ public enum Navigate {
 	/** PREV, but only "unread" entries */
 	PREV_UNREAD(21),
 	
-	/** NEXT, but only "selected" entries (only works in local databases) */
+	/** NEXT, but only "selected" entries */
 	NEXT_SELECTED(14),
-	/** PREV, but only "selected" entries (only works in local databases) */
+	/** PREV, but only "selected" entries */
 	PREV_SELECTED(22),
-	/** Next selected main (Next unread main can be found above; only works in local databases) */
+	/** Next selected main (Next unread main can be found above) */
 	NEXT_SELECTED_MAIN(32),
-	/** Previous selected main (only works in local databases) */
+	/** Previous selected main */
 	PREV_SELECTED_MAIN(33),
 	
 	/** NEXT, but only "expanded" entries */

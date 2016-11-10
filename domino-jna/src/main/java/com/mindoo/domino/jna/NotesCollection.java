@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -622,7 +623,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Returns the unread table
+	 * Returns the unread table.<br>Adding note ids
+	 * to this table causes the notes to be found in view lookups using {@link Navigate#NEXT_UNREAD}
+	 * and similar flags.<br>
+	 * <br>
+	 * For remote databases, do not forget to call {@link #updateFilters(EnumSet)}
+	 * after you are done modifying the table to re-send the list to the server.
 	 * 
 	 * @return unread table
 	 */
@@ -631,7 +637,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Returns the collapsed list; we had no success to far to use this for lookups
+	 * Returns the collapsed list. Can be used to tell Domino which categories are
+	 * expanded/collapsed.<br> Adding note ids
+	 * to this table causes the notes to be found in view lookups using {@link Navigate#NEXT_EXPANDED},
+	 * {@link Navigate#NEXT_EXPANDED_CATEGORY}, {@link Navigate#NEXT_EXPANDED_SELECTED} or
+	 * {@link Navigate#NEXT_EXPANDED_UNREAD}.<br>
+	 * <br>
+	 * For remote databases, do not forget to call {@link #updateFilters(EnumSet)}
+	 * after you are done modifying the table to re-send the list to the server.
 	 * 
 	 * @return collapsed list
 	 */
@@ -640,8 +653,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Returns an id table of "selected" note ids; for local databases, adding note ids
+	 * Returns an id table of "selected" note ids; adding note ids
 	 * to this table causes the notes to be found in view lookups using {@link Navigate#NEXT_SELECTED}
+	 * and similar flags.<br>
+	 * <br>
+	 * For remote databases, do not forget to call {@link #updateFilters(EnumSet)}
+	 * after you are done modifying the table to re-send the list to the server.
 	 * 
 	 * @return selected list
 	 */
@@ -2288,8 +2305,40 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return notesAPI.b64_NIFIsUpdateInProgress(m_hCollection64);
 		}
 		else {
-			return notesAPI.b64_NIFIsUpdateInProgress(m_hCollection32);
+			return notesAPI.b32_NIFIsUpdateInProgress(m_hCollection32);
 		}
+	}
+	
+	/**
+	 * Notify of modification to per-user index filters<br>
+	 * <br>
+	 * This routine must be called by application code when it makes changes
+	 * to any of the index filters (unread list, expand/collapse list,
+	 * selected list).  No handles to the lists are necessary as input
+	 * to this function, since the collection context block remembers the
+	 * filter handles that were originally specified to the OpenCollection
+	 * call.<br>
+	 * If the collection is open on a remote server, then the newly
+	 * modified lists are re-sent over to the server. If the collection
+	 * is "local", then nothing is done.
+	 * 
+	 * @param flags Flags indicating which filters were modified
+	 */
+	public void updateFilters(EnumSet<UpdateCollectionFilters> flags) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		short flagsBitmask = UpdateCollectionFilters.toBitMask(flags);
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NIFUpdateFilters(m_hCollection64, flagsBitmask);
+			
+		}
+		else {
+			result = notesAPI.b32_NIFUpdateFilters(m_hCollection32, flagsBitmask);
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
