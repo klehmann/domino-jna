@@ -180,7 +180,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * @param runAsSigner true to first reopen the database as the agent signer, false to use the current database instance
 	 * @param stdOut optional writer to redirect the standard output content (use PRINT statements in the agent)
 	 * @param timeoutSeconds optional timeout for the agent execution or 0 for no timeout
-	 * @param note, either just in-memory or stored in the database or null if not required, will be passed as Session.DocumentContext
+	 * @param note either just in-memory or stored in a database or null if not required, will be passed as Session.DocumentContext. <b>Please note: this note object does not have to come from the agent's database</b>
 	 * @param paramDocId optional note ID of parameter document, will be passed as Agent.ParameterDocId
 	 * @throws IOException
 	 */
