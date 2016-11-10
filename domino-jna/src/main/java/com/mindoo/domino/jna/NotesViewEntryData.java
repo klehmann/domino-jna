@@ -516,7 +516,12 @@ public class NotesViewEntryData {
 		else if (m_columnValues!=null) {
 			int colIdx = m_parentCollection.getColumnValuesIndex(columnName);
 			if (colIdx!=-1 && colIdx!=65535) {
-				val = m_columnValues[colIdx];
+				if (colIdx < m_columnValues.length) {
+					val = m_columnValues[colIdx];
+				}
+				else {
+					val = null;
+				}
 			}
 		}
 		

@@ -213,6 +213,26 @@ public interface NotesCAPI extends Library {
 	short b64_NIFReadEntries(long hCollection, NotesCollectionPosition IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, LongByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
 
+	public short b64_NIFReadEntriesExt(long hCollection,
+			NotesCollectionPosition CollectionPos,
+            short SkipNavigator, int SkipCount,
+            short ReturnNavigator, int ReturnCount, int ReturnMask,
+            NotesTimeDate DiffTime, long DiffIDTable, int ColumnNumber, int Flags,
+            LongByReference rethBuffer, ShortByReference retBufferLength,
+            IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned,
+            ShortByReference retSignalFlags, NotesTimeDate retDiffTime,
+            NotesTimeDate retModifiedTime, IntByReference retSequence);
+
+	public short b32_NIFReadEntriesExt(int hCollection,
+			NotesCollectionPosition CollectionPos,
+			short SkipNavigator, int SkipCount,
+			short ReturnNavigator, int ReturnCount, int ReturnMask,
+			NotesTimeDate DiffTime, int DiffIDTable, int ColumnNumber, int Flags,
+			IntByReference rethBuffer, ShortByReference retBufferLength,
+			IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned,
+			ShortByReference retSignalFlags, NotesTimeDate retDiffTime,
+			NotesTimeDate retModifiedTime, IntByReference retSequence);
+
 	short b32_NIFFindByKey(int hCollection, Memory keyBuffer, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
 	short b64_NIFFindByKey(long hCollection, Memory keyBuffer, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
 
@@ -258,6 +278,9 @@ public interface NotesCAPI extends Library {
 	public short b64_NIFGetIDTableExtended(long hCollection, short navigator, short Flags, long hIDTable);
 	public short b32_NIFGetIDTableExtended(int hCollection, short navigator, short Flags, int hIDTable);
 
+	public boolean b64_NIFCollectionUpToDate(long hCollection);
+	public boolean b32_NIFCollectionUpToDate(int hCollection);
+	
 	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, IntByReference rethTable);
 	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, LongByReference rethTable);
 	
@@ -2024,4 +2047,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
 
 	public void OSPathAddTrailingPathSep(Memory retPathName);
+	
+	public static int MAXDWORD = 0xffffffff;
+
 }

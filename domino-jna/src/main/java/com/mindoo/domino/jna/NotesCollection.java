@@ -1396,20 +1396,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 			result = notesAPI.b64_NIFFindByKeyExtended2(m_hCollection64, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
 			
 			if (result == 1028 || result == 17412) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			NotesErrorUtils.checkResult(result);
 
 			if (retNumMatches.getValue()==0) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			else {
 				if (retBuffer.getValue()==0) {
-					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null);
 				}
 				else {
 					boolean convertStringsLazily = true;
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), convertStringsLazily);
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null, convertStringsLazily);
 					return viewData;
 				}
 			}
@@ -1427,20 +1427,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			result = notesAPI.b32_NIFFindByKeyExtended2(m_hCollection32, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
 			if (result == 1028 || result == 17412) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			NotesErrorUtils.checkResult(result);
 
 			if (retNumMatches.getValue()==0) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue());
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			else {
 				if (retBuffer.getValue()==0) {
-					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue());
+					return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, retNumMatches.getValue(), retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null);
 				}
 				else {
 					boolean convertStringsLazily = true;
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), convertStringsLazily);
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null, convertStringsLazily);
 					return viewData;
 				}
 			}
@@ -1779,11 +1779,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
 			if (iBufLength==0) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo, null);
 			}
 			else {
 				boolean convertStringsLazily = true;
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
 				return viewData;
 			}
 		}
@@ -1807,12 +1807,108 @@ public class NotesCollection implements IRecyclableNotesObject {
 			int indexModifiedSequenceNo = getIndexModifiedSequenceNo();
 
 			if (retBufferLength.getValue()==0) {
-				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo);
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), retSignalFlags.getValue(), null, indexModifiedSequenceNo, null);
 			}
 			else {
 				boolean convertStringsLazily = true;
 
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
+				return viewData;
+			}
+		}
+	}
+
+	/**
+	 * Reads collection entries with extended funcionality (using undocumented NIFReadEntriesExt method)
+	 * 
+	 * @param startPos start position for the scan; will be modified by the method to reflect the current position
+	 * @param skipNavigator navigator to use for the skip operation
+	 * @param skipCount number of entries to skip
+	 * @param returnNavigator navigator to use for the read operation
+	 * @param returnCount number of entries to read
+	 * @param returnMask bitmask of data to read
+	 * @param diffTime If non-null, this is a "differential view read" meaning that the caller wants
+	 * 				us to optimize things by only returning full information for notes which have
+	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
+	 * 				changed since this time and return a deleted ID table for notes which may be
+	 * 				known by the caller and have been deleted since DiffTime.
+	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
+	 * 				list of notes which the caller has current information on.  We use this to
+	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
+	 * 				and what notes we might have to include in the returned DelNoteIDTable.
+	 * @param columnNumber If not null, number of single column to return value for (0-based)
+	 * @return read data
+	 */
+	public NotesViewLookupResultData readEntriesExt(NotesCollectionPosition startPos,
+			EnumSet<Navigate> skipNavigator, int skipCount, EnumSet<Navigate> returnNavigator,
+			int returnCount, EnumSet<ReadMask> returnMask, NotesTimeDate diffTime,
+			NotesIDTable diffIDTable,
+			Integer columnNumber) {
+		checkHandle();
+
+		IntByReference retNumEntriesSkipped = new IntByReference();
+		IntByReference retNumEntriesReturned = new IntByReference();
+		ShortByReference retSignalFlags = new ShortByReference();
+		ShortByReference retBufferLength = new ShortByReference();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short skipNavBitMask = Navigate.toBitMask(skipNavigator);
+		short returnNavBitMask = Navigate.toBitMask(returnNavigator);
+		int readMaskBitMask = ReadMask.toBitMask(returnMask);
+		
+		int flags = 0;
+		
+		NotesTimeDate retDiffTime = new NotesTimeDate();
+		NotesTimeDate retModifiedTime = new NotesTimeDate();
+		IntByReference retSequence = new IntByReference();
+
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retBuffer = new LongByReference();
+			result = notesAPI.b64_NIFReadEntriesExt(m_hCollection64, startPos,
+					skipNavBitMask,
+					skipCount, returnNavBitMask, returnCount, readMaskBitMask,
+					diffTime, diffIDTable==null ? 0 : diffIDTable.getHandle64(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
+					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
+					retDiffTime, retModifiedTime, retSequence);
+			
+			NotesErrorUtils.checkResult(result);
+			
+			int indexModifiedSequenceNo = retModifiedTime.Innards[0]; //getIndexModifiedSequenceNo();
+			
+			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
+			if (iBufLength==0) {
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
+						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime);
+			}
+			else {
+				boolean convertStringsLazily = true;
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime, convertStringsLazily);
+				return viewData;
+			}
+		}
+		else {
+			IntByReference retBuffer = new IntByReference();
+			result = notesAPI.b32_NIFReadEntriesExt(m_hCollection32, startPos,
+					skipNavBitMask,
+					skipCount, returnNavBitMask, returnCount, readMaskBitMask,
+					diffTime, diffIDTable==null ? 0 : diffIDTable.getHandle32(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
+					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
+					retDiffTime, retModifiedTime, retSequence);
+			NotesErrorUtils.checkResult(result);
+			
+			int indexModifiedSequenceNo = retModifiedTime.Innards[0]; //getIndexModifiedSequenceNo();
+
+			if (retBufferLength.getValue()==0) {
+				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
+						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime);
+			}
+			else {
+				boolean convertStringsLazily = true;
+
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
 				return viewData;
 			}
 		}
@@ -2161,6 +2257,24 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return isInView;
 	}
 	
+	/**
+	 * Method to check if the view index is up to date or if any note has changed in
+	 * the database since the last view index update.
+	 * 
+	 * @return true if up to date
+	 */
+	public boolean isUpToDate() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NIFCollectionUpToDate(m_hCollection64);
+		}
+		else {
+			return notesAPI.b32_NIFCollectionUpToDate(m_hCollection32);
+		}
+	}
+
 	/**
 	 * Check if the collection is currently being updated
 	 * 

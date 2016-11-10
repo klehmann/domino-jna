@@ -9,6 +9,7 @@ import java.util.Map;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
@@ -16,6 +17,7 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
 import com.mindoo.domino.jna.structs.NotesItemTable;
+import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Memory;
@@ -40,13 +42,14 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position of first match, if returned by find method
 	 * @param indexModifiedSequenceNo index modified sequence no
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b32_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos,
-			int indexModifiedSequenceNo, boolean convertStringsLazily) {
-		return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferHandle, numEntriesSkipped, numEntriesReturned, returnMask, signalFlags, pos, indexModifiedSequenceNo, convertStringsLazily);
+			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily) {
+		return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferHandle, numEntriesSkipped, numEntriesReturned, returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily);
 	}
 
 	/**
@@ -60,11 +63,12 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, boolean[], Object...)}
 	 * @param indexModifiedSequenceNo index modified sequence no
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
-			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, boolean convertStringsLazily) {
+			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily) {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
@@ -224,7 +228,7 @@ public class NotesLookupResultBufferDecoder {
 				}
 			}
 			
-			return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo);
+			return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo, retDiffTime);
 		}
 		finally {
 			if (NotesJNAContext.is64Bit()) {

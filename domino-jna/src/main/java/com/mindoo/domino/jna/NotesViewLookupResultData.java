@@ -6,6 +6,7 @@ import java.util.List;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.NotesCollectionStats;
+import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 /**
  * Container class for a lookup result in a collection/view
@@ -20,6 +21,7 @@ public class NotesViewLookupResultData {
 	private short m_signalFlags;
 	private String m_pos;
 	private int m_indexModifiedSequenceNo;
+	private NotesTimeDate m_retDiffTime;
 	
 	/**
 	 * Creates a new instance
@@ -31,8 +33,9 @@ public class NotesViewLookupResultData {
 	 * @param signalFlags signal flags indicating view index changes and other stuff
 	 * @param pos first matching position
 	 * @param indexModifiedSequenceNo index modified sequence number
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 */
-	public NotesViewLookupResultData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo) {
+	public NotesViewLookupResultData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime) {
 		m_stats = stats;
 		m_entries = entries;
 		m_numEntriesSkipped = numEntriesSkipped;
@@ -40,8 +43,20 @@ public class NotesViewLookupResultData {
 		m_signalFlags = signalFlags;
 		m_pos = pos;
 		m_indexModifiedSequenceNo = indexModifiedSequenceNo;
+		m_retDiffTime = retDiffTime;
 	}
 
+	/**
+	 * For differential view reading via {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)},
+	 * this method returns the returned diff time that can be passed in subsequent read calls to
+	 * get incremental view updates
+	 * 
+	 * @return diff time or null
+	 */
+	public NotesTimeDate getReturnedDiffTime() {
+		return m_retDiffTime;
+	}
+	
 	/**
 	 * Returns the index modified sequence number, which is increased on every index change.<br>
 	 * 
