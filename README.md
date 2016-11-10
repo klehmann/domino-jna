@@ -8,10 +8,10 @@ The project provides functionality that is not available in the classic Java API
 * **decodes all available types of view column data types** (string, string list, number, number list, datetime, datetime list) **and row data** (e.g. just note id, UNID, counts, unread flag etc.)
 * read view data as **another Notes user**
 * **separation of Notes views and their data into multiple databases** (like programmatically creating private views and keeping them up-to-date incrementally)
-* special optimized functions for local databases (e.g. when API is running on the server and databases are on the server as well):
-    * **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
-    * **reading categorized views** with expanded/collapsed entries and min/max level
+* **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
+* **reading categorized views** with expanded/collapsed entries and min/max level
 * read **design collection** with design elements in a database
+* **differential view reads** : on second view lookup, only read rows that have changed
 * support for view resorting (changing the collation in C API terms)
 * **direct attachment streaming** (IBM's Java API extracts files to temp disk space first to read attachment data)
 * basic APIs to read note (document) item values like String/Double/Calendar single and multiple values
@@ -65,11 +65,13 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 			pickedNoteIds.add(randomNoteId);
 		}
 				
-		//populate the collection's selected list with picked ids (only works if database
-		//with collection is accessed locally where the API is running)
+		//populate the collection's selected list with picked ids
 		NotesIDTable selectedList = colFromDbData.getSelectedList();
 		selectedList.clear();
 		selectedList.addNotes(pickedNoteIds);
+
+		//for remote databases, re-send modified SelectedList
+		colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
 
 		//next, traverse selected entries only, starting at position "0" (top of the view)
 		String startPos = "0";
