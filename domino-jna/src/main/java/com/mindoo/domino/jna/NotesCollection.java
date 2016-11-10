@@ -1831,7 +1831,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 				us to optimize things by only returning full information for notes which have
 	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
 	 * 				changed since this time and return a deleted ID table for notes which may be
-	 * 				known by the caller and have been deleted since DiffTime.
+	 * 				known by the caller and have been deleted since DiffTime. <b>Please note that "differential view reads" do only work in views without permutations (no columns with "show multiple values as separate entries" set) according to IBM. Otherwise, all the view data is always returned.</b>
 	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
 	 * 				list of notes which the caller has current information on.  We use this to
 	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
