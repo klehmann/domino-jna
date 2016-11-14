@@ -927,6 +927,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public static abstract class ViewLookupCallback<T> {
 		public enum Action {Continue, Stop};
+		private NotesTimeDate m_newDiffTime;
 		
 		/**
 		 * The method is called when the view lookup is (re-)started. If the view
@@ -966,7 +967,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		
 		/**
-		 * Method is called when the callback is done
+		 * The method is called when differential view reading is used to return the {@link NotesTimeDate}
+		 * to be used for the next lookups
+		 * 
+		 * @param newDiffTime new diff time
+		 */
+		public void setNewDiffTime(NotesTimeDate newDiffTime) {
+			m_newDiffTime = newDiffTime;
+		}
+		
+		/**
+		 * Use this method to read the {@link NotesTimeDate} to be used for the next lookups when using differential view
+		 * reads
+		 * 
+		 * @return diff time or null
+		 */
+		public NotesTimeDate getNewDiffTime() {
+			return m_newDiffTime;
+		}
+		
+		/**
+		 * Method is called when the lookup process is done
 		 * 
 		 * @param result result object
 		 * @return result or transformed result
@@ -1407,7 +1428,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 			boolean viewModified = false;
 			boolean firstLoopRun = true;
 			
+			NotesTimeDate retDiffTime = null;
+			
+			int innerLoopCount = 0;
+			
 			while (true) {
+				innerLoopCount++;
+				
 				if (preloadEntryCount==0) {
 					break;
 				}
@@ -1415,10 +1442,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 				NotesViewLookupResultData data;
 				if (useExtendedRead) {
 					data = readEntriesExt(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, diffTime, diffIDTable, readSingleColumnIndex);
+					retDiffTime = data.getReturnedDiffTime();
+					if (innerLoopCount==1 && retDiffTime!=null) {
+						callback.setNewDiffTime(retDiffTime);
+					}
 				}
 				else {
 					data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask);
 				}
+				
 				if (data.getReturnCount()==0) {
 					//no more data found
 					result = callback.lookupDone(result);
