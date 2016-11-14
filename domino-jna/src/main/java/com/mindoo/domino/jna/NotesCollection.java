@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -9,9 +10,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Vector;
 
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
@@ -67,6 +70,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private CollationInfo m_collationInfo;
 	private Map<String, Integer> m_columnIndices;
 	private Map<Integer, String> m_columnNamesByIndex;
+	private Map<Integer, Boolean> m_columnIsCategoryByIndex;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -149,10 +153,25 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Method to check whether a collection column contains a category
+	 * 
+	 * @param columnName programmatic column name
+	 * @return true if category, false otherwise
+	 */
+	public boolean isCategoryColumn(String columnName) {
+		if (m_columnIsCategoryByIndex==null) {
+			scanColumns();
+		}
+		int colValuesIndex = getColumnValuesIndex(columnName);
+		Boolean isCategory = m_columnIsCategoryByIndex.get(colValuesIndex);
+		return Boolean.TRUE.equals(isCategory);
+	}
+	
+	/**
 	 * Returns the column values index for the specified programmatic column name
 	 * 
 	 * @param columnName column name
-	 * @return index or null for unknown columns; returns 65535 for static column values that are not returned as column values
+	 * @return index or -1 for unknown columns; returns 65535 for static column values that are not returned as column values
 	 */
 	public int getColumnValuesIndex(String columnName) {
 		if (m_columnIndices==null) {
@@ -919,12 +938,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		public abstract T startingLookup();
 		
 		/**
-		 * Override this method to specify specific column values to decode from the
-		 * collection (for read mode {@link ReadMask#SUMMARYVALUES})
+		 * Override this method to return the programmatic name of a collection column. If
+		 * a non-null value is returned, we use an optimized lookup method to read the data,
+		 * resulting in much better performance (working like the formula @DbColumn)
 		 * 
-		 * @return boolean array or null to decode all column values
+		 * @return programmatic column name or null
 		 */
-		public boolean[] getColumnsToDecode() {
+		public String getNameForSingleColumnRead() {
 			return null;
 		}
 		
@@ -955,6 +975,98 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 	}
 
+	/**
+	 * Subclass of {@link ViewLookupCallback} that wraps any methods and forwards all calls
+	 * the another {@link ViewLookupCallback}.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class ViewLookupCallbackWrapper<T> extends ViewLookupCallback<T> {
+		private ViewLookupCallback<T> m_innerCallback;
+		
+		public ViewLookupCallbackWrapper(ViewLookupCallback<T> innerCallback) {
+			m_innerCallback = innerCallback;
+		}
+
+		@Override
+		public String getNameForSingleColumnRead() {
+			return m_innerCallback.getNameForSingleColumnRead();
+		}
+		
+		@Override
+		public T startingLookup() {
+			return m_innerCallback.startingLookup();
+		}
+
+		@Override
+		public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
+				NotesViewEntryData entryData) {
+			return m_innerCallback.entryRead(result, entryData);
+		}
+
+		@Override
+		public T lookupDone(T result) {
+			return m_innerCallback.lookupDone(result);
+		}
+		
+		@Override
+		public void viewIndexChangeDetected() {
+			m_innerCallback.viewIndexChangeDetected();
+		}
+	}
+	
+	/**
+	 * Subclass of {@link ViewLookupCallback} that uses an optimized view lookup to
+	 * only read the value of a single collection column. This results in much
+	 * better performance, because the 64K summary buffer is not polluted with irrelevant data.<br>
+	 * <br>
+	 * Please make sure to pass either {@link ReadMask#SUMMARYVALUES} or {@link ReadMask#SUMMARY},
+	 * preferably {@link ReadMask#SUMMARYVALUES}.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class ReadSingleColumnValues extends ViewLookupCallback<Set<String>> {
+		private String m_columnName;
+		private Locale m_sortLocale;
+		
+		/**
+		 * Creates a new instance
+		 * 
+		 * @param columnName programmatic column name
+		 * @param sortLocale optional sort locale used to sort the result
+		 */
+		public ReadSingleColumnValues(String columnName, Locale sortLocale) {
+			m_columnName = columnName;
+			m_sortLocale = sortLocale;
+		}
+
+		@Override
+		public String getNameForSingleColumnRead() {
+			return m_columnName;
+		}
+		
+		@Override
+		public Set<String> startingLookup() {
+			Collator collator = Collator.getInstance(m_sortLocale==null ? Locale.getDefault() : m_sortLocale);
+			return new TreeSet<String>(collator);
+		}
+
+		@Override
+		public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(Set<String> result,
+				NotesViewEntryData entryData) {
+			String colValue = entryData.getAsString(m_columnName, null);
+			if (colValue!=null) {
+				result.add(colValue);
+			}
+			return com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action.Continue;
+		}
+
+		@Override
+		public Set<String> lookupDone(Set<String> result) {
+			return result;
+		}
+	}
+	
 	/**
 	 * Subclass of {@link ViewLookupCallback} that stores the data of read collection entries
 	 * in a {@link List}.
@@ -1079,6 +1191,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Reads all values of a collection column
+	 * 
+	 * @param columnName programmatic column name
+	 * @param sortLocale optional sort locale to sort the values; if null, we use the locale returned by {@link Locale#getDefault()}
+	 * @return column values
+	 */
+	public Set<String> getColumnValues(String columnName, Locale sortLocale) {
+		boolean isCategory = isCategoryColumn(columnName);
+		Navigate nav = isCategory ? Navigate.NEXT_CATEGORY : Navigate.NEXT_NONCATEGORY;
+		
+		return getAllEntries("0", 1, EnumSet.of(nav), Integer.MAX_VALUE, EnumSet.of(ReadMask.SUMMARYVALUES), new ReadSingleColumnValues(columnName, sortLocale));
+	}
+	
+	/**
 	 * The method reads a number of entries from the collection/view. It internally takes care
 	 * of view index changes while reading view data and restarts reading if such a change has been
 	 * detected.
@@ -1095,22 +1221,189 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
+		
+		return getAllEntries(startPosStr, skipCount, returnNav, (NotesTimeDate) null,
+				(NotesIDTable) null, preloadEntryCount, returnMask, callback);
+	}
+	
+	/**
+	 * The method reads a number of entries located under a specified category from the collection/view.
+	 * It internally takes care of view index changes while reading view data and restarts reading
+	 * if such a change has been detected.
+	 * 
+	 * @param category category or catlevel1\catlevel2 structure
+	 * @param skipCount number of entries to skip
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param callback callback that is called for each entry read from the collection
+	 * @return lookup result
+	 */
+	public <T> T getAllEntriesInCategory(String category, int skipCount, EnumSet<Navigate> returnNav,
+			int preloadEntryCount, EnumSet<ReadMask> returnMask,
+			final ViewLookupCallback<T> callback) {
+		
+		return getAllEntriesInCategory(category, skipCount, returnNav, null, null, preloadEntryCount, returnMask, callback);
+	}
+	
+	/**
+	 * The method reads a number of entries located under a specified category from the collection/view.
+	 * It internally takes care of view index changes while reading view data and restarts reading
+	 * if such a change has been detected.
+	 * 
+	 * @param category category or catlevel1\catlevel2 structure
+	 * @param skipCount number of entries to skip
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param diffTime If non-null, this is a "differential view read" meaning that the caller wants
+	 * 				us to optimize things by only returning full information for notes which have
+	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
+	 * 				changed since this time and return a deleted ID table for notes which may be
+	 * 				known by the caller and have been deleted since DiffTime.
+	 * 				<b>Please note that "differential view reads" do only work in views without permutations (no columns with "show multiple values as separate entries" set) according to IBM. Otherwise, all the view data is always returned.</b>
+	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
+	 * 				list of notes which the caller has current information on.  We use this to
+	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
+	 * 				and what notes we might have to include in the returned DelNoteIDTable.
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param callback callback that is called for each entry read from the collection
+	 * @return lookup result
+	 */
+	public <T> T getAllEntriesInCategory(String category, int skipCount, EnumSet<Navigate> returnNav,
+			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
+			final ViewLookupCallback<T> callback) {
+		
+		final String[] categoryPos = new String[1];
+		final int[] expectedLkViewMod = new int[1];
+		
+		while (true) {
+			expectedLkViewMod[0] = getIndexModifiedSequenceNo();
+			
+			//find category entry
+			FindResult catFindResult = findByKey(EnumSet.of(Find.CASE_INSENSITIVE, Find.FIRST_EQUAL, Find.EQUAL), category);
+			if (catFindResult.getEntriesFound()==0) {
+				//category not found
+				T result = callback.startingLookup();
+				result = callback.lookupDone(result);
+				return result;
+			}
+			String firstDocInCategoryPos = catFindResult.getPosition();
+			if (!firstDocInCategoryPos.contains(".")) {
+				//category not found
+				T result = callback.startingLookup();
+				result = callback.lookupDone(result);
+				return result;
+			}
+			
+			categoryPos[0] = firstDocInCategoryPos.substring(0, firstDocInCategoryPos.indexOf('.'));
+			
+			System.out.println("categoryPos[0]: "+categoryPos[0]);
+			NotesCollectionPosition pos = NotesCollectionPosition.toPosition(categoryPos[0]);
+			pos.MinLevel = (byte) (pos.Level+1);
+			pos.MaxLevel = 32;
+			pos.write();
+			
+			final boolean[] viewIndexModified = new boolean[1];
+			
+			EnumSet<Navigate> useReturnNav = returnNav.clone();
+			useReturnNav.add(Navigate.MINLEVEL);
+			
+			EnumSet<ReadMask> useReturnMask = returnMask.clone();
+			useReturnMask.add(ReadMask.INDEXPOSITION);
+			
+			T result = getAllEntries(pos.toPosString(), skipCount, useReturnNav, diffTime, diffIDTable,
+					preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
+				int cnt=0;
+				
+				@Override
+				public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
+						NotesViewEntryData entryData) {
+					cnt++;
+					
+					//check if this entry is still one of the descendants of the category entry
+					String entryPos = entryData.getPositionStr();
+					if (entryPos.startsWith(categoryPos[0])) {
+						return super.entryRead(result, entryData);
+					}
+					
+					if ((cnt % 100)==0) {
+						int currViewIndexMod = getIndexModifiedSequenceNo();
+						if (currViewIndexMod!=expectedLkViewMod[0]) {
+							viewIndexModified[0] = true;
+							return Action.Stop;
+						}
+					}
+					return Action.Continue;
+				}
+			});
+			if (viewIndexModified[0]) {
+				callback.viewIndexChangeDetected();
+				continue;
+			}
+			
+			int currViewIndexMod = getIndexModifiedSequenceNo();
+			if (currViewIndexMod!=expectedLkViewMod[0]) {
+				//view has changed, restart
+				callback.viewIndexChangeDetected();
+				continue;
+			}
+			
+			return result;
+		}
+	}
+	
+	/**
+	 * The method reads a number of entries from the collection/view. It internally takes care
+	 * of view index changes while reading view data and restarts reading if such a change has been
+	 * detected.
+	 * 
+	 * @param startPosStr start position; use "0" or null to start before the first entry
+	 * @param skipCount number entries to skip before reading
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param diffTime If non-null, this is a "differential view read" meaning that the caller wants
+	 * 				us to optimize things by only returning full information for notes which have
+	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
+	 * 				changed since this time and return a deleted ID table for notes which may be
+	 * 				known by the caller and have been deleted since DiffTime.
+	 * 				<b>Please note that "differential view reads" do only work in views without permutations (no columns with "show multiple values as separate entries" set) according to IBM. Otherwise, all the view data is always returned.</b>
+	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
+	 * 				list of notes which the caller has current information on.  We use this to
+	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
+	 * 				and what notes we might have to include in the returned DelNoteIDTable.
+	 * @param callback callback that is called for each entry read from the collection
+	 * @return lookup result
+	 * 
+	 * @param <T> type of lookup result object
+	 */
+	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
+			NotesTimeDate diffTime, NotesIDTable diffIDTable,
+			int preloadEntryCount,
+			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
 		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(startPosStr==null ? "0" : startPosStr);
+		
+		//decide whether we need to use the undocumented NIFReadEntriesExt
+		String readSingleColumnName = callback.getNameForSingleColumnRead();
+		if (readSingleColumnName!=null) {
+			//make sure that we actually read any column values
+			if (!returnMask.contains(ReadMask.SUMMARY) && !returnMask.contains(ReadMask.SUMMARYVALUES)) {
+				returnMask = returnMask.clone();
+				returnMask.add(ReadMask.SUMMARYVALUES);
+			}
+		}
+		boolean useExtendedRead = diffTime!=null || readSingleColumnName!=null;
+		
+		Integer readSingleColumnIndex = readSingleColumnName==null ? null : getColumnValuesIndex(readSingleColumnName);
 		
 		while (true) {
 			T result = callback.startingLookup();
 			
-			boolean[] columnsToDecode = null;
-			if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
-				columnsToDecode = callback.getColumnsToDecode();
-			}
-
 			if (preloadEntryCount==0) {
 				result = callback.lookupDone(result);
 				return result;
 			}
 			
-			boolean hasMoreData = true;
 			boolean viewModified = false;
 			boolean firstLoopRun = true;
 			
@@ -1119,7 +1412,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 					break;
 				}
 				
-				NotesViewLookupResultData data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask);
+				NotesViewLookupResultData data;
+				if (useExtendedRead) {
+					data = readEntriesExt(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, diffTime, diffIDTable, readSingleColumnIndex);
+				}
+				else {
+					data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask);
+				}
 				if (data.getReturnCount()==0) {
 					//no more data found
 					result = callback.lookupDone(result);
@@ -1175,11 +1474,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 		//while(true) is here to rerun the query in case of view index changes while reading
 		while (true) {
 			T result = callback.startingLookup();
-			
-			boolean[] columnsToDecode = null;
-			if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
-				columnsToDecode = callback.getColumnsToDecode();
-			}
 
 			NotesViewLookupResultData data;
 			//position of first match
@@ -1194,7 +1488,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				findFlagsWithExtraBits.add(Find.AND_READ_MATCHES);
 				findFlagsWithExtraBits.add(Find.RETURN_DWORD);
 				
-				data = findByKeyExtended2(findFlagsWithExtraBits, returnMask, columnsToDecode, keys);
+				data = findByKeyExtended2(findFlagsWithExtraBits, returnMask, keys);
 				
 				int numEntriesFound = data.getReturnCount();
 				if (numEntriesFound!=-1) {
@@ -1376,11 +1670,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param findFlags find flags ({@link Find})
 	 * @param returnMask mask specifying what information is to be returned on each entry ({link ReadMask})
-	 * @param decodeColumns optional array to limit column decoding (or null)
 	 * @param keys lookup keys
 	 * @return lookup result
 	 */
-	public NotesViewLookupResultData findByKeyExtended2(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, boolean[] decodeColumns, Object... keys) {
+	public NotesViewLookupResultData findByKeyExtended2(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, Object... keys) {
 		checkHandle();
 		
 		if (keys==null || keys.length==0)
@@ -2083,6 +2376,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private void scanColumns() {
 		m_columnIndices = new LinkedHashMap<String, Integer>();
 		m_columnNamesByIndex = new TreeMap<Integer, String>();
+		m_columnIsCategoryByIndex = new TreeMap<Integer, Boolean>();
 		
 		try {
 			//TODO implement this in pure JNA code
@@ -2107,11 +2401,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_columnIndices.put(currItemNameLC, currColumnValuesIndex);
 					if (currColumnValuesIndex != ViewColumn.VC_NOT_PRESENT) {
 						m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+						
+						boolean isCategory = currCol.isCategory();
+						m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
 					}
 					
 					boolean isResortAscending = currCol.isResortAscending();
 					boolean isResortDescending = currCol.isResortDescending();
-
+					
 					if (isResortAscending || isResortDescending) {
 
 						if (isResortAscending) {

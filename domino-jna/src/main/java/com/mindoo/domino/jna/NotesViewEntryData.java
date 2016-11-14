@@ -542,6 +542,27 @@ public class NotesViewEntryData {
 	}
 	
 	/**
+	 * Convenience method to check whether there are any column values stored in this entry
+	 * 
+	 * @return true if we have column values
+	 */
+	public boolean hasAnyColumnValues() {
+		if (m_summaryData!=null) {
+			if (!m_summaryData.isEmpty()) {
+				return true;
+			}
+		}
+		if (m_columnValues!=null) {
+			for (int i=0; i<m_columnValues.length; i++) {
+				if (m_columnValues[i]!=null) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	/**
 	 * Convenience function that converts a column value to a string
 	 * 
 	 * @param columnName programatic column name
