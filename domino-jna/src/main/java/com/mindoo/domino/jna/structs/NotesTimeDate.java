@@ -85,4 +85,13 @@ public class NotesTimeDate extends Structure {
 		Calendar cal = toCalendar();
 		return cal==null ? null : cal.getTime();
 	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o instanceof NotesTimeDate) {
+			return Arrays.equals(this.Innards, ((NotesTimeDate)o).Innards);
+		}
+		return false;
+	}
+	
 }
