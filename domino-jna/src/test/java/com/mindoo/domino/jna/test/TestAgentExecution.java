@@ -68,7 +68,7 @@ public class TestAgentExecution extends BaseJNATestClass {
 				Document doc = dbDataLegacy.createDocument();
 				doc.replaceItemValue("testitem", "1234");
 				
-				testAgent.run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, doc);
+				testAgent.run(checkSecurity, runAsSigner, stdOut, timeoutSeconds, doc, 0);
 				
 				String retValue = doc.getItemValueString("returnValue");
 				System.out.println("Return value: "+retValue);

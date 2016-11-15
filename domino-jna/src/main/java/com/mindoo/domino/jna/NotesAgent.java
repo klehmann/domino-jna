@@ -317,11 +317,12 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * @param runAsSigner true to first reopen the database as the agent signer, false to use the current database instance
 	 * @param stdOut optional writer to redirect the standard output content (use PRINT statements in the agent)
 	 * @param timeoutSeconds optional timeout for the agent execution or 0 for no timeout
-	 * @param doc, either just in-memory or stored in the database
+	 * @param doc either just in-memory or stored in the database
+	 * @param paramDocId optional note ID of parameter document, will be passed as Agent.ParameterDocId
 	 * @throws IOException
 	 */
 	public void run(boolean checkSecurity, boolean runAsSigner, Writer stdOut,
-			int timeoutSeconds, Document doc) throws IOException {
+			int timeoutSeconds, Document doc, int paramDocId) throws IOException {
 		
 		checkHandle();
 
@@ -380,7 +381,10 @@ public class NotesAgent implements IRecyclableNotesObject {
 				if (doc!=null) {
 					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), cHandle);
 				}
-				
+				if (paramDocId!=0) {
+					notesAPI.b64_SetParamNoteID(rethContext.getValue(), paramDocId);
+				}
+
 				result = notesAPI.b64_AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
@@ -426,6 +430,9 @@ public class NotesAgent implements IRecyclableNotesObject {
 
 				if (doc!=null) {
 					notesAPI.b32_AgentSetDocumentContext(rethContext.getValue(), (int) cHandle);
+				}
+				if (paramDocId!=0) {
+					notesAPI.b32_SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
 
 				result = notesAPI.b32_AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
