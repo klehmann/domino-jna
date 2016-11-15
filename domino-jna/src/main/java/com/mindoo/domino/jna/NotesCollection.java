@@ -991,7 +991,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		/**
 		 * Override this method to return an optional {@link CollectionDataCache} to speed up view reading.
-		 * The returned cache instance is shared for all calls done with this callback implementation.
+		 * The returned cache instance is shared for all calls done with this callback implementation.<br>
+		 * <br>
+		 * Please note that according to IBM dev, this optimized view reading (differential view reads) does
+		 * only work in views that are not permuted (where documents do not appear multiple times, because
+		 * "Show multiple values as separate entries" has been set on any view column).
 		 * 
 		 * @return cache or null (default value)
 		 */

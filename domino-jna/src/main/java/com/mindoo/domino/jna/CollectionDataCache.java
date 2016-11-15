@@ -16,7 +16,11 @@ import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 /**
  * LRU cache class to be returned in {@link ViewLookupCallback#createDataCache()} in order to let NIF
- * improve lookup performance by skipping already known collection data.
+ * improve lookup performance by skipping already known collection data.<br>
+ * <br>
+ * Please note that according to IBM dev, this optimized view reading (differential view reads) does
+ * only work in views that are not permuted (where documents do not appear multiple times, because
+ * "Show multiple values as separate entries" has been set on any view column).
  * 
  * @author Karsten Lehmann
  */
