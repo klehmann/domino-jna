@@ -1,6 +1,5 @@
 package com.mindoo.domino.jna;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.ReadMask;

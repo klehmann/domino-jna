@@ -44,12 +44,14 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b32_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos,
-			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily) {
-		return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferHandle, numEntriesSkipped, numEntriesReturned, returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily);
+			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily, String singleColumnLookupName) {
+		return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferHandle, numEntriesSkipped, numEntriesReturned,
+				returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
 	}
 
 	/**
@@ -65,10 +67,12 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
-			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily) {
+			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime,
+			boolean convertStringsLazily, String singleColumnLookupName) {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
@@ -225,6 +229,10 @@ public class NotesLookupResultBufferDecoder {
 
 					Map<String,Object> itemValues = itemTableData.asMap(false);
 					newData.setSummaryData(itemValues);
+				}
+				
+				if (singleColumnLookupName!=null) {
+					newData.setSingleColumnLookupName(singleColumnLookupName);
 				}
 			}
 			

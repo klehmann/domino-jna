@@ -17,7 +17,9 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
 
+import com.mindoo.domino.jna.CollectionDataCache.CacheState;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
+import com.mindoo.domino.jna.NotesViewEntryData.CacheableViewEntryData;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
@@ -44,6 +46,7 @@ import com.sun.jna.ptr.ShortByReference;
 import lotus.domino.Database;
 import lotus.domino.View;
 import lotus.domino.ViewColumn;
+import lotus.notes.addins.changeman.functions.DominoConsoleCommand;
 
 /**
  * A collection represents a list of Notes, comparable to the {@link View} object
@@ -987,13 +990,31 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		
 		/**
+		 * Override this method to return an optional {@link CollectionDataCache} to speed up view reading.
+		 * The returned cache instance is shared for all calls done with this callback implementation.
+		 * 
+		 * @return cache or null (default value)
+		 */
+		public CollectionDataCache createDataCache() {
+			return null;
+		}
+		
+		private CollectionDataCache m_cacheInstance;
+		
+		private CollectionDataCache getDataCache() {
+			if (m_cacheInstance==null) {
+				m_cacheInstance = createDataCache();
+			}
+			return m_cacheInstance;
+		}
+		
+		/**
 		 * Method is called when the lookup process is done
 		 * 
 		 * @param result result object
 		 * @return result or transformed result
 		 */
 		public abstract T lookupDone(T result);
-		
 	}
 
 	/**
@@ -1025,6 +1046,21 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return m_innerCallback.entryRead(result, entryData);
 		}
 
+		@Override
+		public CollectionDataCache createDataCache() {
+			return m_innerCallback.createDataCache();
+		}
+		
+		@Override
+		public NotesTimeDate getNewDiffTime() {
+			return m_innerCallback.getNewDiffTime();
+		}
+		
+		@Override
+		public void setNewDiffTime(NotesTimeDate newDiffTime) {
+			m_innerCallback.setNewDiffTime(newDiffTime);
+		}
+		
 		@Override
 		public T lookupDone(T result) {
 			return m_innerCallback.lookupDone(result);
@@ -1127,7 +1163,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			//add entry to result list
 			result.add(entryData);
 			
-			if (result.size() > m_maxEntries) {
+			if (result.size() >= m_maxEntries) {
 				//stop the lookup, we have enough data
 				return Action.Stop;
 			}
@@ -1240,12 +1276,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param <T> type of lookup result object
 	 */
-	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
-			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
-		
-		return getAllEntries(startPosStr, skipCount, returnNav, (NotesTimeDate) null,
-				(NotesIDTable) null, preloadEntryCount, returnMask, callback);
-	}
+//	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
+//			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
+//		
+//		return getAllEntries(startPosStr, skipCount, returnNav, (NotesTimeDate) null,
+//				(NotesIDTable) null, preloadEntryCount, returnMask, callback);
+//	}
 	
 	/**
 	 * The method reads a number of entries located under a specified category from the collection/view.
@@ -1332,7 +1368,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			EnumSet<ReadMask> useReturnMask = returnMask.clone();
 			useReturnMask.add(ReadMask.INDEXPOSITION);
 			
-			T result = getAllEntries(pos.toPosString(), skipCount, useReturnNav, diffTime, diffIDTable,
+			T result = getAllEntries(pos.toPosString(), skipCount, useReturnNav,
 					preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
 				int cnt=0;
 				
@@ -1383,23 +1419,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param diffTime If non-null, this is a "differential view read" meaning that the caller wants
-	 * 				us to optimize things by only returning full information for notes which have
-	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
-	 * 				changed since this time and return a deleted ID table for notes which may be
-	 * 				known by the caller and have been deleted since DiffTime.
-	 * 				<b>Please note that "differential view reads" do only work in views without permutations (no columns with "show multiple values as separate entries" set) according to IBM. Otherwise, all the view data is always returned.</b>
-	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
-	 * 				list of notes which the caller has current information on.  We use this to
-	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
-	 * 				and what notes we might have to include in the returned DelNoteIDTable.
 	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
 	 * 
 	 * @param <T> type of lookup result object
 	 */
 	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
-			NotesTimeDate diffTime, NotesIDTable diffIDTable,
 			int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
 		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(startPosStr==null ? "0" : startPosStr);
@@ -1413,14 +1438,33 @@ public class NotesCollection implements IRecyclableNotesObject {
 				returnMask.add(ReadMask.SUMMARYVALUES);
 			}
 		}
-		boolean useExtendedRead = diffTime!=null || readSingleColumnName!=null;
+		
+		CollectionDataCache dataCache = callback.getDataCache();
+		if (returnMask.equals(EnumSet.of(ReadMask.NOTEID))) {
+			//disable cache if all we need to read is the note id
+			dataCache = null;
+		}
 		
 		Integer readSingleColumnIndex = readSingleColumnName==null ? null : getColumnValuesIndex(readSingleColumnName);
+		
+		if (readSingleColumnName!=null) {
+			//TODO view row caching currently disabled for single column reads, needs more work
+			dataCache = null;
+		}
+
+		if (dataCache!=null) {
+			//if caching is used, make sure that we read the note id, because that's how we hash our data
+			if (!returnMask.contains(ReadMask.NOTEID) && !returnMask.contains(ReadMask.NOTEID)) {
+				returnMask = returnMask.clone();
+				returnMask.add(ReadMask.NOTEID);
+			}
+		}
 		
 		while (true) {
 			T result = callback.startingLookup();
 			
 			if (preloadEntryCount==0) {
+				//nothing to do
 				result = callback.lookupDone(result);
 				return result;
 			}
@@ -1430,30 +1474,59 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			NotesTimeDate retDiffTime = null;
 			
-			int innerLoopCount = 0;
+			NotesTimeDate diffTime = null;
+			NotesIDTable diffIDTable = null;
+			
+			if (dataCache!=null) {
+				CacheState cacheState = dataCache.getCacheState();
+				
+				//only use cache content if read masks are compatible
+				Map<Integer,CacheableViewEntryData> cacheEntries = cacheState.getCacheEntries();
+				if (cacheEntries!=null && !cacheEntries.isEmpty()) {
+					EnumSet<ReadMask> cacheReadMask = cacheState.getReadMask();
+					if (returnMask.equals(cacheReadMask)) {
+						diffTime = cacheState.getDiffTime();
+
+						diffIDTable = new NotesIDTable();
+						diffIDTable.addNotes(cacheEntries.keySet());
+					}
+				}
+			}
+			
+			List<NotesViewEntryData> entriesToUpdateCache = dataCache==null ? null : new ArrayList<NotesViewEntryData>();
 			
 			while (true) {
-				innerLoopCount++;
-				
 				if (preloadEntryCount==0) {
 					break;
 				}
-				
+
 				NotesViewLookupResultData data;
-				if (useExtendedRead) {
-					data = readEntriesExt(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask, diffTime, diffIDTable, readSingleColumnIndex);
-					retDiffTime = data.getReturnedDiffTime();
-					if (innerLoopCount==1 && retDiffTime!=null) {
-						callback.setNewDiffTime(retDiffTime);
-					}
-				}
-				else {
-					data = readEntries(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask);
-				}
+				data = readEntriesExt(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask,
+						diffTime, diffIDTable, readSingleColumnIndex);
 				
+				retDiffTime = data.getReturnedDiffTime();
+				
+				if (dataCache!=null) {
+					//if data cache is used, we fill in missing gaps in cases where NIF skipped producing
+					//the summary data, because the corresponding cache entry was already
+					//up to date
+					List<NotesViewEntryData> entries = data.getEntries();
+					dataCache.populateEntryStubsWithData(entries);
+					
+					entriesToUpdateCache.addAll(entries);
+				}
+
 				if (data.getReturnCount()==0) {
 					//no more data found
 					result = callback.lookupDone(result);
+					
+					if (dataCache!=null && retDiffTime!=null) {
+						if (!entriesToUpdateCache.isEmpty()) {
+							dataCache.addCacheValues(returnMask, retDiffTime, entriesToUpdateCache);
+						}
+						callback.setNewDiffTime(retDiffTime);
+					}
+
 					return result;
 				}
 				
@@ -1472,9 +1545,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 					Action action = callback.entryRead(result, currEntry);
 					if (action==Action.Stop) {
 						result = callback.lookupDone(result);
+						
+						if (dataCache!=null && retDiffTime!=null) {
+							if (!entriesToUpdateCache.isEmpty()) {
+								dataCache.addCacheValues(returnMask, retDiffTime, entriesToUpdateCache);
+							}
+							callback.setNewDiffTime(retDiffTime);
+						}
 						return result;
 					}
 				}
+			}
+
+			if (dataCache!=null && retDiffTime!=null) {
+				if (!entriesToUpdateCache.isEmpty()) {
+					dataCache.addCacheValues(returnMask, retDiffTime, entriesToUpdateCache);
+				}
+				callback.setNewDiffTime(retDiffTime);
+			}
+
+			if (diffIDTable!=null) {
+				diffIDTable.recycle();
 			}
 			
 			if (viewModified) {
@@ -1751,7 +1842,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 				else {
 					boolean convertStringsLazily = true;
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null, convertStringsLazily);
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+							0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null,
+							convertStringsLazily, null);
 					return viewData;
 				}
 			}
@@ -1782,7 +1875,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 				else {
 					boolean convertStringsLazily = true;
-					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), 0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null, convertStringsLazily);
+					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+							0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null,
+							convertStringsLazily, null);
 					return viewData;
 				}
 			}
@@ -2076,7 +2171,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Reads collection entries (using NIFReadEntries method)
+	 * Reads collection entries (using NIFReadEntries method).<br>
+	 * <br>
+	 * This method provides low-level API access. In general, it is safer to use high-level functions like
+	 * {@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)} instead because
+	 * they handle view index update while reading.
 	 * 
 	 * @param startPos start position for the scan; will be modified by the method to reflect the current position
 	 * @param skipNavigator navigator to use for the skip operation
@@ -2125,7 +2224,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
+						indexModifiedSequenceNo, null, convertStringsLazily, null);
 				return viewData;
 			}
 		}
@@ -2154,14 +2255,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 			else {
 				boolean convertStringsLazily = true;
 
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
+						indexModifiedSequenceNo, null, convertStringsLazily, null);
 				return viewData;
 			}
 		}
 	}
 
 	/**
-	 * Reads collection entries with extended funcionality (using undocumented NIFReadEntriesExt method)
+	 * Reads collection entries with extended funcionality (using undocumented NIFReadEntriesExt method).<br>
+	 * <br>
+	 * This method provides low-level API access. In general, it is safer to use high-level functions like
+	 * {@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)} instead because
+	 * they handle view index update while reading.
 	 * 
 	 * @param startPos start position for the scan; will be modified by the method to reflect the current position
 	 * @param skipNavigator navigator to use for the skip operation
@@ -2204,6 +2311,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		NotesTimeDate retModifiedTime = new NotesTimeDate();
 		IntByReference retSequence = new IntByReference();
 
+		String singleColumnLookupName = columnNumber == null ? null : getColumnName(columnNumber);
+		
 		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference retBuffer = new LongByReference();
@@ -2226,7 +2335,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
+						indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
 				return viewData;
 			}
 		}
@@ -2250,7 +2361,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 			else {
 				boolean convertStringsLazily = true;
 
-				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(), retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null, indexModifiedSequenceNo, null, convertStringsLazily);
+				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
+						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
+						indexModifiedSequenceNo, null, convertStringsLazily, singleColumnLookupName);
 				return viewData;
 			}
 		}
@@ -2385,6 +2498,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 			scanColumns();
 		}
 		return m_columnIndices.keySet().iterator();
+	}
+	
+	/**
+	 * Returns the programmatic column name for a column index
+	 * 
+	 * @param index index
+	 * @return column name or null if index is unknown / invalid
+	 */
+	public String getColumnName(int index) {
+		String colName = m_columnNamesByIndex.get(index);
+		return colName;
 	}
 	
 	/**

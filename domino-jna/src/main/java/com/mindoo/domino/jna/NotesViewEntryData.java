@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +24,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
  */
 public class NotesViewEntryData {
 	private NotesCollection m_parentCollection;
+	
 	private int[] m_pos;
 	private String m_posStr;
 	private Integer m_noteId;
@@ -40,6 +42,7 @@ public class NotesViewEntryData {
 	private int[] m_columnValueSizes;
 	private Map<String, Object> m_summaryData;
 	private SoftReference<Map<String, Object>> m_convertedDataRef;
+	private String m_singleColumnLookupName;
 	
 	/**
 	 * Creates a new instance
@@ -48,6 +51,86 @@ public class NotesViewEntryData {
 	 */
 	public NotesViewEntryData(NotesCollection parentCollection) {
 		m_parentCollection = parentCollection;
+	}
+	
+	class CacheableViewEntryData implements Serializable {
+		private static final long serialVersionUID = -6919729244434994355L;
+		
+		private int[] m_pos;
+		private String m_posStr;
+		private Integer m_noteId;
+		private String m_unid;
+		private long[] m_unidAsLongs;
+		private Integer m_noteClass;
+		private Integer m_siblingCount;
+		private Integer m_childCount;
+		private Integer m_descendantCount;
+		private Boolean m_isAnyUnread;
+		private Integer m_indentLevels;
+		private Integer m_ftScore;
+		private Boolean m_isUnread;
+		private Object[] m_columnValues;
+		private int[] m_columnValueSizes;
+		private Map<String, Object> m_summaryData;
+		private SoftReference<Map<String, Object>> m_convertedDataRef;
+		private String m_singleColumnLookupName;
+	}
+	
+	/**
+	 * Method to read the cacheable and serializable data from this object
+	 * 
+	 * @return data
+	 */
+	CacheableViewEntryData getCacheableData() {
+		CacheableViewEntryData data = new CacheableViewEntryData();
+		data.m_pos = m_pos;
+		data.m_posStr = m_posStr;
+		data.m_noteId = m_noteId;
+		data.m_unid = m_unid;
+		data.m_unidAsLongs = m_unidAsLongs;
+		data.m_noteClass = m_noteClass;
+		data.m_siblingCount = m_siblingCount;
+		data.m_childCount = m_childCount;
+		data.m_descendantCount = m_descendantCount;
+		data.m_isAnyUnread = m_isAnyUnread;
+		data.m_indentLevels = m_indentLevels;
+		data.m_ftScore = m_ftScore;
+		data.m_isUnread = m_isUnread;
+		data.m_columnValues = m_columnValues;
+		data.m_columnValueSizes = m_columnValueSizes;
+		data.m_summaryData = m_summaryData;
+		data.m_convertedDataRef = m_convertedDataRef;
+		data.m_singleColumnLookupName = m_singleColumnLookupName;
+		return data;
+	}
+	
+	/**
+	 * Method to update the internal state from a cache entry
+	 * 
+	 * @param data cache entry data
+	 */
+	void updateFromCache(CacheableViewEntryData data) {
+		if (m_noteId.intValue()!=data.m_noteId.intValue())
+			throw new IllegalArgumentException("Note ids do not match: "+m_noteId+" != "+data.m_noteId);
+		
+		m_pos = data.m_pos;
+		m_posStr = data.m_posStr;
+		m_noteId = data.m_noteId;
+		m_unid = data.m_unid;
+		m_unidAsLongs = data.m_unidAsLongs;
+		m_noteClass = data.m_noteClass;
+		m_siblingCount = data.m_siblingCount;
+		m_childCount = data.m_childCount;
+		m_descendantCount = data.m_descendantCount;
+		m_isAnyUnread = data.m_isAnyUnread;
+		m_indentLevels = data.m_indentLevels;
+		m_ftScore = data.m_ftScore;
+		m_isUnread = data.m_isUnread;
+		m_columnValues = data.m_columnValues;
+		m_columnValueSizes = data.m_columnValueSizes;
+		m_summaryData = data.m_summaryData;
+		m_convertedDataRef = data.m_convertedDataRef;
+		m_singleColumnLookupName = data.m_singleColumnLookupName;
 	}
 	
 	/**
@@ -886,6 +969,27 @@ public class NotesViewEntryData {
 	 */
 	public void setSummaryData(Map<String,Object> summaryData) {
 		m_summaryData = summaryData;
+	}
+	
+	/**
+	 * If this view entry data was received by an optimized lookup that read only one column, you
+	 * can use this method to get the programmatic name of the collection column. The method
+	 * is mainly used for collection data caching purposes.
+	 * 
+	 * @return column name or null
+	 */
+	public String getSingleColumnLookupName() {
+		return m_singleColumnLookupName;
+	}
+	
+	/**
+	 * If this view entry data was received by an optimized lookup that read only one column,
+	 * this method is used to set the programmatic name of that column.
+	 * 
+	 * @param colName column name or null
+	 */
+	public void setSingleColumnLookupName(String colName) {
+		m_singleColumnLookupName = colName;
 	}
 	
 	/**
