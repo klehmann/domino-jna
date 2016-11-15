@@ -63,9 +63,9 @@ public class NotesLookupResultBufferDecoder {
 	 * @param numEntriesReturned entries read during collection scan
 	 * @param returnMask bitmask used to fill the buffer with data
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
-	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, boolean[], Object...)}
+	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, Object...)}
 	 * @param indexModifiedSequenceNo index modified sequence no
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data

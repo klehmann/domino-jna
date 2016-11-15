@@ -71,7 +71,7 @@ public class NotesViewLookupResultData {
 	 * the FIRST matching entry is returned ("first" is defined by the<br>
 	 * entry which collates before all others in the collated index).<br>
 	 * 
-	 * Will only be set when {@link NotesCollection#findByKeyExtended2(java.util.EnumSet, java.util.EnumSet, boolean[], Object...)}
+	 * Will only be set when {@link NotesCollection#findByKeyExtended2(java.util.EnumSet, java.util.EnumSet, Object...)}
 	 * is called.
 	 * 
 	 * @return position or null

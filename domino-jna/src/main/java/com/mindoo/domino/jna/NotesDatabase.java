@@ -2283,15 +2283,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Rename a local database or template file name. Allows to 'move' a huge
 	 * database blazingly fast. If you move the application to another directory,
 	 * you have to check if the directory exists and create the target
-	 * directory prior to calling this method
+	 * directory prior to calling this method<br>
+	 * <br>
+	 * Author: Ulrich Krause
 	 * 
-	 * @author Ulrich Krause
 	 * @param dbNameOld
 	 *            The old file name of the local database or template
 	 * @param dbNameNew
 	 *            The new file name of the local database or template.
-	 * @return Return status from this call indicates either success or what the
-	 *         error is.
 	 */
 	public static void renameDatabase(String dbNameOld, String dbNameNew) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();

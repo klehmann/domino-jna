@@ -161,13 +161,13 @@ public class NotesGC {
 	 * @param handle handle
 	 * @throws NotesError if handle does not exist
 	 */
-	public static void __b64_checkValidMemHandle(Class<? extends IAllocatedMemory> objClazz, long handle) {
+	public static void __b64_checkValidMemHandle(Class<? extends IAllocatedMemory> memClazz, long handle) {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
 		IAllocatedMemory obj = m_b64OpenHandlesMemory.get().get(handle);
 		if (obj==null) {
-			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+objClazz.getName()+" does not seem to exist (anymore).");
+			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+memClazz.getName()+" does not seem to exist (anymore).");
 		}
 	}
 

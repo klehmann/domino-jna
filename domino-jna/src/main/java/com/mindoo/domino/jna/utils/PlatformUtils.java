@@ -13,9 +13,10 @@ public class PlatformUtils {
 
 	/**
 	 * This function returns the path specification of the local Domino or Notes
-	 * executable / data / temp directory.
+	 * executable / data / temp directory.<br>
+	 * <br>
+	 * Author: Ulrich Krause
 	 * 
-	 * @author Ulrich Krause
 	 * @param osDirectory
 	 *            {@link OSDirectory}
 	 * @return path

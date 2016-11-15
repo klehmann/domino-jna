@@ -192,7 +192,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * <ul>
 	 * <li>{@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)}</li>
 	 * <li>{@link #getAllEntriesByKey(EnumSet, EnumSet, ViewLookupCallback, Object...)}</li>
-	 * <li>{@link #getAllIds(boolean)}</li>
+	 * <li>{@link #getAllIds(Navigate)}</li>
 	 * <li>{@link #getAllIdsByKey(EnumSet, Object...)}</li>
 	 * </ul>
 	 * @return true if auto update
@@ -210,7 +210,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * <ul>
 	 * <li>{@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)}</li>
 	 * <li>{@link #getAllEntriesByKey(EnumSet, EnumSet, ViewLookupCallback, Object...)}</li>
-	 * <li>{@link #getAllIds(boolean)}</li>
+	 * <li>{@link #getAllIds(Navigate)}</li>
 	 * <li>{@link #getAllIdsByKey(EnumSet, Object...)}</li>
 	 * </ul>
 	 * @param update true to activate auto update
@@ -1198,7 +1198,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param navigator use {@link Navigate#NEXT} to read documents and categories, {@link Navigate#NEXT_CATEGORY} to only read categories and {@link Navigate#NEXT_NONCATEGORY} to only read documents
 	 * @param filterTable true to filter the ID table to entries visible for the current user
 	 * @param idTable table to populate with note ids
-	 * @return ID table
 	 */
 	public void getAllIds(Navigate navigator, boolean filterTable, NotesIDTable idTable) {
 		checkHandle();
@@ -1260,28 +1259,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		return getAllEntries("0", 1, EnumSet.of(nav), Integer.MAX_VALUE, EnumSet.of(ReadMask.SUMMARYVALUES), new ReadSingleColumnValues(columnName, sortLocale));
 	}
-	
-	/**
-	 * The method reads a number of entries from the collection/view. It internally takes care
-	 * of view index changes while reading view data and restarts reading if such a change has been
-	 * detected.
-	 * 
-	 * @param startPosStr start position; use "0" or null to start before the first entry
-	 * @param skipCount number entries to skip before reading
-	 * @param returnNav navigator to specify how to move in the collection
-	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
-	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
-	 * @return lookup result
-	 * 
-	 * @param <T> type of lookup result object
-	 */
-//	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav, int preloadEntryCount,
-//			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
-//		
-//		return getAllEntries(startPosStr, skipCount, returnNav, (NotesTimeDate) null,
-//				(NotesIDTable) null, preloadEntryCount, returnMask, callback);
-//	}
 	
 	/**
 	 * The method reads a number of entries located under a specified category from the collection/view.
