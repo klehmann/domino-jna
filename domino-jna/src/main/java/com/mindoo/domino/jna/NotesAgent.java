@@ -176,7 +176,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	/**
 	 * Executes the agent on a context document
 	 * 
-	 * @param checkSecurity true to do security checks like restricted/unrestricted operations, can create databases, cis agent targeted to this machine, is user allowed to access this machine, can user run personal agents
+	 * @param checkSecurity true to do security checks like restricted/unrestricted operations, can create databases, is agent targeted to this machine, is user allowed to access this machine, can user run personal agents
 	 * @param runAsSigner true to first reopen the database as the agent signer, false to use the current database instance
 	 * @param stdOut optional writer to redirect the standard output content (use PRINT statements in the agent)
 	 * @param timeoutSeconds optional timeout for the agent execution or 0 for no timeout
