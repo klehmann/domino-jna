@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.structs;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -15,7 +16,9 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate extends Structure {
+public class NotesTimeDate extends Structure implements Serializable {
+	private static final long serialVersionUID = 549580185343880134L;
+	
 	/** C type : DWORD[2] */
 	public int[] Innards = new int[2];
 	public NotesTimeDate() {
