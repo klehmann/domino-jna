@@ -99,7 +99,7 @@ public class NotesNamesList implements IAllocatedMemory {
 		else {
 			if (m_handle32==0)
 				throw new NotesError(0, "Memory already freed");
-			NotesGC.__b64_checkValidMemHandle(getClass(), m_handle32);
+			NotesGC.__b32_checkValidMemHandle(getClass(), m_handle32);
 		}
 	}
 
