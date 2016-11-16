@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
@@ -32,7 +33,7 @@ public class CollectionDataCache implements Serializable {
 	private NotesTimeDate m_diffTime;
 	private ReentrantReadWriteLock m_rwLock = new ReentrantReadWriteLock();
 	private EnumSet<ReadMask> m_readMask;
-	private long m_cacheUseCounter;
+	private static ThreadLocal<Long> m_cacheUseCounter = new ThreadLocal<Long>();
 	
 	/**
 	 * Creates a new instance of an unbounded cache
@@ -85,12 +86,53 @@ public class CollectionDataCache implements Serializable {
 	}
 	
 	/**
+	 * Enables taking cache usage stats for the current thread
+	 */
+	public void enableUsageStats() {
+		Long counter = m_cacheUseCounter.get();
+		if (counter!=null) {
+			m_cacheUseCounter.set(Long.valueOf(0));
+		}
+	}
+
+	/**
+	 * Disables taking cache usage stats for the current thread
+	 */
+	public void disableUsageStats() {
+		m_cacheUseCounter.set(null);
+	}
+	
+	/**
+	 * Method to check whether taking cache usage stats for the
+	 * current thread is enabled
+	 * 
+	 * @return true if enabled
+	 */
+	public boolean isUsageStatsEnabled() {
+		return m_cacheUseCounter.get() != null;
+	}
+	
+	/**
 	 * Returns a statistic value with the number of view entries where we could use the cache data
 	 * 
-	 * @return count
+	 * @return count or -1 if logging stats are not enabled
 	 */
 	public long getCacheUsageStats() {
-		return m_cacheUseCounter;
+		Long counter = m_cacheUseCounter.get();
+		if (counter!=null) {
+			return counter.longValue();
+		}
+		return -1;
+	}
+	
+	/**
+	 * Sets the cache usage stats to 0
+	 */
+	public void resetCacheUsageStats() {
+		Long counter = m_cacheUseCounter.get();
+		if (counter!=null) {
+			m_cacheUseCounter.set(Long.valueOf(0));
+		}
 	}
 	
 	/**
@@ -160,6 +202,9 @@ public class CollectionDataCache implements Serializable {
 			}
 		}
 		
+		Long usageStats = m_cacheUseCounter.get();
+		long usageStatsPrim = usageStats==null ? -1 : usageStats.longValue();
+		
 		if (hasAnyMissingData) {
 			m_rwLock.readLock().lock();
 			try {
@@ -169,9 +214,16 @@ public class CollectionDataCache implements Serializable {
 						if (cacheData!=null) {
 							//updating data of stub entry from cache
 							currEntry.updateFromCache(cacheData);
-							m_cacheUseCounter++;
+							
+							if (usageStatsPrim!=-1) {
+								usageStatsPrim++;
+							}
 						}
 					}
+				}
+				
+				if (usageStatsPrim!=-1) {
+					m_cacheUseCounter.set(usageStatsPrim);
 				}
 			}
 			finally {
