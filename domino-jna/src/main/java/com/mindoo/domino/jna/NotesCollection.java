@@ -1013,7 +1013,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		 * 
 		 * @return cache
 		 */
-		protected CollectionDataCache getDataCache() {
+		public CollectionDataCache getDataCache() {
 			if (m_cacheInstance==null) {
 				m_cacheInstance = createDataCache();
 			}
