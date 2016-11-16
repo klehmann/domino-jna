@@ -1005,7 +1005,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		private CollectionDataCache m_cacheInstance;
 		
-		private CollectionDataCache getDataCache() {
+		/**
+		 * Standard implementation of this method calls {@link #createDataCache()} once
+		 * and stores the object instance in a member variable for later reuse.<br>
+		 * Can be overridden in case you need to store the cache somewhere else,
+		 * e.g. to reuse it later on.
+		 * 
+		 * @return cache
+		 */
+		protected CollectionDataCache getDataCache() {
 			if (m_cacheInstance==null) {
 				m_cacheInstance = createDataCache();
 			}
