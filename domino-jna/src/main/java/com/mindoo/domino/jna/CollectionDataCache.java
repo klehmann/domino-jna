@@ -90,7 +90,7 @@ public class CollectionDataCache implements Serializable {
 	 */
 	public void enableUsageStats() {
 		Long counter = m_cacheUseCounter.get();
-		if (counter!=null) {
+		if (counter==null) {
 			m_cacheUseCounter.set(Long.valueOf(0));
 		}
 	}
