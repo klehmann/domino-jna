@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
@@ -169,6 +168,7 @@ public class CollectionDataCache implements Serializable {
 			}
 			if (flush) {
 				m_cacheEntries.clear();
+				cacheFlushed();
 			}
 			
 			m_readMask = readMask;
@@ -184,6 +184,14 @@ public class CollectionDataCache implements Serializable {
 		finally {
 			m_rwLock.writeLock().unlock();
 		}
+	}
+	
+	/**
+	 * Called when the cache needed to be flushed because of view index changes.
+	 * Method is empty by default, can be overriden, e.g. to write a log entry.
+	 */
+	protected void cacheFlushed() {
+		//
 	}
 	
 	/**
