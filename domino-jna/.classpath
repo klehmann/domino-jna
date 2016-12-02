@@ -32,5 +32,7 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/Applications/IBM Notes.app/Contents/MacOS/shared/eclipse/plugins/com.ibm.domino.napi_9.0.1.20150826-0855/lwpd.domino.napi.jar"/>
+	<classpathentry kind="lib" path="/Applications/IBM Notes.app/Contents/MacOS/shared/eclipse/plugins/com.ibm.commons_9.0.1.20150826-0855/lwpd.commons.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

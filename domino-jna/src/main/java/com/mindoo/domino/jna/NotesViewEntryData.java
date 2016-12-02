@@ -587,17 +587,32 @@ public class NotesViewEntryData {
 	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
 	 * </ul>
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnNameOrTitle programatic column name or column title
 	 * @return column value or null
 	 */
-	public Object get(String columnName) {
+	public Object get(String columnNameOrTitle) {
 		Object val = null;
 		
+		String columnNameOrTitleLC = columnNameOrTitle.toLowerCase();
+		
 		if (m_summaryData!=null) {
-			val = m_summaryData.get(columnName);
+			if (m_summaryData.containsKey(columnNameOrTitleLC)) {
+				val = m_summaryData.get(columnNameOrTitleLC);
+			}
+			else {
+				//try to find the programmatic column name if columnNameOrTitle contains the column title
+				int colIdx = m_parentCollection.getColumnValuesIndex(columnNameOrTitleLC);
+				if (colIdx!=-1 && colIdx!=65535) {
+					String progColName = m_parentCollection.getColumnName(colIdx);
+					if (progColName!=null) {
+						val = m_summaryData.get(progColName);
+					}
+				}
+				
+			}
 		}
 		else if (m_columnValues!=null) {
-			int colIdx = m_parentCollection.getColumnValuesIndex(columnName);
+			int colIdx = m_parentCollection.getColumnValuesIndex(columnNameOrTitle);
 			if (colIdx!=-1 && colIdx!=65535) {
 				if (colIdx < m_columnValues.length) {
 					val = m_columnValues[colIdx];

@@ -13,6 +13,7 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
@@ -168,7 +169,7 @@ public class NotesNamesList implements IAllocatedMemory {
 
 				names = new ArrayList<String>(namesList.NumNames);
 
-				offset = NotesCAPI.winNamesListHeaderSize64;
+				offset = namesList.size();
 				numNames = (int) (namesList.NumNames & 0xffff);
 			}
 			else {
@@ -177,19 +178,30 @@ public class NotesNamesList implements IAllocatedMemory {
 
 				names = new ArrayList<String>(namesList.NumNames);
 
-				offset = NotesCAPI.namesListHeaderSize64;
+				offset = namesList.size();
 				numNames = (int) (namesList.NumNames & 0xffff);
-				
 			}
 		}
 		else {
-			NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
-			namesList.read();
+			if (notesAPI instanceof WinNotesCAPI) {
+				WinNotesNamesListHeader32 namesList = new WinNotesNamesListHeader32(namesListBufferPtr);
+				namesList.read();
 
-			names = new ArrayList<String>(namesList.NumNames);
+				names = new ArrayList<String>(namesList.NumNames);
 
-			offset = NotesCAPI.namesListHeaderSize32;
-			numNames = (int) (namesList.NumNames & 0xffff);
+				offset = namesList.size();
+				numNames = (int) (namesList.NumNames & 0xffff);
+			}
+			else {
+				NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
+				namesList.read();
+
+				names = new ArrayList<String>(namesList.NumNames);
+
+				offset = namesList.size();
+				numNames = (int) (namesList.NumNames & 0xffff);
+
+			}
 		}
 		
 

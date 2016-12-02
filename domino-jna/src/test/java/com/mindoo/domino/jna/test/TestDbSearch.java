@@ -27,7 +27,7 @@ import lotus.domino.Session;
  */
 public class TestDbSearch extends BaseJNATestClass {
 
-	//@Test
+	@Test
 	public void testDbSearch_search() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -59,7 +59,7 @@ public class TestDbSearch extends BaseJNATestClass {
 				
 				//since = null to search in all documents
 				NotesTimeDate since = null;
-				dbData.search(formula, viewTitle, searchFlags, noteClassMask, since, new ISearchCallback() {
+				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, noteClassMask, since, new ISearchCallback() {
 
 					@Override
 					public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
@@ -83,6 +83,10 @@ public class TestDbSearch extends BaseJNATestClass {
 						}
 					}
 				});
+				Assert.assertNotNull("Returned end timedate is not null", endTimeDate);
+				
+				System.out.println("Returned end timedate: "+endTimeDate);
+				
 				long t1=System.currentTimeMillis();
 				System.out.println("Database search done after "+(t1-t0)+"ms. "+cnt[0]+" documents found and processed");
 				

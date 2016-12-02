@@ -35,6 +35,31 @@ import lotus.domino.Session;
 public class TestViewTraversal extends BaseJNATestClass {
 
 	@Test
+	public void testViewTraversal_columnTitleLookup() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				
+				NotesCollection colFromDbData = dbData.openCollectionByName("People");
+				colFromDbData.update();
+
+				List<NotesViewEntryData> entries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), 10, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(10));
+				Assert.assertTrue("Row data could be read", entries.size() > 0);
+
+				NotesViewEntryData firstEntry = entries.get(0);
+				
+				//try to read a value by column title; the programmatic name for this column is different ($17)
+				String name = firstEntry.getAsString("name", null);
+				Assert.assertTrue("Name value can be read", name!=null);
+				
+				return null;
+			}
+		});
+	}
+	
+	@Test
 	public void testViewTraversal_numericInequalityLookup() {
 		runWithSession(new IDominoCallable<Object>() {
 

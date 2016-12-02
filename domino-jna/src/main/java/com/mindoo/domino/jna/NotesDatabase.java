@@ -24,27 +24,17 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI.b32_NsfSearchProc;
-import com.mindoo.domino.jna.internal.NotesCAPI.b64_NsfSearchProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBuildVersion;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
-import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
-import com.mindoo.domino.jna.structs.NotesSearchMatch32;
-import com.mindoo.domino.jna.structs.NotesSearchMatch64;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
+import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
@@ -73,7 +63,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String m_replicaID;
 	private boolean m_isOnServer;
 	private boolean m_authenticateUser;
-	private NotesNamesList m_namesList;
+	NotesNamesList m_namesList;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -212,40 +202,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					m_namesList = NotesNamingUtils.buildNamesList(m_asUserCanonical);
 				}
 				
-				
-				Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(m_namesList.getHandle64());
-				
-				try {
-					if (m_authenticateUser) {
-						if (notesAPI instanceof WinNotesCAPI) {
-							WinNotesNamesListHeader64 namesList = new WinNotesNamesListHeader64(namesListBufferPtr);
-							namesList.read();
-							//setting authenticated flag for the user is required when running on the server
-							namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-							namesList.write();
-							namesList.read();
-						}
-						else {
-							NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
-							namesList.read();
-							//setting authenticated flag for the user is required when running on the server
-							namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED + NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-							namesList.write();
-							namesList.read();
-						}
-					}
-					
-					//now try to open the database as this user
-					short openOptions = 0;
-					NotesTimeDate modifiedTime = null;
-					NotesTimeDate retDataModified = new NotesTimeDate();
-					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
-					NotesErrorUtils.checkResult(result);
+				if (m_authenticateUser) {
+					//setting authenticated flag for the user is required when running on the server
+					NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated, Privileges.PasswordAuthenticated));
 				}
-				finally {
-					notesAPI.b64_OSUnlockObject(m_namesList.getHandle64());
-				}
+				
+				//now try to open the database as this user
+				short openOptions = 0;
+				NotesTimeDate modifiedTime = null;
+				NotesTimeDate retDataModified = new NotesTimeDate();
+				NotesTimeDate retNonDataModified = new NotesTimeDate();
+				result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
+				NotesErrorUtils.checkResult(result);
 			}
 
 			m_hDB64 = hDB.get(0);
@@ -267,35 +235,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					m_namesList = NotesNamingUtils.buildNamesList(m_asUserCanonical);
 				}
 				
-				Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(m_namesList.getHandle32());
+				if (m_authenticateUser) {
+					//setting authenticated flag for the user is required when running on the server
+					NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated, Privileges.PasswordAuthenticated));
+				}
 				
-				try {
-					NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
-					namesList.read();
-					
-					if (m_authenticateUser) {
-						//setting authenticated flag for the user is required when running on the server
-						namesList.Authenticated = NotesCAPI.NAMES_LIST_AUTHENTICATED | NotesCAPI.NAMES_LIST_PASSWORD_AUTHENTICATED;
-						namesList.write();
-						namesList.read();
-					}
-					
-					//now try to open the database as this user
-					short openOptions = 0;
-					NotesTimeDate modifiedTime = null;
-					NotesTimeDate retDataModified = new NotesTimeDate();
-					NotesTimeDate retNonDataModified = new NotesTimeDate();
-					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
-					NotesErrorUtils.checkResult(result);
-				}
-				finally {
-					notesAPI.b32_OSUnlockObject(m_namesList.getHandle32());
-				}
+				//now try to open the database as this user
+				short openOptions = 0;
+				NotesTimeDate modifiedTime = null;
+				NotesTimeDate retDataModified = new NotesTimeDate();
+				NotesTimeDate retNonDataModified = new NotesTimeDate();
+				result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+				NotesErrorUtils.checkResult(result);
 			}
 			
 			m_hDB32 = hDB.get(0);
 		}
-		NotesGC.__objectCreated(this);
+		NotesGC.__objectCreated(NotesDatabase.class, this);
 	}
 
 	/** Available encryption strengths for database creation */
@@ -553,7 +509,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB64!=0) {
 					short result = notesAPI.b64_NSFDbClose(m_hDB64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
 					m_hDB64=0;
 				}
 			}
@@ -561,7 +517,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_hDB32!=0) {
 					short result = notesAPI.b32_NSFDbClose(m_hDB32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
 					m_hDB32=0;
 				}
 			}
@@ -591,12 +547,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hDB64==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hDB64);
+			NotesGC.__b64_checkValidObjectHandle(NotesDatabase.class, m_hDB64);
 		}
 		else {
 			if (m_hDB32==0)
 				throw new NotesError(0, "Database already recycled");
-			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hDB32);
+			NotesGC.__b32_checkValidObjectHandle(NotesDatabase.class, m_hDB32);
 		}
 	}
 
@@ -739,7 +695,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
 		}
 		
-		NotesGC.__objectCreated(newCol);
+		NotesGC.__objectCreated(NotesCollection.class, newCol);
 		return newCol;
 	}
 	
@@ -1036,7 +992,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			agent = new NotesAgent(this, agentNoteId, rethAgent.getValue());
 		}
-		NotesGC.__objectCreated(agent);
+		NotesGC.__objectCreated(NotesAgent.class, agent);
 		
 		return agent;
 	}
@@ -1377,9 +1333,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return retVersion;
 	}
 
-	public static interface ISearchCallback {
-		
-		public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData);
+	public static interface ISearchCallback extends NotesSearch.ISearchCallback {
 		
 	}
 	
@@ -1441,302 +1395,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
-		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-		final boolean isDST = NotesDateTimeUtils.isDaylightTime();
-
-		short searchFlagsBitMask = Search.toBitMask(searchFlags);
-
-		if (NotesJNAContext.is64Bit()) {
-			b64_NsfSearchProc apiCallback;
-			final Throwable invocationEx[] = new Throwable[1];
-
-			//not sure if this is necessary, but we had to use a special library extending StdCallLibrary
-			//for Windows and the documentation says this might be required for callbacks as well
-			//(StdCallCallback)
-			if (notesAPI instanceof WinNotesCAPI) {
-				apiCallback = new WinNotesCAPI.b64_NsfSearchProcWin() {
-
-					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
-							NotesItemTable summaryBuffer) {
-
-						try {
-							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
-							}
-
-							ItemTableData itemTableData=null;
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							callback.noteFound(NotesDatabase.this, noteId, noteClass, dbCreated, noteModified, itemTableData);
-						}
-						catch (Throwable t) {
-							invocationEx[0] = t;
-						}
-					}
-				};
-			}
-			else {
-				apiCallback = new b64_NsfSearchProc() {
-
-					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
-							NotesItemTable summaryBuffer) {
-
-						try {
-							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
-							}
-
-							ItemTableData itemTableData=null;
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							callback.noteFound(NotesDatabase.this, noteId, noteClass, dbCreated, noteModified, itemTableData);
-						}
-						catch (Throwable t) {
-							invocationEx[0] = t;							
-						}
-					}
-
-				};
-			}
-
-			long hFormula = 0;
-			if (!StringUtil.isEmpty(formula)) {
-				//formulaName only required if formula is used for collection columns
-				Memory formulaName = null;
-				short formulaNameLength = 0;
-				Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
-				short formulaTextLength = (short) formulaText.size();
-
-				LongByReference rethFormula = new LongByReference();
-				ShortByReference retFormulaLength = new ShortByReference();
-				ShortByReference retCompileError = new ShortByReference();
-				ShortByReference retCompileErrorLine = new ShortByReference();
-				ShortByReference retCompileErrorColumn = new ShortByReference();
-				ShortByReference retCompileErrorOffset = new ShortByReference();
-				ShortByReference retCompileErrorLength = new ShortByReference();
-
-				short result = notesAPI.b64_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
-						formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
-						retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
-
-				if (result == INotesErrorConstants.ERR_FORMULA_COMPILATION) {
-					String errMsg = NotesErrorUtils.errToString(result);
-
-					throw new FormulaCompilationError(result, errMsg, formula,
-							retCompileError.getValue(),
-							retCompileErrorLine.getValue(),
-							retCompileErrorColumn.getValue(),
-							retCompileErrorOffset.getValue(),
-							retCompileErrorLength.getValue());
-				}
-				NotesErrorUtils.checkResult(result);
-				hFormula = rethFormula.getValue();
-			}
-
-			try {
-				NotesTimeDate retUntil = new NotesTimeDate();
-
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
-
-				short result;
-				if (m_namesList!=null) {
-					result = notesAPI.b64_NSFSearchWithUserNameList(m_hDB64, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, m_namesList.getHandle64());
-				}
-				else {
-					result = notesAPI.b64_NSFSearch(m_hDB64, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
-					
-				}
-				NotesErrorUtils.checkResult(result);
-
-				if (invocationEx[0]!=null) {
-					//special case for JUnit testcases
-					if (invocationEx[0] instanceof AssertionError) {
-						throw (AssertionError) invocationEx[0];
-					}
-					throw new NotesError(0, "Error searching database", invocationEx[0]);
-				}
-
-				return retUntil;
-			}
-			finally {
-				//free handle of formula
-				if (hFormula!=0) {
-					notesAPI.b64_OSMemFree(hFormula);
-				}
-			}
-
-		}
-		else {
-			b32_NsfSearchProc apiCallback;
-			final Throwable invocationEx[] = new Throwable[1];
-
-			if (notesAPI instanceof WinNotesCAPI) {
-				apiCallback = new WinNotesCAPI.b32_NsfSearchProcWin() {
-					final Throwable invocationEx[] = new Throwable[1];
-
-					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
-							NotesItemTable summaryBuffer) {
-
-						try {
-							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
-							}
-
-							ItemTableData itemTableData=null;
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							callback.noteFound(NotesDatabase.this, noteId, noteClass, dbCreated, noteModified, itemTableData);
-						}
-						catch (Throwable t) {
-							invocationEx[0] = t;
-						}
-					}
-
-				};
-			}
-			else {
-				apiCallback = new b32_NsfSearchProc() {
-
-					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
-							NotesItemTable summaryBuffer) {
-
-						try {
-							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
-							}
-
-							ItemTableData itemTableData=null;
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							callback.noteFound(NotesDatabase.this, noteId, noteClass, dbCreated, noteModified, itemTableData);
-						}
-						catch (Throwable t) {
-							invocationEx[0] = t;
-						}
-					}
-
-				};
-
-			}
-
-			//formulaName only required of formula is used for collection columns
-			int hFormula = 0;
-			if (!StringUtil.isEmpty(formula)) {
-				Memory formulaName = null;
-				short formulaNameLength = 0;
-				Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
-				short formulaTextLength = (short) formulaText.size();
-
-				IntByReference rethFormula = new IntByReference();
-				ShortByReference retFormulaLength = new ShortByReference();
-				ShortByReference retCompileError = new ShortByReference();
-				ShortByReference retCompileErrorLine = new ShortByReference();
-				ShortByReference retCompileErrorColumn = new ShortByReference();
-				ShortByReference retCompileErrorOffset = new ShortByReference();
-				ShortByReference retCompileErrorLength = new ShortByReference();
-
-				short result = notesAPI.b32_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
-						formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
-						retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
-
-				if (result == INotesErrorConstants.ERR_FORMULA_COMPILATION) {
-					String errMsg = NotesErrorUtils.errToString(result);
-
-					throw new FormulaCompilationError(result, errMsg, formula,
-							retCompileError.getValue(),
-							retCompileErrorLine.getValue(),
-							retCompileErrorColumn.getValue(),
-							retCompileErrorOffset.getValue(),
-							retCompileErrorLength.getValue());
-				}
-				NotesErrorUtils.checkResult(result);
-				hFormula = rethFormula.getValue();
-			}
-
-			try {
-				NotesTimeDate retUntil = new NotesTimeDate();
-
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
-
-				short result;
-				if (m_namesList!=null) {
-					result = notesAPI.b32_NSFSearchWithUserNameList(m_hDB32, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, m_namesList.getHandle32());
-				}
-				else {
-					result = notesAPI.b32_NSFSearch(m_hDB32, hFormula, viewTitleBuf, searchFlagsBitMask, (short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil);
-				}
-				NotesErrorUtils.checkResult(result);
-
-				if (invocationEx[0]!=null) {
-					//special case for JUnit testcases
-					if (invocationEx[0] instanceof AssertionError) {
-						throw (AssertionError) invocationEx[0];
-					}
-					throw new NotesError(0, "Error searching database", invocationEx[0]);
-				}
-
-				return retUntil;
-			}
-			finally {
-				//free handle of formula
-				if (hFormula!=0) {
-					notesAPI.b32_OSMemFree(hFormula);
-				}
-			}
-
-		}
+		NotesTimeDate endTimeDate = NotesSearch.search(this, null, formula, viewTitle, searchFlags, noteClassMask, since, callback);
+		return endTimeDate;
 	}
 	
 	/**
@@ -2173,6 +1833,64 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * This function permanently deletes the specified "soft deleted" note from
+	 * the specified database.<br>
+	 * The deleted note may be of any NOTE_CLASS_xxx. The active user ID must have
+	 * sufficient user access in the databases's Access Control List (ACL) to carry
+	 * out a deletion on the note or the function will throw an error.
+
+	 * @param softDelNoteId The ID of the note that you want to delete.
+	 */
+	public void hardDeleteNote(int softDelNoteId) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFNoteHardDelete(m_hDB64, softDelNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NSFNoteHardDelete(m_hDB32, softDelNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function reads a "soft deleted" note into memory.<br>
+	 * Its input is a database handle and a note ID within that database.<br>
+	 * Use {@link NotesNote#update(EnumSet)} or {@link NotesNote#updateExtended(EnumSet)}
+	 * to restore this "soft deleted" note.
+
+	 * @param noteId The ID of the "soft deleted" note to open
+	 * @return note
+	 */
+	public NotesNote openSoftDeletedNoteById(int noteId) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethNote = new LongByReference();
+			short result = notesAPI.b64_NSFNoteOpenSoftDelete(m_hDB64, noteId, 0, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			long hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(NotesNote.class, note);
+			
+			return note;
+		}
+		else {
+			IntByReference rethNote = new IntByReference();
+			short result = notesAPI.b32_NSFNoteOpenSoftDelete(m_hDB32, noteId, 0, rethNote);
+			NotesErrorUtils.checkResult(result);
+			
+			int hNote = rethNote.getValue();
+			NotesNote note = new NotesNote(this, hNote);
+			NotesGC.__objectCreated(NotesNote.class, note);
+			
+			return note;
+		}
+	}
+	
+	/**
 	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
 	 * <br>
 	 * If the note is marked as unread, by default this function does not change the unread mark.<br>
@@ -2195,7 +1913,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			long hNote = rethNote.getValue();
 			NotesNote note = new NotesNote(this, hNote);
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			
 			return note;
 		}
@@ -2206,7 +1924,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			int hNote = rethNote.getValue();
 			NotesNote note = new NotesNote(this, hNote);
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			
 			return note;
 		}
@@ -2235,7 +1953,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			long hNote = rethNote.getValue();
 			NotesNote note = new NotesNote(this, hNote);
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			
 			return note;
 		}
@@ -2246,7 +1964,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			int hNote = rethNote.getValue();
 			NotesNote note = new NotesNote(this, hNote);
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			
 			return note;
 		}
@@ -2266,7 +1984,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b64_NSFNoteCreate(m_hDB64, retNoteHandle);
 			NotesErrorUtils.checkResult(result);
 			NotesNote note = new NotesNote(this, retNoteHandle.getValue());
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			return note;
 		}
 		else {
@@ -2274,7 +1992,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b32_NSFNoteCreate(m_hDB32, retNoteHandle);
 			NotesErrorUtils.checkResult(result);
 			NotesNote note = new NotesNote(this, retNoteHandle.getValue());
-			NotesGC.__objectCreated(note);
+			NotesGC.__objectCreated(NotesNote.class, note);
 			return note;
 		}
 	}

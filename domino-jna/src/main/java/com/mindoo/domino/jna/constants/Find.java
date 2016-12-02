@@ -84,9 +84,47 @@ public enum Find {
 	/** Only match non-category entries */
 	NONCATEGORY_ONLY(0x0400),
 	
-	/** Read and buffer matches NIFFindByKeyExtended2 only */
-	AND_READ_MATCHES(0x2000);
+	/** User COLLECTIONPOSITION->MaxLevel as BottomLevel. This can be setup prior to call */
+	SET_BOTTOM_LEVEL(0x1000),        
+    
+	/** Do not return multiple matches for
+	the same NOTEID in standard
+	permuted views */
+	UNIQUE_NOTEIDS_IN_FLAT_VIEW(0x4000),
 	
+	/** Return groups, ie looking in the $SERVER_ACCESS view */
+	RETURN_SERVER_ACCESS(0x8000),
+
+	//NIFFindByKeyExtended2 flags
+	
+	/** Read and buffer matches NIFFindByKeyExtended2 only */
+	AND_READ_MATCHES(0x2000),
+	
+	/** Use the case and accent sensitivity flags specified in the view */
+	FIND_VIEW_SENSITIVE(0x00010000),
+    
+	/** Find first category match */
+	CATEGORY_MATCH(0x00020000),
+	
+	/** Limit number of matches returned */
+	LIMIT_MATCHES(0x00040000),
+	
+	/** Search key is a category with leaf entry
+    so match the leaf as well (eg. ibm\atlanta\joe blow */
+	MATCH_CATEGORYANDLEAF(0x00080000),
+	
+	/** Search key is a category only and if no match then match on the leaf. */
+	MATCH_CATEGORYORLEAF(0x00100000),
+	
+	/** Return only entries which hNames would disallow (requires full access set) */
+	MATCH_PRIVATE_ONLY(0x00200000),
+	
+	/** Limit number of matches returned to the number in retNumMatches as an input parameter */
+	SPECIFIC_MATCHES(0x00400000),
+	
+	/** If the collection needs it, call NIFUpdateColletion prior to find (NIFFindByKeyExtended2 only */
+	FIND_REFRESH_FIRST(0x00800000);
+
 	private int m_val;
 	
 	Find(int val) {
@@ -107,6 +145,18 @@ public enum Find {
 			}
 		}
 		return (short) (result & 0xffff);
+	}
+	
+	public static int toBitMaskInt(EnumSet<Find> findSet) {
+		int result = 0;
+		if (findSet!=null) {
+			for (Find currFind : values()) {
+				if (findSet.contains(currFind)) {
+					result = result | currFind.getValue();
+				}
+			}
+		}
+		return result;
 	}
 	
 	/** Bitmask of the comparison flags defined above */

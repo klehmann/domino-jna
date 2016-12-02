@@ -7,7 +7,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 /**
- * JNA class to the NAMES_LIST type on 64 bit platforms
+ * JNA class to the NAMES_LIST type on Windows 64 bit platforms
  * 
  * @author Karsten Lehmann
  */

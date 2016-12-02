@@ -29,7 +29,13 @@ public enum Search {
 	/** Filter out "Truncated" documents */
 	NOABSTRACTS(0x1000),
 	/** Search formula applies only to data notes, i.e., others match */
-	DATAONLY_FORMULA(0x4000);
+	DATAONLY_FORMULA(0x4000),
+	
+	/** Full search (as if Since was "1") but exclude DATA notes prior to passed-in Since time */
+	FULL_DATACUTOFF(0x02000000),
+	
+	/** Allow search to return id's only i.e. no summary buffer */
+	NOPRIVCHECK(0x0800);
 	
 	private int m_val;
 	
@@ -53,4 +59,15 @@ public enum Search {
 		return (short) (result & 0xffff);
 	}
 	
+	public static int toBitMaskInt(EnumSet<Search> findSet) {
+		int result = 0;
+		if (findSet!=null) {
+			for (Search currFind : values()) {
+				if (findSet.contains(currFind)) {
+					result = result | currFind.getValue();
+				}
+			}
+		}
+		return result;
+	}
 }

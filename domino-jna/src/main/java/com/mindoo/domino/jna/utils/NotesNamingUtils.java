@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,8 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -199,10 +202,19 @@ public class NotesNamingUtils {
 			throw new IllegalStateException("Only supported for 32 bit");
 		}
 		
-		Memory namesListMem = new Memory(NotesCAPI.namesListHeaderSize32);
-		NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListMem);
-		namesListHeader.NumNames = (short) (names.size() & 0xffff);
-		namesListHeader.write();
+		Memory namesListMem;
+		if (notesAPI instanceof WinNotesCAPI) {
+			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize32);
+			NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListMem);
+			namesListHeader.NumNames = (short) (names.size() & 0xffff);
+			namesListHeader.write();
+		}
+		else {
+			namesListMem = new Memory(NotesCAPI.namesListHeaderSize32);
+			NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListMem);
+			namesListHeader.NumNames = (short) (names.size() & 0xffff);
+			namesListHeader.write();
+		}
 		
 		IntByReference retHandle = new IntByReference();
 		short result = notesAPI.b32_OSMemAlloc((short) 0, NotesCAPI.namesListHeaderSize32 + bOut.size(), retHandle);
@@ -349,5 +361,116 @@ public class NotesNamingUtils {
 		
 		return names;
 	}
+
+	/**
+	 * Enum of available user privileges
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static enum Privileges {
+
+		/** Set if names list has been authenticated via Notes (e.g. user is allowed to open a database) */
+		Authenticated(0x0001),
+
+		/**	Set if names list has been authenticated using external password -- Triggers "maximum password access allowed" feature */
+		PasswordAuthenticated(0x0002),
+
+		/**	Set if user requested full admin access and it was granted */
+		FullAdminAccess(0x0004);
+
+		private int m_flag;
+
+		Privileges(int flag) {
+			m_flag = flag;
+		}
+
+		public int getValue() {
+			return m_flag;
+		}
+	};
 	
+	/**
+	 * Internal helper function that modifies the Authenticated flag of a {@link NotesNamesList}
+	 * in order to grant access to certain C API functionality (e.g. when opening a database).
+	 * 
+	 * @param namesList names list
+	 * @param privileges new privileges
+	 */
+	public static void setPrivileges(NotesNamesList namesList, EnumSet<Privileges> privileges) {
+		int bitMask = 0;
+		for (Privileges currPrivilege : Privileges.values()) {
+			if (privileges.contains(currPrivilege)) {
+				bitMask = bitMask | currPrivilege.getValue();
+			}
+		}
+		
+		short bitMaskAsShort = (short) (bitMask & 0xffff);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		/*Use different header implementations based on architecture, because we have
+		//different alignments and data types:
+
+		typedef struct {
+			WORD		NumNames;
+			LICENSEID	License;
+											
+
+			#if defined(UNIX) || defined(OS2_2x) || defined(W32)
+			DWORD		Authenticated;
+			#else							
+			WORD		Authenticated;
+			#endif
+			} NAMES_LIST;
+		*/
+		
+		if (NotesJNAContext.is64Bit()) {
+			Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(namesList.getHandle64());
+			
+			try {
+				if (notesAPI instanceof WinNotesCAPI) {
+					WinNotesNamesListHeader64 namesListHeader = new WinNotesNamesListHeader64(namesListBufferPtr);
+					namesListHeader.read();
+					namesListHeader.Authenticated = bitMask;
+					namesListHeader.write();
+					namesListHeader.read();
+				}
+				else {
+					NotesNamesListHeader64 namesListHeader = new NotesNamesListHeader64(namesListBufferPtr);
+					namesListHeader.read();
+					//setting authenticated flag for the user is required when running on the server
+					namesListHeader.Authenticated = bitMaskAsShort;
+					namesListHeader.write();
+					namesListHeader.read();
+				}
+			}
+			finally {
+				notesAPI.b64_OSUnlockObject(namesList.getHandle64());
+			}
+		}
+		else {
+			Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(namesList.getHandle32());
+			
+			try {
+				//setting authenticated flag for the user is required when running on the server
+				if (notesAPI instanceof WinNotesCAPI) {
+					WinNotesNamesListHeader32 namesListHeader = new WinNotesNamesListHeader32(namesListBufferPtr);
+					namesListHeader.read();
+					namesListHeader.Authenticated = bitMask;
+					namesListHeader.write();
+					namesListHeader.read();
+				}
+				else {
+					NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListBufferPtr);
+					namesListHeader.read();
+					namesListHeader.Authenticated = bitMask;
+					namesListHeader.write();
+					namesListHeader.read();
+				}
+			}
+			finally {
+				notesAPI.b32_OSUnlockObject(namesList.getHandle32());
+			}
+		}
+	}
 }

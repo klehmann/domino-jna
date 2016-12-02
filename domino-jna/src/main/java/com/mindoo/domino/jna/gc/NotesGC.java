@@ -21,9 +21,9 @@ public class NotesGC {
 	private static ThreadLocal<Map<String,Object>> m_activeAutoGCCustomValues = new ThreadLocal<Map<String,Object>>();
 	
 	//maps with open handles; using LinkedHashMap to keep insertion order for the keys
-	private static ThreadLocal<LinkedHashMap<Integer,IRecyclableNotesObject>> m_b32OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<Integer,IRecyclableNotesObject>>();
+	private static ThreadLocal<LinkedHashMap<HashKey32,IRecyclableNotesObject>> m_b32OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey32,IRecyclableNotesObject>>();
 	private static ThreadLocal<LinkedHashMap<Integer,IAllocatedMemory>> m_b32OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Integer,IAllocatedMemory>>();
-	private static ThreadLocal<LinkedHashMap<Long, IRecyclableNotesObject>> m_b64OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<Long,IRecyclableNotesObject>>();
+	private static ThreadLocal<LinkedHashMap<HashKey64, IRecyclableNotesObject>> m_b64OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey64,IRecyclableNotesObject>>();
 	private static ThreadLocal<LinkedHashMap<Long, IAllocatedMemory>> m_b64OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Long,IAllocatedMemory>>();
 	
 	private static ThreadLocal<Boolean> m_writeDebugMessages = new ThreadLocal<Boolean>() {
@@ -75,27 +75,123 @@ public class NotesGC {
 		}
 	}
 
+	public static class HashKey64 {
+		private Class<?> m_clazz;
+		private long m_handle;
+		
+		public HashKey64(Class<?> clazz, long handle) {
+			m_clazz = clazz;
+			m_handle = handle;
+		}
+		
+		public long getHandle() {
+			return m_handle;
+		}
+		
+		public Class<?> getType() {
+			return m_clazz;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((m_clazz == null) ? 0 : m_clazz.hashCode());
+			result = prime * result + (int) (m_handle ^ (m_handle >>> 32));
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HashKey64 other = (HashKey64) obj;
+			if (m_clazz == null) {
+				if (other.m_clazz != null)
+					return false;
+			} else if (!m_clazz.equals(other.m_clazz))
+				return false;
+			if (m_handle != other.m_handle)
+				return false;
+			return true;
+		}
+	}
+
+	public static class HashKey32 {
+		private Class<?> m_clazz;
+		private int m_handle;
+		
+		public HashKey32(Class<?> clazz, int handle) {
+			m_clazz = clazz;
+			m_handle = handle;
+		}
+		
+		public int getHandle() {
+			return m_handle;
+		}
+		
+		public Class<?> getType() {
+			return m_clazz;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((m_clazz == null) ? 0 : m_clazz.hashCode());
+			result = prime * result + m_handle;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HashKey32 other = (HashKey32) obj;
+			if (m_clazz == null) {
+				if (other.m_clazz != null)
+					return false;
+			} else if (!m_clazz.equals(other.m_clazz))
+				return false;
+			if (m_handle != other.m_handle)
+				return false;
+			return true;
+		}
+	}
+
 	/**
 	 * Internal method to register a created Notes object that needs to be recycled
 	 * 
+	 * @param clazz class of hash pool
 	 * @param obj Notes object
 	 */
-	public static void __objectCreated(IRecyclableNotesObject obj) {
+	public static void __objectCreated(Class<?> clazz, IRecyclableNotesObject obj) {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 		
-		
 		if (NotesJNAContext.is64Bit()) {
-			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(obj.getHandle64(), obj);
+			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
+			
+			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(key, obj);
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
 		else {
-			IRecyclableNotesObject oldObj = m_b32OpenHandlesDominoObjects.get().put(obj.getHandle32(), obj);
+			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
+			
+			IRecyclableNotesObject oldObj = m_b32OpenHandlesDominoObjects.get().put(key, obj);
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
@@ -148,7 +244,8 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		IRecyclableNotesObject obj = m_b64OpenHandlesDominoObjects.get().get(handle);
+		HashKey64 key = new HashKey64(objClazz, handle);
+		IRecyclableNotesObject obj = m_b64OpenHandlesDominoObjects.get().get(key);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -182,7 +279,8 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		IRecyclableNotesObject obj = m_b32OpenHandlesDominoObjects.get().get(handle);
+		HashKey32 key = new HashKey32(objClazz, handle);
+		IRecyclableNotesObject obj = m_b32OpenHandlesDominoObjects.get().get(key);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -208,9 +306,10 @@ public class NotesGC {
 	/**
 	 * Internal method to unregister a created Notes object that was recycled
 	 * 
+	 * @param clazz class of hash pool
 	 * @param obj Notes object
 	 */
-	public static void __objectBeeingBeRecycled(IRecyclableNotesObject obj) {
+	public static void __objectBeeingBeRecycled(Class<? extends IRecyclableNotesObject> clazz, IRecyclableNotesObject obj) {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
@@ -222,10 +321,12 @@ public class NotesGC {
 		}
 		
 		if (NotesJNAContext.is64Bit()) {
-			m_b64OpenHandlesDominoObjects.get().remove(obj.getHandle64());
+			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
+			m_b64OpenHandlesDominoObjects.get().remove(key);
 		}
 		else {
-			m_b32OpenHandlesDominoObjects.get().remove(obj.getHandle32());
+			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
+			m_b32OpenHandlesDominoObjects.get().remove(key);
 		}
 	}
 
@@ -297,22 +398,22 @@ public class NotesGC {
 			m_activeAutoGC.set(Boolean.TRUE);
 			m_activeAutoGCCustomValues.set(new HashMap<String, Object>());
 			
-			LinkedHashMap<Integer,IRecyclableNotesObject> b32HandlesDominoObjects = null;
-			LinkedHashMap<Long,IRecyclableNotesObject> b64HandlesDominoObjects = null;
+			LinkedHashMap<HashKey32,IRecyclableNotesObject> b32HandlesDominoObjects = null;
+			LinkedHashMap<HashKey64,IRecyclableNotesObject> b64HandlesDominoObjects = null;
 			
 			LinkedHashMap<Integer,IAllocatedMemory> b32HandlesMemory = null;
 			LinkedHashMap<Long,IAllocatedMemory> b64HandlesMemory = null;
 			
 			try {
 				if (NotesJNAContext.is64Bit()) {
-					b64HandlesDominoObjects = new LinkedHashMap<Long,IRecyclableNotesObject>();
+					b64HandlesDominoObjects = new LinkedHashMap<HashKey64,IRecyclableNotesObject>();
 					m_b64OpenHandlesDominoObjects.set(b64HandlesDominoObjects);
 					
 					b64HandlesMemory = new LinkedHashMap<Long,IAllocatedMemory>();
 					m_b64OpenHandlesMemory.set(b64HandlesMemory);
 				}
 				else {
-					b32HandlesDominoObjects = new LinkedHashMap<Integer,IRecyclableNotesObject>();
+					b32HandlesDominoObjects = new LinkedHashMap<HashKey32,IRecyclableNotesObject>();
 					m_b32OpenHandlesDominoObjects.set(b32HandlesDominoObjects);
 					
 					b32HandlesMemory = new LinkedHashMap<Integer,IAllocatedMemory>();
@@ -334,7 +435,7 @@ public class NotesGC {
 							}
 							
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Long,IRecyclableNotesObject> currEntry = mapEntries[i];
+								Entry<HashKey64,IRecyclableNotesObject> currEntry = mapEntries[i];
 								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {
@@ -402,7 +503,7 @@ public class NotesGC {
 							}
 
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Integer,IRecyclableNotesObject> currEntry = mapEntries[i];
+								Entry<HashKey32,IRecyclableNotesObject> currEntry = mapEntries[i];
 								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {

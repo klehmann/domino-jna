@@ -1,17 +1,29 @@
 package com.mindoo.domino.jna;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
+import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback.Action;
+import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesCAPI.IdEnumerateProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
+import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
@@ -58,11 +70,43 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				throw new NotesError(0, "Null handle received for id table");
 			}
 		}
-		NotesGC.__objectCreated(this);
+		NotesGC.__objectCreated(NotesIDTable.class, this);
 
 		m_noRecycle=false;
 	}
 
+	/**
+	 * Creates a new ID table and adds a list of note Ids.<br>
+	 * <br>
+	 * Uses a highly optimized C call internally which inserts
+	 * ranges of IDs. The ID list does not have to be sorted, this is
+	 * checked and done (if required) internally.
+	 * 
+	 * @param ids IDs to add
+	 */
+	public NotesIDTable(Collection<Integer> ids) {
+		this();
+		addNotes(ids, true);
+	}
+	
+	/**
+	 * Creates a new ID table and adds a list of note Ids.<br>
+	 * <br>
+	 * Uses a highly optimized C call internally which inserts
+	 * ranges of IDs. The ID list does not have to be sorted, this is
+	 * checked and done (if required) internally.
+	 * 
+	 * @param ids IDs to add
+	 */
+	public NotesIDTable(int [] ids) {
+		this();
+		List<Integer> idsAsList = new ArrayList<Integer>(ids.length);
+		for (int i=0; i<ids.length; i++) {
+			idsAsList.add(Integer.valueOf(ids[i]));
+		}
+		addNotes(idsAsList, true);
+	}
+	
 	/**
 	 * Wraps an existing ID table, 32 bit mode
 	 * 
@@ -122,7 +166,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				if (m_idTableHandle64!=0) {
 					short result = notesAPI.b64_IDDestroyTable(m_idTableHandle64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesIDTable.class, this);
 					m_idTableHandle64=0;
 					m_isRecycled = true;
 				}
@@ -131,7 +175,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				if (m_idTableHandle32!=0) {
 					short result = notesAPI.b32_IDDestroyTable(m_idTableHandle32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesIDTable.class, this);
 					m_idTableHandle32=0;
 					m_isRecycled = true;
 				}
@@ -156,13 +200,13 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			if (m_idTableHandle64==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b64_checkValidObjectHandle(getClass(), m_idTableHandle64);
+				NotesGC.__b64_checkValidObjectHandle(NotesIDTable.class, m_idTableHandle64);
 		}
 		else {
 			if (m_idTableHandle32==0)
 				throw new RuntimeException("ID table already recycled");
 			if (!m_noRecycle)
-				NotesGC.__b32_checkValidObjectHandle(getClass(), m_idTableHandle32);
+				NotesGC.__b32_checkValidObjectHandle(NotesIDTable.class, m_idTableHandle32);
 		}
 	}
 	
@@ -211,7 +255,26 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * 
 	 * @param noteIds ids to add
 	 */
-	public void addNotes(Set<Integer> noteIds) {
+	public void addNotes(Collection<Integer> noteIds) {
+		boolean addToEnd = false;
+		if (getCount()==0) {
+			addToEnd = true;
+		}
+		
+		addNotes(noteIds, addToEnd);
+	}
+
+	/**
+	 * Method to add a list of note ids. Method is private to prevent
+	 * wrong usage by setting <i>addToEnd</i> to true when it's not ok.
+	 * 
+	 * @param noteIds ids to add
+	 * @param addToEnd set to true if we can <b>guarantee</b> that the ids we add are higher that the highest IDs in the table
+	 */
+	private void addNotes(Collection<Integer> noteIds, boolean addToEnd) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
 		//check if Set is already sorted
 		Integer lastVal = null;
 		Iterator<Integer> idsIt = noteIds.iterator();
@@ -223,32 +286,79 @@ public class NotesIDTable implements IRecyclableNotesObject {
 					isSorted = false;
 					break;
 				}
-				
+
 			}
 			lastVal = currVal;
 		}
-		if (isSorted) {
-			for (Integer currNoteId : noteIds) {
-				addNote(currNoteId.intValue());
-			}
-		}
-		else {
-			//if not sorted, sort it first; might produce better performance when adding to the
-			//ID table, because of its memory organization
-			Integer[] noteIdsArr = noteIds.toArray(new Integer[noteIds.size()]);
+		Integer[] noteIdsArr = noteIds.toArray(new Integer[noteIds.size()]);
+		if (!isSorted) {
 			Arrays.sort(noteIdsArr);
-			for (Integer currNoteId : noteIdsArr) {
-				addNote(currNoteId.intValue());
+		}
+		
+		LinkedList<Integer> currIdRange = new LinkedList<Integer>();
+		
+		//find consecutive id ranges
+		for (int i=0; i<noteIdsArr.length; i++) {
+			int currNoteId = noteIdsArr[i];
+			if (currIdRange.isEmpty()) {
+				currIdRange.add(currNoteId);
+			}
+			else {
+				Integer highestRangeId = currIdRange.getLast();
+				if (currNoteId == (highestRangeId.intValue() + 4)) {
+					currIdRange.add(currNoteId);
+				}
+				else {
+					if (currIdRange.size()==1) {
+						addNote(currIdRange.getFirst());
+					}
+					else {
+						short result;
+						
+						if (NotesJNAContext.is64Bit()) {
+							result = notesAPI.b64_IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+							
+						}
+						else {
+							result = notesAPI.b32_IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+						}
+						
+						NotesErrorUtils.checkResult(result);
+					}
+					//flush range list
+					currIdRange.clear();
+					currIdRange.add(currNoteId);
+				}
+			}
+			
+		}
+		
+		if (!currIdRange.isEmpty()) {
+			if (currIdRange.size()==1) {
+				addNote(currIdRange.getFirst());
+			}
+			else {
+				short result;
+				
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+					
+				}
+				else {
+					result = notesAPI.b32_IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+				}
+				
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 	}
-
+	
 	/**
 	 * Removes a set of note ids from this id table
 	 * 
 	 * @param noteIds ids to remove
 	 */
-	public void removeNotes(Set<Integer> noteIds) {
+	public void removeNotes(Collection<Integer> noteIds) {
 		for (Integer currNoteId : noteIds) {
 			removeNote(currNoteId.intValue());
 		}
@@ -310,6 +420,25 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 	}
 
+	/**
+	 * Fast replacement of this table's content with the content of another table
+	 * 
+	 * @param otherTable table to get the IDs from
+	 * @param saveIDTableHeader true to save the ID table header (e.g. the timedate)
+	 */
+	public void replaceWith(NotesIDTable otherTable, boolean saveIDTableHeader) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_IDTableReplaceExtended(otherTable.getHandle64(), m_idTableHandle64, saveIDTableHeader ? NotesCAPI.IDREPLACE_SAVEDEST : 0);
+		}
+		else {
+			result = notesAPI.b32_IDTableReplaceExtended(otherTable.getHandle32(), m_idTableHandle32, saveIDTableHeader ? NotesCAPI.IDREPLACE_SAVEDEST : 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
 	/**
 	 * Returns the this of this table in memory
 	 * 
@@ -649,34 +778,200 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Converts the content of this id table to a list of Integer
+	 * 
+	 * @return list
+	 */
+	public List<Integer> toList() {
+		final List<Integer> idsAsList = new ArrayList<Integer>();
+		
+		enumerate(new IEnumerateCallback() {
+
+			@Override
+			public Action noteVisited(int noteId) {
+				idsAsList.add(noteId);
+				return Action.Continue;
+			}
+		});
+		
+		return idsAsList;
+	}
+	
+	/**
 	 * Converts the content of this id table to an array of int
 	 * 
 	 * @return int array
 	 */
 	public int[] toArray() {
+		List<Integer> idsAsList = toList();
+		int[] idsArr = new int[idsAsList.size()];
+		
+		for (int i=0; i<idsAsList.size(); i++) {
+			idsArr[i] = idsAsList.get(i).intValue();
+		}
+		return idsArr;
+	}
+
+	/**
+	 * Callback interface for ID table scanning
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IEnumerateCallback {
+		public static enum Action {Continue, Stop};
+		
+		/**
+		 * Method is called for each ID in the table
+		 * 
+		 * @param noteId not id
+		 * @return either {@link Action#Continue} to go on scanning or {@link Action#Stop}
+		 */
+		public Action noteVisited(int noteId);
+		
+	}
+	
+	/**
+	 * Traverses the ID table
+	 * 
+	 * @param callback callback is called for each ID
+	 */
+	public void enumerate(final IEnumerateCallback callback) {
 		checkHandle();
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		int[] ids = new int[getCount()];
-		IntByReference retID = new IntByReference();
-		boolean first = true;
-		int cnt = 0;
+		
+		IdEnumerateProc proc;
+		if (notesAPI instanceof WinNotesCAPI) {
+			proc = new WinNotesCAPI.IdEnumerateProcWin() {
+
+				@Override
+				public short invoke(Pointer parameter, int noteId) {
+					Action result = callback.noteVisited(noteId);
+					if (result==Action.Stop) {
+						return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+					}
+					return 0;
+				}
+				
+			};
+		}
+		else {
+			proc = new IdEnumerateProc() {
+
+				@Override
+				public short invoke(Pointer parameter, int noteId) {
+					Action result = callback.noteVisited(noteId);
+					if (result==Action.Stop) {
+						return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+					}
+					return 0;
+				}
+				
+			};
+		}
+		
 		if (NotesJNAContext.is64Bit()) {
-			while (notesAPI.b64_IDScan(m_idTableHandle64, first, retID)) {
-				first=false;
-				ids[cnt] = retID.getValue();
-				cnt++;
+			short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
+			if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
-			while (notesAPI.b32_IDScan(m_idTableHandle32, first, retID)) {
-				first=false;
-				ids[cnt] = retID.getValue();
-				cnt++;
+			short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
+			if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
+				NotesErrorUtils.checkResult(result);
 			}
 		}
-		return ids;
 	}
+	
+	/**
+	 * Traverses the ID table in reverse order
+	 * 
+	 * @param callback callback is called for each ID
+	 */
+	public void enumerateBackwards(IEnumerateCallback callback) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
+		IntByReference retID = new IntByReference();
+		boolean last = true;
+
+		if (NotesJNAContext.is64Bit()) {
+			while (notesAPI.b64_IDScanBack(m_idTableHandle64, last, retID)) {
+				last=false;
+				Action result = callback.noteVisited(retID.getValue());
+				if (result==Action.Stop) {
+					return;
+				}
+			}
+		}
+		else {
+			while (notesAPI.b32_IDScanBack(m_idTableHandle32, last, retID)) {
+				last=false;
+				Action result = callback.noteVisited(retID.getValue());
+				if (result==Action.Stop) {
+					return;
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Returns the last ID in the table
+	 * 
+	 * @return ID
+	 * @throws NotesError with {@link INotesErrorConstants#ERR_IDTABLE_LENGTH_MISMATCH} if ID table is empty
+	 */
+	public int getLastId() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference retID = new IntByReference();
+		if (NotesJNAContext.is64Bit()) {
+			if (notesAPI.b64_IDScanBack(m_idTableHandle64, true, retID)) {
+				return retID.getValue();
+			}
+			else {
+				throw new NotesError(INotesErrorConstants.ERR_IDTABLE_LENGTH_MISMATCH, "ID table is empty");
+			}
+		}
+		else {
+			if (notesAPI.b32_IDScanBack(m_idTableHandle32, true, retID)) {
+				return retID.getValue();
+			}
+			else {
+				throw new NotesError(INotesErrorConstants.ERR_IDTABLE_LENGTH_MISMATCH, "ID table is empty");
+			}
+		}
+	}
+	
+	/**
+	 * Returns the first ID in the table
+	 * 
+	 * @return ID
+	 * @throws NotesError with {@link INotesErrorConstants#ERR_IDTABLE_LENGTH_MISMATCH} if ID table is empty
+	 */
+	public int getFirstId() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference retID = new IntByReference();
+		if (NotesJNAContext.is64Bit()) {
+			if (notesAPI.b64_IDScan(m_idTableHandle64, true, retID)) {
+				return retID.getValue();
+			}
+			else {
+				throw new NotesError(INotesErrorConstants.ERR_IDTABLE_LENGTH_MISMATCH, "ID table is empty");
+			}
+		}
+		else {
+			if (notesAPI.b32_IDScan(m_idTableHandle32, true, retID)) {
+				return retID.getValue();
+			}
+			else {
+				throw new NotesError(INotesErrorConstants.ERR_IDTABLE_LENGTH_MISMATCH, "ID table is empty");
+			}
+		}
+	}
+	
 	/**
 	 * Checks if the table contains a note ids
 	 * 
@@ -747,6 +1042,116 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Container object with the comparison result of {@link NotesIDTable#findDifferences(NotesIDTable)}
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class ComparisonResult {
+		private NotesIDTable m_tableAdds;
+		private NotesIDTable m_tableDeletes;
+		private NotesIDTable m_tableSame;
+		
+		public ComparisonResult(NotesIDTable tableAdds, NotesIDTable tableDeletes, NotesIDTable tableSame) {
+			m_tableAdds = tableAdds;
+			m_tableDeletes = tableDeletes;
+			m_tableSame = tableSame;
+		}
+		
+		/**
+		 * Returns the ID table of adds
+		 * 
+		 * @return table
+		 */
+		public NotesIDTable getTableAdds() {
+			return m_tableAdds;
+		}
+
+		/**
+		 * Returns the ID table of deletes
+		 * 
+		 * @return table
+		 */
+		public NotesIDTable getTableDeletes() {
+			return m_tableDeletes;
+		}
+
+		/**
+		 * Returns the ID table of IDs that exist in both compared tables
+		 * 
+		 * @return table
+		 */
+		public NotesIDTable getTableSame() {
+			return m_tableSame;
+		}
+		
+		/**
+		 * Returns if all tables are recycled
+		 * 
+		 * @return true if recycled
+		 */
+		public boolean isRecycled() {
+			return m_tableAdds.isRecycled() && m_tableDeletes.isRecycled() && m_tableSame.isRecycled();
+		}
+		
+		/**
+		 * Recycles all tables. Does nothing if already recycled
+		 */
+		public void recycle() {
+			if (!m_tableAdds.isRecycled())
+				m_tableAdds.recycle();
+			if (!m_tableDeletes.isRecycled())
+				m_tableDeletes.recycle();
+			if (!m_tableSame.isRecycled())
+				m_tableSame.recycle();
+		}
+	}
+	
+	/**
+	 * Compares this ID table to another one and returns which note ids need to be added or deleted and which
+	 * IDs are the same in both tables
+	 * 
+	 * @param otherTable table to compare with
+	 * @return result object with ID tables for adds, deletes and same
+	 */
+	public ComparisonResult findDifferences(NotesIDTable otherTable) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retTableAddsHandle = new LongByReference();
+			LongByReference retTableDeletesHandle = new LongByReference();
+			LongByReference retTableSameHandle = new LongByReference();
+
+			result = notesAPI.b64_IDTableDifferences(m_idTableHandle64, otherTable.getHandle64(), retTableAddsHandle, retTableDeletesHandle, retTableSameHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			long hTableAdds = retTableAddsHandle.getValue();
+			long hTableDeletes = retTableDeletesHandle.getValue();
+			long hTableSame = retTableSameHandle.getValue();
+			
+			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds),
+					new NotesIDTable(hTableDeletes), new NotesIDTable(hTableSame));
+			return compResult;
+		}
+		else {
+			IntByReference retTableAddsHandle = new IntByReference();
+			IntByReference retTableDeletesHandle = new IntByReference();
+			IntByReference retTableSameHandle = new IntByReference();
+
+			result = notesAPI.b32_IDTableDifferences(m_idTableHandle32, otherTable.getHandle32(), retTableAddsHandle, retTableDeletesHandle, retTableSameHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			int hTableAdds = retTableAddsHandle.getValue();
+			int hTableDeletes = retTableDeletesHandle.getValue();
+			int hTableSame = retTableSameHandle.getValue();
+			
+			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds),
+					new NotesIDTable(hTableDeletes), new NotesIDTable(hTableSame));
+			return compResult;
+		}
+	}
+	
+	/**
 	 * Creates a copy of this table
 	 * 
 	 * @return clone
@@ -766,5 +1171,75 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			return new NotesIDTable(rethTable.getValue());
 		}
+	}
+	
+	/**
+	 * Creates a new ID table with the IDs of this table, but with high order
+	 * bit set (0x80000000L).
+	 * 
+	 * @return ID table
+	 */
+	public NotesIDTable withHighOrderBit() {
+		List<Integer> ids = toList();
+		
+		for (int i=0; i<ids.size(); i++) {
+			long currId = ids.get(i) | NotesCAPI.NOTEID_RESERVED;
+			ids.set(i, (int) (currId & 0xffffffffL));
+		}
+		
+		return new NotesIDTable(ids);
+	}
+	
+	/**
+	 * Filters the ID table by applying the specified selection formula on each note.<br>
+	 * 
+	 * @param db database to load the notes
+	 * @param formula selection formula, e.g. SELECT Form="Person"
+	 * @return new ID table with filter result
+	 */
+	public NotesIDTable filter(NotesDatabase db, String formula) {
+		final Set<Integer> retIds = new TreeSet<Integer>();
+		
+		NotesSearch.search(db, this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
+				NotesCAPI.NOTE_CLASS_DOCUMENT, null, new NotesSearch.ISearchCallback() {
+
+			@Override
+			public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+				retIds.add(noteId);
+			}
+		});
+		
+		NotesIDTable retIDTable = new NotesIDTable(retIds);
+		return retIDTable;
+	}
+	
+	/**
+	 * Filters the ID table by applying the specified selection formula on each note.
+	 * In constrast to {@link #filter(NotesDatabase, String)}, this method does not
+	 * create a new ID table instance, but replaces the IDs in this table with the
+	 * selection result.
+	 * 
+	 * @param db database to load the notes
+	 * @param formula selection formula, e.g. SELECT Form="Person"
+	 */
+	public void filterInPlace(NotesDatabase db, String formula) {
+		if (formula==null)
+			return;
+		
+		final Set<Integer> retIds = new TreeSet<Integer>();
+
+		NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), NotesCAPI.NOTE_CLASS_DOCUMENT, null, new NotesSearch.ISearchCallback() {
+
+			@Override
+			public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+				retIds.add(noteId);
+			}
+		});
+		
+		clear();
+		
+		addNotes(retIds, true);
 	}
 }

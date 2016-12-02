@@ -8,10 +8,12 @@ import java.util.Vector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.ibm.domino.napi.c.xsp.XSPNative;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.NotesCollection.EntriesAsListCallback;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.ReadMask;
@@ -25,7 +27,7 @@ import lotus.domino.Session;
 
 public class TestNamesListCreation extends BaseJNATestClass {
 
-	@Test
+//	@Test
 	public void testNamesListCreation_listComparisonWithLegacy() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -73,7 +75,16 @@ public class TestNamesListCreation extends BaseJNATestClass {
 						fakeGroup,
 						fakeRole);
 
-
+				NotesNamesList namesList = NotesNamingUtils.writeNewNamesList(fakesUserNamesList);
+				Session sessionAsUser = XSPNative.createXPageSession("CN=Fake User"+rnd+"/O=Mindoo", namesList.getHandle64(), true, false);
+				System.out.println(sessionAsUser.getEffectiveUserName());
+				Database dbTest = sessionAsUser.getDatabase("", "fakenames.nsf");
+				Document docTmp = dbTest.createDocument();
+				Vector v = sessionAsUser.evaluate("@Usernameslist", docTmp);
+				System.out.println("User names list: "+v);
+				docTmp.recycle();
+				sessionAsUser.recycle();
+				
 				NotesDatabase dbData = new NotesDatabase(getSession(), "", "fakenames.nsf", fakesUserNamesList);
 				
 				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());

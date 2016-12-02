@@ -24,6 +24,7 @@ import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -32,6 +33,7 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
+import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.queries.condition.Selection;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
@@ -46,7 +48,6 @@ import com.sun.jna.ptr.ShortByReference;
 import lotus.domino.Database;
 import lotus.domino.View;
 import lotus.domino.ViewColumn;
-import lotus.notes.addins.changeman.functions.DominoConsoleCommand;
 
 /**
  * A collection represents a list of Notes, comparable to the {@link View} object
@@ -71,9 +72,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private boolean m_autoUpdate;
 	private CollationInfo m_collationInfo;
-	private Map<String, Integer> m_columnIndices;
+	private Map<String, Integer> m_columnIndicesByItemName;
+	private Map<String, Integer> m_columnIndicesByTitle;
 	private Map<Integer, String> m_columnNamesByIndex;
 	private Map<Integer, Boolean> m_columnIsCategoryByIndex;
+	private Map<Integer, String> m_columnTitlesLCByIndex;
+	private Map<Integer, String> m_columnTitlesByIndex;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -172,15 +176,19 @@ public class NotesCollection implements IRecyclableNotesObject {
 	
 	/**
 	 * Returns the column values index for the specified programmatic column name
+	 * or column title
 	 * 
-	 * @param columnName column name
+	 * @param columnNameOrTitle programmatic column name or title, case insensitive
 	 * @return index or -1 for unknown columns; returns 65535 for static column values that are not returned as column values
 	 */
-	public int getColumnValuesIndex(String columnName) {
-		if (m_columnIndices==null) {
+	public int getColumnValuesIndex(String columnNameOrTitle) {
+		if (m_columnIndicesByItemName==null) {
 			scanColumns();
 		}
-		Integer idx = m_columnIndices.get(columnName.toLowerCase());
+		Integer idx = m_columnIndicesByItemName.get(columnNameOrTitle.toLowerCase());
+		if (idx==null) {
+			idx = m_columnIndicesByTitle.get(columnNameOrTitle.toLowerCase());
+		}
 		return idx==null ? -1 : idx.intValue();
 	}
 	
@@ -588,13 +596,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 				if (NotesJNAContext.is64Bit()) {
 					result = notesAPI.b64_NIFCloseCollection(m_hCollection64);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
 					m_hCollection64=0;
 				}
 				else {
 					result = notesAPI.b32_NIFCloseCollection(m_hCollection32);
 					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(this);
+					NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
 					m_hCollection32=0;
 				}
 				
@@ -610,12 +618,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hCollection64);
+			NotesGC.__b64_checkValidObjectHandle(NotesCollection.class, m_hCollection64);
 		}
 		else {
 			if (m_hCollection32==0)
 				throw new NotesError(0, "Collection already recycled");
-			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hCollection32);
+			NotesGC.__b32_checkValidObjectHandle(NotesCollection.class, m_hCollection32);
 		}
 	}
 
@@ -1325,25 +1333,28 @@ public class NotesCollection implements IRecyclableNotesObject {
 		while (true) {
 			expectedLkViewMod[0] = getIndexModifiedSequenceNo();
 			
-			//find category entry
-			FindResult catFindResult = findByKey(EnumSet.of(Find.CASE_INSENSITIVE, Find.FIRST_EQUAL, Find.EQUAL), category);
-			if (catFindResult.getEntriesFound()==0) {
-				//category not found
-				T result = callback.startingLookup();
-				result = callback.lookupDone(result);
-				return result;
-			}
-			String firstDocInCategoryPos = catFindResult.getPosition();
-			if (!firstDocInCategoryPos.contains(".")) {
+			//find category entry using NIFFindByKeyExtended2 with flag FIND_CATEGORY_MATCH
+			NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.CATEGORY_MATCH,
+					Find.FIND_REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
+					EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), category);
+			
+			List<NotesViewEntryData> catEntries = catLkResult.getEntries();
+			if (catEntries.isEmpty()) {
 				//category not found
 				T result = callback.startingLookup();
 				result = callback.lookupDone(result);
 				return result;
 			}
 			
-			categoryPos[0] = firstDocInCategoryPos.substring(0, firstDocInCategoryPos.indexOf('.'));
+			if (catLkResult.getIndexModifiedSequenceNo() != expectedLkViewMod[0]) {
+				callback.viewIndexChangeDetected();
+				continue;
+			}
 			
-			System.out.println("categoryPos[0]: "+categoryPos[0]);
+			NotesViewEntryData catEntry = catEntries.get(0);
+			
+			categoryPos[0] = catEntry.getPositionStr();
+			
 			NotesCollectionPosition pos = NotesCollectionPosition.toPosition(categoryPos[0]);
 			pos.MinLevel = (byte) (pos.Level+1);
 			pos.MaxLevel = 32;
@@ -1352,7 +1363,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			final boolean[] viewIndexModified = new boolean[1];
 			
 			EnumSet<Navigate> useReturnNav = returnNav.clone();
-			useReturnNav.add(Navigate.MINLEVEL);
+//			useReturnNav.add(Navigate.MINLEVEL);
+			useReturnNav.add(Navigate.ALL_DESCENDANTS);
 			
 			EnumSet<ReadMask> useReturnMask = returnMask.clone();
 			useReturnMask.add(ReadMask.INDEXPOSITION);
@@ -1791,14 +1803,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (keys==null || keys.length==0)
 			throw new IllegalArgumentException("No search keys specified");
 		
-		if (!canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
-			throw new UnsupportedOperationException("This method cannot be used for the specified arguments (only noteids) or the current platform (only R9 and above)");
-		}
+//		if (!canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
+//			throw new UnsupportedOperationException("This method cannot be used for the specified arguments (only noteids) or the current platform (only R9 and above)");
+//		}
 		
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		short findFlagsBitMask = Find.toBitMask(findFlags);
+		int findFlagsBitMask = Find.toBitMaskInt(findFlags);
 		short result;
 		int returnMaskBitMask = ReadMask.toBitMask(returnMask);
 		
@@ -2352,7 +2364,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, null, convertStringsLazily, singleColumnLookupName);
+						indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
 				return viewData;
 			}
 		}
@@ -2483,10 +2495,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return programmatic column names converted to lowercase in the order they appear in the view
 	 */
 	public Iterator<String> getColumnNames() {
-		if (m_columnIndices==null) {
+		if (m_columnIndicesByItemName==null) {
 			scanColumns();
 		}
-		return m_columnIndices.keySet().iterator();
+		return m_columnIndicesByItemName.keySet().iterator();
 	}
 	
 	/**
@@ -2507,10 +2519,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return number of columns
 	 */
 	public int getNumberOfColumns() {
-		if (m_columnIndices==null) {
+		if (m_columnIndicesByItemName==null) {
 			scanColumns();
 		}
-		return m_columnIndices.size();
+		return m_columnIndicesByItemName.size();
+	}
+	
+	/**
+	 * Returns the column title for a column
+	 * 
+	 * @param columnIndex column index
+	 * @return title
+	 */
+	public String getColumnTitle(int columnIndex) {
+		return m_columnTitlesByIndex.get(columnIndex);
 	}
 	
 	/**
@@ -2519,9 +2541,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return info object with collation info
 	 */
 	private void scanColumns() {
-		m_columnIndices = new LinkedHashMap<String, Integer>();
+		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
+		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
 		m_columnNamesByIndex = new TreeMap<Integer, String>();
 		m_columnIsCategoryByIndex = new TreeMap<Integer, Boolean>();
+		m_columnTitlesLCByIndex = new TreeMap<Integer, String>();
+		m_columnTitlesByIndex = new TreeMap<Integer, String>();
 		
 		try {
 			//TODO implement this in pure JNA code
@@ -2542,10 +2567,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 					String currItemName = currCol.getItemName();
 					String currItemNameLC = currItemName.toLowerCase();
 					
+					String currTitle = currCol.getTitle();
+					String currTitleLC = currTitle.toLowerCase();
+					
 					int currColumnValuesIndex = currCol.getColumnValuesIndex();
-					m_columnIndices.put(currItemNameLC, currColumnValuesIndex);
+					m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
+					m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
+					
 					if (currColumnValuesIndex != ViewColumn.VC_NOT_PRESENT) {
 						m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+						m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
+						m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
 						
 						boolean isCategory = currCol.isCategory();
 						m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
@@ -2717,6 +2749,23 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Method to check whether a view is time variant and has to be rebuilt on each db open
+	 * 
+	 * @return true if time variant
+	 */
+	public boolean isTimeVariantView() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NIFIsTimeVariantView(m_hCollection64);
+		}
+		else {
+			return notesAPI.b32_NIFIsTimeVariantView(m_hCollection32);
+		}
+	}
+	
+	/**
 	 * Method to check if the view index is up to date or if any note has changed in
 	 * the database since the last view index update.
 	 * 
@@ -2788,7 +2837,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param column first column to return
 	 * @param columns other columns to return
-	 * @deprecated not ready for prime time
+	 * @deprecated not ready for prime time, does nothing
 	 * @return selection
 	 */
 	public Selection select(String column, String... columns) {
@@ -2815,4 +2864,54 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Resets the selected list ID table
+	 */
+	public void clearSelection() {
+		m_selectedList.clear();
+	}
+	
+	/**
+	 * This function runs a selection formula on every document of this collection.
+	 * Documents matching the selection formula get added to the selected list.<br>
+	 * After calling this method, the selected documents can then be read via
+	 * {@link #getAllEntries(String, int, EnumSet, int, EnumSet, ViewLookupCallback)}
+	 * with the navigator {@link Navigate#NEXT_SELECTED}.
+	 * 
+	 * @param formula selection formula, e.g. SELECT form="Person"
+	 * @param clearPrevSelection true to clear the current selection
+	 */
+	public void select(String formula, boolean clearPrevSelection) {
+		NotesIDTable idTable = new NotesIDTable();
+		try {
+			//collect all ids of this collection
+			getAllIds(Navigate.NEXT_NONCATEGORY, true, idTable);
+			
+			final Set<Integer> retIds = new TreeSet<Integer>();
+			
+			NotesSearch.search(m_parentDb, idTable, formula, "-",
+					EnumSet.of(Search.SESSION_USERNAME), NotesCAPI.NOTE_CLASS_DATA, null, new NotesSearch.ISearchCallback() {
+						
+						@Override
+						public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+								NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+							retIds.add(noteId);
+						}
+					});
+			
+			NotesIDTable selectedList = getSelectedList();
+			if (clearPrevSelection) {
+				selectedList.clear();
+			}
+			
+			if (!retIds.isEmpty())
+				selectedList.addNotes(retIds);
+			
+			//push selection changes to remote servers
+			updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
 }

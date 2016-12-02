@@ -6,6 +6,7 @@ import java.nio.LongBuffer;
 
 import com.mindoo.domino.jna.structs.NotesBlockId;
 import com.mindoo.domino.jna.structs.NotesBuildVersion;
+import com.mindoo.domino.jna.structs.NotesCDField;
 import com.mindoo.domino.jna.structs.NotesCollectionPosition;
 import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.structs.NotesFTIndexStats;
@@ -25,6 +26,7 @@ import com.mindoo.domino.jna.structs.NotesTime;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.NotesTimeDatePair;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
@@ -54,10 +56,12 @@ public interface NotesCAPI extends Library {
 	public final int tableItemSize = new NotesTableItem().size();
 	public final int oidSize = new NotesOriginatorId().size();
 	public final int winNamesListHeaderSize64 = new WinNotesNamesListHeader64().size();
+	public final int winNamesListHeaderSize32 = new WinNotesNamesListHeader32().size();
 	public final int namesListHeaderSize32 = new NotesNamesListHeader32().size();
 	public final int namesListHeaderSize64 = new NotesNamesListHeader64().size();
 	public final int objectDescriptorSize = new NotesObjectDescriptor().size();
 	public final int fileObjectSize = new NotesFileObject().size();
+	public final int cdFieldSize = new NotesCDField().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -298,6 +302,9 @@ public interface NotesCAPI extends Library {
 
     public short b64_NIFUpdateFilters (long hCollection, short ModifyFlags);
     public short b32_NIFUpdateFilters (int hCollection, short ModifyFlags);
+    
+    public boolean b64_NIFIsTimeVariantView(long hCollection);
+    public boolean b32_NIFIsTimeVariantView(int hCollection);
     
     /** UnreadList has been modified */
     public static short FILTER_UNREAD = 0x0001;
@@ -727,7 +734,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public boolean b32_IDScan (int hTable, boolean fFirst, IntByReference retID);
 	public boolean b64_IDScan (long hTable, boolean fFirst, IntByReference retID);
-	
+
+	public boolean b32_IDScanBack (int hTable, boolean fLast, IntByReference retID);
+	public boolean b64_IDScanBack (long hTable, boolean fLast, IntByReference retID);
+
 	public int b32_IDEntries (int hTable);
 	public int b64_IDEntries (long hTable);
 	
@@ -763,8 +773,108 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public void IDTableSetTime(ByteBuffer pIDTable, NotesTimeDate Time);
 	public NotesTimeDate IDTableTime(ByteBuffer pIDTable);
 
+	public short b64_IDEnumerate(long hTable, IdEnumerateProc Routine, Pointer Parameter);
+	public short b32_IDEnumerate(int hTable, IdEnumerateProc Routine, Pointer Parameter);
+	
+	public interface IdEnumerateProc extends Callback { /* StdCallCallback if using __stdcall__ */
+		short invoke(Pointer parameter, int noteId); 
+	};
+
+	/*        Insert a DWORD Range of IDs into an ID table
+	*
+	*        Inputs:
+	*                hTable = Handle of ID Table
+	*                IDFrom, IDTo = Range of IDs to insert (inclusive)
+	*                Alignment = most typical ID repeat factor (for example, 4 if IDs are
+	*                                        most typically spaced 4 apart in value)
+	*                AtEnd        = if TRUE, caller GUARANTEES that the ID range does not
+	*                                  overlap any IDs in the table and are the largest IDs
+	*                                  in the table!
+	*/
+	public short b64_IDInsertRange(long hTable, int IDFrom, int IDTo, boolean AddToEnd);
+	public short b32_IDInsertRange(int hTable, int IDFrom, int IDTo, boolean AddToEnd);
+	
+	public short b64_IDTableDifferences(long idtable1, long idtable2, LongByReference outputidtableAdds, LongByReference outputidtableDeletes, LongByReference outputidtableSame);
+	public short b32_IDTableDifferences(int idtable1, int idtable2, IntByReference outputidtableAdds, IntByReference outputidtableDeletes, IntByReference outputidtableSame);
+	
+	public short b64_IDTableReplaceExtended(long idtableSrc, long idtableDest, byte flags);
+	public short b32_IDTableReplaceExtended(int idtableSrc, int idtableDest, byte flags);
+	
+	//saves the info in the idtable header in the dest
+	public static final byte IDREPLACE_SAVEDEST = 0x01;
+	
 	public short ODSLength(short type);
 	
+	/*
+	 * ECLGetListCapabilities - WS Execution control list routine to get the
+	 * capabilites for the given signer
+	 *
+	 * Lookup the user in the ECL and return capabilities.
+	 * 
+	 * Inputs: pNamesList - pointer to a NAMES_LIST that contains signer's name
+	 * and all the signer's alternate names. ECLType - Type of ECL to look up.
+	 *
+	 * Outputs: retwCapabilites - Capabilites (ECL_FLAG_xxx | ECL_FLAG_yyy, etc)
+	 * retwCapabilites2 - Extended Capabilites for Workstation ECL
+	 * retfUserCanModifyECL - (optional) set to TRUE if user is allowed to
+	 * modify the ECL
+	 *
+	 * Returns: STATUS
+	 */
+	public short ECLGetListCapabilities(Pointer pNamesList, short ECLType, ShortByReference retwCapabilities,
+			ShortByReference retwCapabilities2, IntByReference retfUserCanModifyECL);
+
+	public short ECL_TYPE_LOTUS_SCRIPT = 0;
+	public short ECL_TYPE_JAVA_APPLET = 1;
+	public short ECL_TYPE_JAVASCRIPT = 2;
+
+	/** Access files (read/write/export/import)*/
+	public short ECL_FLAG_FILES = 0x0008;
+	/** Access current db's docs/db */
+	public short ECL_FLAG_DOCS_DBS = 0x0010;
+
+	/** Access environ vars (get/set) */
+	public short ECL_FLAG_ENVIRON = 0x0080;
+	/** Access non-notes dbs (@DB with non "","Notes" first arg) */
+	public short ECL_FLAG_EXTERN_DBS = 0x0100;
+	/** Access "code" in external systems (LS, DLLS, DDE) */
+	public short ECL_FLAG_EXTERN_CODE = 0x0200;
+	/** Access external programs (OLE/SendMsg/Launch) */
+	public short ECL_FLAG_EXTERN_PROGRAMS = 0x0400;
+	/** Send mail (@MailSend) */
+	public short ECL_FLAG_SEND_MAIL = 0x0800;
+	/** Access ECL */
+	public short ECL_FLAG_ECL = 0x1000;
+	/** Read access to other databases */
+	public short ECL_FLAG_READ_OTHER_DBS = 0x2000;
+	/** Write access to other databases */
+	public short ECL_FLAG_WRITE_OTHER_DBS = 0x4000;
+	/** Ability to export data (copy/print, etc) */
+	public short ECL_FLAG_EXPORT_DATA = (short) (0x8000 & 0xffff);
+
+	/* extended acl flags */
+	
+	/** Access network programatically */
+	public short ECL_FLAG_NETWORK = 0x0001;
+	/** Property Broker Get */
+	public short ECL_FLAG_PROPERTY_GET = 0x0002;
+	/** Property Broker Put */
+	public short ECL_FLAG_PROPERTY_PUT = 0x0004;
+	/** Widget configuration */
+	public short ECL_FLAG_WIDGETS = 0x0008;
+	/** access to load Java */
+	public short ECL_FLAG_LOADJAVA = 0x0010;
+
+	
+	/*
+	 * Set the agent's return http status code
+	 *
+	 * hAgentCtx - agent context
+	 * httpStatus - http status code
+	 */
+	public short b64_AgentSetHttpStatusCode(long hAgentCtx, int httpStatus);
+	public short b32_AgentSetHttpStatusCode(int hAgentCtx, int httpStatus);
+
 	public short ConvertTIMEDATEToText(
 			ByteBuffer intlFormat,
 			ByteBuffer textFormat,
@@ -950,7 +1060,13 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b64_NSFNoteOpen(long hDB, int noteId, short openFlags, LongByReference rethNote);
 	public short b32_NSFNoteOpenExt(int hDB, int noteId, int flags, IntByReference rethNote);
 	public short b64_NSFNoteOpenExt(long hDB, int noteId, int flags, LongByReference rethNote);
+
+	public short b64_NSFNoteOpenSoftDelete(long hDB, int NoteID, int Reserved, LongByReference rethNote);
+	public short b32_NSFNoteOpenSoftDelete(int hDB, int NoteID, int Reserved, IntByReference rethNote);
 	
+	public short b64_NSFNoteHardDelete(long hDB, int NoteID, int Reserved);
+	public short b32_NSFNoteHardDelete(int hDB, int NoteID, int Reserved);
+
 	public short b32_NSFNoteDeleteExtended(int hDB, int NoteID, int UpdateFlags);
 	public short b64_NSFNoteDeleteExtended(long hDB, int NoteID, int UpdateFlags);
 	
@@ -973,6 +1089,29 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public short b32_NSFNoteUnsign(int hNote);
 	public short b64_NSFNoteUnsign(long hNote);
+
+	public short b64_NSFNoteComputeWithForm(
+			long  hNote,
+			long  hFormNote,
+			int  dwFlags,
+			b64_CWFErrorProc ErrorRoutine,
+			Pointer CallersContext);
+	
+	public short b32_NSFNoteComputeWithForm(
+			int  hNote,
+			int  hFormNote,
+			int  dwFlags,
+			b32_CWFErrorProc ErrorRoutine,
+			Pointer CallersContext);
+	
+	/* 	Possible validation phases for NSFNoteComputeWithForm()  */
+	public short CWF_DV_FORMULA = 1;
+	public short CWF_IT_FORMULA	= 2;
+	public short CWF_IV_FORMULA = 3;
+	public short CWF_COMPUTED_FORMULA = 4;
+	public short CWF_DATATYPE_CONVERSION = 5;
+	public short CWF_COMPUTED_FORMULA_LOAD = CWF_COMPUTED_FORMULA;
+	public short CWF_COMPUTED_FORMULA_SAVE = 6;
 
 	public short b32_NSFItemInfo(
 			int  note_handle,
@@ -1194,12 +1333,12 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFItemSetNumber(
 			int  hNote,
 			Memory ItemName,
-			double Number);
+			Memory Number);
 
 	public short b64_NSFItemSetNumber(
 			long hNote,
 			Memory ItemName,
-			double Number);
+			Memory Number);
 
 	public short b64_NSFItemConvertToText(
 			long note_handle,
@@ -1548,6 +1687,64 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Pointer EnumRoutineParameter,
 			NotesTimeDate retUntil);
 
+//	STATUS far PASCAL NSFSearchExtended3 (DBHANDLE hDB,
+//            FORMULAHANDLE hFormula,
+//            DHANDLE hFilter,
+//            DWORD FilterFlags,
+//            char *ViewTitle,
+//            DWORD SearchFlags,
+//            DWORD SearchFlags1,
+//            DWORD SearchFlags2,
+//            DWORD SearchFlags3,
+//            DWORD SearchFlags4,
+//            WORD NoteClassMask,
+//            TIMEDATE *Since,
+//            STATUS (far PASCAL *EnumRoutine)
+//                                    (void *EnumRoutineParameter,
+//                                    SEARCH_MATCH *SearchMatch,
+//                                    ITEM_TABLE *SummaryBuffer),
+//            void *EnumRoutineParameter,
+//            TIMEDATE *retUntil,
+//            DHANDLE namelist) 
+//	
+	public short b64_NSFSearchExtended3 (long hDB, 
+            long hFormula, 
+            long hFilter, 
+            int filterFlags, 
+            Memory ViewTitle, 
+            int SearchFlags, 
+            int SearchFlags1, 
+            int SearchFlags2, 
+            int SearchFlags3, 
+            int SearchFlags4, 
+            short NoteClassMask, 
+            NotesTimeDate Since, 
+            b64_NsfSearchProc  EnumRoutine,
+            Pointer EnumRoutineParameter, 
+            NotesTimeDate retUntil, 
+            long namelist);
+
+	public short b32_NSFSearchExtended3 (int hDB, 
+            int hFormula, 
+            int hFilter, 
+            int FilterFlags, 
+            Memory ViewTitle, 
+            int SearchFlags, 
+            int SearchFlags1, 
+            int SearchFlags2, 
+            int SearchFlags3, 
+            int SearchFlags4, 
+            short NoteClassMask, 
+            NotesTimeDate Since, 
+            b32_NsfSearchProc  EnumRoutine,
+            Pointer EnumRoutineParameter, 
+            NotesTimeDate retUntil, 
+            int namelist);
+
+	//Get filter information needed to do a NSFSearchStart via a FOLDER search
+	public short b64_NSFGetFolderSearchFilter(long hViewDB, long hDataDB, int ViewNoteID, NotesTimeDate Since, int Flags, LongByReference Filter);
+	public short b32_NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDate Since, int Flags, IntByReference Filter);
+	
 	public short b64_NSFSearchWithUserNameList(
 			long hDB,
 			long hFormula,
@@ -1570,7 +1767,164 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			b32_NsfSearchProc  EnumRoutine,
 			Pointer EnumRoutineParameter,
 			NotesTimeDate retUntil,
-			long  nameList);
+			int nameList);
+
+	/** No filter specified (hFilter ignored). */
+	public int SEARCH_FILTER_NONE = 0x00000000;
+	/** hFilter is a Note ID table. */
+	public int SEARCH_FILTER_NOTEID_TABLE = 0x00000001;
+	/** hFilter is a View note handle */
+	public int SEARCH_FILTER_FOLDER = 0x00000002;
+	/** Filter on particular Properties. */
+	public int SEARCH_FILTER_DBDIR_PROPERTY = 0x00000004;
+	/** Filter on Database Options (bits set). */
+	public int SEARCH_FILTER_DBOPTIONS = 0x00000010;
+	/** Filter on Database Options (bits clear). */
+	public int SEARCH_FILTER_DBOPTIONS_CLEAR = 0x00000020;
+	/** Filter based on a set of form names */
+	public int SEARCH_FILTER_FORMSKIMMED = 0x00000040;
+	/** Don't try to filter on form names, we know it won't work */
+	public int SEARCH_FILTER_NOFORMSKIMMED = 0x00000080;
+	/** Filter on Query View SQL */
+	public int SEARCH_FILTER_QUERY_VIEW = 0x00000100;
+	/** Filter on item revision times */
+	public int SEARCH_FILTER_ITEM_TIME = 0x00000200;
+	/** Filter on time range input */
+	public int SEARCH_FILTER_RANGE = 0x00000400;
+	/** Filter out .ndx files */
+	public int SEARCH_FILTER_NO_NDX = 0x00000800;
+	/** Search for databases with inline indexing */
+	public int SEARCH_FILTER_INLINE_INDEX = 0x00001000;
+
+	/**
+	 * Include deleted and non-matching notes in search (ALWAYS "ON" in partial
+	 * searches!)
+	 */
+	public int SEARCH_ALL_VERSIONS = 0x0001;
+
+	/** obsolete synonym */
+	public int SEARCH_INCLUDE_DELETED = SEARCH_ALL_VERSIONS;
+
+	/** TRUE to return summary buffer with each match */
+	public int SEARCH_SUMMARY = 0x0002;
+	/**
+	 * For directory mode file type filtering. If set, "NoteClassMask" is
+	 * treated as a FILE_xxx mask for directory filtering
+	 */
+	public int SEARCH_FILETYPE = 0x0004;
+
+	/** special caching for dir scan */
+	public int SEARCH_SERVERCACHE = 0x0008;
+
+	/** Set NOTE_CLASS_NOTIFYDELETION bit of NoteClass for deleted notes */
+	public int SEARCH_NOTIFYDELETIONS = 0x0010;
+
+	/** do not put item names into summary info */
+	public int SEARCH_NOITEMNAMES = 0x0020;
+	/** return error if we don't have full privileges */
+	public int SEARCH_ALLPRIVS = 0x0040;
+
+	/** for dir scans, only return files needing fixup */
+	public int SEARCH_FILEFIXUP = 0x0080;
+	/** Formula buffer is hashed UNID table */
+	public int SEARCH_UNID_TABLE = 0x0100;
+	/** Return buffer in canonical form */
+	public int SEARCH_CANONICAL = 0x0200;
+	/** Use current session's user name, not server's */
+	public int SEARCH_SESSION_USERNAME = 0x0400;
+	/** Allow search to return id's only, i.e. no summary buffer */
+	public int SEARCH_NOPRIVCHECK = 0x0800;
+	/** Filter out "Truncated" documents */
+	public int SEARCH_NOABSTRACTS = 0x1000;
+	/** Perform unread flag sync */
+	public int SEARCH_SYNC = 0x2000;
+
+	/** Search formula applies only to data notes, i.e., others match */
+	public int SEARCH_DATAONLY_FORMULA = 0x4000;
+	/** INCLUDE notes with non-replicatable OID flag */
+	public int SEARCH_NONREPLICATABLE = 0x8000;
+	/**
+	 * SEARCH_MATCH is V4 style. That is MatchesFormula is now a bit field where
+	 * the lower bit indicates whether the document matches. If it does, the
+	 * other bits provide additional information regarding the note.
+	 */
+	public int SEARCH_V4INFO = 0x00010000;
+	/** Search includes all children of matching documents. */
+	public int SEARCH_ALLCHILDREN = 0x00020000;
+	/** Search includes all descendants of matching documents. */
+	public int SEARCH_ALLDESCENDANTS = 0x00040000;
+	/** First pass in a multipass hierarchical search. */
+	public int SEARCH_FIRSTPASS = 0x00080000;
+	/** Descendants were added on this pass. */
+	public int SEARCH_DESCENDANTSADDED = 0x00100000;
+	/** Formula is an Array of Formulas. */
+	public int SEARCH_MULTI_FORMULA = 0x00200000;
+	/** Return purged note ids as deleted notes. */
+	public int SEARCH_INCLUDE_PURGED = 0x00400000;
+	/** Only return templates without the "advanced" bit set */
+	public int SEARCH_NO_ADV_TEMPLATES = 0x00800000;
+	/** Only Private Views or Agents */
+	public int SEARCH_PRIVATE_ONLY = 0x01000000;
+	/**
+	 * Full search (as if Since was "1") but exclude DATA notes prior to
+	 * passed-in Since time
+	 */
+	public int SEARCH_FULL_DATACUTOFF = 0x02000000;
+
+	/**
+	 * If specified, the progress field in the SEARCH_ENTRY structure will be
+	 * filled in. This avoids performing the calculation if it was not wanted.
+	 */
+	public int SEARCH_CALC_PROGRESS = 0x04000000;
+	/**
+	 * Include *** ALL *** named ghost notes in the search (profile docs,
+	 * xACL's, etc). Note: use SEARCH1_PROFILE_DOCS, etc., introduced in R6, for
+	 * finer control
+	 */
+	public int SEARCH_NAMED_GHOSTS = 0x08000000;
+	/** Perform optimized unread sync */
+	public int SEARCH_SYNC_OPTIMIZED = 0x10000000;
+	/**
+	 * Return only docs with protection fields (BS_PROTECTED set in note header)
+	 */
+	public int SEARCH_ONLYPROTECTED = 0x20000000;
+	/** Return soft deleted documents */
+	public int SEARCH_SOFTDELETIONS = 0x40000000;
+
+	/** for setting/verifying that bits 28-31 of search 1 flags are 1000 */
+	public int SEARCH1_SIGNATURE = 0x80000000;
+
+	public int SEARCH1_SELECT_NAMED_GHOSTS = (0x00000001 | SEARCH1_SIGNATURE);
+
+	/**
+	 * Include profile documents (a specific type of named ghost note) in the
+	 * search Note: set SEARCH1_SELECT_NAMED_GHOSTS, too, if you want the
+	 * selection formula to be applied to the profile docs (so as not to get
+	 * them all back as matches).
+	 */
+	public int SEARCH1_PROFILE_DOCS = (0X00000002 | SEARCH1_SIGNATURE);
+
+	/**
+	 * Skim off notes whose summary buffer can't be generated because its size
+	 * is too big.
+	 */
+	public int SEARCH1_SKIM_SUMMARY_BUFFER_TOO_BIG = (0x00000004 | SEARCH1_SIGNATURE);
+	public int SEARCH1_RETURN_THREAD_UNID_ARRAY = (0x00000008 | SEARCH1_SIGNATURE);
+	public int SEARCH1_RETURN_TUA = SEARCH1_RETURN_THREAD_UNID_ARRAY;
+
+	/**
+	 * flag for reporting noaccess in case of reader's field at the doc level
+	 */
+	public int SEARCH1_REPORT_NOACCESS = (0x000000010 | SEARCH1_SIGNATURE);
+	/** Search "Truncated" documents */
+	public int SEARCH1_ONLY_ABSTRACTS = (0x000000020 | SEARCH1_SIGNATURE);
+	/**
+	 * Search documents fixup purged. This distinct and mutually exlusive from
+	 * SEARCH_INCLUDE_PURGED which is used for view processing by NIF etc to
+	 * remove purged notes from views. This is used for replication restoring
+	 * corrupt documents.
+	 */
+	public int SEARCH1_FIXUP_PURGED = (0x000000040 | SEARCH1_SIGNATURE);
 
 	public interface b32_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
         void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
@@ -1587,6 +1941,16 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public interface NoteNsfItemScanProc extends Callback { /* StdCallCallback if using __stdcall__ */
         void invoke(short spare, short itemFlags, Pointer name, short nameLength, Pointer value, int valueLength, Pointer routineParameter); 
     }
+
+	public interface b64_CWFErrorProc extends Callback { /* StdCallCallback if using __stdcall__ */
+		short invoke(Pointer pCDField, short phase, short error, long hErrorText, short wErrorTextSize, Pointer ctx); 
+    }
+
+	public interface b32_CWFErrorProc extends Callback { /* StdCallCallback if using __stdcall__ */
+       short invoke(Pointer pCDField, short phase, short error, int hErrorText, short wErrorTextSize, Pointer ctx); 
+    }
+
+	public int CWF_CONTINUE_ON_ERROR = 0x0001;		/*	Ignore compute errors */
 
 	public short b64_NSFNoteCipherExtractWithCallback (long hNote, NotesBlockId.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -1667,7 +2031,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 		agent has "restricted" agent privileges, then the agent will
 		be restricted. If you don't set this flag, all agents run as
 		unrestricted.
-
+		
 		List of security checks enabled by this flag:
 			Restricted/unrestricted agent
 			Can create databases
@@ -1690,6 +2054,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			 int dwFlags,
 			 LongByReference rethContext);
 	
+	public short b64_AgentCreateRunContextExt (long hAgent, Pointer pReserved, long pOldContext, int dwFlags, LongByReference rethContext);
+	public short b32_AgentCreateRunContextExt (int hAgent, Pointer pReserved, int pOldContext, int dwFlags, IntByReference rethContext);
+	
 	public short b32_AgentSetDocumentContext(int hAgentCtx, int hNote);
 	public short b64_AgentSetDocumentContext(long hAgentCtx, long hNote);
 	
@@ -1703,7 +2070,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public void b64_SetParamNoteID(long hAgentCtx, int noteId);
 	public void b32_SetParamNoteID(int hAgentCtx, int noteId);
-                        	
+
+	public short b64_AgentSetUserName(long hAgentCtx, long hNameList);
+	public short b32_AgentSetUserName(int hAgentCtx, int hNameList);
+
 	/* Definitions for stdout redirection types. This specifies where
 		output from the LotusScript "print" statement will go */
 
@@ -1724,6 +2094,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short AgentDelete (int hAgent); /* delete agent */
 	public short AgentDelete (long hAgent); /* delete agent */
 	
+	public boolean b64_IsRunAsWebUser(long hAgent);
+	public boolean b32_IsRunAsWebUser(int hAgent);
+
+
 
 	/* If AGENT_REOPEN_DB is set, the AgentRun call will reopen
 		the agent's database with the privileges of the signer of

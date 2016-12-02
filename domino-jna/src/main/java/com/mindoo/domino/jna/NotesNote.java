@@ -19,22 +19,31 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesCAPI.b32_CWFErrorProc;
+import com.mindoo.domino.jna.internal.NotesCAPI.b64_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBlockId;
+import com.mindoo.domino.jna.structs.NotesCDField;
 import com.mindoo.domino.jna.structs.NotesFileObject;
 import com.mindoo.domino.jna.structs.NotesObjectDescriptor;
 import com.mindoo.domino.jna.structs.NotesOriginatorId;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
+
+import lotus.domino.Database;
+import lotus.domino.Document;
 
 /**
  * Object wrapping a Notes document / note
@@ -74,6 +83,42 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Converts a legacy {@link lotus.domino.Document} to a
+	 * {@link NotesNote}.
+	 * 
+	 * @param parentDb parent database
+	 * @param doc document to convert
+	 * @return note
+	 */
+	public static NotesNote toNote(NotesDatabase parentDb, Document doc) {
+		long handle = LegacyAPIUtils.getHandle(doc);
+		NotesNote note;
+		if (NotesJNAContext.is64Bit()) {
+			note = new NotesNote(parentDb, handle);
+		}
+		else {
+			note = new NotesNote(parentDb, (int) handle);
+		}
+		note.setNoRecycle();
+		return note;
+	}
+	
+	/**
+	 * Converts this note to a legacy {@link Document}
+	 * 
+	 * @param db parent database
+	 * @return document
+	 */
+	public Document toDocument(Database db) {
+		if (NotesJNAContext.is64Bit()) {
+			return LegacyAPIUtils.createDocument(db, m_hNote64);
+		}
+		else {
+			return LegacyAPIUtils.createDocument(db, m_hNote32);
+		}
+	}
+	
+	/**
 	 * Returns the parent database
 	 * 
 	 * @return database
@@ -98,7 +143,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retNoteId);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retNoteId);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retNoteId);
 		}
 		return retNoteId.getInt(0);
 	}
@@ -139,7 +184,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
 		}
 		NotesOriginatorId oid = new NotesOriginatorId(retOid);
 		oid.read();
@@ -163,7 +208,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_MODIFIED, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_MODIFIED, retModified);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_MODIFIED, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -187,7 +232,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ACCESSED, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ACCESSED, retModified);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ACCESSED, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -211,7 +256,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
 		}
 		else {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
 		}
 		NotesTimeDate td = new NotesTimeDate(retModified);
 		td.read();
@@ -280,13 +325,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NSFNoteClose(m_hNote64);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__objectBeeingBeRecycled(this);
+			NotesGC.__objectBeeingBeRecycled(NotesNote.class, this);
 			m_hNote64=0;
 		}
 		else {
 			result = notesAPI.b32_NSFNoteClose(m_hNote32);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__objectBeeingBeRecycled(this);
+			NotesGC.__objectBeeingBeRecycled(NotesNote.class, this);
 			m_hNote32=0;
 		}
 	}
@@ -315,12 +360,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hNote64==0)
 				throw new NotesError(0, "Note already recycled");
-			NotesGC.__b64_checkValidObjectHandle(getClass(), m_hNote64);
+			NotesGC.__b64_checkValidObjectHandle(NotesNote.class, m_hNote64);
 		}
 		else {
 			if (m_hNote32==0)
 				throw new NotesError(0, "Note already recycled");
-			NotesGC.__b32_checkValidObjectHandle(getClass(), m_hNote32);
+			NotesGC.__b32_checkValidObjectHandle(NotesNote.class, m_hNote32);
 		}
 	}
 
@@ -563,12 +608,15 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
+		Memory doubleMem = new Memory(Native.getNativeSize(Double.TYPE));
+		doubleMem.setDouble(0, value);
+		
 		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemSetNumber(m_hNote64, itemNameMem, value);
+			short result = notesAPI.b64_NSFItemSetNumber(m_hNote64, itemNameMem, doubleMem);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemSetNumber(m_hNote32, itemNameMem, value);
+			short result = notesAPI.b32_NSFItemSetNumber(m_hNote32, itemNameMem, doubleMem);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -675,13 +723,6 @@ public class NotesNote implements IRecyclableNotesObject {
 					if (lengthAsInt==0) {
 						strList.add("");
 					}
-//					for (int j=0; j<lengthAsInt; j++) {
-//						//replace null bytes with newlines
-//						byte currByte = MAX_TEXT_ITEM_VALUE.getByte(j);
-//						if (currByte==0) {
-//							MAX_TEXT_ITEM_VALUE.setByte(j, (byte) '\n');
-//						}
-//					}
 					String strVal = NotesStringUtils.fromLMBCS(MAX_TEXT_ITEM_VALUE, lengthAsInt);
 					strList.add(strVal);
 				}
@@ -1252,12 +1293,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (NotesJNAContext.is64Bit()) {
 				result = notesAPI.b64_NSFItemInfoNext(m_hNote64, itemBlockIdByVal,
-						itemNameMem, (short) ((itemNameMem.size()-1) & 0xffff), itemBlockId, retDataType,
+						itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff), itemBlockId, retDataType,
 						valueBlockId, retNextValueLen);
 			}
 			else {
 				result = notesAPI.b32_NSFItemInfoNext(m_hNote32, itemBlockIdByVal,
-						itemNameMem, (short) ((itemNameMem.size()-1) & 0xffff), itemBlockId, retDataType,
+						itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff), itemBlockId, retDataType,
 						valueBlockId, retNextValueLen);
 			}
 
@@ -1365,5 +1406,320 @@ public class NotesNote implements IRecyclableNotesObject {
 			byte sealed = signed_flag_ptr.getValue();
 			return sealed == 1;
 		}
+	}
+
+	/** Possible validation phases for {@link NotesNote#computeWithForm(boolean, ComputeWithFormCallback)}  */
+	public static enum ValidationPhase {
+		/** Error occurred when processing the Default Value formula. */
+		CWF_DV_FORMULA,
+		/** Error occurred when processing the Translation formula. */
+		CWF_IT_FORMULA,
+		/**  Error occurred when processing the Validation formula. */
+		CWF_IV_FORMULA,
+		/** Error occurred when processing the computed field Value formula. */
+		CWF_COMPUTED_FORMULA,
+		/** Error occurred when verifying the data type for the field. */
+		CWF_DATATYPE_CONVERSION,
+		/** Error occurred when processing the computed field Value formula, during the "load" pass. */
+		CWF_COMPUTED_FORMULA_LOAD,
+		/** Error occurred when processing the computed field Value formula, during the "save" pass. */
+		CWF_COMPUTED_FORMULA_SAVE
+	};
+
+	/* 	Possible return values from the callback routine specified in
+	NSFNoteComputeWithForm() */
+	public static enum CWF_Action {
+		/** End all processing by NSFNoteComputeWithForm() and return the error status to the caller. */
+		CWF_ABORT((short) 1),
+		/** End validation of the current field and go on to the next. */
+		CWF_NEXT_FIELD((short) 2),
+		/** Begin the validation process for this field over again. */
+		CWF_RECHECK_FIELD((short) 3);
+		
+		short actionVal;
+		
+		CWF_Action(short val) {
+			this.actionVal = val;
+		}
+		
+		public short getShortVal() {
+			return actionVal;
+		}
+
+	}
+	
+	private ValidationPhase decodeValidationPhase(short phase) {
+		ValidationPhase phaseEnum = null;
+		if (phase == NotesCAPI.CWF_DV_FORMULA) {
+			phaseEnum = ValidationPhase.CWF_DV_FORMULA;
+		}
+		else if (phase == NotesCAPI.CWF_IT_FORMULA) {
+			phaseEnum = ValidationPhase.CWF_IT_FORMULA;
+		}
+		else if (phase == NotesCAPI.CWF_IV_FORMULA) {
+			phaseEnum = ValidationPhase.CWF_IV_FORMULA;
+		}
+		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA) {
+			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA;
+		}
+		else if (phase == NotesCAPI.CWF_DATATYPE_CONVERSION) {
+			phaseEnum = ValidationPhase.CWF_DATATYPE_CONVERSION;
+		}
+		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA_LOAD) {
+			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_LOAD;
+		}
+		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA_SAVE) {
+			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_SAVE;
+		}
+
+		return phaseEnum;
+	}
+	
+	private FieldInfo readCDFieldInfo(Pointer ptrCDField) {
+		NotesCDField cdField = new NotesCDField(ptrCDField);
+		cdField.read();
+		
+		Pointer defaultValueFormulaPtr = ptrCDField.share(NotesCAPI.cdFieldSize);
+		Pointer inputTranslationFormulaPtr = defaultValueFormulaPtr.share(cdField.DVLength & 0xffff);
+		Pointer inputValidityCheckFormulaPtr = inputTranslationFormulaPtr.share((cdField.ITLength &0xffff) +
+				(cdField.TabOrder & 0xffff));
+//		Pointer namePtr = inputValidityCheckFormulaPtr.share(cdField.IVLength & 0xffff);
+		
+//		field.DVLength + field.ITLength + field.IVLength,
+//        field.NameLength
+        
+		Pointer namePtr = ptrCDField.share((cdField.DVLength & 0xffff) + (cdField.ITLength & 0xffff) +
+				(cdField.IVLength & 0xffff));
+		Pointer descriptionPtr = namePtr.share(cdField.NameLength & 0xffff);
+		
+		String defaultValueFormula = NotesStringUtils.fromLMBCS(defaultValueFormulaPtr, cdField.DVLength & 0xffff);
+		String inputTranslationFormula = NotesStringUtils.fromLMBCS(inputTranslationFormulaPtr, cdField.ITLength & 0xffff);
+		String inputValidityCheckFormula = NotesStringUtils.fromLMBCS(inputValidityCheckFormulaPtr, cdField.IVLength & 0xffff);
+		String name = NotesStringUtils.fromLMBCS(namePtr, cdField.NameLength & 0xffff);
+		String description = NotesStringUtils.fromLMBCS(descriptionPtr, cdField.DescLength & 0xffff);
+		
+		return new FieldInfo(defaultValueFormula, inputTranslationFormula, inputValidityCheckFormula,
+				name, description);
+	}
+	
+	public static class FieldInfo {
+		private String m_defaultValueFormula;
+		private String m_inputTranslationFormula;
+		private String m_inputValidityCheckFormula;
+		private String m_name;
+		private String m_description;
+		
+		public FieldInfo(String defaultValueFormula, String inputTranslationFormula, String inputValidityCheckFormula,
+				String name, String description) {
+			m_defaultValueFormula = defaultValueFormula;
+			m_inputTranslationFormula = inputTranslationFormula;
+			m_inputValidityCheckFormula = inputValidityCheckFormula;
+			m_name = name;
+			m_description = description;
+		}
+		
+		public String getDefaultValueFormula() {
+			return m_defaultValueFormula;
+		}
+		
+		public String getInputTranslationFormula() {
+			return m_inputTranslationFormula;
+		}
+		
+		public String getInputValidityCheckFormula() {
+			return m_inputValidityCheckFormula;
+		}
+		
+		public String getName() {
+			return m_name;
+		}
+		
+		public String getDescription() {
+			return m_description;
+		}
+		
+		@Override
+		public String toString() {
+			return "FieldInfo [name="+getName()+", description="+getDescription()+", default="+getDefaultValueFormula()+
+					", inputtranslation="+getInputTranslationFormula()+", validation="+getInputValidityCheckFormula()+"]";
+
+		}
+
+	}
+	
+	private void computeWithForm(boolean continueOnError, final ComputeWithFormCallback callback) {
+		checkHandle();
+
+		int dwFlags = 0;
+		if (continueOnError) {
+			dwFlags = NotesCAPI.CWF_CONTINUE_ON_ERROR;
+		}
+		
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			b64_CWFErrorProc errorProc;
+			if (notesAPI instanceof WinNotesCAPI) {
+				errorProc = new WinNotesCAPI.b64_CWFErrorProcWin() {
+
+					@Override
+					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
+							short wErrorTextSize, Pointer ctx) {
+						
+						String errorTxt;
+						if (hErrorText==0) {
+							errorTxt = "";
+						}
+						else {
+							Pointer errorTextPtr = notesAPI.b64_OSLockObject(hErrorText);
+							
+							try {
+								//TODO find out where this offset 6 comes from
+								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
+							}
+							finally {
+								notesAPI.b64_OSUnlockObject(hErrorText);
+							}
+						}
+
+						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						ValidationPhase phaseEnum = decodeValidationPhase(phase);
+
+						CWF_Action action;
+						if (callback==null) {
+							action = CWF_Action.CWF_ABORT;
+						}
+						else {
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+						}
+						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					}
+					
+				};
+			}
+			else {
+				errorProc = new b64_CWFErrorProc() {
+
+					@Override
+					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
+							short wErrorTextSize, Pointer ctx) {
+						
+						String errorTxt;
+						if (hErrorText==0) {
+							errorTxt = "";
+						}
+						else {
+							Pointer errorTextPtr = notesAPI.b64_OSLockObject(hErrorText);
+							System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
+							try {
+								//TODO find out where this offset 6 comes from
+								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
+							}
+							finally {
+								notesAPI.b64_OSUnlockObject(hErrorText);
+							}
+						}
+
+						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						ValidationPhase phaseEnum = decodeValidationPhase(phase);
+
+						CWF_Action action;
+						if (callback==null) {
+							action = CWF_Action.CWF_ABORT;
+						}
+						else {
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+						}
+						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					}
+					
+				};
+			}
+			short result = notesAPI.b64_NSFNoteComputeWithForm(m_hNote64, 0, dwFlags, errorProc, null);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			b32_CWFErrorProc errorProc;
+			if (notesAPI instanceof WinNotesCAPI) {
+				errorProc = new WinNotesCAPI.b32_CWFErrorProcWin() {
+
+					@Override
+					public short invoke(Pointer pCDField, short phase, short error, int hErrorText,
+							short wErrorTextSize, Pointer ctx) {
+						
+						String errorTxt;
+						if (hErrorText==0) {
+							errorTxt = "";
+						}
+						else {
+							Pointer errorTextPtr = notesAPI.b32_OSLockObject(hErrorText);
+							try {
+								//TODO find out where this offset 6 comes from
+								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
+							}
+							finally {
+								notesAPI.b32_OSUnlockObject(hErrorText);
+							}
+						}
+
+						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						ValidationPhase phaseEnum = decodeValidationPhase(phase);
+
+						CWF_Action action;
+						if (callback==null) {
+							action = CWF_Action.CWF_ABORT;
+						}
+						else {
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+						}
+						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					}
+
+				};
+			}
+			else {
+				errorProc = new b32_CWFErrorProc() {
+
+					@Override
+					public short invoke(Pointer pCDField, short phase, short error, int hErrorText,
+							short wErrorTextSize, Pointer ctx) {
+						
+						String errorTxt;
+						if (hErrorText==0) {
+							errorTxt = "";
+						}
+						else {
+							Pointer errorTextPtr = notesAPI.b32_OSLockObject(hErrorText);
+							try {
+								//TODO find out where this offset 6 comes from
+								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
+							}
+							finally {
+								notesAPI.b32_OSUnlockObject(hErrorText);
+							}
+						}
+
+						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						ValidationPhase phaseEnum = decodeValidationPhase(phase);
+
+						CWF_Action action;
+						if (callback==null) {
+							action = CWF_Action.CWF_ABORT;
+						}
+						else {
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+						}
+						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					}
+
+				};
+			}
+			short result = notesAPI.b32_NSFNoteComputeWithForm(m_hNote32, 0, dwFlags, errorProc, null);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	public static interface ComputeWithFormCallback {
+		
+		public CWF_Action errorRaised(FieldInfo fieldInfo, ValidationPhase phase, String errorTxt, long errCode);
 	}
 }

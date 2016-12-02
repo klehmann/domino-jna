@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.utils;
 
 import java.util.Calendar;
+import java.util.Date;
 import java.util.TimeZone;
 
 import com.mindoo.domino.jna.errors.NotesError;
@@ -138,6 +139,44 @@ public class NotesDateTimeUtils {
 	 */
 	public static NotesTimeDate calendarToTimeDate(Calendar cal, boolean hasDate, boolean hasTime) {
 		int[] innards = calendarToInnards(cal, hasDate, hasTime);
+		NotesTimeDate td = new NotesTimeDate();
+		td.Innards[0] = innards[0];
+		td.Innards[1] = innards[1];
+		
+		return td;
+	}
+	
+	/**
+	 * Method to convert a {@link Date} to a {@link NotesTimeDate}
+	 * 
+	 * @param dt date
+	 * @param hasDate true to convert the date
+	 * @param hasTime true to convert the time
+	 * @return timedate
+	 */
+	public static NotesTimeDate dateToTimeDate(Date dt, boolean hasDate, boolean hasTime) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dt);
+		
+		int[] innards = calendarToInnards(cal, hasDate, hasTime);
+		NotesTimeDate td = new NotesTimeDate();
+		td.Innards[0] = innards[0];
+		td.Innards[1] = innards[1];
+		
+		return td;
+	}
+	
+	/**
+	 * Method to convert a {@link Date} to a {@link NotesTimeDate}
+	 * 
+	 * @param dt date
+	 * @return timedate
+	 */
+	public static NotesTimeDate dateToTimeDate(Date dt) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dt);
+		
+		int[] innards = calendarToInnards(cal, true, true);
 		NotesTimeDate td = new NotesTimeDate();
 		td.Innards[0] = innards[0];
 		td.Innards[1] = innards[1];

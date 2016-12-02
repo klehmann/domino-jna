@@ -1,10 +1,13 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,6 +16,7 @@ import com.mindoo.domino.jna.CollectionDataCache;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.Navigate;
@@ -34,7 +38,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 	/**
 	 * Tests the method to read a subset of the view, all descendants of a category
 	 */
-	@Test
+//	@Test
 	public void testExtViewTraversal_getCategoryDescendants() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -49,7 +53,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 				
 				long t0=System.currentTimeMillis();
 				List<NotesViewEntryData> entries = colFromDbData.getAllEntriesInCategory("Abbas", 1,
-						EnumSet.of(Navigate.NEXT_NONCATEGORY),
+						EnumSet.of(Navigate.NEXT),
 						null, null, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new NotesCollection.EntriesAsListCallback(Integer.MAX_VALUE));
 				
 				Assert.assertTrue("Category has any descendants", entries.size() > 0);
@@ -69,7 +73,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 	/**
 	 * Method to test an optimized lookup function that reads a single view column
 	 */
-	@Test
+//	@Test
 	public void testExtViewTraversal_readSingleColumn() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -99,7 +103,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 	/**
 	 * Tests the differential view read feature of NIF using low level APIs
 	 */
-	@Test
+//	@Test
 	public void testExtViewTraversal_incrementalReadLowLevelAPI() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -180,7 +184,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 	 * Differential view reading speeds up the read process, because it optimizes the usage of the
 	 * 64K summary buffer returned by NIFReadEntriesExt.
 	 */
-	@Test
+//	@Test
 	public void testExtViewTraversal_incrementalReadHighLevelAPI() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -238,6 +242,89 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 				
 				Assert.assertTrue("Cache has been used on second lookup", collectionDataCache.getCacheUsageStats() > 0);
 				
+				return null;
+			}
+		});
+	}
+	
+	@Test
+	public void testViewTraversal_selectViaFormula() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+//				NotesDatabase db = getFakeNamesDb();
+				NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf", (String)null);
+
+				NotesCollection col = db.openCollectionByName("People");
+				String formula = "@Begins(LastName;\"L\")";
+//				col.select(formula, true);
+				
+
+				NotesIDTable idTable = new NotesIDTable();
+
+				
+				col.getAllIds(Navigate.NEXT_NONCATEGORY, false, idTable);
+				
+				long t0=System.currentTimeMillis();
+				int[] idsScan = idTable.toArray();
+				long t1=System.currentTimeMillis();
+				System.out.println("IDScan: "+(t1-t0)+"ms, "+idsScan.length+" entries");
+				
+				t0=System.currentTimeMillis();
+				final List<Integer> idList = new ArrayList<Integer>();
+				idTable.enumerate(new IEnumerateCallback() {
+
+					@Override
+					public Action noteVisited(int noteId) {
+						idList.add(noteId);
+						return Action.Continue;
+					}
+				});
+				t1=System.currentTimeMillis();
+				System.out.println("IDEnumerate: "+(t1-t0)+"ms, "+idList.size()+" entries");
+
+				t0=System.currentTimeMillis();
+				idList.clear();
+				idTable.enumerateBackwards(new IEnumerateCallback() {
+
+					@Override
+					public Action noteVisited(int noteId) {
+						idList.add(noteId);
+						return Action.Continue;
+					}
+				});
+				t1=System.currentTimeMillis();
+				System.out.println("IDScanBack: "+(t1-t0)+"ms, "+idList.size()+" entries");
+
+				int[] unfilteredIds = idTable.toArray();
+				System.out.println("unfilteredIds.length = "+unfilteredIds.length);
+				
+				t0=System.currentTimeMillis();
+				NotesIDTable filteredTable = idTable.filter(db, formula);
+				t1=System.currentTimeMillis();
+				System.out.println("Filtering "+idTable.getCount()+" down to "+filteredTable.getCount()+" took "+(t1-t0)+"ms");
+				
+				int[] filteredIds = filteredTable.toArray();
+				System.out.println("filteredIds.length = "+filteredIds.length);
+				System.out.println("unfilteredIds: "+Arrays.toString(filteredIds));
+				
+//				col.select("SELECT Firstname=\"Ellis\"", true);
+//				
+//				long t0=System.currentTimeMillis();
+//				List<NotesViewEntryData> entries = col.getAllEntries("0", 1,
+//						EnumSet.of(Navigate.NEXT_SELECTED),
+//						Integer.MAX_VALUE,
+//						EnumSet.of(
+//								ReadMask.NOTEID,
+//								ReadMask.SUMMARYVALUES
+//								), new EntriesAsListCallback(Integer.MAX_VALUE));
+//				long t1=System.currentTimeMillis();
+//				System.out.println("Reading data of "+entries.size()+" top level entries took "+(t1-t0)+"ms");
+//
+//				for (NotesViewEntryData currEntry : entries) {
+//					System.out.println(currEntry.getNoteId()+"\t"+currEntry.getColumnDataAsMap());
+//				}
 				return null;
 			}
 		});

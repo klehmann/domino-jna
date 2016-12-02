@@ -97,4 +97,99 @@ public class NotesTimeDate extends Structure implements Serializable {
 		return false;
 	}
 	
+	/**
+	 * Sets the date/time of this timedate to the current time
+	 */
+	public void setNow() {
+		int[] newInnards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, true);
+		this.Innards[0] = newInnards[0];
+		this.Innards[1] = newInnards[1];
+		write();
+	}
+
+	/**
+	 * Sets the date part of this timedate to today and the time part to ALLDAY
+	 */
+	public void setToday() {
+		int[] newInnards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, false);
+		this.Innards[0] = newInnards[0];
+		this.Innards[1] = newInnards[1];
+		write();
+	}
+
+	/**
+	 * Sets the date part of this timedate to tomorrow and the time part to ALLDAY
+	 */
+	public void setTomorrow() {
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DATE, 1);
+		int[] newInnards = NotesDateTimeUtils.calendarToInnards(cal, true, false);
+		this.Innards[0] = newInnards[0];
+		this.Innards[1] = newInnards[1];
+		write();
+	}
+
+	/**
+	 * Creates a new {@link NotesTimeDate} instance with the same data as this one
+	 */
+	public NotesTimeDate clone() {
+		NotesTimeDate clone = new NotesTimeDate();
+		clone.Innards[0] = this.Innards[0];
+		clone.Innards[1] = this.Innards[1];
+		clone.write();
+		return clone;
+	}
+	
+	/**
+	 * Modifies the data by adding/subtracting values for year, month, day, hours, minutes and seconds
+	 * 
+	 * @param year positive or negative value or 0 for no change
+	 * @param month positive or negative value or 0 for no change
+	 * @param day positive or negative value or 0 for no change
+	 * @param hours positive or negative value or 0 for no change
+	 * @param minutes positive or negative value or 0 for no change
+	 * @param seconds positive or negative value or 0 for no change
+	 */
+	public void adjust(int year, int month, int day, int hours, int minutes, int seconds) {
+		Calendar cal = NotesDateTimeUtils.innardsToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), this.Innards);
+		if (cal!=null) {
+			boolean modified = false;
+			
+			if (NotesDateTimeUtils.hasDate(cal)) {
+				if (year!=0) {
+					cal.add(Calendar.YEAR, year);
+					modified=true;
+				}
+				if (month!=0) {
+					cal.add(Calendar.MONTH, month);
+					modified=true;
+				}
+				if (day!=0) {
+					cal.add(Calendar.DATE, day);
+					modified=true;
+				}
+			}
+			if (NotesDateTimeUtils.hasTime(cal)) {
+				if (hours!=0) {
+					cal.add(Calendar.HOUR, hours);
+					modified=true;
+				}
+				if (minutes!=0) {
+					cal.add(Calendar.MINUTE, minutes);
+					modified=true;
+				}
+				if (seconds!=0) {
+					cal.add(Calendar.SECOND, seconds);
+					modified=true;
+				}
+			}
+			
+			if (modified) {
+				int[] newInnards = NotesDateTimeUtils.calendarToInnards(cal);
+				this.Innards[0] = newInnards[0];
+				this.Innards[1] = newInnards[1];
+				write();
+			}
+		}
+	}
 }

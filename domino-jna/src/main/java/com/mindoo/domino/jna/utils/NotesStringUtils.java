@@ -235,7 +235,7 @@ public class NotesStringUtils {
 		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
 		formatter.format("%16x", data.getLong());
 		formatter.format("%16x", data.getLong());
-		String unid = formatter.toString().toUpperCase();
+		String unid = formatter.toString().replace(" ", "0").toUpperCase();
 		formatter.close();
 		return unid;
 	}

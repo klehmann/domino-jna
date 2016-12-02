@@ -7,11 +7,11 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 /**
- * JNA class to the NAMES_LIST type on Linux 64 bit platforms
+ * JNA class to the NAMES_LIST type on Windows 32 bit platforms
  * 
  * @author Karsten Lehmann
  */
-public class NotesNamesListHeader64 extends Structure {
+public class WinNotesNamesListHeader32 extends Structure {
 	/** Number of names in list */
 	public short NumNames;
 
@@ -36,11 +36,10 @@ public class NotesNamesListHeader64 extends Structure {
 	/**
 	 * Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public short Authenticated;
+	public int Authenticated;
 	
-	public NotesNamesListHeader64() {
+	public WinNotesNamesListHeader32() {
 		super();
-		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
 		setAlignType(ALIGN_NONE);
 	}
 	protected List<? > getFieldOrder() {
@@ -56,7 +55,7 @@ public class NotesNamesListHeader64 extends Structure {
 	 * @param check info from LICENSEID, should be empty
 	 * @param authenticated  Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public NotesNamesListHeader64(short numNames, byte id[], byte product, byte check[], short authenticated) {
+	public WinNotesNamesListHeader32(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
 		setAlignType(ALIGN_NONE);
 		this.NumNames = numNames;
@@ -69,14 +68,14 @@ public class NotesNamesListHeader64 extends Structure {
 		this.Check = check;
 		this.Authenticated = authenticated;
 	}
-	public NotesNamesListHeader64(Pointer peer) {
+	public WinNotesNamesListHeader32(Pointer peer) {
 		super(peer);
 		setAlignType(ALIGN_NONE);
 	}
-	public static class ByReference extends NotesNamesListHeader64 implements Structure.ByReference {
+	public static class ByReference extends WinNotesNamesListHeader32 implements Structure.ByReference {
 		
 	};
-	public static class ByValue extends NotesNamesListHeader64 implements Structure.ByValue {
+	public static class ByValue extends WinNotesNamesListHeader32 implements Structure.ByValue {
 		
 	};
 }

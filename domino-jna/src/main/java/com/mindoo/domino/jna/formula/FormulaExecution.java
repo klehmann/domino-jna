@@ -97,7 +97,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			m_hCompute64 = rethCompute.getValue();
 			
-			NotesGC.__objectCreated(this);
+			NotesGC.__objectCreated(FormulaExecution.class, this);
 		}
 		else {
 			m_hFormula32 = 0;
@@ -136,7 +136,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			m_hCompute32 = rethCompute.getValue();
 			
-			NotesGC.__objectCreated(this);
+			NotesGC.__objectCreated(FormulaExecution.class, this);
 		}
 	}
 	
@@ -246,6 +246,9 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_ERROR) {
+			supportedType = true;
+		}
 		
 		if (!supportedType) {
 			throw new UnsupportedItemValueError("Data type is currently unsupported: "+dataTypeAsInt);
@@ -291,6 +294,10 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			//e.g. returned by formula "@DeleteDocument"
 			return Collections.emptyList();
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_ERROR) {
+			//TODO find a way to parse error details
+			throw new NotesError(0, "Could not evaluate formula: "+m_formula);
 		}
 		else {
 			throw new UnsupportedItemValueError("Data is currently unsupported: "+dataTypeAsInt);
@@ -439,7 +446,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 				notesAPI.b64_OSUnlockObject(m_hFormula64);
 				notesAPI.b64_OSMemFree(m_hFormula64);
 				
-				NotesGC.__objectBeeingBeRecycled(this);
+				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula64 = 0;
 			}
 		}
@@ -452,7 +459,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			if (m_hFormula32!=0) {
 				notesAPI.b32_OSUnlockObject(m_hFormula32);
 				notesAPI.b32_OSMemFree(m_hFormula32);
-				NotesGC.__objectBeeingBeRecycled(this);
+				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula32 = 0;
 			}
 		}

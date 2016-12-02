@@ -7,7 +7,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 /**
- * JNA class to the NAMES_LIST type on 64 bit platforms
+ * JNA class to the NAMES_LIST type on Linux 32 bit platforms
  * 
  * @author Karsten Lehmann
  */
@@ -41,7 +41,7 @@ public class NotesNamesListHeader32 extends Structure {
 	public NotesNamesListHeader32() {
 		super();
 		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 	}
 	protected List<? > getFieldOrder() {
 		return Arrays.asList("NumNames", "ID", "Product", "Check", "Authenticated");
@@ -58,8 +58,7 @@ public class NotesNamesListHeader32 extends Structure {
 	 */
 	public NotesNamesListHeader32(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
-		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 		this.NumNames = numNames;
 		if ((id.length != this.ID.length)) 
 			throw new IllegalArgumentException("Wrong array size !");
@@ -72,7 +71,7 @@ public class NotesNamesListHeader32 extends Structure {
 	}
 	public NotesNamesListHeader32(Pointer peer) {
 		super(peer);
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 	}
 	public static class ByReference extends NotesNamesListHeader32 implements Structure.ByReference {
 		

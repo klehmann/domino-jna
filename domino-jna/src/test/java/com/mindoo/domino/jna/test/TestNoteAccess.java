@@ -2,23 +2,29 @@ package com.mindoo.domino.jna.test;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.collections4.map.HashedMap;
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesAttachment.IDataCallback;
+import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesNote.IItemCallback;
+import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.OpenNote;
 
 import lotus.domino.ACL;
@@ -46,7 +52,7 @@ public class TestNoteAccess extends BaseJNATestClass {
 	 * in the note info accordingly (which indicates that the current user
 	 * is not allowed to edit the note).
 	 */
-	@Test
+//	@Test
 	public void testNoteAccess_readOnlyCheck() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -99,13 +105,80 @@ public class TestNoteAccess extends BaseJNATestClass {
 		});
 	}
 	
+	@Test
+	public void testNoteAccess_openManyNotes() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				System.out.println("Starting note open test");
+				
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection colAllDocs = dbData.openCollectionByName("People");
+				colAllDocs.update();
+				
+				LinkedHashSet<Integer> allIds = colAllDocs.getAllIds(Navigate.NEXT_NONCATEGORY);
+				
+				System.out.println("Opening "+allIds.size()+" notes");
+
+				Map<Long,String> docDataByHandle = new HashedMap<Long, String>();
+				List<NotesNote> allNotes = new ArrayList<NotesNote>();
+				
+				int idx=0;
+				for (Integer currNoteId : allIds) {
+					NotesNote currNote = dbData.openNoteById(currNoteId.intValue(), EnumSet.noneOf(OpenNote.class));
+					allNotes.add(currNote);
+					
+					String oldData = docDataByHandle.get(currNote.getHandle64());
+					if (oldData!=null) {
+						System.out.println("old data for handle "+currNote.getHandle64()+": "+oldData);
+					}
+					String newData = currNote.getItemValueString("lastname") + ", "+currNote.getItemValueString("firstname")+" - noteid "+currNote.getNoteId();
+					docDataByHandle.put(currNote.getHandle64(), newData);
+					System.out.println(Integer.toString(idx)+" - setting new data to "+newData);
+					
+					idx++;
+				}
+				
+				System.out.println("Done opening "+allIds.size()+" notes");
+				return null;
+			}
+		});
+	
+			
+	}
+	
+//	@Test
+	public void testNoteAccess_createNote() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				System.out.println("Starting create note test");
+				
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesNote note = dbData.createNote();
+				note.setItemValueDateTime("Calendar", Calendar.getInstance());
+				note.setItemValueDateTime("JavaDate_Dateonly", new Date(), true, false);
+				note.setItemValueDateTime("JavaDate_Timeonly", new Date(), false, true);
+				note.setItemValueDateTime("JavaDate_DateTime", new Date(), true, true);
+				note.setItemValueDouble("Double", 1.5);
+				note.setItemValueString("String", "ABC", true);
+				
+				System.out.println("Done with create note test");
+				return null;
+			}
+		});
+	}
+	
 	/**
 	 * Various checks to make sure that item values and attachments are read
 	 * correctly and that the API handles special characters like Umlauts and
 	 * newlines the right way.<br>
 	 * The method also contains code to check direct attachment streaming functionality.
 	 */
-	@Test
+//	@Test
 	public void testNoteAccess_readItems() {
 		runWithSession(new IDominoCallable<Object>() {
 
