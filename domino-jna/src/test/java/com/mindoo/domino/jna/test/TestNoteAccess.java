@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.test;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -24,8 +26,10 @@ import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesNote.IItemCallback;
+import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.OpenNote;
+import com.mindoo.domino.jna.constants.UpdateNote;
 
 import lotus.domino.ACL;
 import lotus.domino.ACLEntry;
@@ -105,7 +109,7 @@ public class TestNoteAccess extends BaseJNATestClass {
 		});
 	}
 	
-	@Test
+//	@Test
 	public void testNoteAccess_openManyNotes() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -178,7 +182,7 @@ public class TestNoteAccess extends BaseJNATestClass {
 	 * newlines the right way.<br>
 	 * The method also contains code to check direct attachment streaming functionality.
 	 */
-//	@Test
+	@Test
 	public void testNoteAccess_readItems() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -229,38 +233,14 @@ public class TestNoteAccess extends BaseJNATestClass {
 				}
 
 				final int TEST_FILE_SIZE = 1 * 1024 * 1024;
-				final String ITEMNAME_FILES = "rt_Files";
+//				final String ITEMNAME_FILES = "rt_Files";
+				
+				boolean addAttachments = false;
 				
 				//add some attachments
 				Vector<?> attachmentNames = session.evaluate("@AttachmentNames", doc);
 				if (attachmentNames==null || attachmentNames.size()==0 || (attachmentNames.size()==1 && "".equals(attachmentNames.get(0)))) {
-					Item itm = doc.getFirstItem(ITEMNAME_FILES);
-					RichTextItem itmFiles=null;
-					if (itm==null) {
-						itmFiles = doc.createRichTextItem(ITEMNAME_FILES);
-					}
-					else if (itm!=null && !(itm instanceof RichTextItem)) {
-						itm.remove();
-						itmFiles = doc.createRichTextItem(ITEMNAME_FILES);
-					}
-					else {
-						itmFiles = (RichTextItem) itm;
-					}
-					
-					for (int i=0; i<3; i++) {
-						File currFile = File.createTempFile("test", ".bin");
-						
-						FileOutputStream fOut = new FileOutputStream(currFile);
-						
-						for (int j=0; j<TEST_FILE_SIZE; j++) {
-							fOut.write(j % 255);
-						}
-						fOut.flush();
-						fOut.close();
-						
-						itmFiles.embedObject(EmbeddedObject.EMBED_ATTACHMENT, "", currFile.getAbsolutePath(), currFile.getName());
-					}
-					docModified=true;
+					addAttachments = true;
 				}
 				
 //				if (!doc.hasItem("MyDateRangeList")) {
@@ -293,6 +273,26 @@ public class TestNoteAccess extends BaseJNATestClass {
 				NotesNote note = dbData.openNoteById(Integer.parseInt(doc.getNoteID(), 16),
 						EnumSet.noneOf(OpenNote.class));
 				
+				if (addAttachments) {
+					for (int i=0; i<3; i++) {
+						File currFile = File.createTempFile("test", ".bin");
+						
+						FileOutputStream fOut = new FileOutputStream(currFile);
+						
+						for (int j=0; j<TEST_FILE_SIZE; j++) {
+							fOut.write(j % 255);
+						}
+						fOut.flush();
+						fOut.close();
+						
+						//use C-API based attach function to create uncompressed attachments (Java API function would
+						//use compression and we cannot read the file starting at a specified offset with compression)
+						note.attachFile(currFile.getAbsolutePath(), currFile.getName(), Compression.NONE);
+						currFile.delete();
+					}
+					note.update(EnumSet.noneOf(UpdateNote.class));
+				}
+				
 				note.getItems("$file", new IItemCallback() {
 
 					@Override
@@ -311,17 +311,53 @@ public class TestNoteAccess extends BaseJNATestClass {
 									final AtomicInteger length = new AtomicInteger();
 									
 									System.out.println("Reading file "+att.getFileName());
-									
-									att.readData(new IDataCallback() {
 
-										@Override
-										public Action read(byte[] data) {
-											length.addAndGet(data.length);
-											return Action.Continue;
+									try {
+										final MessageDigest md5_wholefile = MessageDigest.getInstance("md5");
+										
+										att.readData(new IDataCallback() {
+
+											@Override
+											public Action read(byte[] data) {
+												length.addAndGet(data.length);
+												
+												md5_wholefile.update(data);
+												
+												return Action.Continue;
+											}
+										});
+										Assert.assertEquals("Length correct reading whole file", length.get(), TEST_FILE_SIZE);
+
+										byte[] digestWholeFile = md5_wholefile.digest();
+										
+										System.out.println("Done reading file, size="+length.get());
+										
+										if (att.getCompression() == Compression.NONE) {
+											final MessageDigest md5_rawrrv = MessageDigest.getInstance("md5");
+
+											length.set(0);
+											
+											att.readData(new IDataCallback() {
+
+												@Override
+												public Action read(byte[] data) {
+													length.addAndGet(data.length);
+													md5_rawrrv.update(data);
+
+													return Action.Continue;
+												}
+											}, 0);
+											Assert.assertEquals("Length correct reading with offset", length.get(), TEST_FILE_SIZE);
+											
+											byte[] digestRawRRV = md5_rawrrv.digest();
+											Assert.assertArrayEquals("MD5 checksums match for different file read methods", digestWholeFile, digestRawRRV); 
 										}
-									});
-									System.out.println("Done reading file, size="+length.get());
-									Assert.assertEquals("Length correct", length.get(), TEST_FILE_SIZE);
+										
+										
+									}
+									catch (NoSuchAlgorithmException t) {
+										throw new RuntimeException(t);
+									}
 								}
 							}
 						}

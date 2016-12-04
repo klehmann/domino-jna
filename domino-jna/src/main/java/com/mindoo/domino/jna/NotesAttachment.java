@@ -14,6 +14,9 @@ import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBlockId;
 import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.ShortByReference;
 
 /**
  * Data container to access metadata and binary data of a note attachment
@@ -29,10 +32,11 @@ public class NotesAttachment {
 	private NotesTimeDate m_fileModified;
 	private NotesNote m_parentNote;
 	private NotesBlockId m_itemBlockId;
-
+	private int m_rrv;
+	
 	public NotesAttachment(String fileName, Compression compression, short fileFlags, int fileSize,
 			NotesTimeDate fileCreated, NotesTimeDate fileModified, NotesNote parentNote,
-			NotesBlockId itemBlockId) {
+			NotesBlockId itemBlockId, int rrv) {
 		m_fileName = fileName;
 		m_compression = compression;
 		m_fileFlags = fileFlags;
@@ -41,6 +45,16 @@ public class NotesAttachment {
 		m_fileModified = fileModified;
 		m_parentNote = parentNote;
 		m_itemBlockId = itemBlockId;
+		m_rrv = rrv;
+	}
+
+	/**
+	 * Returns the RRV ID that identifies the object in the database
+	 * 
+	 * @return RRV
+	 */
+	public int getRRV() {
+		return m_rrv;
 	}
 	
 	/**
@@ -105,6 +119,130 @@ public class NotesAttachment {
 	public NotesNote getParentNote() {
 		return m_parentNote;
 	}
+
+	/**
+	 * Method to access the binary attachment data beginning at an offset in the file.
+	 * The method is only supported when the attachment has no compression. Otherwise
+	 * we will throw an {@link UnsupportedOperationException}.
+
+	 * @param callback callback is called with streamed data
+	 * @param offset offset to start reading
+	 */
+	public void readData(final IDataCallback callback, int offset) {
+		readData(callback, offset, 65535);
+	}
+	
+	/**
+	 * Method to access the binary attachment data beginning at an offset in the file.
+	 * The method is only supported when the attachment has no compression. Otherwise
+	 * we will throw an {@link UnsupportedOperationException}.
+	 * 
+	 * @param callback callback is called with streamed data
+	 * @param offset offset to start reading
+	 * @param bufferSize max size of the buffer to be returned in the callback
+	 */
+	public void readData(final IDataCallback callback, int offset, int bufferSize) {
+		m_parentNote.checkHandle();
+
+		if (getCompression() != Compression.NONE) {
+			throw new UnsupportedOperationException("This operation is only supported on attachments without compression.");
+		}
+		if (bufferSize<=0)
+			throw new IllegalArgumentException("Buffer size must be a positive number");
+		
+		int currOffset = offset;
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+//			IntByReference retSize = new IntByReference();
+//			ShortByReference retClass = new ShortByReference();
+//			ShortByReference retPrivileges = new ShortByReference();
+
+//			short result = notesAPI.b64_NSFDbGetObjectSize(m_parentNote.getParent().getHandle64(), this.m_rrv,
+//					NotesCAPI.OBJECT_FILE, retSize, retClass, retPrivileges);
+//			NotesErrorUtils.checkResult(result);
+//
+//			int objSize = retSize.getValue();
+			
+			while (true) {
+				int bytesToRead;
+				if ((currOffset+bufferSize) < m_fileSize) {
+					bytesToRead = bufferSize;
+				}
+				else {
+					bytesToRead = m_fileSize - currOffset;
+				}
+				if (bytesToRead<=0) {
+					//we're done
+					break;
+				}
+				
+				LongByReference rethBuffer = new LongByReference();
+				
+				short result = notesAPI.b64_NSFDbReadObject(m_parentNote.getParent().getHandle64(), m_rrv, currOffset, bytesToRead, rethBuffer);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer ptr = notesAPI.b64_OSLockObject(rethBuffer.getValue());
+				try {
+					byte[] buffer = ptr.getByteArray(0, bytesToRead);
+					Action action = callback.read(buffer);
+					if (action==Action.Stop) {
+						break;
+					}
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethBuffer.getValue());
+				}
+				
+				currOffset += bytesToRead;
+			}
+		}
+		else {
+//			IntByReference retSize = new IntByReference();
+//			ShortByReference retClass = new ShortByReference();
+//			ShortByReference retPrivileges = new ShortByReference();
+
+//			short result = notesAPI.b32_NSFDbGetObjectSize(m_parentNote.getParent().getHandle32(), this.m_rrv,
+//					NotesCAPI.OBJECT_FILE, retSize, retClass, retPrivileges);
+//			NotesErrorUtils.checkResult(result);
+
+//			int objSize = retSize.getValue();
+
+			while (true) {
+				int bytesToRead;
+				if ((offset+bufferSize) < m_fileSize) {
+					bytesToRead = bufferSize;
+				}
+				else {
+					bytesToRead = m_fileSize - currOffset;
+				}
+				
+				if (bytesToRead<=0) {
+					//we're done
+					break;
+				}
+				
+				IntByReference rethBuffer = new IntByReference();
+				
+				short result = notesAPI.b32_NSFDbReadObject(m_parentNote.getParent().getHandle32(), m_rrv, currOffset, bytesToRead, rethBuffer);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer ptr = notesAPI.b32_OSLockObject(rethBuffer.getValue());
+				try {
+					byte[] buffer = ptr.getByteArray(0, bytesToRead);
+					Action action = callback.read(buffer);
+					if (action==Action.Stop) {
+						break;
+					}
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethBuffer.getValue());
+				}
+				
+				currOffset += bytesToRead;
+			}
+		}
+	}
 	
 	/**
 	 * Method to access the binary attachment data
@@ -131,6 +269,9 @@ public class NotesAttachment {
 				
 				@Override
 				public short invoke(Pointer data, int length, Pointer param) {
+					if (length==0)
+						return 0;
+					
 					try {
 						byte[] dataArr = data.getByteArray(0, length);
 						Action action = callback.read(dataArr);
@@ -153,6 +294,9 @@ public class NotesAttachment {
 
 				@Override
 				public short invoke(Pointer data, int length, Pointer param) {
+					if (length==0)
+						return 0;
+					
 					try {
 						byte[] dataArr = data.getByteArray(0, length);
 						Action action = callback.read(dataArr);

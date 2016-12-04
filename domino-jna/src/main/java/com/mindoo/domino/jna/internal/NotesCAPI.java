@@ -1662,6 +1662,35 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short b32_NSFDbGetMajMinVersion(int hDb, NotesBuildVersion retBuildVersion);
 	public short b64_NSFDbGetMajMinVersion(long hDb, NotesBuildVersion retBuildVersion);
 	
+	public short b64_NSFDbReadObject(
+			long hDB,
+			int ObjectID,
+			int Offset,
+			int Length,
+			LongByReference rethBuffer);
+
+	public short b32_NSFDbReadObject(
+			int hDB,
+			int ObjectID,
+			int Offset,
+			int Length,
+			IntByReference rethBuffer);
+
+	public short b64_NSFDbGetObjectSize(
+			long hDB,
+			int ObjectID,
+			short ObjectType,
+			IntByReference retSize,
+			ShortByReference retClass,
+			ShortByReference retPrivileges);
+	public short b32_NSFDbGetObjectSize(
+			int hDB,
+			int ObjectID,
+			short ObjectType,
+			IntByReference retSize,
+			ShortByReference retClass,
+			ShortByReference retPrivileges);
+
 	public short NotesInitExtended(int  argc, StringArray argvPtr);
 	public void NotesTerm();
 
@@ -1962,6 +1991,22 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			NoteExtractCallback pNoteExtractCallback, Pointer pParam,
 			int Reserved, Pointer pReserved);
 
+	public short b64_NSFNoteAttachFile(
+			long note_handle,
+			Memory item_name,
+			short item_name_length,
+			Memory file_name,
+			Memory orig_path_name,
+			short encoding_type);
+	
+	public short b32_NSFNoteAttachFile(
+			int note_handle,
+			Memory item_name,
+			short item_name_length,
+			Memory file_name,
+			Memory orig_path_name,
+			short encoding_type);
+	
 	public short b64_NSFFormulaCompile(
 			Memory FormulaName,
 			short FormulaNameLength,
@@ -2432,13 +2477,13 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/*	Object Types, a sub-category of TYPE_OBJECT */
 
 	/** File Attachment */
-	public static final int OBJECT_FILE = 0;
+	public static final short OBJECT_FILE = 0;
 	/** IDTable of "done" docs attached to filter */
-	public static final int OBJECT_FILTER_LEFTTODO = 3;
+	public static final short OBJECT_FILTER_LEFTTODO = 3;
 	/** Assistant run data object */
-	public static final int OBJECT_ASSIST_RUNDATA = 8;
+	public static final short OBJECT_ASSIST_RUNDATA = 8;
 	/** Used as input to NSFDbGetObjectSize */
-	public static final int OBJECT_UNKNOWN = 0xffff;
+	public static final short OBJECT_UNKNOWN = (short) (0xffff & 0xffff);
 
 	/** file object has object digest appended */
 	public static final short FILEFLAG_SIGN = 0x0001;
@@ -2460,5 +2505,5 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public void OSPathAddTrailingPathSep(Memory retPathName);
 	
 	public static int MAXDWORD = 0xffffffff;
-
+	
 }

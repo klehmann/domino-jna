@@ -1019,6 +1019,8 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesObjectDescriptor objDescriptor = new NotesObjectDescriptor(valueDataPtr);
 			objDescriptor.read();
 			
+			int rrv = objDescriptor.RRV;
+			
 			if (objDescriptor.ObjectType == NotesCAPI.OBJECT_FILE) {
 				Pointer fileObjectPtr = valueDataPtr;
 				
@@ -1046,7 +1048,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 				NotesAttachment attInfo = new NotesAttachment(fileName, compression, flags, fileSize,
 						fileCreated, fileModified, this,
-						itemBlockId);
+						itemBlockId, rrv);
 				
 				return Arrays.asList((Object) attInfo);
 			}
@@ -1055,6 +1057,40 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
+		}
+	}
+
+	/**
+	 * Attaches a disk file to a note.<br>
+	 * <br>
+	 * To accomplish this, the function creates an item of TYPE_OBJECT, sub-category OBJECT_FILE,
+	 * whose ITEM_xxx flag(s) are set to ITEM_SIGN | ITEM_SEAL.<br>
+	 * The item that is built by NSFNoteAttachFile contains all relevant file information and
+	 * the compressed file itself.<br>
+	 * Since the Item APIs offer no means of dealing with signed, sealed, or compressed item values,
+	 * the File Attachment API NSFNoteDetachFile must be used exclusively to access these items.
+	 * 
+	 * @param filePathOnDisk fully qualified file path specification for file being attached
+	 * @param fileNameInNote filename that will be stored internally with the attachment, displayed with the attachment icon when the document is viewed in the Notes user interface, and subsequently used when selecting which attachment to Extract or Detach and what path to create for an Extracted file.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible.  If attaching mulitiple files that have the same filename but different content to a single document, make sure this variable is unique in each call to NSFNoteAttachFile().
+	 * @param compression compression to use
+	 */
+	public void attachFile(String filePathOnDisk, String fileNameInNote, Compression compression) {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		Memory $fileItemName = NotesStringUtils.toLMBCS("$FILE", true);
+		Memory filePathOnDiskMem = NotesStringUtils.toLMBCS(filePathOnDisk, true);
+		Memory fileNameInNoteMem = NotesStringUtils.toLMBCS(fileNameInNote, true);
+		short compressionAsShort = (short) (compression.getValue() & 0xffff);
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFNoteAttachFile(m_hNote64, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, fileNameInNoteMem, compressionAsShort);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NSFNoteAttachFile(m_hNote32, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, fileNameInNoteMem, compressionAsShort);
+			NotesErrorUtils.checkResult(result);
 		}
 	}
 	
@@ -1547,7 +1583,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 	}
 	
-	private void computeWithForm(boolean continueOnError, final ComputeWithFormCallback callback) {
+	public void computeWithForm(boolean continueOnError, final ComputeWithFormCallback callback) {
 		checkHandle();
 
 		int dwFlags = 0;
