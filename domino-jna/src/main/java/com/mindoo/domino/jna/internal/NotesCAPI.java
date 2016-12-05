@@ -2505,5 +2505,35 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public void OSPathAddTrailingPathSep(Memory retPathName);
 	
 	public static int MAXDWORD = 0xffffffff;
+
+	//NSFTransactionBegin/Commit/Rollback
+	//provide the ability to group updates into a single unit of work. There are some caveats about
+	//them, like folder stuff. If you are just doing document updates (add/update/delete) they should work fine.
+	//Only work on local dbs
+	
+	public short b64_NSFTransactionBegin(long hDB, int flags);
+	public short b32_NSFTransactionBegin(int hDB, int flags);
+	
+	/** Transactions is Sub-Commited if a Sub Transaction */
+	public static int NSF_TRANSACTION_BEGIN_SUB_COMMIT = 0x00000001;
+	
+	/** When starting a txn (not a sub tran) get an IS lock on the db */
+	public static int NSF_TRANSACTION_BEGIN_LOCK_DB = 0x00000002;
+
+	//a SUB_COMMIT is a Nested Top Action (being able to commit a part of a transaction)
+
+	public short b64_NSFTransactionCommit(long hDB, int flags);
+	public short b32_NSFTransactionCommit(int hDB, int flags);
+	
+	/** Don't automatically abort if Commit Processing Fails */
+	public static final int TRANCOMMIT_SKIP_AUTO_ABORT = 1;
+
+	//rollsback the transaction or NTA (if an NTA was started)
+	public short b64_NSFTransactionRollback(long hDB);
+	public short b32_NSFTransactionRollback(int hDB);
+
+	//returns the list of forms that were included in the search formula 
+	public short b64_NSFSearchGetFormList(long SearchHandle, LongByReference hFormList, ShortByReference ListLength);
+	public short b32_NSFSearchGetFormList(int SearchHandle, IntByReference hFormList, ShortByReference ListLength);
 	
 }
