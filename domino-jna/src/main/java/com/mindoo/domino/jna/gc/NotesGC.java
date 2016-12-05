@@ -428,134 +428,142 @@ public class NotesGC {
 				if (NotesJNAContext.is64Bit()) {
 					{
 						//recycle created Domino objects
-						Entry[] mapEntries = b64HandlesDominoObjects.entrySet().toArray(new Entry[b64HandlesDominoObjects.size()]);
-						if (mapEntries.length>0) {
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Auto-recycling "+mapEntries.length+" Domino objects:");
-							}
-							
-							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<HashKey64,IRecyclableNotesObject> currEntry = mapEntries[i];
-								IRecyclableNotesObject obj = currEntry.getValue();
-								try {
-									if (!obj.isRecycled()) {
-										if (writeDebugMsg) {
-											System.out.println("AutoGC - Auto-recycling "+obj);
+						if (!b64HandlesDominoObjects.isEmpty()) {
+							Entry[] mapEntries = b64HandlesDominoObjects.entrySet().toArray(new Entry[b64HandlesDominoObjects.size()]);
+							if (mapEntries.length>0) {
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Auto-recycling "+mapEntries.length+" Domino objects:");
+								}
+								
+								for (int i=mapEntries.length-1; i>=0; i--) {
+									Entry<HashKey64,IRecyclableNotesObject> currEntry = mapEntries[i];
+									IRecyclableNotesObject obj = currEntry.getValue();
+									try {
+										if (!obj.isRecycled()) {
+											if (writeDebugMsg) {
+												System.out.println("AutoGC - Auto-recycling "+obj);
+											}
+											obj.recycle();
 										}
-										obj.recycle();
 									}
+									catch (Throwable e) {
+										e.printStackTrace();
+									}
+									b64HandlesDominoObjects.remove(currEntry.getKey());
 								}
-								catch (Throwable e) {
-									e.printStackTrace();
+								
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Done auto-recycling "+mapEntries.length+" Domino objects");
 								}
-								b64HandlesDominoObjects.remove(currEntry.getKey());
+								
+								b64HandlesDominoObjects.clear();
+								m_b64OpenHandlesDominoObjects.set(null);
 							}
-							
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Done auto-recycling "+mapEntries.length+" Domino objects");
-							}
-							
-							b64HandlesDominoObjects.clear();
-							m_b64OpenHandlesDominoObjects.set(null);
 						}
 					}
 					{
 						//dispose allocated memory
-						Entry[] mapEntries = b64HandlesMemory.entrySet().toArray(new Entry[b64HandlesMemory.size()]);
-						if (mapEntries.length>0) {
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
-							}
+						if (!b64HandlesMemory.isEmpty()) {
+							Entry[] mapEntries = b64HandlesMemory.entrySet().toArray(new Entry[b64HandlesMemory.size()]);
+							if (mapEntries.length>0) {
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
+								}
 
-							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Long,IAllocatedMemory> currEntry = mapEntries[i];
-								IAllocatedMemory obj = currEntry.getValue();
-								try {
-									if (!obj.isFreed()) {
-										if (writeDebugMsg) {
-											System.out.println("AutoGC - Freeing "+obj);
+								for (int i=mapEntries.length-1; i>=0; i--) {
+									Entry<Long,IAllocatedMemory> currEntry = mapEntries[i];
+									IAllocatedMemory obj = currEntry.getValue();
+									try {
+										if (!obj.isFreed()) {
+											if (writeDebugMsg) {
+												System.out.println("AutoGC - Freeing "+obj);
+											}
+											obj.free();
 										}
-										obj.free();
 									}
+									catch (Throwable e) {
+										e.printStackTrace();
+									}
+									b64HandlesMemory.remove(currEntry.getKey());
 								}
-								catch (Throwable e) {
-									e.printStackTrace();
+
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
 								}
-								b64HandlesMemory.remove(currEntry.getKey());
+
+								b64HandlesMemory.clear();
+								m_b64OpenHandlesMemory.set(null);
 							}
-							
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
-							}
-							
-							b64HandlesMemory.clear();
-							m_b64OpenHandlesMemory.set(null);
 						}
 					}
 				}
 				else {
 					{
-						//recycle created Domino objects
-						Entry[] mapEntries = b32HandlesDominoObjects.entrySet().toArray(new Entry[b32HandlesDominoObjects.size()]);
-						if (mapEntries.length>0) {
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Recycling "+mapEntries.length+" Domino objects:");
-							}
+						if (!b32HandlesDominoObjects.isEmpty()) {
+							//recycle created Domino objects
+							Entry[] mapEntries = b32HandlesDominoObjects.entrySet().toArray(new Entry[b32HandlesDominoObjects.size()]);
+							if (mapEntries.length>0) {
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Recycling "+mapEntries.length+" Domino objects:");
+								}
 
-							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<HashKey32,IRecyclableNotesObject> currEntry = mapEntries[i];
-								IRecyclableNotesObject obj = currEntry.getValue();
-								try {
-									if (!obj.isRecycled()) {
-										if (writeDebugMsg) {
-											System.out.println("AutoGC - Recycling "+obj);
+								for (int i=mapEntries.length-1; i>=0; i--) {
+									Entry<HashKey32,IRecyclableNotesObject> currEntry = mapEntries[i];
+									IRecyclableNotesObject obj = currEntry.getValue();
+									try {
+										if (!obj.isRecycled()) {
+											if (writeDebugMsg) {
+												System.out.println("AutoGC - Recycling "+obj);
+											}
+											obj.recycle();
 										}
-										obj.recycle();
 									}
+									catch (Throwable e) {
+										e.printStackTrace();
+									}
+									b32HandlesDominoObjects.remove(currEntry.getKey());
 								}
-								catch (Throwable e) {
-									e.printStackTrace();
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Done recycling "+mapEntries.length+" memory handles");
 								}
-								b32HandlesDominoObjects.remove(currEntry.getKey());
+
+								b32HandlesDominoObjects.clear();
+								m_b32OpenHandlesDominoObjects.set(null);
 							}
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Done recycling "+mapEntries.length+" memory handles");
-							}
-							
-							b32HandlesDominoObjects.clear();
-							m_b32OpenHandlesDominoObjects.set(null);
 						}
 					}
 					{
-						//dispose allocated memory
-						Entry[] mapEntries = b32HandlesMemory.entrySet().toArray(new Entry[b32HandlesMemory.size()]);
-						if (mapEntries.length>0) {
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
-							}
+						if (!b32HandlesMemory.isEmpty()) {
+							//dispose allocated memory
+							Entry[] mapEntries = b32HandlesMemory.entrySet().toArray(new Entry[b32HandlesMemory.size()]);
+							if (mapEntries.length>0) {
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
+								}
 
-							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Integer,IAllocatedMemory> currEntry = mapEntries[i];
-								IAllocatedMemory obj = currEntry.getValue();
-								try {
-									if (!obj.isFreed()) {
-										if (writeDebugMsg) {
-											System.out.println("AutoGC - Freeing "+obj);
+								for (int i=mapEntries.length-1; i>=0; i--) {
+									Entry<Integer,IAllocatedMemory> currEntry = mapEntries[i];
+									IAllocatedMemory obj = currEntry.getValue();
+									try {
+										if (!obj.isFreed()) {
+											if (writeDebugMsg) {
+												System.out.println("AutoGC - Freeing "+obj);
+											}
+											obj.free();
 										}
-										obj.free();
 									}
+									catch (Throwable e) {
+										e.printStackTrace();
+									}
+									b32HandlesMemory.remove(currEntry.getKey());
 								}
-								catch (Throwable e) {
-									e.printStackTrace();
+								if (writeDebugMsg) {
+									System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
 								}
-								b32HandlesMemory.remove(currEntry.getKey());
+
+								b32HandlesMemory.clear();
+								m_b32OpenHandlesMemory.set(null);
 							}
-							if (writeDebugMsg) {
-								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
-							}
-							
-							b32HandlesMemory.clear();
-							m_b32OpenHandlesMemory.set(null);
 						}
 					}
 				}
