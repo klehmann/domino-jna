@@ -2020,4 +2020,82 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		NotesErrorUtils.checkResult(result);
 	}
+	
+	/**
+	 * Gets the value of a database option
+	 * 
+	 * @param optionBit see DBOPTBIT_XXX constants in {@link NotesCAPI}
+	 * @return true if the option is enabled, false if the option is disabled
+	 */
+	public boolean getOption(int optionBit) {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory retDbOptions = new Memory(4 * 4); //DWORD[4]
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_NSFDbGetOptionsExt(m_hDB64, retDbOptions);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = notesAPI.b32_NSFDbGetOptionsExt(m_hDB32, retDbOptions);
+			NotesErrorUtils.checkResult(result);
+		}
+		byte[] dbOptionsArr = retDbOptions.getByteArray(0, 4 * 4);
+
+		int byteOffsetWithBit = optionBit / 8;
+		byte byteValueWithBit = dbOptionsArr[byteOffsetWithBit];
+		int bitToCheck = (int) Math.pow(2, optionBit % 8);
+		
+		boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
+		return enabled;
+	}
+	
+	/**
+	 * Sets the value of a database option
+	 * 
+	 * @param optionBit see DBOPTBIT_XXX constants in {@link NotesCAPI}
+	 * @param flag true to set the option
+	 */
+	public void setOption(int optionBit, boolean flag) {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		int byteOffsetWithBit = optionBit / 8;
+		int bitToCheck = (int) Math.pow(2, optionBit % 8);
+
+		byte[] optionsWithBitSetArr = new byte[4*4];
+		optionsWithBitSetArr[byteOffsetWithBit] = (byte) (bitToCheck & 0xff);
+		
+		Memory dbOptionsWithBitSetMem = new Memory(4 * 4);
+		dbOptionsWithBitSetMem.write(0, optionsWithBitSetArr, 0, 4*4);
+		
+		if (NotesJNAContext.is64Bit()) {
+			short result;
+			if (flag) {
+				//use dbOptionsMem both for the new value and for the bitmask, since the new value is 1
+				result = notesAPI.b64_NSFDbSetOptionsExt(m_hDB64, dbOptionsWithBitSetMem, dbOptionsWithBitSetMem);
+			}
+			else {
+				Memory nullBytesMem = new Memory(4 * 4);
+				nullBytesMem.clear();
+				result = notesAPI.b64_NSFDbSetOptionsExt(m_hDB64, nullBytesMem, dbOptionsWithBitSetMem);
+			}
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result;
+			if (flag) {
+				result = notesAPI.b32_NSFDbSetOptionsExt(m_hDB32, dbOptionsWithBitSetMem, dbOptionsWithBitSetMem);
+			}
+			else {
+				Memory nullBytesMem = new Memory(4 * 4);
+				nullBytesMem.clear();
+				result = notesAPI.b32_NSFDbSetOptionsExt(m_hDB32, nullBytesMem, dbOptionsWithBitSetMem);
+			}
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
 }

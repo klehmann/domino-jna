@@ -2517,7 +2517,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** Transactions is Sub-Commited if a Sub Transaction */
 	public static int NSF_TRANSACTION_BEGIN_SUB_COMMIT = 0x00000001;
 	
-	/** When starting a txn (not a sub tran) get an IS lock on the db */
+	/** When starting a txn (not a sub tran) get an intent shared lock on the db */
 	public static int NSF_TRANSACTION_BEGIN_LOCK_DB = 0x00000002;
 
 	//a SUB_COMMIT is a Nested Top Action (being able to commit a part of a transaction)
@@ -2532,8 +2532,224 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short b64_NSFTransactionRollback(long hDB);
 	public short b32_NSFTransactionRollback(int hDB);
 
-	//returns the list of forms that were included in the search formula 
-	public short b64_NSFSearchGetFormList(long SearchHandle, LongByReference hFormList, ShortByReference ListLength);
-	public short b32_NSFSearchGetFormList(int SearchHandle, IntByReference hFormList, ShortByReference ListLength);
+	public short b64_NSFDbGetOptionsExt(long hDB, Memory retDbOptions);
+	public short b32_NSFDbGetOptionsExt(int hDB, Memory retDbOptions);
+
+	public short b64_NSFDbSetOptionsExt(long hDB, Memory dbOptions, Memory mask);
+	public short b32_NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
 	
+	/** Enable full text indexing */
+	public static final int DBOPTBIT_FT_INDEX = 0;
+	/** TRUE if database is being used as an object store - for garbage collection */
+	public static final int DBOPTBIT_IS_OBJSTORE = 1;
+	/** TRUE if database has notes which refer to an object store - for garbage collection*/
+	public static final int DBOPTBIT_USES_OBJSTORE = 2;
+	/** TRUE if NoteUpdate of notes in this db should never use an object store. */
+	public static final int DBOPTBIT_OBJSTORE_NEVER = 3;
+	/** TRUE if database is a library */
+	public static final int DBOPTBIT_IS_LIBRARY = 4;
+	/** TRUE if uniform access control across all replicas */
+	public static final int DBOPTBIT_UNIFORM_ACCESS = 5;
+	/** TRUE if NoteUpdate of notes in this db should always try to use an object store. */
+	public static final int DBOPTBIT_OBJSTORE_ALWAYS = 6;
+	/** TRUE if garbage collection is never to be done on this object store */
+	public static final int DBOPTBIT_COLLECT_NEVER = 7;
+	/** TRUE if this is a template and is considered an advanced one (for experts only.) */
+	public static final int DBOPTBIT_ADV_TEMPLATE = 8;
+	/** TRUE if db has no background agent */
+	public static final int DBOPTBIT_NO_BGAGENT = 9;
+	/** TRUE is db is out-of-service, no new opens allowed, unless DBOPEN_IGNORE_OUTOFSERVICE is specified */
+	public static final int DBOPTBIT_OUT_OF_SERVICE = 10;
+	/** TRUE if db is personal journal */
+	public static final int DBOPTBIT_IS_PERSONALJOURNAL = 11;
+	/** TRUE if db is marked for delete. no new opens allowed, cldbdir will delete the database when ref count = = 0;*/
+	public static final int DBOPTBIT_MARKED_FOR_DELETE = 12;
+	/** TRUE if db stores calendar events */
+	public static final int DBOPTBIT_HAS_CALENDAR = 13;
+	/** TRUE if db is a catalog index */
+	public static final int DBOPTBIT_IS_CATALOG_INDEX = 14;
+	/** TRUE if db is an address book */
+	public static final int DBOPTBIT_IS_ADDRESS_BOOK = 15;
+	/** TRUE if db is a "multi-db-search" repository */
+	public static final int DBOPTBIT_IS_SEARCH_SCOPE = 16;
+	/** TRUE if db's user activity log is confidential, only viewable by designer and manager */
+	public static final int DBOPTBIT_IS_UA_CONFIDENTIAL = 17;
+	/** TRUE if item names are to be treated as if the ITEM_RARELY_USED_NAME flag is set. */
+	public static final int DBOPTBIT_RARELY_USED_NAMES = 18;
+	/** TRUE if db is a "multi-db-site" repository */
+	public static final int DBOPTBIT_IS_SITEDB = 19;
+
+	/** TRUE if docs in folders in this db have folder references */
+	public static final int DBOPTBIT_FOLDER_REFERENCES = 20;
+
+	/** TRUE if the database is a proxy for non-NSF data */
+	public static final int DBOPTBIT_IS_PROXY = 21;
+	/** TRUE for NNTP server add-in dbs */
+	public static final int DBOPTBIT_IS_NNTP_SERVER_DB = 22;
+	/** TRUE if this is a replica of an IMAP proxy, enables certain * special cases for interacting with db */
+	public static final int DBOPTBIT_IS_INET_REPL = 23;
+	/** TRUE if db is a Lightweight NAB */
+	public static final int DBOPTBIT_IS_LIGHT_ADDRESS_BOOK = 24;
+	/** TRUE if database has notes which refer to an object store - for garbage collection*/
+	public static final int DBOPTBIT_ACTIVE_OBJSTORE = 25;
+	/** TRUE if database is globally routed */
+	public static final int DBOPTBIT_GLOBALLY_ROUTED = 26;
+	/** TRUE if database has mail autoprocessing enabled */
+	public static final int DBOPTBIT_CS_AUTOPROCESSING_ENABLED = 27;
+	/** TRUE if database has mail filters enabled */
+	public static final int DBOPTBIT_MAIL_FILTERS_ENABLED = 28;
+	/** TRUE if database holds subscriptions */
+	public static final int DBOPTBIT_IS_SUBSCRIPTIONDB = 29;
+	/** TRUE if data base supports "check-in" "check-out" */
+	public static final int DBOPTBIT_IS_LOCK_DB = 30;
+	/** TRUE if editor must lock notes to edit */
+	public static final int DBOPTBIT_IS_DESIGNLOCK_DB = 31;
+
+
+	/* ODS26+ options */
+	/** if TRUE, store all modified index blocks in lz1 compressed form */
+	public static final int DBOPTBIT_COMPRESS_INDEXES = 33;
+	/** if TRUE, store all modified buckets in lz1 compressed form */
+	public static final int DBOPTBIT_COMPRESS_BUCKETS = 34;
+	/** FALSE by default, turned on forever if DBFLAG_COMPRESS_INDEXES or DBFLAG_COMPRESS_BUCKETS are ever turned on. */
+	public static final int DBOPTBIT_POSSIBLY_COMPRESSED = 35;
+	/** TRUE if freed space in db is not overwritten */
+	public static final int DBOPTBIT_NO_FREE_OVERWRITE = 36;
+	/** DB doesn't maintain unread marks */
+	public static final int DBOPTBIT_NOUNREAD = 37;
+	/** TRUE if the database does not maintain note hierarchy info. */
+	public static final int DBOPTBIT_NO_RESPONSE_INFO = 38;
+	/** Disabling of response info will happen on next compaction */
+	public static final int DBOPTBIT_DISABLE_RSP_INFO_PEND = 39;
+	/** Enabling of response info will happen on next compaction */
+	public static final int DBOPTBIT_ENABLE_RSP_INFO_PEND = 40;
+	/** Form/Bucket bitmap optimization is enabled */
+	public static final int DBOPTBIT_FORM_BUCKET_OPT = 41;
+	/** Disabling of Form/Bucket bitmap opt will happen on next compaction */
+	public static final int DBOPTBIT_DISABLE_FORMBKT_PEND = 42;
+	/** Enabling of Form/Bucket bitmap opt will happen on next compaction */
+	public static final int DBOPTBIT_ENABLE_FORMBKT_PEND = 43;
+	/** If TRUE, maintain LastAccessed */
+	public static final int DBOPTBIT_MAINTAIN_LAST_ACCESSED = 44;
+	/** If TRUE, transaction logging is disabled for this database */
+	public static final int DBOPTBIT_DISABLE_TXN_LOGGING = 45;
+	/** If TRUE, monitors can't be used against this database (non-replicating) */
+	public static final int DBOPTBIT_MONITORS_NOT_ALLOWED = 46;
+	/** If TRUE, all transactions on this database are nested top actions */
+	public static final int DBOPTBIT_NTA_ALWAYS = 47;
+	/** If TRUE, objects are not to be logged */
+	public static final int DBOPTBIT_DONTLOGOBJECTS = 48;
+	/** If set, the default delete is soft. Can be overwritten by UPDATE_DELETE_HARD */
+	public static final int DBOPTBIT_DELETES_ARE_SOFT = 49;
+
+	/* The following bits are used by the webserver and are gotten from the icon note */
+	/** if TRUE, the Db needs to be opened using SSL over HTTP */
+	public static final int DBOPTBIT_HTTP_DBIS_SSL = 50;
+	/** if TRUE, the Db needs to use JavaScript to render the HTML for formulas, buttons, etc */
+	public static final int DBOPTBIT_HTTP_DBIS_JS = 51;
+	/** if TRUE, there is a $DefaultLanguage value on the $icon note */
+	public static final int DBOPTBIT_HTTP_DBIS_MULTILANG = 52;
+
+	/* ODS37+ options */
+	/** if TRUE, database is a mail.box (ODS37 and up) */
+	public static final int DBOPTBIT_IS_MAILBOX = 53;
+	/** if TRUE, database is allowed to have >64KB UNK table */
+	public static final int DBOPTBIT_LARGE_UNKTABLE = 54;
+	/** If TRUE, full-text index is accent sensitive */
+	public static final int DBOPTBIT_ACCENT_SENSITIVE_FT = 55;
+	/** TRUE if database has NSF support for IMAP enabled */
+	public static final int DBOPTBIT_IMAP_ENABLED = 56;
+	/** TRUE if database is a USERless N&A Book */
+	public static final int DBOPTBIT_USERLESS_NAB = 57;
+	/** TRUE if extended ACL's apply to this Db */
+	public static final int DBOPTBIT_EXTENDED_ACL = 58;
+	/** TRUE if connections to = 3;rd party DBs are allowed */
+	public static final int DBOPTBIT_DECS_ENABLED = 59;
+	/** TRUE if a = 1;+ referenced shared template. Sticky bit once referenced. */
+	public static final int DBOPTBIT_IS_SHARED_TEMPLATE = 60;
+	/** TRUE if database is a mailfile */
+	public static final int DBOPTBIT_IS_MAILFILE = 61;
+	/** TRUE if database is a web application */
+	public static final int DBOPTBIT_IS_WEBAPPLICATION = 62;
+	/** TRUE if the database should not be accessible via the standard URL syntax */
+	public static final int DBOPTBIT_HIDE_FROM_WEB = 63;
+	/** TRUE if database contains one or more enabled background agent */
+	public static final int DBOPTBIT_ENABLED_BGAGENT = 64;
+	/** database supports LZ1 compression. */
+	public static final int DBOPTBIT_LZ1 = 65;
+	/** TRUE if database has default language */
+	public static final int DBOPTBIT_HTTP_DBHAS_DEFLANG = 66;
+	/** TRUE if database design refresh is only on admin server */
+	public static final int DBOPTBIT_REFRESH_DESIGN_ON_ADMIN = 67;
+	/** TRUE if shared template should be actively used to merge in design. */
+	public static final int DBOPTBIT_ACTIVE_SHARED_TEMPLATE = 68;
+	/** TRUE to allow the use of themes when displaying the application. */
+	public static final int DBOPTBIT_APPLY_THEMES = 69;
+	/** TRUE if unread marks replicate */
+	public static final int DBOPTBIT_UNREAD_REPLICATION = 70;
+	/** TRUE if unread marks replicate out of the cluster */
+	public static final int DBOPTBIT_UNREAD_REP_OUT_OF_CLUSTER = 71;
+	/** TRUE, if the mail file is a migrated one from Exchange */
+	public static final int DBOPTBIT_IS_MIGRATED_EXCHANGE_MAILFILE = 72;
+	/** TRUE, if the mail file is a migrated one from Exchange */
+	public static final int DBOPTBIT_NEED_EX_NAMEFIXUP = 73;
+	/** TRUE, if out of office service is enabled in a mail file */
+	public static final int DBOPTBIT_OOS_ENABLED = 74;
+	/** TRUE if Support Response Threads is enabled in database */
+	public static final int DBOPTBIT_SUPPORT_RESP_THREADS = 75;
+	/**TRUE if the database search is disabled<br>
+	 * LI = 4463;.02. give the admin a mechanism to prevent db search in scenarios
+	 * where the db is very large, they don't want to create new views, and they
+	 * don't want a full text index
+	 */
+	public static final int DBOPTBIT_NO_SIMPLE_SEARCH = 76;
+	/** TRUE if the database FDO is repaired to proper coalation function. */
+	public static final int DBOPTBIT_FDO_REPAIRED = 77;
+	/** TRUE if the policy settings have been removed from a db with no policies */
+	public static final int DBOPTBIT_POLICIES_REMOVED = 78;
+	/** TRUE if Superblock is compressed. */
+	public static final int DBOPTBIT_COMPRESSED_SUPERBLOCK = 79;
+	/** TRUE if design note non-summary should be compressed */
+	public static final int DBOPTBIT_COMPRESSED_DESIGN_NS = 80;
+	/** TRUE if the db has opted in to use DAOS */
+	public static final int DBOPTBIT_DAOS_ENABLED = 81;
+
+	/** TRUE if all data documents in database should be compressed (compare with DBOPTBIT_COMPRESSED_DESIGN_NS) */
+	public static final int DBOPTBIT_COMPRESSED_DATA_DOCS = 82;
+	/** TRUE if views in this database should be skipped by server-side update task */
+	public static final int DBOPTBIT_DISABLE_AUTO_VIEW_UPDS = 83;
+	/** if TRUE, Domino can suspend T/L check for DAOS items because the dbtarget is expendable */
+	public static final int DBOPTBIT_DAOS_LOGGING_NOT_REQD = 84;
+	/** TRUE if exporting of view data is to be disabled */
+	public static final int DBOPTBIT_DISABLE_VIEW_EXPORT = 85;
+	/** TRUE if database is a NAB which contains config information, groups, and mailin databases but where users are stored externally. */
+	public static final int DBOPTBIT_USERLESS2_NAB = 86;
+	/** LLN2 specific, added to this codestream to reserve this value */
+	public static final int DBOPTBIT_ADVANCED_PROP_OVERRIDE = 87;
+	/** Turn off VerySoftDeletes for ODS51 */
+	public static final int DBOPTBIT_NO_VSD = 88;
+	/** NSF is to be used as a cache */
+	public static final int DBOPTBIT_LOCAL_CACHE = 89;
+	/** Set to force next compact to be out of place. Initially done for ODS upgrade of in use Dbs, but may have other uses down the road. The next compact will clear this bit, it is transitory. */
+	public static final int DBOPTBIT_COMPACT_NO_INPLACE = 90;
+	/** from LLN2 */
+	public static final int DBOPTBIT_NEEDS_ZAP_LSN = 91;
+	/** set to indicate this is a system db (eg NAB, mail.box, etc) so we don't rely on the db name */
+	public static final int DBOPTBIT_IS_SYSTEM_DB = 92;
+	/** TRUE if the db has opted in to use PIRC */
+	public static final int DBOPTBIT_PIRC_ENABLED = 93;
+	/** from lln2 */
+	public static final int DBOPTBIT_DBMT_FORCE_FIXUP = 94;
+	/** TRUE if the db has likely a complete design replication - for PIRC control */
+	public static final int DBOPTBIT_DESIGN_REPLICATED = 95;
+	/** on the = 1;->0 transition rename the file (for LLN2 keep in sync please) */
+	public static final int DBOPTBIT_MARKED_FOR_PENDING_DELETE = 96;
+	public static final int DBOPTBIT_IS_NDX_DB = 97;
+	/** move NIF containers & collection objects out of nsf into .ndx db */
+	public static final int DBOPTBIT_SPLIT_NIF_DATA = 98;
+	/** NIFNSF is off but not all containers have been moved out yet */
+	public static final int DBOPTBIT_NIFNSF_OFF = 99;
+	/** Inlined indexing exists for this DB */
+	public static final int DBOPTBIT_INLINE_INDEX = 100;
+
 }
