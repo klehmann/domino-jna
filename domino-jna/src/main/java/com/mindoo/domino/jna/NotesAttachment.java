@@ -192,6 +192,7 @@ public class NotesAttachment {
 				}
 				finally {
 					notesAPI.b64_OSUnlockObject(rethBuffer.getValue());
+					notesAPI.b64_OSMemFree(rethBuffer.getValue());
 				}
 				
 				currOffset += bytesToRead;
@@ -237,6 +238,7 @@ public class NotesAttachment {
 				}
 				finally {
 					notesAPI.b32_OSUnlockObject(rethBuffer.getValue());
+					notesAPI.b32_OSMemFree(rethBuffer.getValue());
 				}
 				
 				currOffset += bytesToRead;
