@@ -1033,7 +1033,6 @@ public class NotesNote implements IRecyclableNotesObject {
 				short fileNameLength = fileObject.FileNameLength;
 				int fileSize = fileObject.FileSize;
 				short flags = fileObject.Flags;
-				fileObject.HostType = fileObject.HostType;
 				
 				Compression compression = null;
 				for (Compression currComp : Compression.values()) {
