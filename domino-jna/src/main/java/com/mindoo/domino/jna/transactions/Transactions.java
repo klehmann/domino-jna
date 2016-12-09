@@ -9,7 +9,8 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
 /**
  * Utility class that gives actions to NSF transactions. NSF transactions cover
  * normal document operations like add/update/delete, but in R9 they have some
- * caveats like folder operations that are not covered. Transactions currently only work
+ * caveats like folder operations (e.g. moving docs between folders) that may not
+ * be covered property according to IBM dev. Transactions currently only work
  * in local databases.<br>
  * <br>
  * The concept behind NSF transactions is called nested top actions. In short, you can
@@ -18,6 +19,14 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
  * <br>
  * Here is a short description of the concept:<br>
  * <a href="http://www.cse.iitb.ac.in/infolab/Data/Courses/CS632/1999/aries/node23.html">Nested Top Actions</a>.
+ * <br>
+ * Running code via {@link #runInDbTransaction(NotesDatabase, ITransactionCallable)}
+ * does not automatically lock out all other threads.
+ * Instead, only an Intend Shared lock is allocated, all users
+ * can still read and write. Blocking other threads from writing starts when the
+ * first write operations is being made (e.g. via NSFNoteUpdate). In addition, you
+ * should not take too much time for your transaction operation, because it gets
+ * aborted after a certain amount of time and when many other threads are waiting in the queue.
  * 
  * @author Karsten Lehmann
  */
