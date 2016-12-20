@@ -34,57 +34,6 @@ public class DominoJNAHttpService extends HttpService {
 	public DominoJNAHttpService(final LCDEnvironment lcdEnv) {
 		super(lcdEnv);
 		this.services = lcdEnv.getServices();
-
-//		SecurityManager oldSecurityMgr = System.getSecurityManager();
-//		System.out.println("Current SecurityManager: "+(oldSecurityMgr==null ? "null" : oldSecurityMgr.getClass().getName()));
-//		if (oldSecurityMgr instanceof AgentSecurityManager) {
-//			try {
-//				System.setSecurityManager(new DominoJNASecurityManager((AgentSecurityManager) oldSecurityMgr));
-				
-//				AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-//					@Override
-//					public Object run() {
-//						Enhancer enhancer = new Enhancer();
-//						enhancer.setSuperclass(AgentSecurityManager.class);
-//						enhancer.setCallback(new MethodInterceptor() {
-//
-//							@Override
-//							public Object intercept(Object obj, Method method, Object[] args, final MethodProxy proxy) throws Throwable {
-//								AccessController.doPrivileged(new PrivilegedAction<Object>() {
-//
-//									@Override
-//									public Object run() {
-//										//call a method via AccessController block that invokes MethodProxy.init()
-//										proxy.getSuperIndex();
-//										return null;
-//									}
-//								});
-//								try {
-//									return proxy.invokeSuper(obj, args);
-//								}
-//								catch (SecurityException secEx) {
-//									System.out.println("Denied by SecurityManager:");
-//									System.out.println(method.getName()+"("+(args==null ? "" : new Vector<Object>(Arrays.asList(args)))+")");
-//									secEx.printStackTrace();
-//									throw secEx;
-//								}
-//							}
-//						});
-//						enhancer.setNamingPolicy(new DominoJNANamingPolicy());
-//						enhancer.setClassLoader(DominoJNAActivator.class.getClassLoader());
-//						SecurityManager newSecurityMgr = (SecurityManager) enhancer.create();
-//						System.setSecurityManager(newSecurityMgr);
-//						System.out.println("Registered new SecurityManager");
-
-//						return null;
-//					}
-//				});
-//			}
-//			catch (Throwable t) {
-//				t.printStackTrace();
-//			}
-//		}
 	}
 
 	@Override
@@ -114,8 +63,6 @@ public class DominoJNAHttpService extends HttpService {
 		final Throwable[] exception = new Throwable[1];
 
 		try {
-			System.out.println("doService, path="+contextPath);
-
 			//wrap doService call in NotesGC.runWithAutoGC to automatically clean up allocated handles and memory
 			//after the request has been processed
 			NotesGC.runWithAutoGC(new Callable<Object>() {
