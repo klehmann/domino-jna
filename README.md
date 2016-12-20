@@ -217,6 +217,7 @@ The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain exper
 Please use the following steps to create a build or just download a binary build from the "releases" section.
  
 **1. Target platform**
+
 To create the build, you first need to create the Eclipse target platform that we will compile against.
 This step is only required once.
 
@@ -225,6 +226,7 @@ In project `domino-target`, call `mvn clean install` with the same parameters de
 When the build is done, the directory `domino-target/target/repository` contains a P2 Update Site containing the features and plugins of the installed IBM Notes Client that can by used by Maven/Tycho.
 
 **2. Build Update Site**
+
 Next call `mvn clean install` (also with parameters `JVMPARAMS`, `DOMINODIR` and `NOTESINI`) in project `com.mindoo.domino.jna.xsp.build`.
 
 This copies the current Domino JNA source code from project `domino-jna` into two Eclipse plugins `com.mindoo.domino.jna.xsp/jna-src` and `com.mindoo.domino.jna.xsp.source/jna-src`.
@@ -232,6 +234,7 @@ This copies the current Domino JNA source code from project `domino-jna` into tw
 `com.mindoo.domino.jna.xsp` provides the extension library for XPages and `com.mindoo.domino.jna.xsp.source` provides the source code for the Java editor of IBM Domino Designer.
 
 **3. Install Update Site**
+
 Similar to IBM's XPages Extension Library, the Domino JNA Update Site needs to be installed both in IBM Domino Designer and IBM Domino server.
 
 [Installation instructions from IBM](https://www-10.lotus.com/ldd/ddwiki.nsf/xpAPIViewer.xsp?lookupName=XPages+Extensibility+API#action=openDocument&res_title=XPages_Extension_Library_Deployment&content=apicontent)
