@@ -9,7 +9,7 @@ import com.sun.jna.Structure;
 /**
  * Structure returned by NSFDbGetMajMinVersion to determine code level at runtime
  */
-public class NotesBuildVersion extends Structure {
+public class NotesBuildVersion extends BaseStructure {
 	/** Major version identifier */
 	public int MajorVersion;
 	/** Minor version identifier */

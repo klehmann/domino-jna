@@ -8,7 +8,7 @@ import java.util.List;
  * 
  * @author Karsten Lehmann
  */
-public class NotesFTIndexStats extends Structure {
+public class NotesFTIndexStats extends BaseStructure {
 	/** # of new documents */
 	public int DocsAdded;
 	/** # of revised documents */

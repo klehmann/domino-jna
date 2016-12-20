@@ -1,0 +1,59 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>com.mindoo.domino.jna.xsp-updatesite</artifactId>
+	<packaging>eclipse-update-site</packaging>
+	<parent>
+		<groupId>com.mindoo.domino</groupId>
+		<artifactId>domino-jna-xsp-build</artifactId>
+		<version>0.9.0-SNAPSHOT</version>
+		<relativePath>../com.mindoo.domino.jna.xsp.build</relativePath>
+	</parent>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>setqualifier</id>
+						<phase>install</phase>
+						<configuration>
+							<tasks>
+								<ant antfile="${basedir}${file.separator}build.xml" target="main"
+									inheritAll="true">
+									<property name="maven_plugin_classpath" refid="maven.plugin.classpath" />
+									<property name="domino_jna_loc" value="${basedir}${file.separator}..${file.separator}domino-jna" />
+									<property name="project_loc" value="${basedir}" />
+									<property name="workspace_loc" value="${basedir}${file.separator}.." />
+									<property name="build_timestamp" value="${buildQualifier}" />
+								</ant>
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>ant-contrib</groupId>
+						<artifactId>ant-contrib</artifactId>
+						<version>1.0b3</version>
+						<exclusions>
+							<exclusion>
+								<groupId>ant</groupId>
+								<artifactId>ant</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+					<dependency>
+						<groupId>ant</groupId>
+						<artifactId>ant-nodeps</artifactId>
+						<version>1.6.5</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+		</plugins>
+	</build>
+</project>

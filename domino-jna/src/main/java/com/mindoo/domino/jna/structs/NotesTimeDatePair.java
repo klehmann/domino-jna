@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDatePair extends Structure {
+public class NotesTimeDatePair extends BaseStructure {
 	/** C type : TIMEDATE */
 	public NotesTimeDate Lower;
 	/** C type : TIMEDATE */

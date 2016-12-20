@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main" xmlns:ac="antlib:net.sf.antcontrib">
+	<target name="main">
+		<ac:var name="domino_jna_src_loc" value="${domino_jna_loc}${file.separator}src${file.separator}main${file.separator}java" />
+		<ac:var name="domino_jna_xsp_loc" value="${project_loc}${file.separator}jna-src" />
+		
+		<delete dir="${domino_jna_xsp_loc}" />
+		<mkdir dir="${domino_jna_xsp_loc}" />
+			
+		<copy todir="${domino_jna_xsp_loc}" includeEmptyDirs="yes" overwrite="true">
+			<fileset dir="${domino_jna_src_loc}" casesensitive="yes" defaultexcludes="yes" erroronmissingdir="false">
+				<include name="*/**" />
+			</fileset>
+		</copy>
+	</target>
+</project>

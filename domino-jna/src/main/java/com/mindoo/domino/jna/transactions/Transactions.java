@@ -41,7 +41,7 @@ public class Transactions {
 	/**
 	 * Method to check whether transactions are available for the specified database.
 	 * 
-	 * @param anyDb any database 
+	 * @param anyLocalDb any database 
 	 * @return true if available
 	 */
 	public static boolean areTransactionsSupported(NotesDatabase anyLocalDb) {

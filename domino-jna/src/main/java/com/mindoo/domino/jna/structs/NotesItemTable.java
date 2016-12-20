@@ -10,7 +10,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesItemTable extends Structure {
+public class NotesItemTable extends BaseStructure {
 	/** total length of this buffer */
 	public short Length;
 	/** number of items in the table */

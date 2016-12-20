@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTime extends Structure {
+public class NotesTime extends BaseStructure {
 	/** 1-32767 */
 	public int year;
 	/** 1-12 */

@@ -53,7 +53,7 @@ import com.sun.jna.Structure;
  * If you need to make an existing note appear to be a totally new note,
  * the NSFDbGenerateOID function can be used to generate a new OID.
  */
-public class NotesOriginatorId extends Structure {
+public class NotesOriginatorId extends BaseStructure {
 	/** C type : DBID */
 	public NotesTimeDate File;
 	/** C type : TIMEDATE */

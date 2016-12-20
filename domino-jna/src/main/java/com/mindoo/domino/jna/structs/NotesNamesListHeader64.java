@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNamesListHeader64 extends Structure {
+public class NotesNamesListHeader64 extends BaseStructure {
 	/** Number of names in list */
 	public short NumNames;
 

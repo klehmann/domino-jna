@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class WinNotesNamesListHeader32 extends Structure {
+public class WinNotesNamesListHeader32 extends BaseStructure {
 	/** Number of names in list */
 	public short NumNames;
 

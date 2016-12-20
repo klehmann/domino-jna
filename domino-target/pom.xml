@@ -1,0 +1,61 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.mindoo.domino</groupId>
+	<artifactId>domino-target</artifactId>
+	<version>0.9.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<properties>
+		<tycho-version>0.22.0</tycho-version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.6</maven.compiler.source>
+		<maven.compiler.target>1.6</maven.compiler.target>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho.extras</groupId>
+				<artifactId>tycho-p2-extras-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<executions>
+					<execution>
+						<id>rcp_plugins</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>publish-features-and-bundles</goal>
+						</goals>
+						<configuration>
+							<metadataRepositoryLocation>${project.build.directory}/repository</metadataRepositoryLocation>
+							<artifactRepositoryLocation>${project.build.directory}/repository</artifactRepositoryLocation>
+							<compress>true</compress>
+							<append>false</append>
+							<publishArtifacts>true</publishArtifacts>
+
+							<sourceLocation>${DOMINODIR}/rcp/eclipse</sourceLocation>
+						</configuration>
+					</execution>
+					<execution>
+						<id>shared_plugins</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>publish-features-and-bundles</goal>
+						</goals>
+						<configuration>
+							<metadataRepositoryLocation>${project.build.directory}/repository</metadataRepositoryLocation>
+							<artifactRepositoryLocation>${project.build.directory}/repository</artifactRepositoryLocation>
+							<compress>true</compress>
+							<append>true</append>
+							<publishArtifacts>true</publishArtifacts>
+
+							<sourceLocation>${DOMINODIR}/shared/eclipse</sourceLocation>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

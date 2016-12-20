@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesCollectionPosition extends Structure {
+public class NotesCollectionPosition extends BaseStructure {
 	/** # levels -1 in tumbler */
 	public short Level;
 

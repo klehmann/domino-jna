@@ -7,6 +7,7 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
 import com.sun.jna.Native;
 
+import lotus.domino.Database;
 import lotus.domino.NotesException;
 import lotus.domino.NotesFactory;
 import lotus.domino.NotesThread;
@@ -16,6 +17,8 @@ import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
 public class BaseJNATestClass {
+	private static final String DBPATH_FAKENAMES_VIEWS_NSF = "fakenames-views.nsf";
+	private static final String DBPATH_FAKENAMES_NSF = "fakenames.nsf";
 	private ThreadLocal<Session> m_threadSession = new ThreadLocal<Session>();
 	private static boolean m_notesInitExtendedCalled = false;
 	
@@ -44,12 +47,22 @@ public class BaseJNATestClass {
 	}
 	
 	public NotesDatabase getFakeNamesDb() throws NotesException {
-		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf");
+		NotesDatabase db = new NotesDatabase(getSession(), "", DBPATH_FAKENAMES_NSF);
 		return db;
 	}
 
 	public NotesDatabase getFakeNamesViewsDb() throws NotesException {
-		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames-views.nsf");
+		NotesDatabase db = new NotesDatabase(getSession(), "", DBPATH_FAKENAMES_VIEWS_NSF);
+		return db;
+	}
+
+	public Database getFakeNamesDbLegacy() throws NotesException {
+		Database db = getSession().getDatabase("", DBPATH_FAKENAMES_NSF);
+		return db;
+	}
+
+	public Database getFakeNamesViewsDbLegacy() throws NotesException {
+		Database db = getSession().getDatabase("", DBPATH_FAKENAMES_VIEWS_NSF);
 		return db;
 	}
 

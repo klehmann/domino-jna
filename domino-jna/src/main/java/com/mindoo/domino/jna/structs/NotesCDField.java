@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * CD Field data structure
  */
-public class NotesCDField extends Structure {
+public class NotesCDField extends BaseStructure {
 	/** ORed with WORDRECORDLENGTH */
 	public short Signature;
 	/** (length is inclusive with this struct) */

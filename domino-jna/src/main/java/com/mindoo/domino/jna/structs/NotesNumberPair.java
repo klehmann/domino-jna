@@ -11,7 +11,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNumberPair extends Structure {
+public class NotesNumberPair extends BaseStructure {
 	/** C type : NUMBER */
 	public double Lower;
 	/** C type : NUMBER */

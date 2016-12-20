@@ -2751,5 +2751,13 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int DBOPTBIT_NIFNSF_OFF = 99;
 	/** Inlined indexing exists for this DB */
 	public static final int DBOPTBIT_INLINE_INDEX = 100;
+	/** db solr search enabled */
+	public static final int DBOPTBIT_SOLR_SEARCH = 101;
+	/** init solr index done */
+	public static final int DBOPTBIT_SOLR_SEARCH_INIT_DONE = 102;
+	/** Folder sync enabled for database (sync Drafts, Sent and Trash views to IMAP folders) */
+	public static final int DBOPTBIT_IMAP_FOLDERSYNC = 103;
+	/** Large Summary Support (LSS) */
+	public static final int DBOPTBIT_LARGE_BUCKETS_ENABLED = 104;
 
 }

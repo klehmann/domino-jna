@@ -9,7 +9,7 @@ import java.util.List;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTableItem extends Structure {
+public class NotesTableItem extends BaseStructure {
 	/** Length of Item Name following this struct. may be zero (0) if not required by func(s)*/
 	public short NameLength;
 	/** Length of Item Value following this struct, incl. Notes data type.        */

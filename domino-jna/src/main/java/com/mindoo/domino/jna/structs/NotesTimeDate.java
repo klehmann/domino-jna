@@ -16,7 +16,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate extends Structure implements Serializable {
+public class NotesTimeDate extends BaseStructure implements Serializable {
 	private static final long serialVersionUID = 549580185343880134L;
 	
 	/** C type : DWORD[2] */

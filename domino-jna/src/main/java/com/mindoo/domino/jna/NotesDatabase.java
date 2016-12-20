@@ -212,7 +212,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesTimeDate modifiedTime = null;
 				NotesTimeDate retDataModified = new NotesTimeDate();
 				NotesTimeDate retNonDataModified = new NotesTimeDate();
-				result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
+				
+				int retries = 5;
+				do {
+					//try opening the database multiple times; we had issues here when opening
+					//many dbs remotely that could be solved by retrying
+					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					retries--;
+					if (result!=0) {
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				while (retries>0 && result!=0);
+				
 				NotesErrorUtils.checkResult(result);
 			}
 
@@ -245,7 +261,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesTimeDate modifiedTime = null;
 				NotesTimeDate retDataModified = new NotesTimeDate();
 				NotesTimeDate retNonDataModified = new NotesTimeDate();
-				result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+				
+				int retries = 5;
+				do {
+					//try opening the database multiple times; we had issues here when opening
+					//many dbs remotely that could be solved by retrying
+					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					retries--;
+					if (result!=0) {
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				while (retries>0 && result!=0);
+
 				NotesErrorUtils.checkResult(result);
 			}
 			

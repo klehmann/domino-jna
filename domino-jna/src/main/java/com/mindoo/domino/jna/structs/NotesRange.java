@@ -10,7 +10,7 @@ import java.util.List;
  * 
  * @author Karsten Lehmann
  */
-public class NotesRange extends Structure {
+public class NotesRange extends BaseStructure {
 	/** list entries following */
 	public short ListEntries;
 	/** range entries following */

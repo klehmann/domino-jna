@@ -10,7 +10,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesCollectionStats extends Structure {
+public class NotesCollectionStats extends BaseStructure {
 	/** # top level entries (level 0) */
 	public int TopLevelEntries;
 	/** 0 */

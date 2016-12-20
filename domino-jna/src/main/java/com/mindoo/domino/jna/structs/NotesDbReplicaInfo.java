@@ -22,7 +22,7 @@ import com.sun.jna.Structure;
  * This time/date is NOT normalized to Greenwich Mean Time (GMT), as keeping the local
  * time zone and daylight savings time settings will further ensure that it is a unique time/date.
  */
-public class NotesDbReplicaInfo extends Structure {
+public class NotesDbReplicaInfo extends BaseStructure {
 	/**
 	 * ID that is same for all replica files<br>
 	 * C type : TIMEDATE

@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna.internal;
 
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,47 +43,56 @@ public class NotesJNAContext {
 		if (m_api==null) {
 			synchronized (NotesJNAContext.class) {
 				if (m_api==null) {
-					Throwable t = null;
-					for (int i=0; i<3; i++) {
-						try {
-							String osName = System.getProperty("os.name");
-							Native.setProtected(true);
-							@SuppressWarnings("rawtypes")
-							Map options = new HashMap();
-							options.put(Library.OPTION_FUNCTION_MAPPER, new FunctionMapper() {
-								//use different methods for 32 and 64 bit
-								@Override
-								public String getFunctionName(NativeLibrary library, Method method) {
-									String methodName = method.getName();
-									if (methodName.startsWith("b32_") || methodName.startsWith("b64_")) {
-										return methodName.substring(4);
+					try {
+						m_api = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCAPI>() {
+
+							@Override
+							public NotesCAPI run() throws Exception {
+								Exception t = null;
+								for (int i=0; i<3; i++) {
+									try {
+										String osName = System.getProperty("os.name");
+										Native.setProtected(true);
+										@SuppressWarnings("rawtypes")
+										Map options = new HashMap();
+										options.put(Library.OPTION_FUNCTION_MAPPER, new FunctionMapper() {
+											//use different methods for 32 and 64 bit
+											@Override
+											public String getFunctionName(NativeLibrary library, Method method) {
+												String methodName = method.getName();
+												if (methodName.startsWith("b32_") || methodName.startsWith("b64_")) {
+													return methodName.substring(4);
+												}
+												else
+													return methodName;
+											}
+										});
+										
+										try {
+											if (osName.toLowerCase().indexOf("win") >= 0) {
+												return (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
+											}
+											else {
+												return (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+											}
+										}
+										catch (UnsatisfiedLinkError e) {
+											System.out.println("Could not load notes native library.\nEnvironment: "+System.getenv());
+											throw e;
+										}
 									}
-									else
-										return methodName;
+									catch (Exception currError) {
+										t = currError;
+									}
 								}
-							});
-							
-							try {
-								if (osName.toLowerCase().indexOf("win") >= 0) {
-									m_api = (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
-								}
-								else {
-									m_api = (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
-								}
+								if (t!=null)
+									throw t;
+								else
+									throw new RuntimeException();
 							}
-							catch (UnsatisfiedLinkError e) {
-								System.out.println("Could not load notes native library.\nEnvironment: "+System.getenv());
-								throw e;
-							}
-							break;
-						}
-						catch (Throwable currError) {
-							t = currError;
-						}
-					}
-					
-					if (t!=null) {
-						throw new RuntimeException(t);
+						});
+					} catch (Throwable e) {
+						throw new RuntimeException("Could not initialize Domino JNA API", e);
 					}
 				}
 			}

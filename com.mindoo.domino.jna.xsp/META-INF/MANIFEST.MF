@@ -1,0 +1,35 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Domino JNA XSP Integrator Plugin
+Bundle-SymbolicName: com.mindoo.domino.jna.xsp;singleton:=true
+Bundle-Version: 0.9.0.qualifier
+Bundle-Vendor: Mindoo GmbH
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Import-Package: com.ibm.designer.runtime.domino.adapter,
+ com.ibm.designer.runtime.domino.bootstrap.adapter,
+ javax.servlet,
+ javax.servlet.http,
+ lotus.domino
+Require-Bundle: com.sun.jna;bundle-version="[4.1.0,5.0.0)",
+ com.ibm.xsp.core,
+ org.eclipse.core.runtime;bundle-version="3.4.0"
+Export-Package: com.mindoo.domino.jna,
+ com.mindoo.domino.jna.constants,
+ com.mindoo.domino.jna.directory,
+ com.mindoo.domino.jna.ecl,
+ com.mindoo.domino.jna.errors,
+ com.mindoo.domino.jna.formula,
+ com.mindoo.domino.jna.gc,
+ com.mindoo.domino.jna.internal,
+ com.mindoo.domino.jna.queries.condition,
+ com.mindoo.domino.jna.queries.condition.internal,
+ com.mindoo.domino.jna.queries.test,
+ com.mindoo.domino.jna.structs,
+ com.mindoo.domino.jna.transactions,
+ com.mindoo.domino.jna.utils,
+ com.mindoo.domino.jna.xsp.http
+Bundle-ClassPath: lib/commons-collections4-4.0.jar,
+ .,
+ lib/net.sf.cglib.jar
+Bundle-Activator: com.mindoo.domino.jna.xsp.internal.DominoJNAActivator
+Eclipse-BundleShape: dir

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+	<extension point="com.ibm.commons.Extension">
+         <service type="com.ibm.xsp.adapter.serviceFactory" class="com.mindoo.domino.jna.xsp.http.DominoJNAServiceFactory" />
+   </extension>
+   
+	<extension point="com.ibm.commons.Extension">
+		<service type="com.ibm.xsp.Library" class="com.mindoo.domino.jna.xsp.library.DominoJNALibrary" />
+   </extension>
+</plugin>

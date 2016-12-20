@@ -17,7 +17,6 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
 import com.sun.jna.Memory;

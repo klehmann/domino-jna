@@ -43,7 +43,7 @@ import com.sun.jna.Structure;
  * The "Note" member of the UNID contains the date/time when the very first copy of the note
  * was stored into the first NSF (Note: date/time from $CREATED item, if exists, takes precedence).
  */
-public class NotesUniversalNoteId extends Structure {
+public class NotesUniversalNoteId extends BaseStructure {
 	/** C type : DBID */
 	public NotesTimeDate File;
 	/** C type : TIMEDATE */
