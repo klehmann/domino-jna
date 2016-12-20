@@ -151,7 +151,7 @@ mvn install:install-file -Dfile="/Applications/IBM Notes.app/Contents/MacOS/jvm/
 ### Maven build
 
 **Windows:**
-To build against the IBM Notes Client on Windows, make sure you use a 32 bit JDK (e.g. 1.8) and use this command:
+To build against the IBM Notes Client on Windows, make sure you use a 32 bit JDK (e.g. 1.8) and use this command in the "domino-jna" directory:
 
 ```
 mvn -DJVMPARAMS= -DDOMINODIR="C:\Program Files (x86)\IBM\Notes" -DNOTESINI="C:\Program Files (x86)\IBM\Notes\Notes.ini" clean install
@@ -174,7 +174,7 @@ With skipped testcases, this command should run fine:
 mvn -DJVMPARAMS=-d64 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
 ```
 
-The directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA, Joda DateTime and Apache tool libraries.
+The directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA and Apache tool libraries.
 The "domino-api-binaries.jar" generated there is just the Notes.jar that you previously have added to Maven.
 
 ### Running the test cases
@@ -210,6 +210,33 @@ NOTESBIN = /Applications/IBM Notes.app/Contents/MacOS
 PATH = /Applications/IBM Notes.app/Contents/MacOS
 NotesINI = ~/Library/Preferences/Notes Preferences
 ```
+
+## Using Domino JNA in XPages applications
+The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain experimental build scripts to use Domino JNA in XPages applications, similar to IBM's XPages Extension Library.
+
+Please use the following steps to create a build or just download a binary build from the "releases" section.
+ 
+**1. Target platform**
+To create the build, you first need to create the Eclipse target platform that we will compile against.
+This step is only required once.
+
+In project `domino-target`, call `mvn clean install` with the same parameters described above (`JVMPARAMS`, `DOMINODIR` and `NOTESINI`).
+
+When the build is done, the directory `domino-target/target/repository` contains a P2 Update Site containing the features and plugins of the installed IBM Notes Client that can by used by Maven/Tycho.
+
+**2. Build Update Site**
+Next call `mvn clean install` (also with parameters `JVMPARAMS`, `DOMINODIR` and `NOTESINI`) in project `com.mindoo.domino.jna.xsp.build`.
+
+This copies the current Domino JNA source code from project `domino-jna` into two Eclipse plugins `com.mindoo.domino.jna.xsp/jna-src` and `com.mindoo.domino.jna.xsp.source/jna-src`.
+
+`com.mindoo.domino.jna.xsp` provides the extension library for XPages and `com.mindoo.domino.jna.xsp.source` provides the source code for the Java editor of IBM Domino Designer.
+
+**3. Install Update Site**
+Similar to IBM's XPages Extension Library, the Domino JNA Update Site needs to be installed both in IBM Domino Designer and IBM Domino server.
+
+[Installation instructions from IBM](https://www-10.lotus.com/ldd/ddwiki.nsf/xpAPIViewer.xsp?lookupName=XPages+Extensibility+API#action=openDocument&res_title=XPages_Extension_Library_Deployment&content=apicontent)
+
+When using the API in XPages applications, wrapping the code in `NotesGC.runWithAutoGC` blocks is not necessary, because we already do this in the plugin and clean up at the end of the XPages/JSF lifecycle.
 
 ## Further information
 * [New on Github: Domino JNA - Cross-platform access to IBM Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
