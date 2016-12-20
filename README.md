@@ -229,9 +229,11 @@ When the build is done, the directory `domino-target/target/repository` contains
  
 Next call `mvn clean install` (also with parameters `JVMPARAMS`, `DOMINODIR` and `NOTESINI`) in project `com.mindoo.domino.jna.xsp.build`.
 
-This copies the current Domino JNA source code from project `domino-jna` into two Eclipse plugins `com.mindoo.domino.jna.xsp/jna-src` and `com.mindoo.domino.jna.xsp.source/jna-src`.
+This copies the current Domino JNA source code from project `domino-jna` into two Eclipse plugins `com.mindoo.domino.jna.xsp/jna-src` and `com.mindoo.domino.jna.xsp.source/jna-src` and starts the compilation.
 
 `com.mindoo.domino.jna.xsp` provides the extension library for XPages and `com.mindoo.domino.jna.xsp.source` provides the source code for the Java editor of IBM Domino Designer.
+
+You can find the created Update Site in directory `com.mindoo.domino.jna.xsp-updatesite/target/site`.
 
 **3. Install Update Site**
  
