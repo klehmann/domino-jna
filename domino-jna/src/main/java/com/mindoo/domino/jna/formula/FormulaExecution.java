@@ -46,7 +46,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	 * if there are any compilation errors
 	 * 
 	 * @param formula formula
-	 * @throws FormulaCompilationError
+	 * @throws FormulaCompilationError if formula has wrong syntax
 	 */
 	public FormulaExecution(String formula) throws FormulaCompilationError {
 		m_formula = formula;
@@ -186,7 +186,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	 * @param formula formula
 	 * @param note note
 	 * @return computation result
-	 * @throws FormulaCompilationError
+	 * @throws FormulaCompilationError if formula has wrong syntax
 	 */
 	public static FormulaExecutionResult evaluateExt(String formula, NotesNote note) throws FormulaCompilationError {
 		FormulaExecution instance = new FormulaExecution(formula);

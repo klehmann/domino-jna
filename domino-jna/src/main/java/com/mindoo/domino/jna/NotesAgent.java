@@ -185,7 +185,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * Executes the agent on a context document
 	 * 
 	 * @param runCtx run context
-	 * @throws IOException
+	 * @throws IOException in case of i/o errors writing to output writer
 	 */
 	public void run(NotesAgentRunContext runCtx) throws IOException {
 		checkHandle();

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-import com.ibm.domino.napi.c.xsp.XSPNative;
 import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;

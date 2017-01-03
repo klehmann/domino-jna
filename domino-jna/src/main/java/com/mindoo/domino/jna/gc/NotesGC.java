@@ -35,7 +35,7 @@ public class NotesGC {
 	/**
 	 * Method to enable GC debug logging for the current {@link #runWithAutoGC(Callable)} call
 	 * 
-	 * @param enabled
+	 * @param enabled true if enabled
 	 */
 	public static void setDebugLoggingEnabled(boolean enabled) {
 		m_writeDebugMessages.set(Boolean.valueOf(enabled));

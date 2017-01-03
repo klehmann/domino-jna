@@ -258,7 +258,7 @@ public class NotesAgentRunContext {
 	 * We still need to find a way to change this (when calling WebQueryOpen/Save agents manually), if there is any.
 	 * 
 	 * @param sessionEffectiveNameAsNamesList names list, null by default, which means Session.EffectiveUserName will be the agent signer
-	 * @return
+	 * @return this context object (for chained calls)
 	 */
 	public NotesAgentRunContext setUsernameAsNamesList(NotesNamesList sessionEffectiveNameAsNamesList) {
 		this.m_userNameAsNamesList = sessionEffectiveNameAsNamesList;

@@ -293,6 +293,7 @@ public interface NotesCAPI extends Library {
 	 * @param hUnreadList Address to store unread list handle (optional)
 	 * @param hCollapsedList Address to store collapsed list handle (optional)
 	 * @param hSelectedList = Address to store selected list handle (optional)
+	 * @return unknown
 	 */
 	public boolean b64_NIFSetCollectionInfo (long hCollection, Pointer SessionID,
             long hUnreadList, long hCollapsedList, long hSelectedList);
@@ -2653,13 +2654,13 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/* ODS37+ options */
 	/** if TRUE, database is a mail.box (ODS37 and up) */
 	public static final int DBOPTBIT_IS_MAILBOX = 53;
-	/** if TRUE, database is allowed to have >64KB UNK table */
+	/** if TRUE, database is allowed to have /gt;64KB UNK table */
 	public static final int DBOPTBIT_LARGE_UNKTABLE = 54;
 	/** If TRUE, full-text index is accent sensitive */
 	public static final int DBOPTBIT_ACCENT_SENSITIVE_FT = 55;
 	/** TRUE if database has NSF support for IMAP enabled */
 	public static final int DBOPTBIT_IMAP_ENABLED = 56;
-	/** TRUE if database is a USERless N&A Book */
+	/** TRUE if database is a USERless N&amp;A Book */
 	public static final int DBOPTBIT_USERLESS_NAB = 57;
 	/** TRUE if extended ACL's apply to this Db */
 	public static final int DBOPTBIT_EXTENDED_ACL = 58;
@@ -2742,10 +2743,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int DBOPTBIT_DBMT_FORCE_FIXUP = 94;
 	/** TRUE if the db has likely a complete design replication - for PIRC control */
 	public static final int DBOPTBIT_DESIGN_REPLICATED = 95;
-	/** on the = 1;->0 transition rename the file (for LLN2 keep in sync please) */
+	/** on the = 1;-&gt;0 transition rename the file (for LLN2 keep in sync please) */
 	public static final int DBOPTBIT_MARKED_FOR_PENDING_DELETE = 96;
 	public static final int DBOPTBIT_IS_NDX_DB = 97;
-	/** move NIF containers & collection objects out of nsf into .ndx db */
+	/** move NIF containers &amp; collection objects out of nsf into .ndx db */
 	public static final int DBOPTBIT_SPLIT_NIF_DATA = 98;
 	/** NIFNSF is off but not all containers have been moved out yet */
 	public static final int DBOPTBIT_NIFNSF_OFF = 99;

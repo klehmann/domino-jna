@@ -16,7 +16,7 @@ public interface ITransactionCallable<T> {
 	 * 
 	 * @param db database
 	 * @return computation result or null
-	 * @throws Exception
+	 * @throws Exception in case of errors
 	 */
 	public T runInDbTransaction(NotesDatabase db) throws Exception;
 }

@@ -84,7 +84,7 @@ public enum Find {
 	/** Only match non-category entries */
 	NONCATEGORY_ONLY(0x0400),
 	
-	/** User COLLECTIONPOSITION->MaxLevel as BottomLevel. This can be setup prior to call */
+	/** User COLLECTIONPOSITION-&gt;MaxLevel as BottomLevel. This can be setup prior to call */
 	SET_BOTTOM_LEVEL(0x1000),        
     
 	/** Do not return multiple matches for

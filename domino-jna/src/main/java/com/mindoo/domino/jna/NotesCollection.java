@@ -1285,6 +1285,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * It internally takes care of view index changes while reading view data and restarts reading
 	 * if such a change has been detected.
 	 * 
+	 * @param <T> result data type
+	 * 
 	 * @param category category or catlevel1\catlevel2 structure
 	 * @param skipCount number of entries to skip
 	 * @param returnNav navigator to specify how to move in the collection
@@ -1293,6 +1295,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
 	 */
+	
 	public <T> T getAllEntriesInCategory(String category, int skipCount, EnumSet<Navigate> returnNav,
 			int preloadEntryCount, EnumSet<ReadMask> returnMask,
 			final ViewLookupCallback<T> callback) {
@@ -1304,6 +1307,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * The method reads a number of entries located under a specified category from the collection/view.
 	 * It internally takes care of view index changes while reading view data and restarts reading
 	 * if such a change has been detected.
+	 * 
+	 * @param <T> result data type
 	 * 
 	 * @param category category or catlevel1\catlevel2 structure
 	 * @param skipCount number of entries to skip

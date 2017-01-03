@@ -34,7 +34,7 @@
 							<append>false</append>
 							<publishArtifacts>true</publishArtifacts>
 
-							<sourceLocation>${DOMINODIR}/rcp/eclipse</sourceLocation>
+							<sourceLocation>${DOMINOOSGIDIR}/rcp/eclipse</sourceLocation>
 						</configuration>
 					</execution>
 					<execution>
@@ -50,7 +50,7 @@
 							<append>true</append>
 							<publishArtifacts>true</publishArtifacts>
 
-							<sourceLocation>${DOMINODIR}/shared/eclipse</sourceLocation>
+							<sourceLocation>${DOMINOOSGIDIR}/shared/eclipse</sourceLocation>
 						</configuration>
 					</execution>
 				</executions>

@@ -21,7 +21,7 @@
 		<repository>
 			<id>Domino</id>
 			<layout>p2</layout>
-			<url>file://${basedir}${file.separator}..${file.separator}domino-target${file.separator}target${file.separator}repository</url>
+			<url>${project.baseUri}/../domino-target/target/repository</url>
 		</repository>
 	</repositories>
 
