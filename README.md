@@ -154,7 +154,7 @@ mvn install:install-file -Dfile="/Applications/IBM Notes.app/Contents/MacOS/jvm/
 To build against the IBM Notes Client on Windows, make sure you use a 32 bit JDK (e.g. 1.8) and use this command in the "domino-jna" directory:
 
 ```
-mvn -DJVMPARAMS= -DDOMINODIR="C:\Program Files (x86)\IBM\Notes" -DNOTESINI="C:\Program Files (x86)\IBM\Notes\Notes.ini" clean install
+mvn -DJVMPARAMS= -DDOMINOOSGIDIR="C:\Program Files (x86)\IBM\Notes\osgi" -DDOMINODIR="C:\Program Files (x86)\IBM\Notes" -DNOTESINI="C:\Program Files (x86)\IBM\Notes\Notes.ini" clean install
 ```
 
 **Mac:**
@@ -163,7 +163,7 @@ We had to downgrade Maven to version 3.2.5 for the build, because that was the l
 
 This command should work for 32 bit:
 ```
-mvn -DJVMPARAMS=-d32 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install
+mvn -DJVMPARAMS=-d32 -DDOMINOOSGIDIR=/Applications/IBM\ Notes.app/Contents/MacOS -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install
 ```
 
 For 64 bit, running the test cases currently fails with a libxml.dylib loading error and we still need to figure out how to fix this.
@@ -171,7 +171,7 @@ For 64 bit, running the test cases currently fails with a libxml.dylib loading e
 With skipped testcases, this command should run fine:
 
 ```
-mvn -DJVMPARAMS=-d64 -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
+mvn -DJVMPARAMS=-d64 -DDOMINOOSGIDIR=/Applications/IBM\ Notes.app/Contents/MacOS -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
 ```
 
 The directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA and Apache tool libraries.
@@ -221,13 +221,13 @@ Please use the following steps to create a build or just download a binary build
 To create the build, you first need to create the Eclipse target platform that we will compile against.
 This step is only required once.
 
-In project `domino-target`, call `mvn clean install` with the same parameters described above (`JVMPARAMS`, `DOMINODIR` and `NOTESINI`).
+In project `domino-target`, call `mvn clean install` with the same parameters described above (`JVMPARAMS`, `DOMINOOSGIDIR`, `DOMINODIR` and `NOTESINI`).
 
 When the build is done, the directory `domino-target/target/repository` contains a P2 Update Site containing the features and plugins of the installed IBM Notes Client that can by used by Maven/Tycho.
 
 **2. Build Update Site**
  
-Next call `mvn clean install` (also with parameters `JVMPARAMS`, `DOMINODIR` and `NOTESINI`) in project `com.mindoo.domino.jna.xsp.build`.
+Next call `mvn clean install` (also with parameters `JVMPARAMS`, `DOMINOOSGIDIR`, `DOMINODIR` and `NOTESINI`) in project `com.mindoo.domino.jna.xsp.build`.
 
 This copies the current Domino JNA source code from project `domino-jna` into two Eclipse plugins `com.mindoo.domino.jna.xsp/jna-src` and `com.mindoo.domino.jna.xsp.source/jna-src` and starts the compilation.
 
