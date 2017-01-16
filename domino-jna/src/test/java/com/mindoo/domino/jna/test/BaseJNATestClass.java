@@ -17,8 +17,8 @@ import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
 public class BaseJNATestClass {
-	private static final String DBPATH_FAKENAMES_VIEWS_NSF = "fakenames-views.nsf";
-	private static final String DBPATH_FAKENAMES_NSF = "fakenames.nsf";
+	public static final String DBPATH_FAKENAMES_VIEWS_NSF = "fakenames-views.nsf";
+	public static final String DBPATH_FAKENAMES_NSF = "fakenames.nsf";
 	private ThreadLocal<Session> m_threadSession = new ThreadLocal<Session>();
 	private static boolean m_notesInitExtendedCalled = false;
 	
