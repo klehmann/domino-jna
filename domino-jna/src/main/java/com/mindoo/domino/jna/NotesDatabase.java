@@ -699,7 +699,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			else {
 				//now try to open collection as this user
-				result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle64());
+				int retries = 5;
+				do {
+					//try opening the database multiple times; we had issues here when opening
+					//many dbs remotely that could be solved by retrying
+					result = notesAPI.b64_NIFOpenCollectionWithUserNameList(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle64());
+					retries--;
+					if (result!=0) {
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				while (retries>0 && result!=0);
+
 				NotesErrorUtils.checkResult(result);
 			}
 			
@@ -719,7 +734,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			else {
 				//now try to open collection as this user
-				result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle32());
+				int retries = 5;
+				do {
+					//try opening the database multiple times; we had issues here when opening
+					//many dbs remotely that could be solved by retrying
+					result = notesAPI.b32_NIFOpenCollectionWithUserNameList(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList, m_namesList.getHandle32());
+					retries--;
+					if (result!=0) {
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				while (retries>0 && result!=0);
+				
 				NotesErrorUtils.checkResult(result);
 			}
 			
