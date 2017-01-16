@@ -246,6 +246,7 @@ When using the API in XPages applications, wrapping the code in `NotesGC.runWith
 ## Further information
 * [New on Github: Domino JNA - Cross-platform access to IBM Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
 * [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
+* [New APIs for Domino JNA project, now available for XPages development](http://www.mindoo.com/web/blog.nsf/dx/16.01.2017082125KLEAMY.htm?opendocument&comments)
 
 ## Next steps
 This project is not done yet, this is just the beginning.
