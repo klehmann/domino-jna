@@ -10,7 +10,7 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
  * Utility class that gives actions to NSF transactions. NSF transactions cover
  * normal document operations like add/update/delete, but in R9 they have some
  * caveats like folder operations (e.g. moving docs between folders) that may not
- * be covered property according to IBM dev. Transactions currently only work
+ * be covered properly according to IBM dev. Transactions currently only work
  * in local databases.<br>
  * <br>
  * The concept behind NSF transactions is called nested top actions. In short, you can
