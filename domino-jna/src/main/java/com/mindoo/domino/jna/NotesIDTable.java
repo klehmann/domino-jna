@@ -1159,18 +1159,23 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public Object clone() {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		NotesIDTable clonedTable;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
 			short result = notesAPI.b64_IDTableCopy(m_idTableHandle64, rethTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable.getValue());
+			clonedTable = new NotesIDTable(rethTable.getValue());
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
 			short result = notesAPI.b32_IDTableCopy(m_idTableHandle32, rethTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable.getValue());
+			clonedTable = new NotesIDTable(rethTable.getValue());
 		}
+		//constructor sets m_noRecycle to true when invoked with a handle, but
+		//we need GC to recycle the clone
+		clonedTable.m_noRecycle = false;
+		return clonedTable;
 	}
 	
 	/**
