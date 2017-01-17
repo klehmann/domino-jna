@@ -223,7 +223,7 @@ This step is only required once.
 
 In project `domino-target`, call `mvn clean install` with the same parameters described above (`JVMPARAMS`, `DOMINOOSGIDIR`, `DOMINODIR` and `NOTESINI`).
 
-When the build is done, the directory `domino-target/target/repository` contains a P2 Update Site containing the features and plugins of the installed IBM Notes Client that can by used by Maven/Tycho.
+When the build is done, the directory `domino-target/target/repository` contains a P2 Update Site containing the features and plugins of the installed IBM Notes Client that can be used by Maven/Tycho.
 
 **2. Build Update Site**
  
@@ -237,7 +237,7 @@ You can find the created Update Site in directory `com.mindoo.domino.jna.xsp-upd
 
 **3. Install Update Site**
  
-Similar to IBM's XPages Extension Library, the Domino JNA Update Site needs to be installed both in IBM Domino Designer and IBM Domino server.
+Similar to IBM's XPages Extension Library, the Domino JNA Update Site needs to be installed both in IBM Domino Designer and IBM Domino server R9.0.1+.
 
 [Installation instructions from IBM](https://www-10.lotus.com/ldd/ddwiki.nsf/xpAPIViewer.xsp?lookupName=XPages+Extensibility+API#action=openDocument&res_title=XPages_Extension_Library_Deployment&content=apicontent)
 
