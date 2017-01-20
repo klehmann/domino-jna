@@ -122,12 +122,12 @@ public class NotesSearch {
 				apiCallback = new WinNotesCAPI.b64_NsfSearchProcWin() {
 
 					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
 							NotesItemTable summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
+								return 0;
 							}
 
 							ItemTableData itemTableData=null;
@@ -145,9 +145,11 @@ public class NotesSearch {
 							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
 							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							return 0;
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 				};
@@ -156,12 +158,12 @@ public class NotesSearch {
 				apiCallback = new b64_NsfSearchProc() {
 
 					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
 							NotesItemTable summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
+								return 0;
 							}
 
 							ItemTableData itemTableData=null;
@@ -179,9 +181,11 @@ public class NotesSearch {
 							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
 							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							return 0;
 						}
 						catch (Throwable t) {
-							invocationEx[0] = t;							
+							invocationEx[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 
@@ -314,12 +318,12 @@ public class NotesSearch {
 					final Throwable invocationEx[] = new Throwable[1];
 
 					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
 							NotesItemTable summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
+								return 0;
 							}
 
 							ItemTableData itemTableData=null;
@@ -337,9 +341,11 @@ public class NotesSearch {
 							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
 							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							return 0;
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 
@@ -349,12 +355,12 @@ public class NotesSearch {
 				apiCallback = new b32_NsfSearchProc() {
 
 					@Override
-					public void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
 							NotesItemTable summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
-								return;
+								return 0;
 							}
 
 							ItemTableData itemTableData=null;
@@ -372,9 +378,11 @@ public class NotesSearch {
 							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
 							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							return 0;
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 

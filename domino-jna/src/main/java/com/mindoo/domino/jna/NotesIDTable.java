@@ -111,24 +111,32 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * Wraps an existing ID table, 32 bit mode
 	 * 
 	 * @param hTable ID table handle
+	 * @param noRecycle true to prevent auto-recycling (e.g. because the C API owns this id table)
 	 */
-	NotesIDTable(int hTable) {
+	NotesIDTable(int hTable, boolean noRecycle) {
 		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_idTableHandle32 = hTable;
-		m_noRecycle=true;
+		m_noRecycle=noRecycle;
+		if (!noRecycle) {
+			NotesGC.__objectCreated(NotesIDTable.class, this);
+		}
 	}
 
 	/**
 	 * Wraps an existing ID table, 64 bit mode
 	 * 
 	 * @param hTable ID table handle
+	 * @param noRecycle true to prevent auto-recycling (e.g. because the C API owns this id table)
 	 */
-	NotesIDTable(long hTable) {
+	NotesIDTable(long hTable, boolean noRecycle) {
 		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_idTableHandle64 = hTable;
-		m_noRecycle=true;
+		m_noRecycle=noRecycle;
+		if (!noRecycle) {
+			NotesGC.__objectCreated(NotesIDTable.class, this);
+		}
 	}
 	
 	public boolean isRecycled() {
@@ -1004,14 +1012,14 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			LongByReference retTableHandle = new LongByReference();
 			result = notesAPI.b64_IDTableIntersect(m_idTableHandle64, otherTable.getHandle64(), retTableHandle);
 			NotesErrorUtils.checkResult(result);
-			NotesIDTable retTable = new NotesIDTable(retTableHandle.getValue());
+			NotesIDTable retTable = new NotesIDTable(retTableHandle.getValue(), false);
 			return retTable;
 		}
 		else {
 			IntByReference retTableHandle = new IntByReference();
 			result = notesAPI.b32_IDTableIntersect(m_idTableHandle32, otherTable.getHandle32(), retTableHandle);
 			NotesErrorUtils.checkResult(result);
-			NotesIDTable retTable = new NotesIDTable(retTableHandle.getValue());
+			NotesIDTable retTable = new NotesIDTable(retTableHandle.getValue(), false);
 			return retTable;
 		}
 	}
@@ -1129,8 +1137,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			long hTableDeletes = retTableDeletesHandle.getValue();
 			long hTableSame = retTableSameHandle.getValue();
 			
-			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds),
-					new NotesIDTable(hTableDeletes), new NotesIDTable(hTableSame));
+			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds, false),
+					new NotesIDTable(hTableDeletes, false), new NotesIDTable(hTableSame, false));
 			return compResult;
 		}
 		else {
@@ -1145,8 +1153,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			int hTableDeletes = retTableDeletesHandle.getValue();
 			int hTableSame = retTableSameHandle.getValue();
 			
-			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds),
-					new NotesIDTable(hTableDeletes), new NotesIDTable(hTableSame));
+			ComparisonResult compResult = new ComparisonResult(new NotesIDTable(hTableAdds, false),
+					new NotesIDTable(hTableDeletes, false), new NotesIDTable(hTableSame, false));
 			return compResult;
 		}
 	}
@@ -1164,17 +1172,14 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			LongByReference rethTable = new LongByReference();
 			short result = notesAPI.b64_IDTableCopy(m_idTableHandle64, rethTable);
 			NotesErrorUtils.checkResult(result);
-			clonedTable = new NotesIDTable(rethTable.getValue());
+			clonedTable = new NotesIDTable(rethTable.getValue(), false);
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
 			short result = notesAPI.b32_IDTableCopy(m_idTableHandle32, rethTable);
 			NotesErrorUtils.checkResult(result);
-			clonedTable = new NotesIDTable(rethTable.getValue());
+			clonedTable = new NotesIDTable(rethTable.getValue(), false);
 		}
-		//constructor sets m_noRecycle to true when invoked with a handle, but
-		//we need GC to recycle the clone
-		clonedTable.m_noRecycle = false;
 		return clonedTable;
 	}
 	

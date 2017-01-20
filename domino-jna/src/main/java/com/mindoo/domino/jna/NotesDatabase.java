@@ -719,7 +719,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		else {
 			IntByReference hCollection = new IntByReference();
@@ -754,7 +754,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue()), new NotesIDTable(selectedList.getValue()), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		
 		NotesGC.__objectCreated(NotesCollection.class, newCol);
@@ -829,7 +829,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = notesAPI.b64_FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 		else {
 			IntByReference rethSearch = new IntByReference();
@@ -857,7 +857,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = notesAPI.b32_FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 	}
 
@@ -934,6 +934,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
+		NotesIDTable modifiedNoteTable;
+		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
 			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, since, retUntil, rethTable);
@@ -941,7 +943,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable.getValue());
+			return new NotesIDTable(rethTable.getValue(), false);
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
@@ -950,7 +952,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(rethTable.getValue());
+			return new NotesIDTable(rethTable.getValue(), false);
 		}
 	}
 	

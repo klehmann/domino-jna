@@ -1957,11 +1957,11 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public int SEARCH1_FIXUP_PURGED = (0x000000040 | SEARCH1_SIGNATURE);
 
 	public interface b32_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
-        void invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
+        short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
     }
 	
 	public interface b64_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
-        void invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch, NotesItemTable summaryBuffer); 
+        short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch, NotesItemTable summaryBuffer); 
     }
 
 	public interface NoteExtractCallback extends Callback { /* StdCallCallback if using __stdcall__ */

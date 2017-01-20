@@ -431,13 +431,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 			LongByReference hTable = new LongByReference();
 			short result = notesAPI.b64_NSFFolderGetIDTable(m_hDB64, m_hDB64, m_viewNoteId, validateIds ? NotesCAPI.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(hTable.getValue());
+			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
+			return new NotesIDTable(hTable.getValue(), true);
 		}
 		else {
 			IntByReference hTable = new IntByReference();
 			short result = notesAPI.b32_NSFFolderGetIDTable(m_hDB32, m_hDB32, m_viewNoteId, validateIds ? NotesCAPI.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			return new NotesIDTable(hTable.getValue());
+			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
+			return new NotesIDTable(hTable.getValue(), true);
 		}
 	}
 	
@@ -751,7 +753,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 		else {
 			IntByReference rethResults = new IntByReference();
@@ -773,7 +775,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue()), retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 	}
 	
@@ -907,7 +909,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		{
 			//we had "ERR 774: Unsupported return flag(s)" errors when using the optimized lookup
-			//method wither return values other than note id
+			//method with other return values other than note id
 			boolean unsupportedValuesFound = false;
 			for (ReadMask currReadMaskValues: returnMask) {
 				if ((currReadMaskValues != ReadMask.NOTEID) && (currReadMaskValues != ReadMask.SUMMARY)) {
