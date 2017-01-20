@@ -286,8 +286,6 @@ public class NotesSearch {
 						(short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil,
 						db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
 
-				NotesErrorUtils.checkResult(result);
-
 				if (invocationEx[0]!=null) {
 					//special case for JUnit testcases
 					if (invocationEx[0] instanceof AssertionError) {
@@ -295,6 +293,7 @@ public class NotesSearch {
 					}
 					throw new NotesError(0, "Error searching database", invocationEx[0]);
 				}
+				NotesErrorUtils.checkResult(result);
 
 				return retUntil;
 			}
@@ -480,7 +479,6 @@ public class NotesSearch {
 				result = notesAPI.b32_NSFSearchExtended3(db.getHandle32(), hFormula, hFilter, filterFlags,
 						viewTitleBuf, (int) (searchFlagsBitMask & 0xffff), searchFlags1, searchFlags2, searchFlags3, searchFlags4,
 						(short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
-				NotesErrorUtils.checkResult(result);
 
 				if (invocationEx[0]!=null) {
 					//special case for JUnit testcases
@@ -489,6 +487,7 @@ public class NotesSearch {
 					}
 					throw new NotesError(0, "Error searching database", invocationEx[0]);
 				}
+				NotesErrorUtils.checkResult(result);
 
 				return retUntil;
 			}
