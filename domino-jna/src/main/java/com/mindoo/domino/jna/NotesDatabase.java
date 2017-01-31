@@ -143,14 +143,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					Name nameServer = session.createName(server);
 					Name nameCurrServer = session.createName(session.getServerName());
 					if (nameServer.getCommon().equalsIgnoreCase(nameCurrServer.getCommon())) {
-						//switch to "" as servername if server points to the server the API is running on;
-						//this enables advanced lookup features like using NEXT_SELECTED in view traversal
+						//switch to "" as servername if server points to the server the API is running on
 						server = "";
 					}
 				}
 			}
 			
 			if ("".equals(server)) {
+				m_authenticateUser = true;
+			}
+			else if (session.isOnServer() && (namesForNamesList!=null || !StringUtil.isEmpty(asUserCanonical))) {
 				m_authenticateUser = true;
 			}
 		}
