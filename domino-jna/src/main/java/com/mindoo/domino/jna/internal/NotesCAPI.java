@@ -2761,4 +2761,39 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** Large Summary Support (LSS) */
 	public static final int DBOPTBIT_LARGE_BUCKETS_ENABLED = 104;
 
+	/** Open and read all information out of the id file */
+	public static final int SECKFM_open_All = 0x00000001;
+	/** Write information conatined inthe handle out to the specified ID file */
+	public static final int SECKFM_close_WriteIdFile = 0x00000001;
+
+	/** Don't set environment variable used to identify the ID file during process initialization -
+	 * usually either ServerKeyFileName or KeyFileName. See SECKFMSwitchToIDFile. */
+	public static final int fKFM_switchid_DontSetEnvVar	= 0x00000008;
+
+	
+	public short SECKFMOpen(Pointer phKFC, Memory pIDFileName, Memory pPassword,
+			int Flags, int Reserved, Pointer pReserved);
+	
+	public short SECKFMClose(Pointer phKFC, int Flags, int Reserved, Pointer pReserved);
+	public short SECKFMChangePassword(Memory pIDFile, Memory pOldPassword, Memory pNewPassword);
+	public short SECKFMGetUserName(Memory retUserName);
+	
+	public short SECKFMSwitchToIDFile(Memory pIDFileName, Memory pPassword, Memory pUserName,
+			short  MaxUserNameLength, int Flags, Pointer pReserved);
+	
+	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
+			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved);
+
+	public short SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
+			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved);
+	
+	public short SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
+			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved, IntByReference retdwFlags);
+	
+	public short SECidvResetUserPassword(Memory pServer, Memory pUserName, Memory pPassword,
+			short wDownloadCount, int ReservedFlags, Pointer pReserved);
+	
 }
