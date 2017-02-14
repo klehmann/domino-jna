@@ -104,6 +104,7 @@ public class Transactions {
 	 * @param db database
 	 * @param callable callable
 	 * @return optional return value
+	 * @param <T> return value type
 	 */
 	public static <T> T runInDbTransaction(NotesDatabase db, ITransactionCallable<T> callable) throws RollbackException {
 		if (db.isRecycled()) {

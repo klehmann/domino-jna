@@ -161,7 +161,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	 * @param formula formula
 	 * @param note note
 	 * @return computation result
-	 * @throws FormulaCompilationError
+	 * @throws FormulaCompilationError if formula has wrong syntax
 	 */
 	public static List<Object> evaluate(String formula, NotesNote note) throws FormulaCompilationError {
 		FormulaExecution instance = new FormulaExecution(formula);
