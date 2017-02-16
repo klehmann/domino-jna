@@ -826,7 +826,7 @@ public class NotesViewEntryData {
 			if (!valAsList.isEmpty()) {
 				Object firstVal = valAsList.get(0);
 				if (firstVal instanceof Number) {
-					return ((Number) val).doubleValue();
+					return ((Number) firstVal).doubleValue();
 				}
 			}
 		}
@@ -850,7 +850,7 @@ public class NotesViewEntryData {
 			if (!valAsList.isEmpty()) {
 				Object firstVal = valAsList.get(0);
 				if (firstVal instanceof Number) {
-					return ((Number) val).intValue();
+					return ((Number) firstVal).intValue();
 				}
 			}
 		}
