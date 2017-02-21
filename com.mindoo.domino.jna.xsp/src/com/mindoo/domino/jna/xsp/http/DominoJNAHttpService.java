@@ -65,10 +65,10 @@ public class DominoJNAHttpService extends HttpService {
 		try {
 			//wrap doService call in NotesGC.runWithAutoGC to automatically clean up allocated handles and memory
 			//after the request has been processed
-			NotesGC.runWithAutoGC(new Callable<Object>() {
+			Boolean processed = NotesGC.runWithAutoGC(new Callable<Boolean>() {
 
 				@Override
-				public Object call() throws Exception {
+				public Boolean call() throws Exception {
 					try {
 						boolean behindUs = false;
 						for (HttpService service : DominoJNAHttpService.this.services) {
@@ -85,11 +85,12 @@ public class DominoJNAHttpService extends HttpService {
 					catch (Throwable t) {
 						exception[0] = t;
 					}
-					return null;
+					return false;
 				}
-
 			});
-			return false;
+			if (exception[0]!=null) {
+				return processed.booleanValue();
+			}
 		} catch (Throwable e) {
 			//should not happen since we have a try/catch in the Callable; only possible if Domino JNA cleanup code is wrong
 			e.printStackTrace();
