@@ -88,7 +88,7 @@ public class DominoJNAHttpService extends HttpService {
 					return false;
 				}
 			});
-			if (exception[0]!=null) {
+			if (exception[0]==null) {
 				return processed.booleanValue();
 			}
 		} catch (Throwable e) {
