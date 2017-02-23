@@ -18,28 +18,67 @@ import com.sun.jna.Structure;
 public class NotesTimeDate implements IAdaptable {
 	private NotesTimeDateStruct m_struct;
 	
-	public NotesTimeDate(NotesTimeDateStruct struct) {
-		m_struct = struct;
-	}
-	
+	/**
+	 * Creates a new date/time object and sets it to the current date/time
+	 */
 	public NotesTimeDate() {
-		this(NotesTimeDateStruct.newInstance());
+		this(NotesTimeDateStruct.newInstance(NotesDateTimeUtils.calendarToInnards(Calendar.getInstance())));
 	}
 	
+	/**
+	 * Creates a new date/time object and sets it to a date/time specified as
+	 * innards array
+	 * 
+	 * @param innards innards array
+	 */
 	public NotesTimeDate(int innards[]) {
 		this(NotesTimeDateStruct.newInstance(innards));
 	}
 	
-	public NotesTimeDate(Pointer peer) {
-		this(NotesTimeDateStruct.newInstance(peer));
-	}
-	
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link Date}
+	 * 
+	 * @param dt date object
+	 */
 	public NotesTimeDate(Date dt) {
 		this(NotesTimeDateStruct.newInstance(dt));
 	}
 
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link Calendar}
+	 * 
+	 * @param cal calendar object
+	 */
 	public NotesTimeDate(Calendar cal) {
 		this(NotesTimeDateStruct.newInstance(cal));
+	}
+
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param adaptable object providing a supported data object for the time/date state
+	 */
+	public NotesTimeDate(IAdaptable adaptable) {
+		NotesTimeDateStruct struct = adaptable.getAdapter(NotesTimeDateStruct.class);
+		if (struct!=null) {
+			m_struct = struct;
+			return;
+		}
+		
+		Pointer p = adaptable.getAdapter(Pointer.class);
+		if (p!=null) {
+			m_struct = NotesTimeDateStruct.newInstance(p);
+			return;
+		}
+		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
+	}
+	
+	private NotesTimeDate(NotesTimeDateStruct struct) {
+		m_struct = struct;
+	}
+	
+	private NotesTimeDate(Pointer peer) {
+		m_struct = NotesTimeDateStruct.newInstance(peer);
 	}
 
 	@Override

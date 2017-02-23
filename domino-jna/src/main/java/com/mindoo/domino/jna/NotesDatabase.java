@@ -1420,7 +1420,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b32_NSFDbGetMajMinVersion(m_hDB32, retVersion);
 			NotesErrorUtils.checkResult(result);
 		}
-		return new NotesBuildVersion(retVersion);
+		retVersion.read();
+		return new NotesBuildVersion(retVersion.MajorVersion,
+				retVersion.MinorVersion, retVersion.QMRNumber, retVersion.QMUNumber,
+				retVersion.HotfixNumber, retVersion.Flags, retVersion.FixpackNumber, retVersion.Spare);
 	}
 
 	public static interface ISearchCallback extends NotesSearch.ISearchCallback {

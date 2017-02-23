@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
@@ -18,7 +19,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDateStruct extends BaseStructure implements Serializable {
+public class NotesTimeDateStruct extends BaseStructure implements Serializable, IAdaptable {
 	private static final long serialVersionUID = 549580185343880134L;
 	
 	/** C type : DWORD[2] */
@@ -96,6 +97,17 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable {
 	 */
 	public NotesTimeDateStruct(Pointer peer) {
 		super(peer);
+	}
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesTimeDateStruct.class) {
+			return (T) this;
+		}
+		else if (clazz == Pointer.class) {
+			return (T) getPointer();
+		}
+		return null;
 	}
 	
 	public static class ByReference extends NotesTimeDateStruct implements Structure.ByReference {

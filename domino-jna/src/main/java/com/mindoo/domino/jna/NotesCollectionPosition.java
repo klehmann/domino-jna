@@ -41,31 +41,49 @@ import com.sun.jna.Structure;
 public class NotesCollectionPosition implements IAdaptable {
 	private NotesCollectionPositionStruct m_struct;
 	
-	public NotesCollectionPosition(NotesCollectionPositionStruct struct) {
+	public NotesCollectionPosition(IAdaptable adaptable) {
+		NotesCollectionPositionStruct struct = adaptable.getAdapter(NotesCollectionPositionStruct.class);
+		if (struct!=null) {
+			m_struct = struct;
+			return;
+		}
+		Pointer p = adaptable.getAdapter(Pointer.class);
+		if (p!=null) {
+			m_struct = NotesCollectionPositionStruct.newInstance(p);
+			return;
+		}
+		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
+	}
+	
+	private NotesCollectionPosition(NotesCollectionPositionStruct struct) {
 		m_struct = struct;
 	}
 	
-	public NotesCollectionPosition(Pointer p) {
+	private NotesCollectionPosition(Pointer p) {
 		this(NotesCollectionPositionStruct.newInstance(p));
 	}
 	
 	/**
 	 * Creates a new instance
 	 * 
-	 * @param Level level in the view, use 0 for first level
-	 * @param MinLevel min level, see {@link #setMinLevel(int)}
-	 * @param MaxLevel max level, see {@link #setMaxLevel(int)}
-	 * @param Tumbler array with position information [index level0, index level1, ...], e.g. [1,2,3], up to 32 entries
+	 * @param level level in the view, use 0 for first level
+	 * @param minLevel min level, see {@link #setMinLevel(int)}
+	 * @param maxLevel max level, see {@link #setMaxLevel(int)}
+	 * @param tumbler array with position information [index level0, index level1, ...], e.g. [1,2,3], up to 32 entries
 	 */
-	public NotesCollectionPosition(int Level, int MinLevel, int MaxLevel, final int Tumbler[]) {
+	public NotesCollectionPosition(int level, int minLevel, int maxLevel, final int tumbler[]) {
 		this(NotesCollectionPositionStruct.newInstance());
 		
-		m_struct.Level = (short) (Level & 0xffff);
-		m_struct.MinLevel = (byte) (MinLevel & 0xff);
-		m_struct.MaxLevel = (byte) (MaxLevel & 0xff);
+		m_struct.Level = (short) (level & 0xffff);
+		m_struct.MinLevel = (byte) (minLevel & 0xff);
+		m_struct.MaxLevel = (byte) (maxLevel & 0xff);
+		if (tumbler.length>32) {
+			throw new IllegalArgumentException("Tumbler array exceeds the maximum size ("+tumbler.length+" > 32)");
+		}
+		
 		for (int i=0; i<m_struct.Tumbler.length; i++) {
-			if (i < Tumbler.length) {
-				m_struct.Tumbler[i] = Tumbler[i];
+			if (i < tumbler.length) {
+				m_struct.Tumbler[i] = tumbler[i];
 			}
 			else {
 				m_struct.Tumbler[i] = 0;

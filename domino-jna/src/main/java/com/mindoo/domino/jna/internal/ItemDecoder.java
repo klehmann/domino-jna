@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
@@ -85,8 +86,9 @@ public class ItemDecoder {
 		return listValues;
 	}
 	
-	public static Calendar decodeTimeDate(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
-		NotesTimeDate timeDate = new NotesTimeDate(ptr);
+	public static Calendar decodeTimeDate(NotesCAPI notesAPI, final Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
+		NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptr);
+		NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
 		
 		Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
 		return calDate;
@@ -141,7 +143,8 @@ public class ItemDecoder {
 		
 		for (int t=0; t<listEntriesAsInt; t++) {
 			Pointer ptrListEntry = ptrAfterRange.share(t * NotesCAPI.timeDateSize);
-			NotesTimeDate timeDate = new NotesTimeDate(ptrListEntry);
+			NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptrListEntry);
+			NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
 			
 			Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
 			if (calDate!=null) {

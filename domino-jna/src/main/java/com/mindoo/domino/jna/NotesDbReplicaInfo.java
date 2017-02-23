@@ -24,11 +24,30 @@ import com.sun.jna.Structure;
 public class NotesDbReplicaInfo implements IAdaptable {
 	private NotesDbReplicaInfoStruct m_struct;
 	
-	public NotesDbReplicaInfo(NotesDbReplicaInfoStruct struct) {
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param adaptable object providing a supported data object for the time/date state
+	 */
+	public NotesDbReplicaInfo(IAdaptable adaptable) {
+		NotesDbReplicaInfoStruct struct = adaptable.getAdapter(NotesDbReplicaInfoStruct.class);
+		if (struct!=null) {
+			m_struct = struct;
+			return;
+		}
+		Pointer p = adaptable.getAdapter(Pointer.class);
+		if (p!=null) {
+			m_struct = NotesDbReplicaInfoStruct.newInstance(p);
+			return;
+		}
+		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
+	}
+	
+	private NotesDbReplicaInfo(NotesDbReplicaInfoStruct struct) {
 		m_struct = struct;
 	}
 	
-	public NotesDbReplicaInfo(Pointer p) {
+	private NotesDbReplicaInfo(Pointer p) {
 		this(NotesDbReplicaInfoStruct.newInstance(p));
 	}
 	

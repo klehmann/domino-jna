@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 /**
@@ -57,7 +58,7 @@ import com.sun.jna.Structure;
  * If you need to make an existing note appear to be a totally new note,
  * the NSFDbGenerateOID function can be used to generate a new OID.
  */
-public class NotesOriginatorIdStruct extends BaseStructure {
+public class NotesOriginatorIdStruct extends BaseStructure implements IAdaptable {
 	/** C type : DBID */
 	public NotesTimeDateStruct File;
 	/** C type : TIMEDATE */
@@ -81,6 +82,17 @@ public class NotesOriginatorIdStruct extends BaseStructure {
 				return new NotesOriginatorIdStruct();
 			}
 		});
+	}
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesOriginatorIdStruct.class) {
+			return (T) this;
+		}
+		else if (clazz == Pointer.class) {
+			return (T) getPointer();
+		}
+		return null;
 	}
 	
 	protected List<? > getFieldOrder() {

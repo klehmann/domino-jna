@@ -5,6 +5,7 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
@@ -24,7 +25,7 @@ import com.sun.jna.Structure;
  * This time/date is NOT normalized to Greenwich Mean Time (GMT), as keeping the local
  * time zone and daylight savings time settings will further ensure that it is a unique time/date.
  */
-public class NotesDbReplicaInfoStruct extends BaseStructure {
+public class NotesDbReplicaInfoStruct extends BaseStructure implements IAdaptable {
 	/**
 	 * ID that is same for all replica files<br>
 	 * C type : TIMEDATE
@@ -57,6 +58,17 @@ public class NotesDbReplicaInfoStruct extends BaseStructure {
 			public NotesDbReplicaInfoStruct run() {
 				return new NotesDbReplicaInfoStruct();
 			}});
+	}
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesTimeDateStruct.class) {
+			return (T) this;
+		}
+		else if (clazz == Pointer.class) {
+			return (T) getPointer();
+		}
+		return null;
 	}
 	
 	protected List<? > getFieldOrder() {

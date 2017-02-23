@@ -1,33 +1,32 @@
 package com.mindoo.domino.jna;
 
-import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
-import com.sun.jna.Pointer;
-import com.sun.jna.Structure;
-
 /**
  * Structure returned by NSFDbGetMajMinVersion to determine code level at runtime
  */
-public class NotesBuildVersion implements IAdaptable {
-	private NotesBuildVersionStruct m_struct;
-	
-	public NotesBuildVersion() {
-		this(NotesBuildVersionStruct.newInstance());
-	}
-	
-	public NotesBuildVersion(NotesBuildVersionStruct struct) {
-		m_struct = struct;
-	}
-	
-	public NotesBuildVersion(Pointer p) {
-		this(NotesBuildVersionStruct.newInstance(p));
-	}
-	
-	@Override
-	public <T> T getAdapter(Class<T> clazz) {
-		if (clazz == NotesBuildVersionStruct.class || clazz == Structure.class) {
-			return (T) m_struct;
-		}
-		return null;
+public class NotesBuildVersion {
+	/** Major version identifier */
+	private int m_majorVersion;
+	/** Minor version identifier */
+	private int m_minorVersion;
+	/** Maintenance Release identifier */
+	private int m_qmrNumber;
+	/** Maintenance Update identifier */
+	private int m_qmuNumber;
+	/** Hotfixes installed on machine */
+	private int m_hotfixNumber;
+	/** See BUILDVERFLAGS_xxx */
+	private int m_flags;
+	/** Fixpack version installed on machine */
+	private int m_fixpackNumber;
+
+	public NotesBuildVersion(int majorVersion, int minorVersion, int qmrNumber, int qmuNumber, int hotfixNumber, int flags, int fixpackNumber, int Spare[]) {
+		m_majorVersion = majorVersion;
+		m_minorVersion = minorVersion;
+		m_qmrNumber = qmrNumber;
+		m_qmuNumber = qmuNumber;
+		m_hotfixNumber = hotfixNumber;
+		m_flags = flags;
+		m_fixpackNumber = fixpackNumber;
 	}
 	
 	/**
@@ -36,7 +35,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return identifier
 	 */
 	public int getMajorVersion() {
-		return m_struct.MajorVersion;
+		return m_majorVersion;
 	}
 	
 	/**
@@ -45,7 +44,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return identifier
 	 */
 	public int getMinorVersion() {
-		return m_struct.MinorVersion;
+		return m_minorVersion;
 	}
 	
 	/**
@@ -54,7 +53,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return identifier
 	 */
 	public int getQMRNumber() {
-		return m_struct.QMRNumber;
+		return m_qmrNumber;
 	}
 	
 	/**
@@ -63,7 +62,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return identifier
 	 */
 	public int getQMUNumber() {
-		return m_struct.QMUNumber;
+		return m_qmuNumber;
 	}
 	
 	/**
@@ -72,7 +71,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return hotfixes
 	 */
 	public int getHotfixNumber() {
-		return m_struct.HotfixNumber;
+		return m_hotfixNumber;
 	}
 	
 	/**
@@ -81,7 +80,7 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return flags
 	 */
 	public int getFlags() {
-		return m_struct.Flags;
+		return m_flags;
 	}
 	
 	/**
@@ -90,6 +89,6 @@ public class NotesBuildVersion implements IAdaptable {
 	 * @return fixpack/feature version
 	 */
 	public int getFixpackNumber() {
-		return m_struct.FixpackNumber;
+		return m_fixpackNumber;
 	}
 }

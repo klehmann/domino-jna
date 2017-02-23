@@ -7,11 +7,25 @@ import com.sun.jna.Structure;
 public class NotesOriginatorId implements IAdaptable {
 	private NotesOriginatorIdStruct m_struct;
 	
-	public NotesOriginatorId(NotesOriginatorIdStruct struct) {
+	public NotesOriginatorId(IAdaptable adaptable) {
+		NotesOriginatorIdStruct struct = adaptable.getAdapter(NotesOriginatorIdStruct.class);
+		if (struct!=null) {
+			m_struct = struct;
+			return;
+		}
+		Pointer p = adaptable.getAdapter(Pointer.class);
+		if (p!=null) {
+			m_struct = NotesOriginatorIdStruct.newInstance(p);
+			return;
+		}
+		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
+	}
+	
+	private NotesOriginatorId(NotesOriginatorIdStruct struct) {
 		m_struct = struct;
 	}
 	
-	public NotesOriginatorId(Pointer p) {
+	private NotesOriginatorId(Pointer p) {
 		this(NotesOriginatorIdStruct.newInstance(p));
 	}
 	

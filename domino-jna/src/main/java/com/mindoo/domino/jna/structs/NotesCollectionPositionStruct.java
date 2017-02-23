@@ -5,6 +5,7 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.structs.BaseStructure;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
@@ -14,7 +15,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesCollectionPositionStruct extends BaseStructure {
+public class NotesCollectionPositionStruct extends BaseStructure implements IAdaptable {
 	/** # levels -1 in tumbler */
 	public short Level;
 
@@ -56,6 +57,17 @@ public class NotesCollectionPositionStruct extends BaseStructure {
 				return new NotesCollectionPositionStruct();
 			}
 		});
+	}
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesCollectionPositionStruct.class) {
+			return (T) this;
+		}
+		else if (clazz == Pointer.class) {
+			return (T) getPointer();
+		}
+		return null;
 	}
 	
 	protected List<? > getFieldOrder() {
