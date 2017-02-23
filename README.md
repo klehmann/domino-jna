@@ -27,6 +27,8 @@ The project provides functionality that is not available in the classic Java API
 * fast noteid / UNID conversion
 * compute @Usernameslist values for any Notes user
 * faster **formula execution on documents** with document modified/selected/deleted by formula check
+* **SSO token computation** (with tokens also working on Websphere)
+* APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
 
 **Please note:**
 
