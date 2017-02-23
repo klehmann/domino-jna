@@ -16,10 +16,10 @@ import com.sun.jna.TypeMapper;
  */
 public abstract class BaseStructure extends Structure {
 
-	public BaseStructure() {
+	protected BaseStructure() {
 		super();
 	}
-
+	
 	public BaseStructure(int alignType, TypeMapper mapper) {
 		super(alignType, mapper);
 	}

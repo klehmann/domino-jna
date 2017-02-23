@@ -30,11 +30,12 @@ public class TestRangeLookup extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
-				Database db = session.getDatabase("", dbData.getRelativeFilePath());
-				View viewRangeTest = db.getView("$DateRangeLookup");
+				Database db = getFakeNamesDbLegacy();
+				
+				View viewRangeTest = db.getView("$DateRangeLookup2");
 				Vector<Object> lkKeys = new Vector<Object>();
-				Date startDate = new Date(2016 - 1900, 7 - 1, 1, 0, 0, 0);
-				Date endDate = new Date(2016 - 1900, 8 - 1, 31, 23, 59, 59);
+				Date startDate = new Date(2015 - 1900, 7 - 1, 1, 0, 0, 0);
+				Date endDate = new Date(2018 - 1900, 8 - 1, 31, 23, 59, 59);
 				
 				DateRange range = session.createDateRange(startDate, endDate);
 				lkKeys.add("Bennett");

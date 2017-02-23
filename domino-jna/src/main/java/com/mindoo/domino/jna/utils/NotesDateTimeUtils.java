@@ -4,12 +4,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesTime;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.structs.NotesTimeStruct;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ShortByReference;
@@ -52,7 +53,8 @@ public class NotesDateTimeUtils {
 	 * @return calendar
 	 */
 	public static Calendar timeDateToCalendar(boolean useDayLight, int gmtOffset, NotesTimeDate timeDate) {
-		return innardsToCalendar(useDayLight, gmtOffset, timeDate.Innards);
+		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
+		return innardsToCalendar(useDayLight, gmtOffset, struct.Innards);
 	}
 
 	/**
@@ -139,11 +141,7 @@ public class NotesDateTimeUtils {
 	 */
 	public static NotesTimeDate calendarToTimeDate(Calendar cal, boolean hasDate, boolean hasTime) {
 		int[] innards = calendarToInnards(cal, hasDate, hasTime);
-		NotesTimeDate td = new NotesTimeDate();
-		td.Innards[0] = innards[0];
-		td.Innards[1] = innards[1];
-		
-		return td;
+		return new NotesTimeDate(new int[] {innards[0], innards[1]});
 	}
 	
 	/**
@@ -159,11 +157,7 @@ public class NotesDateTimeUtils {
 		cal.setTime(dt);
 		
 		int[] innards = calendarToInnards(cal, hasDate, hasTime);
-		NotesTimeDate td = new NotesTimeDate();
-		td.Innards[0] = innards[0];
-		td.Innards[1] = innards[1];
-		
-		return td;
+		return new NotesTimeDate(new int[] {innards[0], innards[1]});
 	}
 	
 	/**
@@ -177,11 +171,7 @@ public class NotesDateTimeUtils {
 		cal.setTime(dt);
 		
 		int[] innards = calendarToInnards(cal, true, true);
-		NotesTimeDate td = new NotesTimeDate();
-		td.Innards[0] = innards[0];
-		td.Innards[1] = innards[1];
-		
-		return td;
+		return new NotesTimeDate(new int[] {innards[0], innards[1]});
 	}
 	
 	/**
@@ -221,7 +211,7 @@ public class NotesDateTimeUtils {
 		int millis = cal.get(Calendar.MILLISECOND);
 		
 		Memory m = new Memory(NotesCAPI.timeSize);
-		NotesTime time = new NotesTime(m);
+		NotesTimeStruct time = NotesTimeStruct.newInstance(m);
 		
 		time.dst=isDST ? 1 : 0;
 		time.zone=-gmtOffset;
@@ -272,7 +262,7 @@ public class NotesDateTimeUtils {
         boolean hasTime=(innards[0]!=0 && innards[0]!=NotesCAPI.ALLDAY);
         boolean hasDate=(innards[1]!=0 && innards[1]!=NotesCAPI.ANYDAY);
 
-		NotesTime time = new NotesTime();
+        NotesTimeStruct time = NotesTimeStruct.newInstance();
 		time.GM.Innards[0] = innards[0];
 		time.GM.Innards[1] = innards[1];
 		
@@ -353,7 +343,8 @@ public class NotesDateTimeUtils {
 	public static void setMinimum(NotesTimeDate timeDate) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MINIMUM, timeDate);
+		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
+		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MINIMUM, struct);
 //		timeDate.read();
 	}
 	
@@ -365,7 +356,8 @@ public class NotesDateTimeUtils {
 	public static void setMaximum(NotesTimeDate timeDate) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MAXIMUM, timeDate);
+		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
+		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MAXIMUM, struct);
 //		timeDate.read();
 	}
 	
@@ -377,7 +369,8 @@ public class NotesDateTimeUtils {
 	public static void setWildcard(NotesTimeDate timeDate) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_WILDCARD, timeDate);
+		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
+		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_WILDCARD, struct);
 //		timeDate.read();
 	}
 	
@@ -388,20 +381,24 @@ public class NotesDateTimeUtils {
 	 * @return string with formatted timedate
 	 */
 	public static String toString(NotesTimeDate td) {
-		if (td.Innards==null || td.Innards.length<2 || (td.Innards.length>=2 && td.Innards[0]==0 && td.Innards[1]==0))
+		NotesTimeDateStruct struct = td.getAdapter(NotesTimeDateStruct.class);
+		if (struct==null)
+			throw new IllegalArgumentException("Missing native data object");
+		
+		if (struct.Innards==null || struct.Innards.length<2 || (struct.Innards.length>=2 && struct.Innards[0]==0 && struct.Innards[1]==0))
 			return null;
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory retTextBuffer = new Memory(100);
 
 		ShortByReference retTextLength = new ShortByReference();
-		short result = notesAPI.ConvertTIMEDATEToText(null, null, td, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+		short result = notesAPI.ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
 		NotesErrorUtils.checkResult(result);
 
 		if (retTextLength.getValue() > retTextBuffer.size()) {
 			retTextBuffer = new Memory(retTextLength.getValue());
 
-			result = notesAPI.ConvertTIMEDATEToText(null, null, td, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+			result = notesAPI.ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
 			NotesErrorUtils.checkResult(result);
 		}
 
@@ -421,13 +418,13 @@ public class NotesDateTimeUtils {
 		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
 		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);
 		
-		NotesTimeDate retTimeDate = new NotesTimeDate();
+		NotesTimeDateStruct retTimeDate = NotesTimeDateStruct.newInstance();
 		Memory retTimeDateMem = new Memory(retTimeDate.size());
-		retTimeDate = new NotesTimeDate(retTimeDateMem);
+		retTimeDate = NotesTimeDateStruct.newInstance(retTimeDateMem);
 		
 		short result = notesAPI.ConvertTextToTIMEDATE(null, null, dateTimeStrLMBCSPtr, NotesCAPI.MAXALPHATIMEDATE, retTimeDate);
 		NotesErrorUtils.checkResult(result);
-		return retTimeDate;
+		return new NotesTimeDate(retTimeDate);
 	}
 
 }

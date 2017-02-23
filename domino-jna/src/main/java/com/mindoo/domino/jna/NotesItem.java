@@ -7,8 +7,8 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesBlockId;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.ByteByReference;
@@ -83,8 +83,8 @@ public class NotesItem {
 	private int m_valueLength;
 	private String m_itemName;
 	
-	private NotesBlockId m_itemBlockId;
-	private NotesBlockId m_valueBlockId;
+	private NotesBlockIdStruct m_itemBlockId;
+	private NotesBlockIdStruct m_valueBlockId;
 	
 	/**
 	 * Creates a new item object
@@ -95,8 +95,8 @@ public class NotesItem {
 	 * @param valueBlockId value block id
 	 * @param valueLength value length in bytes
 	 */
-	NotesItem(NotesNote parentNote, NotesBlockId itemBlockId, int dataType,
-			NotesBlockId valueBlockId, int valueLength) {
+	NotesItem(NotesNote parentNote, NotesBlockIdStruct itemBlockId, int dataType,
+			NotesBlockIdStruct valueBlockId, int valueLength) {
 		m_parentNote = parentNote;
 		m_itemBlockId = itemBlockId;
 		m_dataType = dataType;
@@ -118,7 +118,7 @@ public class NotesItem {
 	 * 
 	 * @return item block id
 	 */
-	NotesBlockId getItemBlockId() {
+	NotesBlockIdStruct getItemBlockId() {
 		return m_itemBlockId;
 	}
 	
@@ -127,7 +127,7 @@ public class NotesItem {
 	 * 
 	 * @return value block id
 	 */
-	NotesBlockId getValueBlockId() {
+	NotesBlockIdStruct getValueBlockId() {
 		return m_valueBlockId;
 	}
 	
@@ -225,7 +225,7 @@ public class NotesItem {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockId.ByValue valueBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue valueBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		valueBlockIdByVal.pool = m_valueBlockId.pool;
 		valueBlockIdByVal.block = m_valueBlockId.block;
 
@@ -276,12 +276,12 @@ public class NotesItem {
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
 		
-		NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
 		if (NotesJNAContext.is64Bit()) {
-			NotesBlockId retValueBid = new NotesBlockId();
+			NotesBlockIdStruct retValueBid = new NotesBlockIdStruct();
 			
 			notesAPI.b64_NSFItemQueryEx(m_parentNote.getHandle64(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
@@ -290,7 +290,7 @@ public class NotesItem {
 			
 		}
 		else {
-			NotesBlockId retValueBid = new NotesBlockId();
+			NotesBlockIdStruct retValueBid = new NotesBlockIdStruct();
 
 			notesAPI.b32_NSFItemQueryEx(m_parentNote.getHandle32(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
@@ -378,9 +378,9 @@ public class NotesItem {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesTimeDate retTime = new NotesTimeDate();
+		NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 		
-		NotesBlockId.ByValue itemIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemIdByVal = new NotesBlockIdStruct.ByValue();
 		itemIdByVal.pool = m_itemBlockId.pool;
 		itemIdByVal.block = m_itemBlockId.block;
 		
@@ -416,7 +416,7 @@ public class NotesItem {
 				targetNote.removeItem(itemName);
 			}
 		}
-		NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
@@ -437,7 +437,7 @@ public class NotesItem {
 	public void remove() {
 		m_parentNote.checkHandle();
 		
-		NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 

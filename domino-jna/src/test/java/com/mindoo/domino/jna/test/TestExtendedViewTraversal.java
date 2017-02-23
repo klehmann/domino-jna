@@ -7,23 +7,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.CollectionDataCache;
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesCollectionPosition;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 import lotus.domino.Session;
 
@@ -122,7 +121,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 				
 				NotesCollectionPosition startPos;
 				{
-					startPos = NotesCollectionPosition.toPosition("0");
+					startPos = new NotesCollectionPosition("0");
 					
 					NotesViewLookupResultData lkResult = colFromDbData.readEntriesExt(startPos,
 							EnumSet.of(Navigate.NEXT), 1, EnumSet.of(Navigate.NEXT),
@@ -149,7 +148,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 					//second run: we use DiffTime and diffIDTable to tell NIF which data we already know
 					//from the view
 					NotesTimeDate lastDiffTime = diffTime;
-					startPos = NotesCollectionPosition.toPosition("0");
+					startPos = new NotesCollectionPosition("0");
 					
 					NotesViewLookupResultData lkResult = colFromDbData.readEntriesExt(startPos,
 							EnumSet.of(Navigate.NEXT), 1, EnumSet.of(Navigate.NEXT),

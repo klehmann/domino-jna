@@ -12,7 +12,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
 import com.mindoo.domino.jna.NotesViewEntryData.CacheableViewEntryData;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 /**
  * LRU cache class to be returned in {@link ViewLookupCallback#createDataCache()} in order to let NIF

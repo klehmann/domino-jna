@@ -9,12 +9,12 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesDatabase.NoteInfo;
 import com.mindoo.domino.jna.NotesDatabase.NoteInfoExt;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 import junit.framework.Assert;
 import lotus.domino.Database;

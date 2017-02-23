@@ -14,12 +14,12 @@
 					<manifest>
 						<attribute name="Manifest-Version" value="1.0" />
 						<attribute name="Bundle-Vendor" value="Mindoo GmbH" />
-						<attribute name="Bundle-Version" value="0.9.0.${build_timestamp}" />
+						<attribute name="Bundle-Version" value="0.9.1.${build_timestamp}" />
 						<attribute name="Bundle-Name" value="Domino JNA XSP Integrator Plugin Source" />
 						<attribute name="Bundle-ManifestVersion" value="2" />
 						<attribute name="Bundle-SymbolicName" value="com.mindoo.domino.jna.xsp.source" />
 						<attribute name="Bundle-RequiredExecutionEnvironment" value="JavaSE-1.6" />
-						<attribute name="Eclipse-SourceBundle" value="com.mindoo.domino.jna.xsp;version=&quot;0.9.0.${build_timestamp}&quot;;roots:=&quot;jna-src&quot;" />
+						<attribute name="Eclipse-SourceBundle" value="com.mindoo.domino.jna.xsp;version=&quot;0.9.1.${build_timestamp}&quot;;roots:=&quot;jna-src&quot;" />
 					</manifest>
 				</jar>
 			</sequential>

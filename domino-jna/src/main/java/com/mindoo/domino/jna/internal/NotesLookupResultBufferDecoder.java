@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
@@ -9,17 +10,19 @@ import java.util.Map;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesCollectionStats;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesItem;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesCollectionStats;
-import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
+import com.mindoo.domino.jna.structs.NotesCollectionStatsStruct;
+import com.mindoo.domino.jna.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
+import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -42,7 +45,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position of first match, if returned by find method
 	 * @param indexModifiedSequenceNo index modified sequence no
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
@@ -65,7 +68,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, Object...)}
 	 * @param indexModifiedSequenceNo index modified sequence no
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
@@ -92,12 +95,10 @@ public class NotesLookupResultBufferDecoder {
 		
 		try {
 			if (returnMask.contains(ReadMask.COLLECTIONSTATS)) {
-				NotesCollectionStats tmpStats = new NotesCollectionStats(bufferPtr);
+				NotesCollectionStatsStruct tmpStats = NotesCollectionStatsStruct.newInstance(bufferPtr);
 				tmpStats.read();
 				
-				collectionStats = new NotesCollectionStats();
-				collectionStats.TopLevelEntries = tmpStats.TopLevelEntries;
-				collectionStats.LastModifiedTime = tmpStats.LastModifiedTime;
+				collectionStats = new NotesCollectionStats(tmpStats.TopLevelEntries, tmpStats.LastModifiedTime);
 						
 				bufferPos += tmpStats.size();
 			}
@@ -108,11 +109,11 @@ public class NotesLookupResultBufferDecoder {
             boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
             
             Memory sharedCollectionPositionMem = null;
-			NotesCollectionPosition sharedPosition = null;
+			NotesCollectionPositionStruct sharedPosition = null;
 			if (returnMask.contains(ReadMask.INDEXPOSITION)) {
 				//allocate memory for a position
 				sharedCollectionPositionMem = new Memory(NotesCAPI.collectionPositionSize);
-				sharedPosition = new NotesCollectionPosition(sharedCollectionPositionMem);
+				sharedPosition = NotesCollectionPositionStruct.newInstance(sharedCollectionPositionMem);
 			}
 			
 			for (int i=0; i<numEntriesReturned; i++) {
@@ -533,7 +534,7 @@ public class NotesLookupResultBufferDecoder {
 	 */
 	public static ItemTableData decodeItemTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight, boolean convertStringsLazily) {
 		int bufferPos = 0;
-		NotesItemTable itemTable = new NotesItemTable(bufferPtr);
+		NotesItemTableStruct itemTable = NotesItemTableStruct.newInstance(bufferPtr);
 		itemTable.read();
 		
 		//skip item table header
@@ -662,12 +663,23 @@ public class NotesLookupResultBufferDecoder {
 		 * @param itemName item name, case insensitive
 		 * @return value or null
 		 */
-		public Object getValue(String itemName) {
+		public Object get(String itemName) {
 			for (int i=0; i<m_itemNames.length; i++) {
 				if (m_itemNames[i].equalsIgnoreCase(itemName)) {
 					Object val = m_itemValues[i];
 					if (val instanceof LMBCSString) {
 						return ((LMBCSString)val).getValue();
+					}
+					else if (val instanceof List) {
+						List<Object> valAsList = (List<Object>) val;
+						for (int j=0; j<valAsList.size(); j++) {
+							Object currListValue = valAsList.get(j);
+							
+							if (currListValue instanceof LMBCSString) {
+								valAsList.set(j, ((LMBCSString)currListValue).getValue());
+							}
+						}
+						return valAsList;
 					}
 					else {
 						return val;
@@ -677,6 +689,303 @@ public class NotesLookupResultBufferDecoder {
 			return null;
 		}
 		
+		/**
+		 * Convenience function that converts a summary value to a string
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if value is empty or is not a string
+		 * @return string value or null
+		 */
+		public String getAsString(String itemName, String defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof String) {
+				return (String) val;
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (valAsList.isEmpty()) {
+					return defaultValue;
+				}
+				else {
+					return valAsList.get(0).toString();
+				}
+			}
+			return defaultValue;
+		}
+
+		/**
+		 * Convenience function that converts a summary value to an abbreviated name
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @return name or null
+		 */
+		public String getAsNameAbbreviated(String itemName) {
+			String nameStr = getAsString(itemName, null);
+			return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
+		}
+		
+		/**
+		 * Convenience function that converts a summary value to a list of abbreviated names
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @return names or null
+		 */
+		public List<String> getAsNamesListAbbreviated(String itemName) {
+			List<String> strList = getAsStringList(itemName, null);
+			if (strList!=null) {
+				List<String> namesAbbr = new ArrayList<String>(strList.size());
+				for (int i=0; i<strList.size(); i++) {
+					namesAbbr.add(NotesNamingUtils.toAbbreviatedName(strList.get(i)));
+				}
+				return namesAbbr;
+			}
+			else
+				return null;
+		}
+		
+		/**
+		 * Convenience function that converts a summary value to a string list
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return string list value or null
+		 */
+		public List<String> getAsStringList(String itemName, List<String> defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof String) {
+				return Arrays.asList((String) val);
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean correctType=true;
+				for (int i=0; i<valAsList.size(); i++) {
+					if (!(valAsList.get(i) instanceof String)) {
+						correctType=false;
+						break;
+					}
+				}
+				
+				if (correctType) {
+					return (List<String>) valAsList;
+				}
+				else {
+					List<String> strList = new ArrayList<String>();
+					for (int i=0; i<valAsList.size(); i++) {
+						strList.add(valAsList.get(i).toString());
+					}
+					return strList;
+				}
+			}
+			else if (val!=null) {
+				return Arrays.asList(val.toString());
+			}
+			return defaultValue;
+		}
+		
+		/**
+		 * Convenience function that converts a summary value to a {@link Calendar}
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a Calendar
+		 * @return calendar value or null
+		 */
+		public Calendar getAsCalendar(String itemName, Calendar defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Calendar) {
+				return (Calendar) val;
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (!valAsList.isEmpty()) {
+					Object firstVal = valAsList.get(0);
+					if (firstVal instanceof Calendar) {
+						return (Calendar) firstVal;
+					}
+				}
+			}
+			return defaultValue;
+		}
+
+		/**
+		 * Convenience function that converts a summary value to a {@link Calendar} list
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return calendar list value or null
+		 */
+		public List<Calendar> getAsCalendarList(String itemName, List<Calendar> defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Calendar) {
+				return Arrays.asList((Calendar) val);
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean correctType=true;
+				for (int i=0; i<valAsList.size(); i++) {
+					if (!(valAsList.get(i) instanceof Calendar)) {
+						correctType=false;
+						break;
+					}
+				}
+				
+				if (correctType) {
+					return (List<Calendar>) valAsList;
+				}
+				else {
+					return defaultValue;
+				}
+			}
+			return defaultValue;
+		}
+		
+		/**
+		 * Convenience function that converts a summary value to a double
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return double
+		 */
+		public Double getAsDouble(String itemName, Double defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Number) {
+				return ((Number) val).doubleValue();
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (!valAsList.isEmpty()) {
+					Object firstVal = valAsList.get(0);
+					if (firstVal instanceof Number) {
+						return ((Number) firstVal).doubleValue();
+					}
+				}
+			}
+			return defaultValue;
+		}
+
+		/**
+		 * Convenience function that converts a summary value to a double
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return integer
+		 */
+		public Integer getAsInteger(String itemName, Integer defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Number) {
+				return ((Number) val).intValue();
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (!valAsList.isEmpty()) {
+					Object firstVal = valAsList.get(0);
+					if (firstVal instanceof Number) {
+						return ((Number) firstVal).intValue();
+					}
+				}
+			}
+			return defaultValue;
+		}
+
+		/**
+		 * Convenience function that converts a summary value to a double list
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return double list
+		 */
+		public List<Double> getAsDoubleList(String itemName, List<Double> defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Number) {
+				return Arrays.asList(((Number) val).doubleValue());
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean correctType=true;
+				boolean numberList=true;
+				
+				for (int i=0; i<valAsList.size(); i++) {
+					Object currObj = valAsList.get(i);
+					
+					if (currObj instanceof Double) {
+						//ok
+					}
+					else if (currObj instanceof Number) {
+						correctType=false;
+						numberList=true;
+					}
+					else {
+						correctType=false;
+						numberList=false;
+					}
+				}
+				
+				if (correctType) {
+					return (List<Double>) valAsList;
+				}
+				else if (numberList) {
+					List<Double> dblList = new ArrayList<Double>(valAsList.size());
+					for (int i=0; i<valAsList.size(); i++) {
+						dblList.add(((Number)valAsList.get(i)).doubleValue());
+					}
+					return dblList;
+				}
+				else {
+					return defaultValue;
+				}
+			}
+			return defaultValue;
+		}
+
+		/**
+		 * Convenience function that converts a summary value to a integer list
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a number
+		 * @return integer list
+		 */
+		public List<Integer> getAsIntegerList(String itemName, List<Integer> defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Number) {
+				return Arrays.asList(((Number) val).intValue());
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean correctType=true;
+				boolean numberList=true;
+				
+				for (int i=0; i<valAsList.size(); i++) {
+					Object currObj = valAsList.get(i);
+					
+					if (currObj instanceof Integer) {
+						//ok
+					}
+					else if (currObj instanceof Number) {
+						correctType=false;
+						numberList=true;
+					}
+					else {
+						correctType=false;
+						numberList=false;
+					}
+				}
+				
+				if (correctType) {
+					return (List<Integer>) valAsList;
+				}
+				else if (numberList) {
+					List<Integer> intList = new ArrayList<Integer>(valAsList.size());
+					for (int i=0; i<valAsList.size(); i++) {
+						intList.add(((Number)valAsList.get(i)).intValue());
+					}
+					return intList;
+				}
+				else {
+					return defaultValue;
+				}
+			}
+			return defaultValue;
+		}
+
 		/**
 		 * Converts the values to a Java {@link Map}
 		 * 

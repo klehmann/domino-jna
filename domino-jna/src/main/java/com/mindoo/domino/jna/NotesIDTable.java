@@ -23,8 +23,8 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.IdEnumerateProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -536,6 +536,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
+		NotesTimeDateStruct timeStruct = time==null ? null : time.getAdapter(NotesTimeDateStruct.class);
+		
 		Pointer ptr;
 		if (NotesJNAContext.is64Bit()) {
 			ptr = notesAPI.b64_OSLockObject(m_idTableHandle64);
@@ -553,7 +555,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				sizeInBytes = notesAPI.b32_IDTableSizeP(ptr);
 			}
 			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
-			notesAPI.IDTableSetTime(buf, time);
+			notesAPI.IDTableSetTime(buf, timeStruct);
 		}
 		finally {
 			if (NotesJNAContext.is64Bit()) {
@@ -607,8 +609,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			
 			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			
-			NotesTimeDate time = notesAPI.IDTableTime(buf);
-			return time;
+			NotesTimeDateStruct timeStruct = notesAPI.IDTableTime(buf);
+			return timeStruct==null ? null : new NotesTimeDate(timeStruct);
 		}
 		finally {
 			if (NotesJNAContext.is64Bit()) {

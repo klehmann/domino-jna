@@ -11,10 +11,10 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -164,7 +164,7 @@ public class NotesNamesList implements IAllocatedMemory {
 
 		if (NotesJNAContext.is64Bit()) {
 			if (notesAPI instanceof WinNotesCAPI) {
-				WinNotesNamesListHeader64 namesList = new WinNotesNamesListHeader64(namesListBufferPtr);
+				WinNotesNamesListHeader64Struct namesList = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
 				names = new ArrayList<String>(namesList.NumNames);
@@ -173,7 +173,7 @@ public class NotesNamesList implements IAllocatedMemory {
 				numNames = (int) (namesList.NumNames & 0xffff);
 			}
 			else {
-				NotesNamesListHeader64 namesList = new NotesNamesListHeader64(namesListBufferPtr);
+				NotesNamesListHeader64Struct namesList = NotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
 				names = new ArrayList<String>(namesList.NumNames);
@@ -184,7 +184,7 @@ public class NotesNamesList implements IAllocatedMemory {
 		}
 		else {
 			if (notesAPI instanceof WinNotesCAPI) {
-				WinNotesNamesListHeader32 namesList = new WinNotesNamesListHeader32(namesListBufferPtr);
+				WinNotesNamesListHeader32Struct namesList = WinNotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
 				names = new ArrayList<String>(namesList.NumNames);
@@ -193,7 +193,7 @@ public class NotesNamesList implements IAllocatedMemory {
 				numNames = (int) (namesList.NumNames & 0xffff);
 			}
 			else {
-				NotesNamesListHeader32 namesList = new NotesNamesListHeader32(namesListBufferPtr);
+				NotesNamesListHeader32Struct namesList = NotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
 				names = new ArrayList<String>(namesList.NumNames);

@@ -23,12 +23,12 @@ import com.mindoo.domino.jna.internal.NotesCAPI.b32_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesCAPI.b64_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesBlockId;
-import com.mindoo.domino.jna.structs.NotesCDField;
-import com.mindoo.domino.jna.structs.NotesFileObject;
-import com.mindoo.domino.jna.structs.NotesObjectDescriptor;
-import com.mindoo.domino.jna.structs.NotesOriginatorId;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
+import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
+import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
+import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -186,7 +186,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
 		}
-		NotesOriginatorId oid = new NotesOriginatorId(retOid);
+		NotesOriginatorIdStruct oid = NotesOriginatorIdStruct.newInstance(retOid);
 		oid.read();
 		String unid = oid.getUNIDAsString();
 		return unid;
@@ -210,7 +210,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_MODIFIED, retModified);
 		}
-		NotesTimeDate td = new NotesTimeDate(retModified);
+		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
 		Calendar cal = td.toCalendar();
 		return cal;
@@ -234,7 +234,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ACCESSED, retModified);
 		}
-		NotesTimeDate td = new NotesTimeDate(retModified);
+		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
 		Calendar cal = td.toCalendar();
 		return cal;
@@ -258,7 +258,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
 		}
-		NotesTimeDate td = new NotesTimeDate(retModified);
+		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
 		Calendar cal = td.toCalendar();
 		return cal;
@@ -422,6 +422,32 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * This function writes the in-memory version of a note to its database.<br>
+	 * Prior to issuing this call, a new note (or changes to a note) are not a part of
+	 * the on-disk database.<br>
+	 * <br>
+	 * You should also consider updating the collections associated with other Views in a database
+	 * via the function {@link NotesDatabase#openCollection(String, int, EnumSet)}
+	 * {@link NotesCollection#update()}, if you have added and/or deleted a substantial number of documents.<br>
+	 * If the Server's Indexer Task does not rebuild the collections associated with
+	 * the database's Views, the first user to access a View in the modified database
+	 * might experience an inordinant delay, while the collection is rebuilt by the
+	 * Notes Workstation (locally) or Server Application (remotely).<br>
+	 * <br>
+	 * Do not update notes to disk that contain invalid items.<br>
+	 * An example of an invalid item is a view design note that has a $Collation item
+	 * whose BufferSize member is set to zero.<br>
+	 * This update method may return an error for an invalid item that was not caught
+	 * in a previous release of Domino or Notes.<br>
+	 * Note: if you have enabled IMAP on a database, in the case of the
+	 * special NoteID "NOTEID_ADD_OR_REPLACE", a new note is always created.
+	 * 
+	 */
+	public void update() {
+		update(EnumSet.noneOf(UpdateNote.class));
+	}
+	
 	/**
 	 * This function writes the in-memory version of a note to its database.<br>
 	 * Prior to issuing this call, a new note (or changes to a note) are not a part of
@@ -640,13 +666,14 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		NotesTimeDate timeDate = NotesDateTimeUtils.calendarToTimeDate(cal);
+		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : timeDate.getAdapter(NotesTimeDateStruct.class);
 		
 		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemSetTime(m_hNote64, itemNameMem, timeDate);
+			short result = notesAPI.b64_NSFItemSetTime(m_hNote64, itemNameMem, timeDateStruct);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemSetTime(m_hNote32, itemNameMem, timeDate);
+			short result = notesAPI.b32_NSFItemSetTime(m_hNote32, itemNameMem, timeDateStruct);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -880,7 +907,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
-		NotesTimeDate td_item_value = new NotesTimeDate();
+		NotesTimeDateStruct td_item_value = NotesTimeDateStruct.newInstance();
 		
 		if (NotesJNAContext.is64Bit()) {
 			boolean exists = notesAPI.b64_NSFItemGetTime(m_hNote64, itemNameMem, td_item_value);
@@ -905,7 +932,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param valueLength item value length plus 2 bytes for the data type WORD
 	 * @return item value as list
 	 */
-	List<Object> getItemValue(String itemName, NotesBlockId itemBlockId, NotesBlockId valueBlockId, int valueLength) {
+	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, NotesBlockIdStruct valueBlockId, int valueLength) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		Pointer poolPtr;
@@ -940,12 +967,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * 
 	 * @param notesAPI Notes API
 	 * @param itemName item name (for logging purpose)
-	 * @param NotesBlockId itemBlockId item block id
+	 * @param NotesBlockIdStruct itemBlockId item block id
 	 * @param valuePtr pointer to the item value
 	 * @param valueLength item value length plus 2 bytes for the data type WORD
 	 * @return item value as list
 	 */
-	List<Object> getItemValue(String itemName, NotesBlockId itemBlockId, Pointer valuePtr, int valueLength) {
+	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, Pointer valuePtr, int valueLength) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		short dataType = valuePtr.getShort(0);
@@ -1016,7 +1043,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			return calendarValues==null ? Collections.emptyList() : calendarValues;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_OBJECT) {
-			NotesObjectDescriptor objDescriptor = new NotesObjectDescriptor(valueDataPtr);
+			NotesObjectDescriptorStruct objDescriptor = NotesObjectDescriptorStruct.newInstance(valueDataPtr);
 			objDescriptor.read();
 			
 			int rrv = objDescriptor.RRV;
@@ -1024,12 +1051,15 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (objDescriptor.ObjectType == NotesCAPI.OBJECT_FILE) {
 				Pointer fileObjectPtr = valueDataPtr;
 				
-				NotesFileObject fileObject = new NotesFileObject(fileObjectPtr);
+				NotesFileObjectStruct fileObject = NotesFileObjectStruct.newInstance(fileObjectPtr);
 				fileObject.read();
 				
 				short compressionType = fileObject.CompressionType;
-				NotesTimeDate fileCreated = fileObject.FileCreated;
-				NotesTimeDate fileModified = fileObject.FileModified;
+				NotesTimeDateStruct fileCreated = fileObject.FileCreated;
+				NotesTimeDateStruct fileModified = fileObject.FileModified;
+				NotesTimeDate fileCreatedWrap = fileCreated==null ? null : new NotesTimeDate(fileCreated);
+				NotesTimeDate fileModifiedWrap = fileModified==null ? null : new NotesTimeDate(fileModified);
+				
 				short fileNameLength = fileObject.FileNameLength;
 				int fileSize = fileObject.FileSize;
 				short flags = fileObject.Flags;
@@ -1046,7 +1076,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				String fileName = NotesStringUtils.fromLMBCS(fileNamePtr, fileNameLength);
 				
 				NotesAttachment attInfo = new NotesAttachment(fileName, compression, flags, fileSize,
-						fileCreated, fileModified, this,
+						fileCreatedWrap, fileModifiedWrap, this,
 						itemBlockId, rrv);
 				
 				return Arrays.asList((Object) attInfo);
@@ -1148,7 +1178,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		Pointer valuePtr;
 		
 		//lock and decode value
-		NotesBlockId valueBlockId = item.getValueBlockId();
+		NotesBlockIdStruct valueBlockId = item.getValueBlockId();
 		
 		Pointer poolPtr;
 		if (NotesJNAContext.is64Bit()) {
@@ -1276,8 +1306,8 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		Memory itemNameMem = StringUtil.isEmpty(searchForItemName) ? null : NotesStringUtils.toLMBCS(searchForItemName, false);
 		
-		NotesBlockId.ByReference itemBlockId = new NotesBlockId.ByReference();
-		NotesBlockId.ByReference valueBlockId = new NotesBlockId.ByReference();
+		NotesBlockIdStruct.ByReference itemBlockId = new NotesBlockIdStruct.ByReference();
+		NotesBlockIdStruct.ByReference valueBlockId = new NotesBlockIdStruct.ByReference();
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
 		
@@ -1299,12 +1329,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		NotesErrorUtils.checkResult(result);
 		
-		NotesBlockId itemBlockIdClone = new NotesBlockId();
+		NotesBlockIdStruct itemBlockIdClone = new NotesBlockIdStruct();
 		itemBlockIdClone.pool = itemBlockId.pool;
 		itemBlockIdClone.block = itemBlockId.block;
 		itemBlockIdClone.write();
 		
-		NotesBlockId valueBlockIdClone = new NotesBlockId();
+		NotesBlockIdStruct valueBlockIdClone = new NotesBlockIdStruct();
 		valueBlockIdClone.pool = valueBlockId.pool;
 		valueBlockIdClone.block = valueBlockId.block;
 		valueBlockIdClone.write();
@@ -1322,7 +1352,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		while (true) {
 			IntByReference retNextValueLen = new IntByReference();
 			
-			NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+			NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 			itemBlockIdByVal.pool = itemBlockId.pool;
 			itemBlockIdByVal.block = itemBlockId.block;
 			
@@ -1343,12 +1373,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 			NotesErrorUtils.checkResult(result);
 
-			itemBlockIdClone = new NotesBlockId();
+			itemBlockIdClone = new NotesBlockIdStruct();
 			itemBlockIdClone.pool = itemBlockId.pool;
 			itemBlockIdClone.block = itemBlockId.block;
 			itemBlockIdClone.write();
 			
-			valueBlockIdClone = new NotesBlockId();
+			valueBlockIdClone = new NotesBlockIdStruct();
 			valueBlockIdClone.pool = valueBlockId.pool;
 			valueBlockIdClone.block = valueBlockId.block;
 			valueBlockIdClone.write();
@@ -1511,7 +1541,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	private FieldInfo readCDFieldInfo(Pointer ptrCDField) {
-		NotesCDField cdField = new NotesCDField(ptrCDField);
+		NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(ptrCDField);
 		cdField.read();
 		
 		Pointer defaultValueFormulaPtr = ptrCDField.share(NotesCAPI.cdFieldSize);
@@ -1756,5 +1786,214 @@ public class NotesNote implements IRecyclableNotesObject {
 	public static interface ComputeWithFormCallback {
 		
 		public CWF_Action errorRaised(FieldInfo fieldInfo, ValidationPhase phase, String errorTxt, long errCode);
+	}
+	
+	public static enum EncryptionMode {
+		/** Encrypt the message with the key in the user's ID. This flag is not for outgoing mail
+		 * messages because recipients, other than the sender, will not be able to decrypt
+		 * the message. This flag can be useful to encrypt documents in a local database to
+		 * keep them secure or to encrypt documents that can only be decrypted by the same user. */
+		ENCRYPT_WITH_USER_PUBLIC_KEY (NotesCAPI.ENCRYPT_WITH_USER_PUBLIC_KEY),
+		
+		/**
+		 * Encrypt SMIME if MIME present
+		 */
+		ENCRYPT_SMIME_IF_MIME_PRESENT (NotesCAPI.ENCRYPT_SMIME_IF_MIME_PRESENT),
+		
+		/**
+		 * Encrypt SMIME no sender.
+		 */
+		ENCRYPT_SMIME_NO_SENDER (NotesCAPI.ENCRYPT_SMIME_NO_SENDER),
+		
+		/**
+		 * Encrypt SMIME trusting all certificates.
+		 */
+		ENCRYPT_SMIME_TRUST_ALL_CERTS(NotesCAPI.ENCRYPT_SMIME_TRUST_ALL_CERTS);
+		
+		private int m_mode;
+		
+		private EncryptionMode(int mode) {
+			m_mode = mode;
+		}
+		
+		public int getMode() {
+			return m_mode;
+		}
+	};
+	
+	/**
+	 * This function copies and encrypts (seals) the encryption enabled fields in a note
+	 * (including the note's file objects), using a handle to an ID file.<br>
+	 * <br>
+	 * It can encrypt a note in several ways -- by using the Domino public key of the caller,
+	 * by using specified secret encryption keys stored in the caller's ID, or by using the
+	 * Domino public keys of specified users, if the note does not have any mime parts.<br>
+	 * <br>
+	 * The method decides which type of encryption to do based upon the setting of the flag
+	 * passed to it in its <code>encryptionMode</code> argument.<br>
+	 * <br>
+	 * If the {@link EncryptionMode#ENCRYPT_WITH_USER_PUBLIC_KEY} flag is set, it uses the
+	 * caller's public ID to encrypt the note.<br>
+	 * In this case, only the user who encodes the note can decrypt it.<br>
+	 * This feature allows an individual to protect information from anyone else.<br>
+	 * <br>
+	 * If, instead, the {@link EncryptionMode#ENCRYPT_WITH_USER_PUBLIC_KEY} flag is not set,
+	 * then the function expects the note to contain  a field named "SecretEncryptionKeys"
+	 * a field named "PublicEncryptionKeys", or both.<br>
+	 * Each field is either a TYPE_TEXT or TYPE_TEXT_LIST field.<br>
+	 * <br>
+	 * "SecretEncryptionKeys" contains the name(s) of the secret encryption keys in the
+	 * calling user's ID to be used to encrypt the note.<br>
+	 * This feature is intended to allow a group to encrypt some of the notes in a single
+	 * database in a way that only they can decrypt them -- they must share the secret encryption
+	 * keys among themselves first for this to work.<br>
+	 * <br>
+	 * "PublicEncryptionKeys" contains the name(s) of  users, in canonical format.<br>
+	 * The note will be encrypted with each user's Domino public key.<br>
+	 * The user can then decrypt the note with the private key in the user's ID.<br>
+	 * This feature provides a way to encrypt documents, such as mail documents, for another user.<br>
+	 * <br>
+	 * The note must contain at least one encryption enabled item (an item with the ITEM_SEAL flag set)
+	 * in order to be encrypted.<br>
+	 * If the note has mime parts and flag {@link EncryptionMode#ENCRYPT_SMIME_IF_MIME_PRESENT}
+	 * is set, then it is SMIME encrypted.<br>
+	 * <br>
+	 * If the document is to be signed as well as encrypted, you must sign the document
+	 * before using this method.
+
+	 * @param id user id to be used for encryption, use null for current id
+	 * @param encryptionMode encryption mode
+	 * @return encrypted note copy
+	 */
+	public NotesNote copyAndEncrypt(NotesUserId id, EnumSet<EncryptionMode> encryptionMode) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		int flags = 0;
+		for (EncryptionMode currMode : encryptionMode) {
+			flags = flags | currMode.getMode();
+		}
+		
+		short flagsShort = (short) (flags & 0xffff);
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethDstNote = new LongByReference();
+			result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id==null ? 0 : id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
+			NotesGC.__objectCreated(NotesNote.class, copyNote);
+			return copyNote;
+		}
+		else {
+			IntByReference rethDstNote = new IntByReference();
+			result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id==null ? 0 : id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
+			NotesGC.__objectCreated(NotesNote.class, copyNote);
+			return copyNote;
+		}
+	}
+	
+	/**
+	 * This function decrypts an encrypted note, using the appropriate encryption key stored
+	 * in the user's ID file.<br>
+	 * If the user does not have the appropriate encryption key to decrypt the note, an error is returned.<br>
+	 * <br>
+	 * This function supports new cryptographic keys and algorithms introduced in Release 8.0.1 as
+	 * well as any from releases prior to 8.0.1.
+	 * <br>
+	 * The current implementation of this function automatically decrypts attachments as well.
+	 * 
+	 * @param id user id used for decryption, use null for current id
+	 */
+	public void decrypt(NotesUserId id) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		short decryptFlags = NotesCAPI.DECRYPT_ATTACHMENTS_IN_PLACE;
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteCipherDecrypt(m_hNote64, id==null ? 0 : id.getKFCHandle(), decryptFlags,
+					null, 0, null);
+		}
+		else {
+			result = notesAPI.b32_NSFNoteCipherDecrypt(m_hNote32, id==null ? 0 : id.getKFCHandle(), decryptFlags,
+					null, 0, null);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function signs the note using the specified ID.
+	 * It allows you to pass a flag to determine how MIME parts will be signed.<br>
+	 * <br>
+	 * The used C method NSFNoteSignExt3 generates a signature item with the specified name and
+	 * appends this signature item to the note. A signature item has data type
+	 * TYPE_SIGNATURE and item flags ITEM_SEAL. The data value of the signature item is a
+	 * digest of the data stored in items in the note, signed with the user's private key.<br>
+	 * <br>
+	 * If the note has MIME parts and the flag <code>signNotesIfMimePresent</code> is true,
+	 * it will be SMIME signed, if not set it will be Notes signed.
+	 * <br>
+	 * If the document to be signed is encrypted, this function will attempt to decrypt the
+	 * document in order to generate a valid signature.<br>
+	 * If you want the document to be signed and encrypted, you must sign the document
+	 * before using {@link #copyAndEncrypt(NotesUserId, EnumSet)}.<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * As described <a href="http://www.eknori.de/2015-01-31/serious-issue-when-signing-a-database-in-the-background-on-the-server/">here</a>,
+	 * it is not possible to use this method to sign XPages design elements on a server with
+	 * an ID other than the server id.</b>
+	 * 
+	 * @param id user id to use for signing or null for current id
+	 * @param signNotesIfMimePresent If the note has MIME parts and this flag is true it will be SMIME signed, if not set it will be Notes signed.
+	 */
+	public void sign(NotesUserId id, boolean signNotesIfMimePresent) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b64_NSFNoteSignExt3(m_hNote64, id==null ? 0 : id.getKFCHandle(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+			
+			//verify signature
+			NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
+			Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
+			Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+
+			result = notesAPI.b64_NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+
+			result = notesAPI.b32_NSFNoteSignExt3(m_hNote32, id==null ? 0 : id.getKFCHandle(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+
+			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+			
+			//verify signature
+			NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
+			Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
+			Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+
+			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
+			NotesErrorUtils.checkResult(result);
+		}
 	}
 }

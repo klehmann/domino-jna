@@ -15,10 +15,10 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -204,13 +204,13 @@ public class NotesNamingUtils {
 		Memory namesListMem;
 		if (notesAPI instanceof WinNotesCAPI) {
 			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize32);
-			NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListMem);
+			WinNotesNamesListHeader32Struct namesListHeader = WinNotesNamesListHeader32Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 		else {
 			namesListMem = new Memory(NotesCAPI.namesListHeaderSize32);
-			NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListMem);
+			NotesNamesListHeader32Struct namesListHeader = NotesNamesListHeader32Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
@@ -256,13 +256,13 @@ public class NotesNamingUtils {
 		Memory namesListMem;
 		if (notesAPI instanceof WinNotesCAPI) {
 			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize64);
-			WinNotesNamesListHeader64 namesListHeader = new WinNotesNamesListHeader64(namesListMem);
+			WinNotesNamesListHeader64Struct namesListHeader = WinNotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 		else {
 			namesListMem = new Memory(NotesCAPI.namesListHeaderSize64);
-			NotesNamesListHeader64 namesListHeader = new NotesNamesListHeader64(namesListMem);
+			NotesNamesListHeader64Struct namesListHeader = NotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
@@ -428,14 +428,14 @@ public class NotesNamingUtils {
 			
 			try {
 				if (notesAPI instanceof WinNotesCAPI) {
-					WinNotesNamesListHeader64 namesListHeader = new WinNotesNamesListHeader64(namesListBufferPtr);
+					WinNotesNamesListHeader64Struct namesListHeader = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					namesListHeader.Authenticated = bitMask;
 					namesListHeader.write();
 					namesListHeader.read();
 				}
 				else {
-					NotesNamesListHeader64 namesListHeader = new NotesNamesListHeader64(namesListBufferPtr);
+					NotesNamesListHeader64Struct namesListHeader = NotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					//setting authenticated flag for the user is required when running on the server
 					namesListHeader.Authenticated = bitMaskAsShort;
@@ -453,14 +453,14 @@ public class NotesNamingUtils {
 			try {
 				//setting authenticated flag for the user is required when running on the server
 				if (notesAPI instanceof WinNotesCAPI) {
-					WinNotesNamesListHeader32 namesListHeader = new WinNotesNamesListHeader32(namesListBufferPtr);
+					WinNotesNamesListHeader32Struct namesListHeader = WinNotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					namesListHeader.Authenticated = bitMask;
 					namesListHeader.write();
 					namesListHeader.read();
 				}
 				else {
-					NotesNamesListHeader32 namesListHeader = new NotesNamesListHeader32(namesListBufferPtr);
+					NotesNamesListHeader32Struct namesListHeader = NotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					namesListHeader.Authenticated = bitMask;
 					namesListHeader.write();

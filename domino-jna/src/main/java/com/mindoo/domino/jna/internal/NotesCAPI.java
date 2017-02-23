@@ -4,30 +4,30 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
-import com.mindoo.domino.jna.structs.NotesBlockId;
-import com.mindoo.domino.jna.structs.NotesBuildVersion;
-import com.mindoo.domino.jna.structs.NotesCDField;
-import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
-import com.mindoo.domino.jna.structs.NotesFTIndexStats;
-import com.mindoo.domino.jna.structs.NotesFileObject;
-import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesItemValueTable;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64;
-import com.mindoo.domino.jna.structs.NotesNumberPair;
-import com.mindoo.domino.jna.structs.NotesObjectDescriptor;
-import com.mindoo.domino.jna.structs.NotesOriginatorId;
-import com.mindoo.domino.jna.structs.NotesRange;
-import com.mindoo.domino.jna.structs.NotesSearchMatch32;
-import com.mindoo.domino.jna.structs.NotesSearchMatch64;
-import com.mindoo.domino.jna.structs.NotesTableItem;
-import com.mindoo.domino.jna.structs.NotesTime;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
-import com.mindoo.domino.jna.structs.NotesTimeDatePair;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64;
+import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
+import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
+import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
+import com.mindoo.domino.jna.structs.NotesDbReplicaInfoStruct;
+import com.mindoo.domino.jna.structs.NotesFTIndexStatsStruct;
+import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
+import com.mindoo.domino.jna.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.structs.NotesItemValueTableStruct;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
+import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
+import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.structs.NotesSearchMatch32Struct;
+import com.mindoo.domino.jna.structs.NotesSearchMatch64Struct;
+import com.mindoo.domino.jna.structs.NotesTableItemStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.structs.NotesTimeStruct;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
@@ -46,22 +46,22 @@ import com.sun.jna.ptr.ShortByReference;
  */
 public interface NotesCAPI extends Library {
 	//computation of data type sizes for the current platform
-	public final int timeDateSize = new NotesTimeDate().size();
-	public final int rangeSize = new NotesRange().size();
-	public final int timeSize = new NotesTime().size();
-	public final int numberPairSize = new NotesNumberPair().size();
-	public final int timeDatePairSize = new NotesTimeDatePair().size();
-	public final int collectionPositionSize = new NotesCollectionPosition().size();
-	public final int itemValueTableSize = new NotesItemValueTable().size();
-	public final int tableItemSize = new NotesTableItem().size();
-	public final int oidSize = new NotesOriginatorId().size();
-	public final int winNamesListHeaderSize64 = new WinNotesNamesListHeader64().size();
-	public final int winNamesListHeaderSize32 = new WinNotesNamesListHeader32().size();
-	public final int namesListHeaderSize32 = new NotesNamesListHeader32().size();
-	public final int namesListHeaderSize64 = new NotesNamesListHeader64().size();
-	public final int objectDescriptorSize = new NotesObjectDescriptor().size();
-	public final int fileObjectSize = new NotesFileObject().size();
-	public final int cdFieldSize = new NotesCDField().size();
+	public final int timeDateSize = NotesTimeDateStruct.newInstance().size();
+	public final int rangeSize = NotesRangeStruct.newInstance().size();
+	public final int timeSize = NotesTimeStruct.newInstance().size();
+	public final int numberPairSize = NotesNumberPairStruct.newInstance().size();
+	public final int timeDatePairSize = NotesTimeDatePairStruct.newInstance().size();
+	public final int collectionPositionSize = NotesCollectionPositionStruct.newInstance().size();
+	public final int itemValueTableSize = NotesItemValueTableStruct.newInstance().size();
+	public final int tableItemSize = NotesTableItemStruct.newInstance().size();
+	public final int oidSize = NotesOriginatorIdStruct.newInstance().size();
+	public final int winNamesListHeaderSize64 = WinNotesNamesListHeader64Struct.newInstance().size();
+	public final int winNamesListHeaderSize32 = WinNotesNamesListHeader32Struct.newInstance().size();
+	public final int namesListHeaderSize32 = NotesNamesListHeader32Struct.newInstance().size();
+	public final int namesListHeaderSize64 = NotesNamesListHeader64Struct.newInstance().size();
+	public final int objectDescriptorSize = NotesObjectDescriptorStruct.newInstance().size();
+	public final int fileObjectSize = NotesFileObjectStruct.newInstance().size();
+	public final int cdFieldSize = NotesCDFieldStruct.newInstance().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -87,8 +87,8 @@ public interface NotesCAPI extends Library {
 	short b32_NSFDbOpen(Memory dbName, IntBuffer dbHandle);
 	short b64_NSFDbOpen(Memory dbName, LongBuffer dbHandle);
 	
-	short b32_NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDate ModifiedTime, IntBuffer rethDB, NotesTimeDate retDataModified, NotesTimeDate retNonDataModified);
-	short b64_NSFDbOpenExtended (Memory PathName, short Options, long hNames, NotesTimeDate ModifiedTime, LongBuffer rethDB, NotesTimeDate retDataModified, NotesTimeDate retNonDataModified);
+	short b32_NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime, IntBuffer rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
+	short b64_NSFDbOpenExtended (Memory PathName, short Options, long hNames, NotesTimeDateStruct ModifiedTime, LongBuffer rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
 	
 	short b32_NSFDbClose(int dbHandle);
 	short b64_NSFDbClose(long dbHandle);
@@ -172,19 +172,19 @@ public interface NotesCAPI extends Library {
 
 	public short b32_NSFDbReplicaInfoGet(
 			int  hDB,
-			NotesDbReplicaInfo retReplicationInfo);
+			NotesDbReplicaInfoStruct retReplicationInfo);
 
 	public short b64_NSFDbReplicaInfoGet(
 			long  hDB,
-			NotesDbReplicaInfo retReplicationInfo);
+			NotesDbReplicaInfoStruct retReplicationInfo);
 	
 	public short b32_NSFDbReplicaInfoSet(
 			int  hDB,
-			NotesDbReplicaInfo ReplicationInfo);
+			NotesDbReplicaInfoStruct ReplicationInfo);
 
 	public short b64_NSFDbReplicaInfoSet(
 			long  hDB,
-			NotesDbReplicaInfo ReplicationInfo);
+			NotesDbReplicaInfoStruct ReplicationInfo);
 
 	short b32_NIFFindDesignNoteExt(int hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntBuffer retNoteID, int Options);
 	short b64_NIFFindDesignNoteExt(long hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntBuffer retNoteID, int Options);
@@ -212,36 +212,36 @@ public interface NotesCAPI extends Library {
 			LongByReference rethSelectedList,
 			long nameList);
 	
-	short b32_NIFReadEntries(int hCollection, NotesCollectionPosition IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
+	short b32_NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
-	short b64_NIFReadEntries(long hCollection, NotesCollectionPosition IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, LongByReference rethBuffer,
+	short b64_NIFReadEntries(long hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, LongByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
 
 	public short b64_NIFReadEntriesExt(long hCollection,
-			NotesCollectionPosition CollectionPos,
+			NotesCollectionPositionStruct CollectionPos,
             short SkipNavigator, int SkipCount,
             short ReturnNavigator, int ReturnCount, int ReturnMask,
-            NotesTimeDate DiffTime, long DiffIDTable, int ColumnNumber, int Flags,
+            NotesTimeDateStruct DiffTime, long DiffIDTable, int ColumnNumber, int Flags,
             LongByReference rethBuffer, ShortByReference retBufferLength,
             IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned,
-            ShortByReference retSignalFlags, NotesTimeDate retDiffTime,
-            NotesTimeDate retModifiedTime, IntByReference retSequence);
+            ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
+            NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 
 	public short b32_NIFReadEntriesExt(int hCollection,
-			NotesCollectionPosition CollectionPos,
+			NotesCollectionPositionStruct CollectionPos,
 			short SkipNavigator, int SkipCount,
 			short ReturnNavigator, int ReturnCount, int ReturnMask,
-			NotesTimeDate DiffTime, int DiffIDTable, int ColumnNumber, int Flags,
+			NotesTimeDateStruct DiffTime, int DiffIDTable, int ColumnNumber, int Flags,
 			IntByReference rethBuffer, ShortByReference retBufferLength,
 			IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned,
-			ShortByReference retSignalFlags, NotesTimeDate retDiffTime,
-			NotesTimeDate retModifiedTime, IntByReference retSequence);
+			ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
+			NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 
-	short b32_NIFFindByKey(int hCollection, Memory keyBuffer, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
-	short b64_NIFFindByKey(long hCollection, Memory keyBuffer, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
+	short b32_NIFFindByKey(int hCollection, Memory keyBuffer, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
+	short b64_NIFFindByKey(long hCollection, Memory keyBuffer, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
 
-	short b32_NIFFindByName(int hCollection, Memory name, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
-	short b64_NIFFindByName(long hCollection, Memory name, short findFlags, NotesCollectionPosition retIndexPos, IntByReference retNumMatches);
+	short b32_NIFFindByName(int hCollection, Memory name, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
+	short b64_NIFFindByName(long hCollection, Memory name, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
 
 	short b32_NIFGetCollation(int hCollection, ShortByReference retCollationNum);
 	short b64_NIFGetCollation(long hCollection, ShortByReference retCollationNum);
@@ -252,13 +252,13 @@ public interface NotesCAPI extends Library {
 	short b32_NIFUpdateCollection(int hCollection);
 	short b64_NIFUpdateCollection(long hCollection);
 	
-	void b32_NIFGetLastModifiedTime(int hCollection, NotesTimeDate retLastModifiedTime);
-	void b64_NIFGetLastModifiedTime(long hCollection, NotesTimeDate retLastModifiedTime);
+	void b32_NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	void b64_NIFGetLastModifiedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
 	
 	short b32_NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,
-			NotesCollectionPosition retIndexPos,
+			NotesCollectionPositionStruct retIndexPos,
 			IntByReference retNumMatches,
 			ShortByReference retSignalFlags,
 			IntByReference rethBuffer,
@@ -267,7 +267,7 @@ public interface NotesCAPI extends Library {
 	short b64_NIFFindByKeyExtended2 (long hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,
-			NotesCollectionPosition retIndexPos,
+			NotesCollectionPositionStruct retIndexPos,
 			IntByReference retNumMatches,
 			ShortByReference retSignalFlags,
 			LongByReference rethBuffer,
@@ -326,8 +326,8 @@ public interface NotesCAPI extends Library {
     /** Mark all unread */
     public static short FILTER_MARK_UNREAD_ALL = 0x0100;
     
-	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, IntByReference rethTable);
-	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDate Since, NotesTimeDate retUntil, LongByReference rethTable);
+	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
+	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, LongByReference rethTable);
 	
 	short DNCanonicalize(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);
 	short DNAbbreviate(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);	
@@ -348,6 +348,18 @@ public interface NotesCAPI extends Library {
 	public short b32_OSMemGetSize(int handle, IntByReference retSize);
 	public short b64_OSMemGetSize(long handle, IntByReference retSize);
 
+	public short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
+	
+	public int OSMemoryGetSize(int handle);
+	
+	public void OSMemoryFree(int handle);
+	
+	public short OSMemoryReallocate(int handle, int size);
+	
+	public Pointer OSMemoryLock(int handle);
+	
+	public boolean OSMemoryUnlock(int handle);
+	
 	public void ODSWriteMemory(
 			Pointer ppDest,
 			short  type,
@@ -360,8 +372,8 @@ public interface NotesCAPI extends Library {
 			Pointer pDest,
 			short iterations);
 	
-	public short b32_NIFLocateNote (int hCollection, NotesCollectionPosition indexPos, int noteID);
-	public short b64_NIFLocateNote (long hCollection, NotesCollectionPosition indexPos, int noteID);
+	public short b32_NIFLocateNote (int hCollection, NotesCollectionPositionStruct indexPos, int noteID);
+	public short b64_NIFLocateNote (long hCollection, NotesCollectionPositionStruct indexPos, int noteID);
 
 
 	/**
@@ -771,8 +783,8 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public short IDTableFlags (ByteBuffer pIDTable);
 	public void IDTableSetFlags (ByteBuffer pIDTable, short Flags);
-	public void IDTableSetTime(ByteBuffer pIDTable, NotesTimeDate Time);
-	public NotesTimeDate IDTableTime(ByteBuffer pIDTable);
+	public void IDTableSetTime(ByteBuffer pIDTable, NotesTimeDateStruct Time);
+	public NotesTimeDateStruct IDTableTime(ByteBuffer pIDTable);
 
 	public short b64_IDEnumerate(long hTable, IdEnumerateProc Routine, Pointer Parameter);
 	public short b32_IDEnumerate(int hTable, IdEnumerateProc Routine, Pointer Parameter);
@@ -879,7 +891,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short ConvertTIMEDATEToText(
 			ByteBuffer intlFormat,
 			ByteBuffer textFormat,
-			NotesTimeDate inputTime,
+			NotesTimeDateStruct inputTime,
 			Memory retTextBuffer,
 			short textBufferLength,
 			ShortByReference retTextLength);
@@ -889,17 +901,17 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			ByteBuffer textFormat,
 			Memory text,
 			short maxLength,
-			NotesTimeDate retTIMEDATE);
+			NotesTimeDateStruct retTIMEDATE);
 
-	public boolean TimeGMToLocalZone (NotesTime timePtr);
-	public boolean TimeGMToLocal (NotesTime timePtr);
-	public boolean TimeLocalToGM(NotesTime timePtr);
+	public boolean TimeGMToLocalZone (NotesTimeStruct timePtr);
+	public boolean TimeGMToLocal (NotesTimeStruct timePtr);
+	public boolean TimeLocalToGM(NotesTimeStruct timePtr);
 	public boolean TimeLocalToGM(Memory timePtr);
 	
 	public short TIMEDATE_MINIMUM = 0;
 	public short TIMEDATE_MAXIMUM = 1;
 	public short TIMEDATE_WILDCARD = 2;
-	public void TimeConstant(short timeConstantType, NotesTimeDate tdptr);
+	public void TimeConstant(short timeConstantType, NotesTimeDateStruct tdptr);
 
 	public short ListGetText (ByteBuffer pList,
 			boolean fPrefixDataType,
@@ -1047,6 +1059,22 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b64_NSFNoteClose(long hNote);
 	public short b32_NSFNoteSign(int hNote);
 	public short b64_NSFNoteSign(long hNote);
+	
+	public short b64_NSFNoteSignExt3(long hNote, 
+			long	hKFC,
+			Memory SignatureItemName,
+			short ItemCount, long hItemIDs, 
+			int Flags, int Reserved,
+			Pointer pReserved);
+	
+	public short b32_NSFNoteSignExt3(int hNote, 
+			long	hKFC,
+			Memory SignatureItemName,
+			short ItemCount, int hItemIDs, 
+			int Flags, int Reserved,
+			Pointer pReserved);
+	
+	public int SIGN_NOTES_IF_MIME_PRESENT = 0x00000001;
 
 	public short b32_NSFNoteUpdateExtended(int hNote, int updateFlags);
 	public short b64_NSFNoteUpdateExtended(long hNote, int updateFlags);
@@ -1071,20 +1099,20 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFNoteDeleteExtended(int hDB, int NoteID, int UpdateFlags);
 	public short b64_NSFNoteDeleteExtended(long hDB, int NoteID, int UpdateFlags);
 	
-	public short b64_NSFNoteDetachFile(long note_handle, NotesBlockId.ByValue item_blockid);
-	public short b32_NSFNoteDetachFile(int note_handle, NotesBlockId.ByValue item_blockid);
+	public short b64_NSFNoteDetachFile(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	public short b32_NSFNoteDetachFile(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	
 	public boolean b64_NSFNoteIsSignedOrSealed(long note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
 	public boolean b32_NSFNoteIsSignedOrSealed(int note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
 	
 	public short b32_NSFNoteOpenByUNID(
 			int hDB,
-			NotesUniversalNoteId pUNID,
+			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			IntByReference rethNote);
 	public short b64_NSFNoteOpenByUNID(
 			long  hDB,
-			NotesUniversalNoteId pUNID,
+			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			LongByReference rethNote);
 
@@ -1118,18 +1146,18 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			int  note_handle,
 			Memory item_name,
 			short name_len,
-			NotesBlockId retbhItem,
+			NotesBlockIdStruct retbhItem,
 			ShortByReference retDataType,
-			NotesBlockId retbhValue,
+			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 	
 	public short b64_NSFItemInfo(
 			long note_handle,
 			Memory item_name,
 			short  name_len,
-			NotesBlockId retbhItem,
+			NotesBlockIdStruct retbhItem,
 			ShortByReference retDataType,
-			NotesBlockId retbhValue,
+			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 	
 //	STATUS LNPUBLIC NSFItemInfo(
@@ -1143,42 +1171,42 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	
 	public short b32_NSFItemInfoNext(
 			int  note_handle,
-			NotesBlockId.ByValue NextItem,
+			NotesBlockIdStruct.ByValue NextItem,
 			Memory item_name,
 			short name_len,
-			NotesBlockId retbhItem,
+			NotesBlockIdStruct retbhItem,
 			ShortByReference retDataType,
-			NotesBlockId retbhValue,
+			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 	
 	public short b64_NSFItemInfoNext(
 			long  note_handle,
-			NotesBlockId.ByValue NextItem,
+			NotesBlockIdStruct.ByValue NextItem,
 			Memory item_name,
 			short  name_len,
-			NotesBlockId retbhItem,
+			NotesBlockIdStruct retbhItem,
 			ShortByReference retDataType,
-			NotesBlockId retbhValue,
+			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 	
 	public short b32_NSFItemInfoPrev(
 			int  note_handle,
-			NotesBlockId.ByValue  CurrItem,
+			NotesBlockIdStruct.ByValue  CurrItem,
 			Memory item_name,
 			short  name_len,
-			NotesBlockId item_blockid_ptr,
+			NotesBlockIdStruct item_blockid_ptr,
 			ShortByReference value_type_ptr,
-			NotesBlockId value_blockid_ptr,
+			NotesBlockIdStruct value_blockid_ptr,
 			IntByReference value_len_ptr);
 	
 	public short b64_NSFItemInfoPrev(
 			long  note_handle,
-			NotesBlockId.ByValue  CurrItem,
+			NotesBlockIdStruct.ByValue  CurrItem,
 			Memory item_name,
 			short  name_len,
-			NotesBlockId item_blockid_ptr,
+			NotesBlockIdStruct item_blockid_ptr,
 			ShortByReference value_type_ptr,
-			NotesBlockId value_blockid_ptr,
+			NotesBlockIdStruct value_blockid_ptr,
 			IntByReference value_len_ptr);
 	
 	public short b64_NSFItemScan(
@@ -1193,26 +1221,26 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public void b32_NSFItemQueryEx(
 			int  note_handle,
-			NotesBlockId.ByValue item_bid,
+			NotesBlockIdStruct.ByValue item_bid,
 			Memory item_name,
 			short  return_buf_len,
 			ShortByReference name_len_ptr,
 			ShortByReference item_flags_ptr,
 			ShortByReference value_datatype_ptr,
-			NotesBlockId value_bid_ptr,
+			NotesBlockIdStruct value_bid_ptr,
 			IntByReference value_len_ptr,
 			ByteByReference retSeqByte,
 			ByteByReference retDupItemID);
 	
 	public void b64_NSFItemQueryEx(
 			long  note_handle,
-			NotesBlockId.ByValue item_bid,
+			NotesBlockIdStruct.ByValue item_bid,
 			Memory item_name,
 			short  return_buf_len,
 			ShortByReference name_len_ptr,
 			ShortByReference item_flags_ptr,
 			ShortByReference value_datatype_ptr,
-			NotesBlockId value_bid_ptr,
+			NotesBlockIdStruct value_bid_ptr,
 			IntByReference value_len_ptr,
 			ByteByReference retSeqByte,
 			ByteByReference retDupItemID);
@@ -1222,26 +1250,26 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Memory ItemName,
 			short  ItemNameLength,
 			int  Flags,
-			NotesTimeDate retTime);
+			NotesTimeDateStruct retTime);
 	
 	public short b64_NSFItemGetModifiedTime(
 			long hNote,
 			Memory ItemName,
 			short  ItemNameLength,
 			int  Flags,
-			NotesTimeDate retTime);
+			NotesTimeDateStruct retTime);
 	
 	public short b32_NSFItemGetModifiedTimeByBLOCKID(
 			int  hNote,
-			NotesBlockId.ByValue bhItem,
+			NotesBlockIdStruct.ByValue bhItem,
 			int  Flags,
-			NotesTimeDate retTime);
+			NotesTimeDateStruct retTime);
 	
 	public short b64_NSFItemGetModifiedTimeByBLOCKID(
 			long  hNote,
-			NotesBlockId.ByValue bhItem,
+			NotesBlockIdStruct.ByValue bhItem,
 			int  Flags,
-			NotesTimeDate retTime);
+			NotesTimeDateStruct retTime);
 	
 	public short b32_NSFItemGetText(
 			int  note_handle,
@@ -1294,22 +1322,22 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public boolean b32_NSFItemGetTime(
 			int  note_handle,
 			Memory td_item_name,
-			NotesTimeDate td_item_value);
+			NotesTimeDateStruct td_item_value);
 	
 	public boolean b64_NSFItemGetTime(
 			long  note_handle,
 			Memory td_item_name,
-			NotesTimeDate td_item_value);
+			NotesTimeDateStruct td_item_value);
 	
 	public short b32_NSFItemSetTime(
 			int  note_handle,
 			Memory td_item_name,
-			NotesTimeDate td_item_ptr);
+			NotesTimeDateStruct td_item_ptr);
 	
 	public short b64_NSFItemSetTime(
 			long  note_handle,
 			Memory td_item_name,
-			NotesTimeDate td_item_ptr);
+			NotesTimeDateStruct td_item_ptr);
 
 	public boolean b32_NSFItemGetNumber(
 			int hNote,
@@ -1357,7 +1385,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public short b64_NSFItemConvertValueToText(
 			short value_type,
-			NotesBlockId.ByValue value_bid,
+			NotesBlockIdStruct.ByValue value_bid,
 			int  value_len,
 			Memory text_buf_ptr,
 			short  text_buf_len,
@@ -1365,7 +1393,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public short b32_NSFItemConvertValueToText(
 			short value_type,
-			NotesBlockId.ByValue value_bid,
+			NotesBlockIdStruct.ByValue value_bid,
 			int  value_len,
 			Memory text_buf_ptr,
 			short  text_buf_len,
@@ -1381,11 +1409,11 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Memory item_name,
 			short name_len);
 
-	public short b64_NSFItemDeleteByBLOCKID(long note_handle, NotesBlockId.ByValue item_blockid);
-	public short b32_NSFItemDeleteByBLOCKID(int note_handle, NotesBlockId.ByValue item_blockid);
+	public short b64_NSFItemDeleteByBLOCKID(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	public short b32_NSFItemDeleteByBLOCKID(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	
-	public short b64_NSFItemCopy(long note_handle, NotesBlockId.ByValue item_blockid);
-	public short b32_NSFItemCopy(int note_handle, NotesBlockId.ByValue item_blockid);
+	public short b64_NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	public short b32_NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 
 	public short b32_NSFDbGetMultNoteInfo(
 			int  hDb,
@@ -1406,39 +1434,42 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b32_NSFDbGetNoteInfoExt(
 			int  hDB,
 			int  NoteID,
-			NotesOriginatorId retNoteOID,
-			NotesTimeDate retModified,
+			NotesOriginatorIdStruct retNoteOID,
+			NotesTimeDateStruct retModified,
 			ShortByReference retNoteClass,
-			NotesTimeDate retAddedToFile,
+			NotesTimeDateStruct retAddedToFile,
 			ShortByReference retResponseCount,
 			IntByReference retParentNoteID);
 
 	public short b64_NSFDbGetNoteInfoExt(
 			long  hDB,
 			int  NoteID,
-			NotesOriginatorId retNoteOID,
-			NotesTimeDate retModified,
+			NotesOriginatorIdStruct retNoteOID,
+			NotesTimeDateStruct retModified,
 			ShortByReference retNoteClass,
-			NotesTimeDate retAddedToFile,
+			NotesTimeDateStruct retAddedToFile,
 			ShortByReference retResponseCount,
 			IntByReference retParentNoteID);
 
 	public short b32_NSFNoteVerifySignature(
 			int  hNote,
 			Memory SignatureItemName,
-			NotesTimeDate retWhenSigned,
+			NotesTimeDateStruct retWhenSigned,
 			Memory retSigner,
 			Memory retCertifier);
 	
 	public short b64_NSFNoteVerifySignature(
 			long  hNote,
 			Memory SignatureItemName,
-			NotesTimeDate retWhenSigned,
+			NotesTimeDateStruct retWhenSigned,
 			Memory retSigner,
 			Memory retCertifier);
 	
 	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
 
+	public short b64_NSFDbSign(long hDb, short noteclass);
+	public short b32_NSFDbSign(int hDb, short noteclass);
+	
 	/** Return NoteID */
 	public static short fINFO_NOTEID = 0x0001;
 	/** Return SequenceTime from OID */
@@ -1648,20 +1679,20 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int TICKS_IN_HOUR = (int)360000;
 	public static final int DT_VALID = (int)0x8000;
 
-	public short b32_FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStats retStats);
-	public short b64_FTIndex(long hDB, short options, Memory stopFile, NotesFTIndexStats retStats);
+	public short b32_FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
+	public short b64_FTIndex(long hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
 
 	public short b32_FTDeleteIndex(int hDB);
 	public short b64_FTDeleteIndex(long hDB);
 	
-	public short b32_FTGetLastIndexTime(int hDB, NotesTimeDate retTime);
-	public short b64_FTGetLastIndexTime(long hDB, NotesTimeDate retTime);
+	public short b32_FTGetLastIndexTime(int hDB, NotesTimeDateStruct retTime);
+	public short b64_FTGetLastIndexTime(long hDB, NotesTimeDateStruct retTime);
 	
 	public short b32_NSFDbGetBuildVersion(int hDB, ShortByReference retVersion);
 	public short b64_NSFDbGetBuildVersion(long hDB, ShortByReference retVersion);
 	
-	public short b32_NSFDbGetMajMinVersion(int hDb, NotesBuildVersion retBuildVersion);
-	public short b64_NSFDbGetMajMinVersion(long hDb, NotesBuildVersion retBuildVersion);
+	public short b32_NSFDbGetMajMinVersion(int hDb, NotesBuildVersionStruct retBuildVersion);
+	public short b64_NSFDbGetMajMinVersion(long hDb, NotesBuildVersionStruct retBuildVersion);
 	
 	public short b64_NSFDbReadObject(
 			long hDB,
@@ -1701,10 +1732,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Memory viewTitle,
 			short SearchFlags,
 			short NoteClassMask,
-			NotesTimeDate Since,
+			NotesTimeDateStruct Since,
 			b32_NsfSearchProc enumRoutine,
 			Pointer EnumRoutineParameter,
-			NotesTimeDate retUntil);
+			NotesTimeDateStruct retUntil);
 
 	public short b64_NSFSearch(
 			long hDB,
@@ -1712,10 +1743,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Memory viewTitle,
 			short SearchFlags,
 			short NoteClassMask,
-			NotesTimeDate Since,
+			NotesTimeDateStruct Since,
 			b64_NsfSearchProc enumRoutine,
 			Pointer EnumRoutineParameter,
-			NotesTimeDate retUntil);
+			NotesTimeDateStruct retUntil);
 
 //	STATUS far PASCAL NSFSearchExtended3 (DBHANDLE hDB,
 //            FORMULAHANDLE hFormula,
@@ -1748,10 +1779,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
             int SearchFlags3, 
             int SearchFlags4, 
             short NoteClassMask, 
-            NotesTimeDate Since, 
+            NotesTimeDateStruct Since, 
             b64_NsfSearchProc  EnumRoutine,
             Pointer EnumRoutineParameter, 
-            NotesTimeDate retUntil, 
+            NotesTimeDateStruct retUntil, 
             long namelist);
 
 	public short b32_NSFSearchExtended3 (int hDB, 
@@ -1765,15 +1796,15 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
             int SearchFlags3, 
             int SearchFlags4, 
             short NoteClassMask, 
-            NotesTimeDate Since, 
+            NotesTimeDateStruct Since, 
             b32_NsfSearchProc  EnumRoutine,
             Pointer EnumRoutineParameter, 
-            NotesTimeDate retUntil, 
+            NotesTimeDateStruct retUntil, 
             int namelist);
 
 	//Get filter information needed to do a NSFSearchStart via a FOLDER search
-	public short b64_NSFGetFolderSearchFilter(long hViewDB, long hDataDB, int ViewNoteID, NotesTimeDate Since, int Flags, LongByReference Filter);
-	public short b32_NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDate Since, int Flags, IntByReference Filter);
+	public short b64_NSFGetFolderSearchFilter(long hViewDB, long hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, LongByReference Filter);
+	public short b32_NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, IntByReference Filter);
 	
 	public short b64_NSFSearchWithUserNameList(
 			long hDB,
@@ -1781,10 +1812,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Memory ViewTitle,
 			short  SearchFlags,
 			short  NoteClassMask,
-			NotesTimeDate Since,
+			NotesTimeDateStruct Since,
 			b64_NsfSearchProc  EnumRoutine,
 			Pointer EnumRoutineParameter,
-			NotesTimeDate retUntil,
+			NotesTimeDateStruct retUntil,
 			long  nameList);
 
 	public short b32_NSFSearchWithUserNameList(
@@ -1793,10 +1824,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Memory ViewTitle,
 			short  SearchFlags,
 			short  NoteClassMask,
-			NotesTimeDate Since,
+			NotesTimeDateStruct Since,
 			b32_NsfSearchProc  EnumRoutine,
 			Pointer EnumRoutineParameter,
-			NotesTimeDate retUntil,
+			NotesTimeDateStruct retUntil,
 			int nameList);
 
 	/** No filter specified (hFilter ignored). */
@@ -1957,11 +1988,11 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public int SEARCH1_FIXUP_PURGED = (0x000000040 | SEARCH1_SIGNATURE);
 
 	public interface b32_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
-        short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch, NotesItemTable summaryBuffer); 
+        short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch, NotesItemTableStruct summaryBuffer); 
     }
 	
 	public interface b64_NsfSearchProc extends Callback { /* StdCallCallback if using __stdcall__ */
-        short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch, NotesItemTable summaryBuffer); 
+        short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch, NotesItemTableStruct summaryBuffer); 
     }
 
 	public interface NoteExtractCallback extends Callback { /* StdCallCallback if using __stdcall__ */
@@ -1982,15 +2013,58 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public int CWF_CONTINUE_ON_ERROR = 0x0001;		/*	Ignore compute errors */
 
-	public short b64_NSFNoteCipherExtractWithCallback (long hNote, NotesBlockId.ByValue bhItem,
+	public short b64_NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
 			NoteExtractCallback pNoteExtractCallback, Pointer pParam,
 			int Reserved, Pointer pReserved);
 
-	public short b32_NSFNoteCipherExtractWithCallback (int hNote, NotesBlockId.ByValue bhItem,
+	public short b32_NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
 			NoteExtractCallback pNoteExtractCallback, Pointer pParam,
 			int Reserved, Pointer pReserved);
+
+	/*	EncryptFlags used in NSFNoteCopyAndEncrypt */
+
+	public short ENCRYPT_WITH_USER_PUBLIC_KEY = 0x0001;
+	public short ENCRYPT_SMIME_IF_MIME_PRESENT = 0x0002;
+	public short ENCRYPT_SMIME_NO_SENDER = 0x0004;
+	public short ENCRYPT_SMIME_TRUST_ALL_CERTS = 0x0008;
+	
+	public short b64_NSFNoteCopyAndEncryptExt2(
+			long  hSrcNote,
+			long hKFC,
+			short EncryptFlags,
+			LongByReference rethDstNote,
+			int Reserved,
+			Pointer pReserved);
+
+	public short b32_NSFNoteCopyAndEncryptExt2(
+			int hSrcNote,
+			long hKFC,
+			short EncryptFlags,
+			IntByReference rethDstNote,
+			int  Reserved,
+			Pointer pReserved);
+	
+	/*	DecryptFlags used in NSFNoteDecrypt */
+
+	public short DECRYPT_ATTACHMENTS_IN_PLACE = 0x0001;
+	
+	public short b64_NSFNoteCipherDecrypt(
+			long  hNote,
+			long  hKFC,
+			int  DecryptFlags,
+			LongByReference rethCipherForAttachments,
+			int  Reserved,
+			Pointer pReserved);
+
+	public short b32_NSFNoteCipherDecrypt(
+			int  hNote,
+			long  hKFC,
+			int  DecryptFlags,
+			LongByReference rethCipherForAttachments,
+			int  Reserved,
+			Pointer pReserved);
 
 	public short b64_NSFNoteAttachFile(
 			long note_handle,
@@ -2506,7 +2580,8 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public void OSPathAddTrailingPathSep(Memory retPathName);
 	
 	public static int MAXDWORD = 0xffffffff;
-
+	public static short MAXWORD = (short) (0xffff & 0xffff);
+	
 	//NSFTransactionBegin/Commit/Rollback
 	//provide the ability to group updates into a single unit of work. There are some caveats about
 	//them, like folder stuff. If you are just doing document updates (add/update/delete) they should work fine.
@@ -2771,10 +2846,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int fKFM_switchid_DontSetEnvVar	= 0x00000008;
 
 	
-	public short SECKFMOpen(Pointer phKFC, Memory pIDFileName, Memory pPassword,
+	public short SECKFMOpen(LongByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 	
-	public short SECKFMClose(Pointer phKFC, int Flags, int Reserved, Pointer pReserved);
+	public short SECKFMClose(LongByReference phKFC, int Flags, int Reserved, Pointer pReserved);
 	public short SECKFMChangePassword(Memory pIDFile, Memory pOldPassword, Memory pNewPassword);
 	public short SECKFMGetUserName(Memory retUserName);
 	
@@ -2782,18 +2857,57 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			short  MaxUserNameLength, int Flags, Pointer pReserved);
 	
 	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
-			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
 
 	public short SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
-			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
 	
 	public short SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
-			Pointer phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved, IntByReference retdwFlags);
 	
 	public short SECidvResetUserPassword(Memory pServer, Memory pUserName, Memory pPassword,
 			short wDownloadCount, int ReservedFlags, Pointer pReserved);
+	
+	/*	Function codes for routine SECKFMGetPublicKey */
+
+	public short KFM_pubkey_Primary = 0;
+	public short KFM_pubkey_International = 1;
+	
+	public short SECKFMGetPublicKey(
+			Memory pName,
+			short Function,
+			short Flags,
+			IntByReference rethPubKey);
+	
+	public short SECTokenGenerate(
+			Memory ServerName,
+			Memory OrgName,
+			Memory ConfigName,
+			Memory UserName,
+			NotesTimeDateStruct Creation,
+			NotesTimeDateStruct Expiration,
+			IntByReference retmhToken,
+			int dwReserved,
+			Pointer vpReserved);
+
+	public void SECTokenFree(IntByReference mhToken);
+	
+	
+	public short SECTokenValidate(
+			Memory ServerName,
+			Memory OrgName,
+			Memory ConfigName,
+			Memory TokenData,
+			Memory retUsername,
+			NotesTimeDateStruct retCreation,
+			NotesTimeDateStruct retExpiration,
+			int  dwReserved,
+			Pointer vpReserved);
+	
+	public short fSECToken_EnableRenewal = 0x0001;
+
 	
 }

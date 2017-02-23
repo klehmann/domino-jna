@@ -5,10 +5,10 @@ import java.util.EnumSet;
 import java.util.Map;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 import lotus.domino.DbDirectory;
 import lotus.domino.Session;

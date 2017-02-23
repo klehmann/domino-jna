@@ -8,12 +8,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 import lotus.domino.Database;
 import lotus.domino.Document;

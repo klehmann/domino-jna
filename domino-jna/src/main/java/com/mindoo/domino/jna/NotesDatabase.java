@@ -1,9 +1,12 @@
 package com.mindoo.domino.jna;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.Calendar;
 import java.util.EnumSet;
+import java.util.Formatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,13 +28,12 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesBuildVersion;
-import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
-import com.mindoo.domino.jna.structs.NotesFTIndexStats;
-import com.mindoo.domino.jna.structs.NotesOriginatorId;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
+import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
+import com.mindoo.domino.jna.structs.NotesDbReplicaInfoStruct;
+import com.mindoo.domino.jna.structs.NotesFTIndexStatsStruct;
+import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
@@ -211,9 +213,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				//now try to open the database as this user
 				short openOptions = 0;
-				NotesTimeDate modifiedTime = null;
-				NotesTimeDate retDataModified = new NotesTimeDate();
-				NotesTimeDate retNonDataModified = new NotesTimeDate();
+				NotesTimeDateStruct modifiedTime = null;
+				NotesTimeDateStruct retDataModified = NotesTimeDateStruct.newInstance();
+				NotesTimeDateStruct retNonDataModified = NotesTimeDateStruct.newInstance();
 				
 				int retries = 5;
 				do {
@@ -260,9 +262,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				//now try to open the database as this user
 				short openOptions = 0;
-				NotesTimeDate modifiedTime = null;
-				NotesTimeDate retDataModified = new NotesTimeDate();
-				NotesTimeDate retNonDataModified = new NotesTimeDate();
+				NotesTimeDateStruct modifiedTime = null;
+				NotesTimeDateStruct retDataModified = NotesTimeDateStruct.newInstance();
+				NotesTimeDateStruct retNonDataModified = NotesTimeDateStruct.newInstance();
 				
 				int retries = 5;
 				do {
@@ -385,7 +387,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public NotesDbReplicaInfo getReplicaInfo() {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		NotesDbReplicaInfo retReplicationInfo = new NotesDbReplicaInfo();
+		NotesDbReplicaInfoStruct retReplicationInfo = NotesDbReplicaInfoStruct.newInstance();
 		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_NSFDbReplicaInfoGet(m_hDB64, retReplicationInfo);
 		}
@@ -393,7 +395,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFDbReplicaInfoGet(m_hDB32, retReplicationInfo);
 		}
 		NotesErrorUtils.checkResult(result);
-		return retReplicationInfo;
+		return new NotesDbReplicaInfo(retReplicationInfo);
 	}
 	
 	/**
@@ -417,10 +419,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFDbReplicaInfoSet(m_hDB64, replInfo);
+			result = notesAPI.b64_NSFDbReplicaInfoSet(m_hDB64, replInfo.getAdapter(NotesDbReplicaInfoStruct.class));
 		}
 		else {
-			result = notesAPI.b32_NSFDbReplicaInfoSet(m_hDB32, replInfo);
+			result = notesAPI.b32_NSFDbReplicaInfoSet(m_hDB32, replInfo.getAdapter(NotesDbReplicaInfoStruct.class));
 		}
 		NotesErrorUtils.checkResult(result);
 		//reset cached replicaId
@@ -659,6 +661,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Converts bytes in memory to a UNID
+	 * 
+	 * @param buf memory
+	 * @return unid
+	 */
+	private static String toUNID(Memory buf) {
+		Formatter formatter = new Formatter();
+		ByteBuffer data = buf.getByteBuffer(0, buf.size()).order(ByteOrder.LITTLE_ENDIAN);
+		formatter.format("%16x", data.getLong());
+		formatter.format("%16x", data.getLong());
+		String unid = formatter.toString().toUpperCase();
+		formatter.close();
+		return unid;
+	}
+	
+	/**
 	 * Opens a collection by its view note id. This method lets you store
 	 * the view in a separate database than the one containing the actual data,
 	 * which can be useful to reduce database size (by externalizing view indices) and
@@ -720,7 +738,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 			}
 			
-			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
+			String sViewUNID = toUNID(viewUNID);
 			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		else {
@@ -755,7 +773,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 			}
 			
-			String sViewUNID = NotesStringUtils.toUNID(viewUNID);
+			String sViewUNID = toUNID(viewUNID);
 			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		
@@ -934,13 +952,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (retUntil==null)
 			retUntil = new NotesTimeDate();
 		
+		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct retUntilStruct = retUntil.getAdapter(NotesTimeDateStruct.class);
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		NotesIDTable modifiedNoteTable;
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
-			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, since, retUntil, rethTable);
+			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, sinceStruct, retUntilStruct, rethTable);
 			if (result == INotesErrorConstants.ERR_NO_MODIFIED_NOTES) {
 				return new NotesIDTable();
 			}
@@ -949,7 +970,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
-			short result = notesAPI.b32_NSFDbGetModifiedNoteTable(m_hDB32, noteClassMask, since, retUntil, rethTable);
+			short result = notesAPI.b32_NSFDbGetModifiedNoteTable(m_hDB32, noteClassMask, sinceStruct, retUntilStruct, rethTable);
 			if (result == INotesErrorConstants.ERR_NO_MODIFIED_NOTES) {
 				return new NotesIDTable();
 			}
@@ -1084,7 +1105,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		NotesCollection col = openDesignCollection();
 		try {
-			NotesCollectionPosition pos = NotesCollectionPosition.toPosition("0");
+			NotesCollectionPosition pos = new NotesCollectionPosition("0");
 			boolean moreToDo = true;
 			boolean isFirstRun = true;
 			while (moreToDo) {
@@ -1118,7 +1139,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							short result = notesAPI.b64_NSFNoteOpen(m_hDB64, currNoteId, expandNote ? NotesCAPI.OPEN_EXPAND : 0, rethNote);
 							NotesErrorUtils.checkResult(result);
 							try {
-								NotesTimeDate retWhenSigned = new NotesTimeDate();
+								NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
 								Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
 								Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
 								
@@ -1166,7 +1187,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							short result = notesAPI.b32_NSFNoteOpen(m_hDB32, currNoteId, expandNote ? NotesCAPI.OPEN_EXPAND : 0, rethNote);
 							NotesErrorUtils.checkResult(result);
 							try {
-								NotesTimeDate retWhenSigned = new NotesTimeDate();
+								NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
 								Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
 								Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
 								
@@ -1240,19 +1261,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short optionsBitMask = FTIndex.toBitMask(options);
 		
-		NotesFTIndexStats retStats = new NotesFTIndexStats();
+		NotesFTIndexStatsStruct retStats = NotesFTIndexStatsStruct.newInstance();
+		short result;
 		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_FTIndex(m_hDB64, optionsBitMask, null, retStats);
-			NotesErrorUtils.checkResult(result);
-			retStats.read();
-			return retStats;
+			result = notesAPI.b64_FTIndex(m_hDB64, optionsBitMask, null, retStats);
 		}
 		else {
-			short result = notesAPI.b32_FTIndex(m_hDB32, optionsBitMask, null, retStats);
-			NotesErrorUtils.checkResult(result);
-			retStats.read();
-			return retStats;
+			result = notesAPI.b32_FTIndex(m_hDB32, optionsBitMask, null, retStats);
 		}
+		NotesErrorUtils.checkResult(result);
+		retStats.read();
+		
+		return new NotesFTIndexStats(retStats.DocsAdded, retStats.DocsUpdated, retStats.DocsDeleted, retStats.BytesIndexed);
 	}
 	
 	/**
@@ -1304,24 +1324,28 @@ public class NotesDatabase implements IRecyclableNotesObject {
         boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 
 		if (NotesJNAContext.is64Bit()) {
-			NotesTimeDate retTime = new NotesTimeDate();
+			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 			short result = notesAPI.b64_FTGetLastIndexTime(m_hDB64, retTime);
 			if (result == INotesErrorConstants.ERR_FT_NOT_INDEXED) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
 			retTime.read();
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTime);
+			
+			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
+			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
 		}
 		else {
-			NotesTimeDate retTime = new NotesTimeDate();
+			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 			short result = notesAPI.b32_FTGetLastIndexTime(m_hDB32, retTime);
 			if (result == INotesErrorConstants.ERR_FT_NOT_INDEXED) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
 			retTime.read();
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTime);
+			
+			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
+			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
 		}
 	}
 
@@ -1387,7 +1411,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-		NotesBuildVersion retVersion = new NotesBuildVersion();
+		NotesBuildVersionStruct retVersion = NotesBuildVersionStruct.newInstance();
 		if (NotesJNAContext.is64Bit()) {
 			short result = notesAPI.b64_NSFDbGetMajMinVersion(m_hDB64, retVersion);
 			NotesErrorUtils.checkResult(result);
@@ -1396,7 +1420,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = notesAPI.b32_NSFDbGetMajMinVersion(m_hDB32, retVersion);
 			NotesErrorUtils.checkResult(result);
 		}
-		return retVersion;
+		return new NotesBuildVersion(retVersion);
 	}
 
 	public static interface ISearchCallback extends NotesSearch.ISearchCallback {
@@ -1472,11 +1496,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public static class NoteInfo {
 		private int m_noteId;
-		private NotesOriginatorId m_oid;
+		private NotesOriginatorIdStruct m_oid;
+		private NotesOriginatorId m_oidWrap;
 		private boolean m_isDeleted;
 		private boolean m_notPresent;
 		
-		public NoteInfo(int noteId, NotesOriginatorId oid, boolean isDeleted, boolean notPresent) {
+		private NoteInfo(int noteId, NotesOriginatorIdStruct oid, boolean isDeleted, boolean notPresent) {
 			m_noteId = noteId;
 			m_oid = oid;
 			m_isDeleted = isDeleted;
@@ -1499,7 +1524,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return OID
 		 */
 		public NotesOriginatorId getOID() {
-			return m_oid;
+			if (m_oidWrap==null) {
+				m_oidWrap = m_oid==null ? null : new NotesOriginatorId(m_oid);
+			}
+			return m_oidWrap;
 		}
 		
 		/**
@@ -1517,7 +1545,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return sequence time
 		 */
 		public NotesTimeDate getSequenceTime() {
-			return m_oid==null ? null : m_oid.SequenceTime;
+			NotesOriginatorId oidWrap = getOID();
+			if (oidWrap!=null) {
+				return oidWrap.getSequenceTime();
+			}
+			return null;
 		}
 		
 		/**
@@ -1554,14 +1586,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @author Karsten Lehmann
 	 */
 	public static class NoteInfoExt extends NoteInfo {
-		private NotesTimeDate m_modified;
+		private NotesTimeDateStruct m_modified;
 		private short m_noteClass;
-		private NotesTimeDate m_addedToFile;
+		private NotesTimeDateStruct m_addedToFile;
 		private short m_responseCount;
 		private int m_parentNoteId;
 		
-		public NoteInfoExt(int noteId, NotesOriginatorId oid, boolean isDeleted, boolean notPresent,
-				NotesTimeDate modified, short noteClass, NotesTimeDate addedToFile, short responseCount,
+		private NoteInfoExt(int noteId, NotesOriginatorIdStruct oid, boolean isDeleted, boolean notPresent,
+				NotesTimeDateStruct modified, short noteClass, NotesTimeDateStruct addedToFile, short responseCount,
 				int parentNoteId) {
 			
 			super(noteId, oid, isDeleted, notPresent);
@@ -1578,7 +1610,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return date
 		 */
 		public NotesTimeDate getModified() {
-			return m_modified;
+			return m_modified==null ? null : new NotesTimeDate(m_modified);
 		}
 		
 		/**
@@ -1596,7 +1628,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return date
 		 */
 		public NotesTimeDate getAddedToFile() {
-			return m_addedToFile;
+			return m_addedToFile==null ? null : new NotesTimeDate(m_addedToFile);
 		}
 		
 		/**
@@ -1652,10 +1684,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-		NotesOriginatorId retNoteOID = new NotesOriginatorId();
-		NotesTimeDate retModified = new NotesTimeDate();
+		NotesOriginatorIdStruct retNoteOID = NotesOriginatorIdStruct.newInstance();
+		NotesTimeDateStruct retModified = NotesTimeDateStruct.newInstance();
 		ShortByReference retNoteClass = new ShortByReference();
-		NotesTimeDate retAddedToFile = new NotesTimeDate();
+		NotesTimeDateStruct retAddedToFile = NotesTimeDateStruct.newInstance();
 		ShortByReference retResponseCount = new ShortByReference();
 		IntByReference retParentNoteID = new IntByReference();
 		boolean isDeleted = false;
@@ -1847,13 +1879,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			offsetInEntry += 4;
 
 			Pointer fileTimeDatePtr = entryBufPtr.share(offsetInEntry);
-			NotesTimeDate fileTimeDate = new NotesTimeDate(fileTimeDatePtr);
+			NotesTimeDateStruct fileTimeDate = NotesTimeDateStruct.newInstance(fileTimeDatePtr);
 			fileTimeDate.read();
 			
 			offsetInEntry += 8;
 			
 			Pointer noteTimeDatePtr = entryBufPtr.share(offsetInEntry);
-			NotesTimeDate noteTimeDate = new NotesTimeDate(noteTimeDatePtr);
+			NotesTimeDateStruct noteTimeDate = NotesTimeDateStruct.newInstance(noteTimeDatePtr);
 			noteTimeDate.read();
 			
 			offsetInEntry += 8;
@@ -1863,12 +1895,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			offsetInEntry += 4;
 			
 			Pointer sequenceTimePtr = entryBufPtr.share(offsetInEntry);
-			NotesTimeDate sequenceTimeDate = new NotesTimeDate(sequenceTimePtr);
+			NotesTimeDateStruct sequenceTimeDate = NotesTimeDateStruct.newInstance(sequenceTimePtr);
 			sequenceTimeDate.read();
 			
 			offsetInEntry += 8;
 
-			NotesOriginatorId oid = new NotesOriginatorId();
+			NotesOriginatorIdStruct oid = NotesOriginatorIdStruct.newInstance();
 			oid.File = fileTimeDate;
 			oid.Note = noteTimeDate;
 			oid.Sequence = sequence;
@@ -1882,6 +1914,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retNoteInfo[i] = new NoteInfo(currNoteId, oid, isDeleted, isNotPresent);
 		}
 		return retNoteInfo;
+	}
+	
+	/**
+	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
+	 * 
+	 * @param noteIdStr The note ID as hex string of the note that you want to open.
+	 * @return note
+	 */
+	public NotesNote openNoteById(String noteIdStr) {
+		return openNoteById(noteIdStr, EnumSet.noneOf(OpenNote.class));
 	}
 	
 	/**
@@ -1958,6 +2000,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
+	 * 
+	 * @param noteId The note ID of the note that you want to open.
+	 * @return note
+	 */
+	public NotesNote openNoteById(int noteId) {
+		return openNoteById(noteId, EnumSet.noneOf(OpenNote.class));
+	}
+	
+	/**
+	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
 	 * <br>
 	 * If the note is marked as unread, by default this function does not change the unread mark.<br>
 	 * You can use the {@link OpenNote#MARK_READ} flag to change an unread mark to read for remote databases.
@@ -1998,6 +2050,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * This function takes the Universal Note ID and reads the note into memory and returns
+	 * a handle to the in-memory copy.
+	 * @param unid UNID
+	 * @return note
+	 */
+	public NotesNote openNoteByUnid(String unid) {
+		return openNoteByUnid(unid, EnumSet.noneOf(OpenNote.class));
+	}
+	
+	/**
+	 * This function takes the Universal Note ID and reads the note into memory and returns
 	 * a handle to the in-memory copy.<br>
 	 * This function only supports the set of 16-bit WORD options described in the entry {@link OpenNote}.
 
@@ -2009,7 +2071,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		checkHandle();
 
 		short openFlagsBitmask = OpenNote.toBitMaskForOpen(openFlags);
-		NotesUniversalNoteId unidObj = NotesUniversalNoteId.fromString(unid);
+		NotesUniversalNoteIdStruct unidObj = NotesUniversalNoteIdStruct.fromString(unid);
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {

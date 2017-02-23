@@ -9,14 +9,12 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.NoteExtractCallback;
+import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesBlockId;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
-import com.sun.jna.ptr.ShortByReference;
 
 /**
  * Data container to access metadata and binary data of a note attachment
@@ -31,12 +29,12 @@ public class NotesAttachment {
 	private NotesTimeDate m_fileCreated;
 	private NotesTimeDate m_fileModified;
 	private NotesNote m_parentNote;
-	private NotesBlockId m_itemBlockId;
+	private NotesBlockIdStruct m_itemBlockId;
 	private int m_rrv;
 	
 	public NotesAttachment(String fileName, Compression compression, short fileFlags, int fileSize,
 			NotesTimeDate fileCreated, NotesTimeDate fileModified, NotesNote parentNote,
-			NotesBlockId itemBlockId, int rrv) {
+			NotesBlockIdStruct itemBlockId, int rrv) {
 		m_fileName = fileName;
 		m_compression = compression;
 		m_fileFlags = fileFlags;
@@ -256,7 +254,7 @@ public class NotesAttachment {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
@@ -345,7 +343,7 @@ public class NotesAttachment {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockId.ByValue itemBlockIdByVal = new NotesBlockId.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 

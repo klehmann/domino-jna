@@ -7,8 +7,9 @@ import java.util.List;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.structs.NotesDbReplicaInfo;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
+import com.mindoo.domino.jna.NotesDbReplicaInfo;
+import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
@@ -135,7 +136,9 @@ public class TestStringUtils extends BaseJNATestClass {
 				
 				Assert.assertEquals("Conversion functions between replica id and innards are ok", replicaIdJNA, convertedReplicaId);
 				
-				Assert.assertTrue("Innards are equal after conversion", Arrays.equals(replInfoJNA.ID.Innards, innards));
+				NotesTimeDate replicaIdAsDate = replInfoJNA.getReplicaIDAsDate();
+				
+				Assert.assertTrue("Innards are equal after conversion", Arrays.equals(replicaIdAsDate==null ? null : replicaIdAsDate.getInnards(), innards));
 				
 				System.out.println("Done with replica info get and conversion test");
 				return null;
@@ -154,7 +157,7 @@ public class TestStringUtils extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				String origUnid = "DF8ADEA0A485F3E34825718E00585666";
-				NotesUniversalNoteId unidObj = NotesUniversalNoteId.fromString(origUnid);
+				NotesUniversalNoteIdStruct unidObj = NotesUniversalNoteIdStruct.fromString(origUnid);
 				String formattedUnid = unidObj.toString();
 				Assert.assertEquals("Parsing and formatting UNID returns the same result", origUnid, formattedUnid);
 

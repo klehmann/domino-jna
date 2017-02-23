@@ -1,12 +1,15 @@
 package com.mindoo.domino.jna.utils;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.NotesUserId;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 
 import lotus.domino.Session;
 
@@ -30,7 +33,40 @@ public class IDUtils {
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	public static String getUserIdFromVault(String userName, String password, String idPath, String serverName) {
+	public static String extractUserIdFromVault(String userName, String password, String idPath, String serverName) {
+		return _getUserIdFromVault(userName, password, idPath, null, serverName);
+	}
+	
+	/**
+	 * Will contact the server and locate a vault for <code>userName</code>.<br>
+	 * Then downloads the ID file from the vault and store it in memory.<br>
+	 * 
+	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
+	 * @param password Password to id file being uploaded to the vault
+	 * @param idPath Path to where the download ID file should be created or overwritten
+	 * @param serverName Name of server to contact
+	 * @return the in-memory user id
+	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
+	 */
+	public static NotesUserId getUserIdFromVault(String userName, String password, String serverName) {
+		LongByReference rethKFC = new LongByReference();
+		_getUserIdFromVault(userName, password, null, rethKFC, serverName);
+		NotesUserId userId = new NotesUserId(rethKFC.getValue());
+		return userId;
+	}
+	
+	/**
+	 * Internal helper method to fetch the ID from the ID vault.
+	 * 
+	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
+	 * @param password Password to id file being uploaded to the vault
+	 * @param idPath if not null, path to where the download ID file should be created or overwritten
+	 * @param rethKFC if not null, returns the hKFC handle to the in-memory id
+	 * @param serverName Name of server to contact
+	 * @return the vault server name
+	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
+	 */
+	private static String _getUserIdFromVault(String userName, String password, String idPath, LongByReference rethKFC, String serverName) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
@@ -52,7 +88,7 @@ public class IDUtils {
 			}
 		}
 		
-		short result = notesAPI.SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, null, serverNameMem, 0, (short) 0, null);
+		short result = notesAPI.SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC, serverNameMem, 0, (short) 0, null);
 		NotesErrorUtils.checkResult(result);
 		
 		int vaultServerNameLength = 0;
@@ -80,6 +116,47 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	public static String putUserIdIntoVault(Session session, String userName, String password, String idPath, String serverName) {
+		return _putUserIdIntoVault(session, userName, password, idPath, null, serverName);
+	}
+	
+	/**
+	 * Will locate a vault server for user <code>userName</code> and
+	 * upload the specified ID contents to the vault, then return with the vault server name.<br>
+	 * 
+	 * @param session current legacy session
+	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
+	 * @param password Password to id file being uploaded to the vault
+	 * @param userId user id
+	 * @param serverName Name of server to contact
+	 * @return the vault server name
+	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
+	 */
+	public static String putUserIdIntoVault(Session session, String userName, String password, NotesUserId userId, String serverName) {
+		LongByReference phKFC = new LongByReference();
+		if (userId!=null) {
+			phKFC.setValue(userId.getKFCHandle());
+		}
+		else {
+			phKFC = null;
+		}
+		
+		return _putUserIdIntoVault(session, userName, password, null, phKFC, serverName);
+	}
+	
+	/**
+	 * Will open the ID file name provided, locate a vault server for user <code>userName</code>,
+	 * upload the ID file contents to the vault, then return with the vault server name.<br>
+	 * 
+	 * @param session current legacy session
+	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
+	 * @param password Password to id file being uploaded to the vault
+	 * @param idPath Path to where the download ID file should be created or overwritten or null to use the in-memory id
+	 * @param phKFC handle to the in-memory id or null to use an id file on disk
+	 * @param serverName Name of server to contact
+	 * @return the vault server name
+	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
+	 */
+	private static String _putUserIdIntoVault(Session session, String userName, String password, String idPath, LongByReference phKFC, String serverName) {
 		//opening any database on the server is required before putting the id fault, according to the
 		//C API documentation and sample "idvault.c"
 		NotesDatabase anyServerDb = new NotesDatabase(session, serverName, "names.nsf");
@@ -104,8 +181,6 @@ public class IDUtils {
 					serverNameMem.setByte(0, (byte) 0);
 				}
 			}
-			
-			Memory phKFC = new Memory(8);
 			
 			short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
 			NotesErrorUtils.checkResult(result);
@@ -202,7 +277,7 @@ public class IDUtils {
 			}
 		}
 		
-		Memory phKFC = new Memory(8);
+		LongByReference phKFC = new LongByReference();
 		IntByReference retdwFlags = new IntByReference();
 		
 		short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
@@ -347,11 +422,65 @@ public class IDUtils {
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		
-		Memory phKFC = new Memory(8);
+		LongByReference phKFC = new LongByReference();
+		
 		short result = notesAPI.SECKFMOpen(phKFC, idPathMem, passwordMem, 0, 0, null);
 		NotesErrorUtils.checkResult(result);
 
 		result = notesAPI.SECKFMClose(phKFC, 0, 0, null);
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Callback interface to work with an opened ID
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IDAccessCallback<T> {
+		
+		/**
+		 * Implement this method to work with the passed user id. <b>Do not store it anywhere, since it is disposed right after the method call!</b>.
+		 * 
+		 * @param id id
+		 * @throws Exception
+		 */
+		public T accessId(NotesUserId id) throws Exception;
+		
+	}
+	
+	/**
+	 * Opens an ID file and returns an in-memory handle for signing ({@link NotesNote#sign(NotesUserId, boolean)})
+	 * and using note encrypting ({@link NotesNote#copyAndEncrypt(NotesUserId, java.util.EnumSet)} /
+	 * {@link NotesNote#decrypt(NotesUserId)}).
+	 * 
+	 * @param idPath id path on disk
+	 * @param password id password
+	 * @param callback callback code to access the opened ID; we automatically close the ID file when the callback invocation is done
+	 * @return optional computation result
+	 * @throws Exception in case of errors
+	 */
+	public static <T> T openUserIdFile(String idPath, String password, IDAccessCallback<T> callback) throws Exception {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
+		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
+		
+		LongByReference phKFC = new LongByReference();
+		
+		//open the id file
+		short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+		NotesErrorUtils.checkResult(result);
+		
+		try {
+			NotesUserId id = new NotesUserId(phKFC.getValue());
+			//invoke callback code
+			return callback.accessId(id);
+		}
+		finally {
+			//and close the ID file afterwards
+			result = notesAPI.SECKFMClose(phKFC, 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+		}
+			
 	}
 }

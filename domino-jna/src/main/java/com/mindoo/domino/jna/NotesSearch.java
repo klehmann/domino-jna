@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.Date;
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
@@ -14,11 +15,11 @@ import com.mindoo.domino.jna.internal.NotesCAPI.b64_NsfSearchProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
+import com.mindoo.domino.jna.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.structs.NotesSearchMatch32Struct;
+import com.mindoo.domino.jna.structs.NotesSearchMatch64Struct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesItemTable;
-import com.mindoo.domino.jna.structs.NotesSearchMatch32;
-import com.mindoo.domino.jna.structs.NotesSearchMatch64;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -98,6 +99,8 @@ public class NotesSearch {
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database already recycled");
 		}
+
+		NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
@@ -122,8 +125,8 @@ public class NotesSearch {
 				apiCallback = new WinNotesCAPI.b64_NsfSearchProcWin() {
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
-							NotesItemTable summaryBuffer) {
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
+							NotesItemTableStruct summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
@@ -141,10 +144,13 @@ public class NotesSearch {
 
 							short noteClass = searchMatch.NoteClass;
 							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
+							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
-							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
+							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
+							
+							callback.noteFound(db, noteId, noteClass, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							return 0;
 						}
 						catch (Throwable t) {
@@ -158,8 +164,8 @@ public class NotesSearch {
 				apiCallback = new b64_NsfSearchProc() {
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64 searchMatch,
-							NotesItemTable summaryBuffer) {
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
+							NotesItemTableStruct summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
@@ -177,10 +183,13 @@ public class NotesSearch {
 
 							short noteClass = searchMatch.NoteClass;
 							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
+							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
-							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
+							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
+
+							callback.noteFound(db, noteId, noteClass, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							return 0;
 						}
 						catch (Throwable t) {
@@ -230,7 +239,7 @@ public class NotesSearch {
 			boolean tableWithHighOrderBitCanBeRecycled = false;
 			
 			try {
-				NotesTimeDate retUntil = new NotesTimeDate();
+				NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
 
 				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
 
@@ -283,7 +292,7 @@ public class NotesSearch {
 				result = notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormula,
 						hFilter, filterFlags,
 						viewTitleBuf, searchFlagsBitMask, searchFlags1, searchFlags2, searchFlags3, searchFlags4,
-						(short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil,
+						(short) (noteClassMask & 0xffff), sinceStruct, apiCallback, null, retUntil,
 						db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
 
 				if (invocationEx[0]!=null) {
@@ -295,7 +304,8 @@ public class NotesSearch {
 				}
 				NotesErrorUtils.checkResult(result);
 
-				return retUntil;
+				NotesTimeDate retUntilWrap = retUntil==null ? null : new  NotesTimeDate(retUntil);
+				return retUntilWrap;
 			}
 			finally {
 				//free handle of formula
@@ -317,8 +327,8 @@ public class NotesSearch {
 					final Throwable invocationEx[] = new Throwable[1];
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
-							NotesItemTable summaryBuffer) {
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
+							NotesItemTableStruct summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
@@ -336,10 +346,13 @@ public class NotesSearch {
 
 							short noteClass = searchMatch.NoteClass;
 							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
+							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
-							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
+							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
+
+							callback.noteFound(db, noteId, noteClass, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							return 0;
 						}
 						catch (Throwable t) {
@@ -354,8 +367,8 @@ public class NotesSearch {
 				apiCallback = new b32_NsfSearchProc() {
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32 searchMatch,
-							NotesItemTable summaryBuffer) {
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
+							NotesItemTableStruct summaryBuffer) {
 
 						try {
 							if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
@@ -373,10 +386,13 @@ public class NotesSearch {
 
 							short noteClass = searchMatch.NoteClass;
 							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesTimeDate dbCreated = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDate noteModified = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
+							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
 
-							callback.noteFound(db, noteId, noteClass, dbCreated, noteModified, itemTableData);
+							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
+							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
+
+							callback.noteFound(db, noteId, noteClass, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							return 0;
 						}
 						catch (Throwable t) {
@@ -426,7 +442,7 @@ public class NotesSearch {
 			NotesIDTable tableWithHighOrderBit = null;
 			boolean tableWithHighOrderBitCanBeRecycled = false;
 			try {
-				NotesTimeDate retUntil = new NotesTimeDate();
+				NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
 
 				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
 
@@ -478,7 +494,7 @@ public class NotesSearch {
 				short result;
 				result = notesAPI.b32_NSFSearchExtended3(db.getHandle32(), hFormula, hFilter, filterFlags,
 						viewTitleBuf, (int) (searchFlagsBitMask & 0xffff), searchFlags1, searchFlags2, searchFlags3, searchFlags4,
-						(short) (noteClassMask & 0xffff), since, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
+						(short) (noteClassMask & 0xffff), sinceStruct, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
 
 				if (invocationEx[0]!=null) {
 					//special case for JUnit testcases
@@ -489,7 +505,8 @@ public class NotesSearch {
 				}
 				NotesErrorUtils.checkResult(result);
 
-				return retUntil;
+				NotesTimeDate retUntilWrap = retUntil==null ? null : new NotesTimeDate(retUntil);
+				return retUntilWrap;
 			}
 			finally {
 				//free handle of formula

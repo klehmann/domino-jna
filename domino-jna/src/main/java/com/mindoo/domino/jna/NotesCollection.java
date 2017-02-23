@@ -36,8 +36,8 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.queries.condition.Selection;
-import com.mindoo.domino.jna.structs.NotesCollectionPosition;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
+import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -236,7 +236,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public int getIndexModifiedSequenceNo() {
 		NotesTimeDate ndtModified = getLastModifiedTime();
-		return ndtModified.Innards[0];
+		return ndtModified.getAdapter(NotesTimeDateStruct.class).Innards[0];
 	}
 	
 	/**
@@ -251,7 +251,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public NotesTimeDate getLastModifiedTime() {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		NotesTimeDate retLastModifiedTime = new NotesTimeDate();
+		NotesTimeDateStruct retLastModifiedTime = NotesTimeDateStruct.newInstance();
 		
 		if (NotesJNAContext.is64Bit()) {
 			notesAPI.b64_NIFGetLastModifiedTime(m_hCollection64, retLastModifiedTime);
@@ -259,7 +259,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NIFGetLastModifiedTime(m_hCollection32, retLastModifiedTime);
 		}
-		return retLastModifiedTime;
+		return new NotesTimeDate(retLastModifiedTime);
 	}
 
 	/**
@@ -835,7 +835,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public String locateNote(int noteId) {
 		checkHandle();
 
-		NotesCollectionPosition foundPos = new NotesCollectionPosition();
+		NotesCollectionPositionStruct foundPos = NotesCollectionPositionStruct.newInstance();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		if (NotesJNAContext.is64Bit()) {
@@ -1362,7 +1362,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			categoryPos[0] = catEntry.getPositionStr();
 			
-			NotesCollectionPosition pos = NotesCollectionPosition.toPosition(categoryPos[0]);
+			NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(categoryPos[0]);
 			pos.MinLevel = (byte) (pos.Level+1);
 			pos.MaxLevel = 32;
 			pos.write();
@@ -1435,7 +1435,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
 			int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
-		NotesCollectionPosition pos = NotesCollectionPosition.toPosition(startPosStr==null ? "0" : startPosStr);
+		NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(startPosStr==null ? "0" : startPosStr);
+		NotesCollectionPosition posWrap = new NotesCollectionPosition(pos);
 		
 		//decide whether we need to use the undocumented NIFReadEntriesExt
 		String readSingleColumnName = callback.getNameForSingleColumnRead();
@@ -1509,7 +1510,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 
 				NotesViewLookupResultData data;
-				data = readEntriesExt(pos, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask,
+				data = readEntriesExt(posWrap, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask,
 						diffTime, diffIDTable, readSingleColumnIndex);
 				
 				retDiffTime = data.getReturnedDiffTime();
@@ -1699,13 +1700,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 				//position of the first match; we skip (entries.size()) to read the remaining entries
 				boolean isFirstLookup = true;
 				
-				NotesCollectionPosition lookupPos = NotesCollectionPosition.toPosition(firstMatchPosStr);
+				NotesCollectionPositionStruct lookupPos = NotesCollectionPositionStruct.toPosition(firstMatchPosStr);
+				NotesCollectionPosition lookupPosWrap = new NotesCollectionPosition(lookupPos);
 				
 				boolean viewModified = false;
 				
 				while (remainingEntries>0) {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
-					data = readEntries(lookupPos, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask);
+					data = readEntries(lookupPosWrap, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask);
 					
 					if (isFirstLookup || isAutoUpdate()) {
 						//for the first lookup, make sure we start at the right position
@@ -1815,7 +1817,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 //		}
 		
 		IntByReference retNumMatches = new IntByReference();
-		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
+		NotesCollectionPositionStruct retIndexPos = NotesCollectionPositionStruct.newInstance();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		int findFlagsBitMask = Find.toBitMaskInt(findFlags);
 		short result;
@@ -1914,7 +1916,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * of notes that match the keys. Since all notes that match the keys
 	 * appear contiguously in the view or folder, you may pass the resulting
 	 * {@link NotesCollectionPosition} and match count as inputs to
-	 * {@link NotesCollection#readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet)}
+	 * {@link #readEntries(NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet)}
 	 * to read all the entries in the collection that match the keys.<br>
 	 * <br>
 	 * If multiple notes match the specified (partial) keys, and
@@ -1974,7 +1976,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			throw new IllegalArgumentException("No search keys specified");
 		
 		IntByReference retNumMatches = new IntByReference();
-		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
+		NotesCollectionPositionStruct retIndexPos = NotesCollectionPositionStruct.newInstance();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
@@ -2073,7 +2075,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		Memory nameLMBCS = NotesStringUtils.toLMBCS(name, true);
 
 		IntByReference retNumMatches = new IntByReference();
-		NotesCollectionPosition retIndexPos = new NotesCollectionPosition();
+		NotesCollectionPositionStruct retIndexPos = NotesCollectionPositionStruct.newInstance();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short findFlagsBitMask = Find.toBitMask(findFlags);
 		short result;
@@ -2206,11 +2208,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		short returnNavBitMask = Navigate.toBitMask(returnNavigator);
 		int readMaskBitMask = ReadMask.toBitMask(returnMask);
 		
+		NotesCollectionPositionStruct startPosStruct = startPos==null ? null : startPos.getAdapter(NotesCollectionPositionStruct.class);
+		
 		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference retBuffer = new LongByReference();
 			result = notesAPI.b64_NIFReadEntries(m_hCollection64, // hCollection
-					startPos, // IndexPos
+					startPosStruct, // IndexPos
 					skipNavBitMask, // SkipNavigator
 					skipCount, // SkipCount
 					returnNavBitMask, // ReturnNavigator
@@ -2241,7 +2245,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		else {
 			IntByReference retBuffer = new IntByReference();
 			result = notesAPI.b32_NIFReadEntries(m_hCollection32, // hCollection
-					startPos, // IndexPos
+					startPosStruct, // IndexPos
 					skipNavBitMask, // SkipNavigator
 					skipCount, // SkipCount
 					returnNavBitMask, // ReturnNavigator
@@ -2312,66 +2316,73 @@ public class NotesCollection implements IRecyclableNotesObject {
 		short skipNavBitMask = Navigate.toBitMask(skipNavigator);
 		short returnNavBitMask = Navigate.toBitMask(returnNavigator);
 		int readMaskBitMask = ReadMask.toBitMask(returnMask);
+		NotesCollectionPositionStruct startPosStruct = startPos==null ? null : startPos.getAdapter(NotesCollectionPositionStruct.class);
 		
 		int flags = 0;
 		
-		NotesTimeDate retDiffTime = new NotesTimeDate();
-		NotesTimeDate retModifiedTime = new NotesTimeDate();
+		NotesTimeDateStruct retDiffTimeStruct = NotesTimeDateStruct.newInstance();
+		NotesTimeDateStruct retModifiedTimeStruct = NotesTimeDateStruct.newInstance();
 		IntByReference retSequence = new IntByReference();
 
 		String singleColumnLookupName = columnNumber == null ? null : getColumnName(columnNumber);
 		
+		NotesTimeDateStruct diffTimeStruct = diffTime==null ? null : diffTime.getAdapter(NotesTimeDateStruct.class);
+		
 		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference retBuffer = new LongByReference();
-			result = notesAPI.b64_NIFReadEntriesExt(m_hCollection64, startPos,
+			result = notesAPI.b64_NIFReadEntriesExt(m_hCollection64, startPosStruct,
 					skipNavBitMask,
 					skipCount, returnNavBitMask, returnCount, readMaskBitMask,
-					diffTime, diffIDTable==null ? 0 : diffIDTable.getHandle64(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
+					diffTimeStruct, diffIDTable==null ? 0 : diffIDTable.getHandle64(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
-					retDiffTime, retModifiedTime, retSequence);
+					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
 			
 			NotesErrorUtils.checkResult(result);
 			
-			int indexModifiedSequenceNo = retModifiedTime.Innards[0]; //getIndexModifiedSequenceNo();
+			int indexModifiedSequenceNo = retModifiedTimeStruct.Innards[0]; //getIndexModifiedSequenceNo();
 			
+			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
+
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
 			if (iBufLength==0) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
-						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime);
+						retSignalFlags.getValue(), null, indexModifiedSequenceNo, new NotesTimeDate(retDiffTimeStruct));
 			}
 			else {
 				boolean convertStringsLazily = true;
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
+						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, singleColumnLookupName);
 				return viewData;
 			}
 		}
 		else {
 			IntByReference retBuffer = new IntByReference();
-			result = notesAPI.b32_NIFReadEntriesExt(m_hCollection32, startPos,
+			result = notesAPI.b32_NIFReadEntriesExt(m_hCollection32, startPosStruct,
 					skipNavBitMask,
 					skipCount, returnNavBitMask, returnCount, readMaskBitMask,
-					diffTime, diffIDTable==null ? 0 : diffIDTable.getHandle32(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
+					diffTimeStruct, diffIDTable==null ? 0 : diffIDTable.getHandle32(), columnNumber==null ? NotesCAPI.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
-					retDiffTime, retModifiedTime, retSequence);
+					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
 			NotesErrorUtils.checkResult(result);
 			
-			int indexModifiedSequenceNo = retModifiedTime.Innards[0]; //getIndexModifiedSequenceNo();
+			int indexModifiedSequenceNo = retModifiedTimeStruct.Innards[0]; //getIndexModifiedSequenceNo();
 
+			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
+			
 			if (retBufferLength.getValue()==0) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
-						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTime);
+						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTimeWrap);
 			}
 			else {
 				boolean convertStringsLazily = true;
 
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
+						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, singleColumnLookupName);
 				return viewData;
 			}
 		}

@@ -8,9 +8,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesIDTable.ComparisonResult;
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
 
 import lotus.domino.Session;
 
@@ -213,7 +213,7 @@ public class TestIdTable extends BaseJNATestClass {
 				NotesTimeDate timeAfter = table1.getTime();
 				
 				Assert.assertNotNull("Timedate has not been overwritten", timeAfter);
-				Assert.assertArrayEquals("Timedate contains the original value", timeBefore.Innards, timeAfter.Innards);
+				Assert.assertArrayEquals("Timedate contains the original value", timeBefore.getInnards(), timeAfter.getInnards());
 				
 				saveHeader = false;
 				table1.replaceWith(table2, saveHeader);

@@ -2,16 +2,14 @@ package com.mindoo.domino.jna.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Formatter;
+import java.util.List;
 
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesOriginatorId;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteId;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -42,12 +40,48 @@ public class NotesStringUtils {
 
 		return textLen;
 	}
-
+	
+	/**
+	 * Reads a list of null terminated strings in LMBCS format at the specified pointer
+	 * 
+	 * @param inPtr pointer
+	 * @param numEntries number of null terminated strings
+	 * @return string list
+	 */
+	public static List<String> fromLMBCSStringList(Pointer inPtr, int numEntries) {
+		List<String> stringList = new ArrayList<String>();
+		
+		Pointer ptrStartOfString = inPtr;
+		
+		for (int i=0; i<numEntries; i++) {
+			int currStringOffset = 0;
+			
+			while(true) {
+				byte b = ptrStartOfString.getByte(currStringOffset);
+				currStringOffset++;
+				if (b==0) {
+					break;
+				}
+			}
+			
+			String currString = fromLMBCS(ptrStartOfString, currStringOffset-1);
+			stringList.add(currString);
+			
+			if ((i+1)<numEntries) {
+				ptrStartOfString = ptrStartOfString.share(currStringOffset);
+			}
+			else {
+				break;
+			}
+		}
+		return stringList;
+	}
+	
 	/**
 	 * Converts an LMBCS string to a Java String
 	 * 
 	 * @param inPtr pointer in memory
-	 * @param textLen length of text
+	 * @param textLen length of text, use -1 to let the method search for a terminating \0
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(Pointer inPtr, long textLen) {
@@ -55,6 +89,20 @@ public class NotesStringUtils {
 
 		if (textLen==0) {
 			return "";
+		}
+		
+		if (textLen==-1) {
+			int foundLen = 0;
+			int offset = 0;
+			while (true) {
+				foundLen++;
+				
+				if (inPtr.getByte(offset)==0) {
+					break;
+				}
+				offset++;
+			}
+			textLen = foundLen;
 		}
 		
 		Pointer pText = inPtr;
@@ -203,44 +251,6 @@ public class NotesStringUtils {
 	}
 
 	/**
-	 * Extracts the UNID from a {@link NotesUniversalNoteId} and converts it to a string
-	 * 
-	 * @param unid UNID object
-	 * @return UNID string
-	 */
-	public static String extractUNID(NotesUniversalNoteId unid) {
-		unid.write();
-		Pointer oidPtr = unid.getPointer();
-		
-		Formatter formatter = new Formatter();
-		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
-		String unidStr = formatter.toString().toUpperCase();
-		formatter.close();
-		return unidStr;
-	}
-	
-	/**
-	 * Extracts the UNID from a {@link NotesOriginatorId} and converts it to a string
-	 * 
-	 * @param oid originator id
-	 * @return unid
-	 */
-	public static String extractUNID(NotesOriginatorId oid) {
-		oid.write();
-		Pointer oidPtr = oid.getPointer();
-		
-		Formatter formatter = new Formatter();
-		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
-		String unid = formatter.toString().replace(" ", "0").toUpperCase();
-		formatter.close();
-		return unid;
-	}
-	
-	/**
 	 * Converts bytes in memory to a UNID
 	 * 
 	 * @param innardsFile innards of file part
@@ -252,22 +262,6 @@ public class NotesStringUtils {
 		
 		formatter.format("%16x", innardsFile);
 		formatter.format("%16x", innardsNote);
-		String unid = formatter.toString().toUpperCase();
-		formatter.close();
-		return unid;
-	}
-	
-	/**
-	 * Converts bytes in memory to a UNID
-	 * 
-	 * @param buf memory
-	 * @return unid
-	 */
-	public static String toUNID(Memory buf) {
-		Formatter formatter = new Formatter();
-		ByteBuffer data = buf.getByteBuffer(0, buf.size()).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
 		String unid = formatter.toString().toUpperCase();
 		formatter.close();
 		return unid;

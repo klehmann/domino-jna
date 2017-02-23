@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.structs.NotesCollectionStats;
+import com.mindoo.domino.jna.NotesCollectionStats;
 
 /**
  * These flags control what information is returned by NIFReadEntries
@@ -34,7 +34,7 @@ public enum ReadMask {
 	SCORE(0x00000200),
 	/** TRUE if this entry is unread, FALSE otherwise */
 	INDEXUNREAD(0x00000400),
-	/** Collection statistics (as a {@link NotesCollectionStats} structure) */
+	/** Collection statistics (as a {@link NotesCollectionStatsWrap} structure) */
 	COLLECTIONSTATS(0x00000100),
 	/** Return the position of an entry in the collection */
 	INDEXPOSITION(0x00004000),

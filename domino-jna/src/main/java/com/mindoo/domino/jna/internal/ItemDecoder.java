@@ -5,11 +5,12 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.structs.NotesNumberPair;
-import com.mindoo.domino.jna.structs.NotesRange;
-import com.mindoo.domino.jna.structs.NotesTimeDate;
-import com.mindoo.domino.jna.structs.NotesTimeDatePair;
+import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
+import com.mindoo.domino.jna.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -86,14 +87,13 @@ public class ItemDecoder {
 	
 	public static Calendar decodeTimeDate(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
 		NotesTimeDate timeDate = new NotesTimeDate(ptr);
-		timeDate.read();
 		
 		Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
 		return calDate;
 	}
 	
 	public static List<Object> decodeNumberList(NotesCAPI notesAPI, Pointer ptr, int valueLength) {
-		NotesRange range = new NotesRange(ptr);
+		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		
 		//read number of list and range entries in range
@@ -115,7 +115,7 @@ public class ItemDecoder {
 		
 		for (int t=0; t<rangeEntriesAsInt; t++) {
 			Pointer ptrListEntry = ptrAfterListEntries.share(t * NotesCAPI.numberPairSize);
-			NotesNumberPair numPair = new NotesNumberPair(ptrListEntry);
+			NotesNumberPairStruct numPair = NotesNumberPairStruct.newInstance(ptrListEntry);
 			numPair.read();
 			double lower = numPair.Lower;
 			double upper = numPair.Upper;
@@ -127,7 +127,7 @@ public class ItemDecoder {
 	}
 	
 	public static List<Object> decodeTimeDateList(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
-		NotesRange range = new NotesRange(ptr);
+		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		
 		//read number of list and range entries in range
@@ -142,7 +142,6 @@ public class ItemDecoder {
 		for (int t=0; t<listEntriesAsInt; t++) {
 			Pointer ptrListEntry = ptrAfterRange.share(t * NotesCAPI.timeDateSize);
 			NotesTimeDate timeDate = new NotesTimeDate(ptrListEntry);
-			timeDate.read();
 			
 			Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
 			if (calDate!=null) {
@@ -155,14 +154,14 @@ public class ItemDecoder {
 		
 		for (int t=0; t<rangeEntriesAsInt; t++) {
 			Pointer ptrRangeEntry = ptrAfterListEntries.share(t * NotesCAPI.timeDatePairSize);
-			NotesTimeDatePair timeDatePair = new NotesTimeDatePair(ptrRangeEntry);
+			NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(ptrRangeEntry);
 			timeDatePair.read();
 			
-			NotesTimeDate lowerTimeDate = timeDatePair.Lower;
-			NotesTimeDate upperTimeDate = timeDatePair.Upper;
+			NotesTimeDateStruct lowerTimeDate = timeDatePair.Lower;
+			NotesTimeDateStruct upperTimeDate = timeDatePair.Upper;
 			
-			Calendar lowerCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, lowerTimeDate);
-			Calendar upperCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, upperTimeDate);
+			Calendar lowerCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(lowerTimeDate));
+			Calendar upperCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(upperTimeDate));
 			
 			calendarValues.add(new Calendar[] {lowerCalDate, upperCalDate});
 		}

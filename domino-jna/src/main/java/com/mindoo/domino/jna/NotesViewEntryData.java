@@ -664,7 +664,7 @@ public class NotesViewEntryData {
 	 * Convenience function that converts a column value to a string
 	 * 
 	 * @param columnName programatic column name
-	 * @param defaultValue default value if column is empty or is not a number
+	 * @param defaultValue default value if column is empty or is not a string
 	 * @return string value or null
 	 */
 	public String getAsString(String columnName, String defaultValue) {
@@ -757,7 +757,7 @@ public class NotesViewEntryData {
 	 * Convenience function that converts a column value to a {@link Calendar}
 	 * 
 	 * @param columnName programatic column name
-	 * @param defaultValue default value if column is empty or is not a number
+	 * @param defaultValue default value if column is empty or is not a Calendar
 	 * @return calendar value or null
 	 */
 	public Calendar getAsCalendar(String columnName, Calendar defaultValue) {
