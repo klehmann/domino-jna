@@ -43,7 +43,6 @@ public class IDUtils {
 	 * 
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
-	 * @param idPath Path to where the download ID file should be created or overwritten
 	 * @param serverName Name of server to contact
 	 * @return the in-memory user id
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
@@ -434,6 +433,8 @@ public class IDUtils {
 	/**
 	 * Callback interface to work with an opened ID
 	 * 
+	 * @param <T> computation result type
+	 * 
 	 * @author Karsten Lehmann
 	 */
 	public static interface IDAccessCallback<T> {
@@ -442,7 +443,8 @@ public class IDUtils {
 		 * Implement this method to work with the passed user id. <b>Do not store it anywhere, since it is disposed right after the method call!</b>.
 		 * 
 		 * @param id id
-		 * @throws Exception
+		 * @return optional computation result
+		 * @throws Exception in case of errors
 		 */
 		public T accessId(NotesUserId id) throws Exception;
 		

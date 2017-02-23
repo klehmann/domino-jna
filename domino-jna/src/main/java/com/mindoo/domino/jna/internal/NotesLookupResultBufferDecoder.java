@@ -45,7 +45,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position of first match, if returned by find method
 	 * @param indexModifiedSequenceNo index modified sequence no
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
@@ -68,7 +68,7 @@ public class NotesLookupResultBufferDecoder {
 	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
 	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, Object...)}
 	 * @param indexModifiedSequenceNo index modified sequence no
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data

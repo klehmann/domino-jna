@@ -34,7 +34,7 @@ public enum ReadMask {
 	SCORE(0x00000200),
 	/** TRUE if this entry is unread, FALSE otherwise */
 	INDEXUNREAD(0x00000400),
-	/** Collection statistics (as a {@link NotesCollectionStatsWrap} structure) */
+	/** Collection statistics (as a {@link NotesCollectionStats} object) */
 	COLLECTIONSTATS(0x00000100),
 	/** Return the position of an entry in the collection */
 	INDEXPOSITION(0x00004000),

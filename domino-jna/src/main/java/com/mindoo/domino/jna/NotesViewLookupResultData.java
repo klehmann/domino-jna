@@ -30,7 +30,7 @@ public class NotesViewLookupResultData {
 	 * @param signalFlags signal flags indicating view index changes and other stuff
 	 * @param pos first matching position
 	 * @param indexModifiedSequenceNo index modified sequence number
-	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 */
 	public NotesViewLookupResultData(NotesCollectionStats stats, List<NotesViewEntryData> entries, int numEntriesSkipped, int numEntriesReturned, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime) {
 		m_stats = stats;
@@ -44,7 +44,7 @@ public class NotesViewLookupResultData {
 	}
 
 	/**
-	 * For differential view reading via {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)},
+	 * For differential view reading via {@link NotesCollection#readEntriesExt(NotesCollectionPosition, java.util.EnumSet, int, java.util.EnumSet, int, java.util.EnumSet, NotesTimeDate, NotesIDTable, Integer)},
 	 * this method returns the returned diff time that can be passed in subsequent read calls to
 	 * get incremental view updates
 	 * 

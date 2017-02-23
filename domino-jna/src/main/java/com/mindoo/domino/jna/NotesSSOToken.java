@@ -22,7 +22,7 @@ public class NotesSSOToken {
 	 * @param domains DNS domains
 	 * @param secureOnly true to recommend that the token only be set on a secure connection
 	 * @param data token data
-	 * @param renewalDate
+	 * @param renewalDate optional date when the token needs a renewal (if specified on token generation)
 	 */
 	public NotesSSOToken(String name, List<String> domains, boolean secureOnly, String data, NotesTimeDate renewalDate) {
 		m_name = name;

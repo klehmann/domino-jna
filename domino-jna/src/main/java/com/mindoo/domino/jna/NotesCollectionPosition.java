@@ -132,7 +132,7 @@ public class NotesCollectionPosition implements IAdaptable {
 	/**
 	 * MAXIMUM level that this position is allowed to be nagivated to. This is
 	 * useful to navigate a subtree using all navigator codes. This field is
-	 * IGNORED unless the {@Link Navigate#MAXLEVEL} flag is enabled (for backward
+	 * IGNORED unless the {@link Navigate#MAXLEVEL} flag is enabled (for backward
 	 * compatibility)
 	 * 
 	 * @return max level

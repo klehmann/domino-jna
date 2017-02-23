@@ -6,7 +6,7 @@ import com.mindoo.domino.jna.NotesCollection;
 
 /**
  * These flags control how
- * {@link NotesCollection#readEntries(com.mindoo.domino.jna.structs.NotesCollectionPositionWrap, EnumSet, int, EnumSet, int, EnumSet)}
+ * {@link NotesCollection#readEntries(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet)}
  * steps through a collection.<br>
  * <br>
  * The flags are used to control both the order in which NIFReadEntries:<br>
