@@ -80,7 +80,13 @@ public class CollectionDataCache implements Serializable {
 	 * @return size
 	 */
 	public int size() {
-		return m_cacheEntries.size();
+		m_rwLock.readLock().lock();
+		try {
+			return m_cacheEntries.size();
+		}
+		finally {
+			m_rwLock.readLock().unlock();
+		}
 	}
 	
 	/**
