@@ -70,7 +70,8 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 		return null;
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("Level", "MinLevel", "MaxLevel", "Tumbler");
 	}
 	

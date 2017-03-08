@@ -42,9 +42,11 @@ public class NotesBlockIdStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("pool", "block");
 	}
+	
 	/**
 	 * @param pool pool handle<br>
 	 * C type : DHANDLE<br>

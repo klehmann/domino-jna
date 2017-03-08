@@ -95,7 +95,8 @@ public class NotesOriginatorIdStruct extends BaseStructure implements IAdaptable
 		return null;
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("File", "Note", "Sequence", "SequenceTime");
 	}
 	

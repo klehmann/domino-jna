@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 /**
@@ -47,7 +48,7 @@ import com.sun.jna.Structure;
  * The "Note" member of the UNID contains the date/time when the very first copy of the note
  * was stored into the first NSF (Note: date/time from $CREATED item, if exists, takes precedence).
  */
-public class NotesUniversalNoteIdStruct extends BaseStructure {
+public class NotesUniversalNoteIdStruct extends BaseStructure implements IAdaptable {
 	/** C type : DBID */
 	public NotesTimeDateStruct File;
 	/** C type : TIMEDATE */
@@ -70,7 +71,8 @@ public class NotesUniversalNoteIdStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("File", "Note");
 	}
 	
@@ -142,12 +144,11 @@ public class NotesUniversalNoteIdStruct extends BaseStructure {
 	}
 	
 	/**
-	 * Converts a hex encoded UNID to a {@link NotesUniversalNoteIdStruct} object
+	 * Changes the internal value to a UNID formatted as string
 	 * 
 	 * @param unidStr UNID string
-	 * @return UNID object
 	 */
-	public static NotesUniversalNoteIdStruct fromString(String unidStr) {
+	public void setUnid(String unidStr) {
 		if (unidStr.length() != 32) {
 			throw new IllegalArgumentException("UNID is expected to have 32 characters");
 		}
@@ -160,7 +161,32 @@ public class NotesUniversalNoteIdStruct extends BaseStructure {
 
 		NotesTimeDateStruct file = new NotesTimeDateStruct(new int[] {fileInnards0, fileInnards1});
 		NotesTimeDateStruct note = new NotesTimeDateStruct(new int[] {noteInnards0, noteInnards1});
-		
-		return new NotesUniversalNoteIdStruct(file, note);
+
+		this.File = file;
+		this.Note = note;
+		write();
+	}
+	
+	/**
+	 * Converts a hex encoded UNID to a {@link NotesUniversalNoteIdStruct} object
+	 * 
+	 * @param unidStr UNID string
+	 * @return UNID object
+	 */
+	public static NotesUniversalNoteIdStruct fromString(String unidStr) {
+		NotesUniversalNoteIdStruct unid = NotesUniversalNoteIdStruct.newInstance();
+		unid.setUnid(unidStr);
+		return unid;
+	}
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesUniversalNoteIdStruct.class) {
+			return (T) this;
+		}
+		else if (clazz == Pointer.class) {
+			return (T) getPointer();
+		}
+		return null;
 	}
 }

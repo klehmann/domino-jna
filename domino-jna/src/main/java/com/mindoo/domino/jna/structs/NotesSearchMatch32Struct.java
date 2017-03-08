@@ -51,7 +51,8 @@ public class NotesSearchMatch32Struct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("ID", "OriginatorID", "NoteClass", "SERetFlags", "Privileges", "SummaryLength");
 	}
 	

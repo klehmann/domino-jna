@@ -38,7 +38,8 @@ public class NotesSSOTokenStruct32 extends Structure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("mhName", "mhDomainList", "wNumDomains", "bSecureOnly", "mhData");
 	}
 	

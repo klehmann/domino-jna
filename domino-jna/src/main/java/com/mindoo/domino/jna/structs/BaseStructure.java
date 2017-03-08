@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.structs;
 
+import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
@@ -44,13 +45,12 @@ public abstract class BaseStructure extends Structure {
 		super(mapper);
 	}
 	
-	@SuppressWarnings("rawtypes")
 	@Override
-	protected List getFieldList() {
-		return AccessController.doPrivileged(new PrivilegedAction<List>() {
+	protected List<Field> getFieldList() {
+		return AccessController.doPrivileged(new PrivilegedAction<List<Field>>() {
 
 			@Override
-			public List run() {
+			public List<Field> run() {
 				return BaseStructure.super.getFieldList();
 			}
 		});

@@ -81,7 +81,8 @@ public class NotesCDFieldStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("Signature", "Length", "Flags", "DataType", "ListDelim", "Digits", "Format", "Attributes", "Unused", "Date", "Time", "Zone", "Structure", "FontID", "DVLength", "ITLength", "TabOrder", "IVLength", "NameLength", "DescLength", "TextValueLength");
 	}
 	

@@ -58,7 +58,8 @@ public class WinNotesNamesListHeader32Struct extends BaseStructure {
 			}});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("NumNames", "ID", "Product", "Check", "Authenticated");
 	}
 	

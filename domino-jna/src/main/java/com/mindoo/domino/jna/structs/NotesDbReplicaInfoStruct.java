@@ -71,7 +71,8 @@ public class NotesDbReplicaInfoStruct extends BaseStructure implements IAdaptabl
 		return null;
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("ID", "Flags", "CutoffInterval", "Cutoff");
 	}
 	

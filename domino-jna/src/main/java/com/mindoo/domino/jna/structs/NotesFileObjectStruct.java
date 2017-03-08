@@ -60,7 +60,8 @@ public class NotesFileObjectStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("Header", "FileNameLength", "HostType", "CompressionType", "FileAttributes", "Flags", "FileSize", "FileCreated", "FileModified");
 	}
 	

@@ -46,7 +46,8 @@ public class NotesGlobalInstanceId64Struct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("File", "Note", "NoteID");
 	}
 	

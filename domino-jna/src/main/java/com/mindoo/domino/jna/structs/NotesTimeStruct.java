@@ -60,7 +60,8 @@ public class NotesTimeStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("year", "month", "day", "weekday", "hour", "minute", "second", "hundredth", "dst", "zone", "GM");
 	}
 	

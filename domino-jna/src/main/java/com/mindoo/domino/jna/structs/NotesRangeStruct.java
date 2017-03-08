@@ -37,7 +37,8 @@ public class NotesRangeStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("ListEntries", "RangeEntries");
 	}
 	

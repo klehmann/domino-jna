@@ -36,7 +36,8 @@ public class NotesItemValueTableStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("Length", "Items");
 	}
 	

@@ -50,7 +50,8 @@ public class NotesBuildVersionStruct extends BaseStructure {
 		});
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("MajorVersion", "MinorVersion", "QMRNumber", "QMUNumber", "HotfixNumber", "Flags", "FixpackNumber", "Spare");
 	}
 	

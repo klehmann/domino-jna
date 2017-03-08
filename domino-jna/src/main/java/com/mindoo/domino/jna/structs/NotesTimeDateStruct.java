@@ -75,7 +75,8 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 		super();
 	}
 	
-	protected List<? > getFieldOrder() {
+	@Override
+	protected List<String> getFieldOrder() {
 		return Arrays.asList("Innards");
 	}
 	
