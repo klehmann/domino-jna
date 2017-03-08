@@ -2401,4 +2401,45 @@ public String ERR_MSG_SCOS_FILE_SIZE = "\nSCOS database specification out of ran
 	public short ERR_FT_NOT_INDEXED = PKG_FT+2; 
 	public String ERR_MSG_FT_NOT_INDEXED = "Database is not full-text indexed";
 
+	public short PKG_MISC = 0x0400;	/* Codes are limited to 0 - 191 */
+
+	public short ERR_QUEUE_NOT_EMPTY = PKG_MISC+1;
+	public String ERRR_MSG_QUEUE_NOT_EMPTY = "Deleting a non-empty queue";
+	
+	public short ERR_QUEUE_EMPTY = PKG_MISC+2;
+	public String ERR_MSG_QUEUE_EMPTY = "No more entries to dequeue";
+
+	public short ERR_MQ_POOLFULL = PKG_MISC+94;
+	public String ERR_MSG_MQ_POOLFULL = "Insufficient memory - Message Queue pool is full.";
+	
+	public short ERR_MQ_TIMEOUT = PKG_MISC+95;
+	public String ERR_MSG_MQ_TIMEOUT = "Timeout occurred waiting for message.";
+	
+	public short ERR_MQSCAN_ABORT = PKG_MISC+96;
+	public String ERR_MSG_MQSCAN_ABORT = "Message Queue scan was aborted.";
+	
+	public short ERR_DUPLICATE_MQ = PKG_MISC+97;
+	public String ERR_MSG_DUPLICATE_MQ = "Message Queue name already in use.";
+	
+	public short ERR_NO_SUCH_MQ	= PKG_MISC+98;
+	public String ERR_MSG_NO_SUCH_MQ = "No Message Queue with that name.";
+	
+	public short ERR_MQ_EXCEEDED_QUOTA = PKG_MISC+99;
+	public String ERR_MQ_MSG_EXCEEDED_QUOTA = "Message Queue is full.";
+	
+	public short ERR_MQ_EMPTY = PKG_MISC+100;
+	public String ERR_MSG_MQ_EMPTY = "Message Queue is empty.";
+	
+	public short ERR_MQ_BFR_TOO_SMALL = PKG_MISC+101;
+	public String ERR_MSG_MQ_BFR_TOO_SMALL = "Message is larger than the buffer provided.";
+	
+	public short ERR_MQ_QUITTING = PKG_MISC+102;
+	public String ERR_MSG_MQ_QUITTING = "Quit is pending on the Message Queue";
+	
+	public short ERR_MQSCAN_DEQUEUE = PKG_MISC+106;
+	public String ERR_MSG_MQSCAN_DEQUEUE = "Dequeue current message in enumeration";
+	
+	public short ERR_MQSCAN_DELETE = PKG_MISC+107;
+	public String ERR_MSG_MQSCAN_DELETE = "Delete current message in enumeration";
+	
 }
