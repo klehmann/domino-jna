@@ -31,4 +31,7 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 	public interface IdEnumerateProcWin extends IdEnumerateProc, StdCallCallback { /* StdCallCallback if using __stdcall__ */
 	};
 
+	public interface MQScanCallbackWin extends MQScanCallback, StdCallCallback { /* StdCallCallback if using __stdcall__ */
+    }
+
 }

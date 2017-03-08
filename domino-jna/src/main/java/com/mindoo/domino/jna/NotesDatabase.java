@@ -2229,4 +2229,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 	
+	/**
+	 * Hides the design of this database
+	 */
+	public void hideDesign() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFHideDesign(m_hDB64, m_hDB64, 0, 0);
+		}
+		else {
+			result = notesAPI.b32_NSFHideDesign(m_hDB32, m_hDB32, 0, 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
 }

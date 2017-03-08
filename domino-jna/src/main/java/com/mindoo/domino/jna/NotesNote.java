@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
+import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.UpdateNote;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -26,9 +27,13 @@ import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
+import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -1000,6 +1005,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_OBJECT) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
+			supportedType = true;
+		}
 		
 		if (!supportedType) {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
@@ -1083,6 +1091,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 			//TODO add support for other object types
 			return Arrays.asList((Object) objDescriptor);
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
+			//skip LIST structure
+			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(valueDataPtr.share(2));
+			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
+			return Arrays.asList((Object) unid);
 		}
 		else {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
@@ -1928,6 +1942,1157 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		NotesErrorUtils.checkResult(result);
 	}
+
+	/**
+	 * Removes any existing field with the specified name and creates a new one with the specified value, setting the {@link ItemType#SUMMARY}<br>
+	 * We support the following value types:
+	 * <ul>
+	 * <li>String and List&lt;String&gt; (max. 65535 entries)</li>
+	 * <li>Double, double, Integer, int, Long, long, Float, float for numbers (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number types for multiple numbers (max. 65535 entries)</li>
+	 * <li>Double[], double[], Integer[], int[], Long[], long[], Float[], float[] with 2 elements (lower/upper) for number ranges (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number range types for multiple number ranges</li>
+	 * <li>Calendar, Date, NotesTimeDate</li>
+	 * <li>{@link List} of date types for multiple dates</li>
+	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
+	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
+	 * </ul>
+	 * 
+	 * @param itemName item name
+	 * @param value item value, see method comment for allowed types
+	 * @return created item
+	 */
+	public NotesItem replaceItemValue(String itemName, Object value) {
+		return replaceItemValue(itemName, EnumSet.of(ItemType.SUMMARY), value);
+	}
+
+	/**
+	 * Removes any existing field with the specified name and creates a new one with the specified value.<br>
+	 * We support the following value types:
+	 * <ul>
+	 * <li>String and List&lt;String&gt; (max. 65535 entries)</li>
+	 * <li>Double, double, Integer, int, Long, long, Float, float for numbers (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number types for multiple numbers (max. 65535 entries)</li>
+	 * <li>Double[], double[], Integer[], int[], Long[], long[], Float[], float[] with 2 elements (lower/upper) for number ranges (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number range types for multiple number ranges</li>
+	 * <li>Calendar, Date, NotesTimeDate</li>
+	 * <li>{@link List} of date types for multiple dates</li>
+	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
+	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
+	 * </ul>
+	 * 
+	 * @param itemName item name
+	 * @param flags item flags, e.g. {@link ItemType#SUMMARY}
+	 * @param value item value, see method comment for allowed types
+	 * @return created item
+	 */
+	public NotesItem replaceItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
+		if (!hasSupportedItemObjectType(value)) {
+			throw new IllegalArgumentException("Unsupported value type: "+(value==null ? "null" : value.getClass().getName()));
+		}
+		
+		while (hasItem(itemName)) {
+			removeItem(itemName);
+		}
+		return appendItemValue(itemName, flags, value);
+	}
+	
+	@SuppressWarnings("rawtypes")
+	private boolean hasSupportedItemObjectType(Object value) {
+		if (value instanceof String) {
+			return true;
+		}
+		else if (value instanceof Number) {
+			return true;
+		}
+		else if (value instanceof Calendar || value instanceof NotesTimeDate || value instanceof Date) {
+			return true;
+		}
+		else if (value instanceof List && ((List)value).isEmpty()) {
+			return true;
+		}
+		else if (value instanceof List && isStringList((List) value)) {
+			return true;
+		}
+		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
+			return true;
+		}
+		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+			return true;
+		}
+		else if (value instanceof Calendar[] && ((Calendar[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof NotesTimeDate[] && ((NotesTimeDate[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Date[] && ((Date[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Number[] && ((Number[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Double[] && ((Double[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Integer[] && ((Integer[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Long[] && ((Long[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof Float[] && ((Float[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof double[] && ((double[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof int[] && ((int[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof long[] && ((long[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof float[] && ((float[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof NotesUniversalNoteId) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Creates a new item with the specified value, setting the {@link ItemType#SUMMARY} (does not overwrite items with the same name)<br>
+	 * We support the following value types:
+	 * <ul>
+	 * <li>String and List&lt;String&gt; (max. 65535 entries)</li>
+	 * <li>Double, double, Integer, int, Long, long, Float, float for numbers (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number types for multiple numbers (max. 65535 entries)</li>
+	 * <li>Double[], double[], Integer[], int[], Long[], long[], Float[], float[] with 2 elements (lower/upper) for number ranges (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number range types for multiple number ranges</li>
+	 * <li>Calendar, Date, NotesTimeDate</li>
+	 * <li>{@link List} of date types for multiple dates</li>
+	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
+	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
+	 * </ul>
+	 * 
+	 * @param itemName item name
+	 * @param value item value, see method comment for allowed types
+	 * @return created item
+	 */
+	public NotesItem appendItemValue(String itemName, Object value) {
+		return appendItemValue(itemName, EnumSet.of(ItemType.SUMMARY), value);
+	}
+	
+	/**
+	 * Creates a new item with the specified item flags and value<br>
+	 * We support the following value types:
+	 * <ul>
+	 * <li>String and List&lt;String&gt; (max. 65535 entries)</li>
+	 * <li>Double, double, Integer, int, Long, long, Float, float for numbers (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number types for multiple numbers (max. 65535 entries)</li>
+	 * <li>Double[], double[], Integer[], int[], Long[], long[], Float[], float[] with 2 elements (lower/upper) for number ranges (will all be converted to double, because that's how Domino stores them)</li>
+	 * <li>{@link List} of number range types for multiple number ranges</li>
+	 * <li>Calendar, Date, NotesTimeDate</li>
+	 * <li>{@link List} of date types for multiple dates</li>
+	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
+	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
+	 * <li>{@link NotesUniversalNoteId}</li> for $REF like items</li>
+	 * </ul>
+	 * 
+	 * @param itemName item name
+	 * @param flags item flags
+	 * @param value item value, see method comment for allowed types
+	 * @return created item
+	 */
+	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		if (value instanceof String) {
+			Memory strValueMem = NotesStringUtils.toLMBCS((String)value, false);
+
+			int valueSize = (int) (2 + (strValueMem==null ? 0 : strValueMem.size()));
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
+					valuePtr = valuePtr.share(2);
+					if (strValueMem!=null) {
+						valuePtr.write(0, strValueMem.getByteArray(0, (int) strValueMem.size()), 0, (int) strValueMem.size());
+					}
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
+					valuePtr = valuePtr.share(2);
+					if (strValueMem!=null) {
+						valuePtr.write(0, strValueMem.getByteArray(0, (int) strValueMem.size()), 0, (int) strValueMem.size());
+					}
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT, rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		
+		}
+		else if (value instanceof Number) {
+			int valueSize = 2 + 8;
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
+					valuePtr = valuePtr.share(2);
+					valuePtr.setDouble(0, ((Number)value).doubleValue());
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
+					valuePtr = valuePtr.share(2);
+					valuePtr.setDouble(0, ((Number)value).doubleValue());
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER, rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else if (value instanceof Calendar || value instanceof NotesTimeDate || value instanceof Date) {
+			Calendar calValue;
+			if (value instanceof Calendar) {
+				calValue = (Calendar) value;
+			}
+			else if (value instanceof NotesTimeDate) {
+				calValue = ((NotesTimeDate)value).getTimeAsCalendar();
+			}
+			else if (value instanceof Date) {
+				calValue = Calendar.getInstance();
+				calValue.setTime((Date) value);
+			}
+			else {
+				throw new IllegalArgumentException("Unsupported date value type: "+(value==null ? "null" : value.getClass().getName()));
+			}
+			
+			boolean hasDate = NotesDateTimeUtils.hasDate(calValue);
+			boolean hasTime = NotesDateTimeUtils.hasTime(calValue);
+			int[] innards = NotesDateTimeUtils.calendarToInnards(calValue, hasDate, hasTime);
+
+			int valueSize = 2 + 8;
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
+					valuePtr = valuePtr.share(2);
+
+					NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
+					timeDate.Innards[0] = innards[0];
+					timeDate.Innards[1] = innards[1];
+					timeDate.write();
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
+					valuePtr = valuePtr.share(2);
+
+					NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
+					timeDate.Innards[0] = innards[0];
+					timeDate.Innards[1] = innards[1];
+					timeDate.write();
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME, rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else if (value instanceof List && (((List)value).isEmpty() || isStringList((List) value))) {
+			List<String> strList = (List<String>) value;
+			
+			if (strList.size()> 65535) {
+				throw new IllegalArgumentException("String list size must fit in a WORD ("+strList.size()+">65535)");
+			}
+			
+			short result;
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethList = new LongByReference();
+				ShortByReference retListSize = new ShortByReference();
+
+				result = notesAPI.b64_ListAllocate((short) 0, 
+						(short) 0,
+						1, rethList, null, retListSize);
+				
+				NotesErrorUtils.checkResult(result);
+
+				long hList = rethList.getValue();
+				notesAPI.b64_OSUnlockObject(hList);
+				
+				for (int i=0; i<strList.size(); i++) {
+					String currStr = strList.get(i);
+					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+
+					result = notesAPI.b64_ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
+							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
+					NotesErrorUtils.checkResult(result);
+				}
+				
+				int listSize = retListSize.getValue() & 0xffff;
+				
+				@SuppressWarnings("unused")
+				Pointer valuePtr = notesAPI.b64_OSLockObject(hList);
+				try {
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(hList);
+				}
+			}
+			else {
+				IntByReference rethList = new IntByReference();
+				ShortByReference retListSize = new ShortByReference();
+
+				result = notesAPI.b32_ListAllocate((short) 0, 
+						(short) 0,
+						1, rethList, null, retListSize);
+				
+				NotesErrorUtils.checkResult(result);
+
+				int hList = rethList.getValue();
+				notesAPI.b32_OSUnlockObject(hList);
+				
+				for (int i=0; i<strList.size(); i++) {
+					String currStr = strList.get(i);
+					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+
+					result = notesAPI.b32_ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
+							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
+					NotesErrorUtils.checkResult(result);
+				}
+				
+				int listSize = retListSize.getValue() & 0xffff;
+				
+				@SuppressWarnings("unused")
+				Pointer valuePtr = notesAPI.b32_OSLockObject(hList);
+				try {
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(hList);
+				}
+			}
+		}
+		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
+			List<?> numberOrNumberArrList = toNumberOrNumberArrayList((List<?>) value);
+			
+			List<Number> numberList = new ArrayList<Number>();
+			List<double[]> numberArrList = new ArrayList<double[]>();
+			
+			for (int i=0; i<numberOrNumberArrList.size(); i++) {
+				Object currObj = numberOrNumberArrList.get(i);
+				if (currObj instanceof Double) {
+					numberList.add((Number) currObj);
+				}
+				else if (currObj instanceof double[]) {
+					numberArrList.add((double[])currObj);
+				}
+			}
+			
+			if (numberList.size()> 65535) {
+				throw new IllegalArgumentException("Number list size must fit in a WORD ("+numberList.size()+">65535)");
+			}
+
+			if (numberArrList.size()> 65535) {
+				throw new IllegalArgumentException("Number range list size must fit in a WORD ("+numberList.size()+">65535)");
+			}
+
+			int valueSize = 2 + NotesCAPI.rangeSize + 
+					8 * numberList.size() +
+					NotesCAPI.numberPairSize * numberArrList.size();
+
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
+					valuePtr = valuePtr.share(2);
+					
+					Pointer rangePtr = valuePtr;
+					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+					range.ListEntries = (short) (numberList.size() & 0xffff);
+					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
+					range.write();
+
+					Pointer doubleListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					
+					for (int i=0; i<numberList.size(); i++) {
+						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
+						doubleListPtr = doubleListPtr.share(8);
+					}
+
+					Pointer doubleArrListPtr = doubleListPtr;
+					
+					for (int i=0; i<numberArrList.size(); i++) {
+						double[] currNumberArr = numberArrList.get(i);
+						
+						NotesNumberPairStruct numberPair = NotesNumberPairStruct.newInstance(doubleArrListPtr);
+						numberPair.Lower = currNumberArr[0];
+						numberPair.Upper = currNumberArr[1];
+						numberPair.write();
+
+						doubleArrListPtr = doubleArrListPtr.share(NotesCAPI.numberPairSize);
+					}
+					
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, (int) rethItem.getValue(),
+							valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
+					valuePtr = valuePtr.share(2);
+					
+					Pointer rangePtr = valuePtr;
+					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+					range.ListEntries = (short) (numberList.size() & 0xffff);
+					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
+					range.write();
+
+					Pointer doubleListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					
+					for (int i=0; i<numberList.size(); i++) {
+						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
+						doubleListPtr = doubleListPtr.share(8);
+					}
+
+					Pointer doubleArrListPtr = doubleListPtr;
+					
+					for (int i=0; i<numberArrList.size(); i++) {
+						double[] currNumberArr = numberArrList.get(i);
+						
+						NotesNumberPairStruct numberPair = NotesNumberPairStruct.newInstance(doubleArrListPtr);
+						numberPair.Lower = currNumberArr[0];
+						numberPair.Upper = currNumberArr[1];
+						numberPair.write();
+
+						doubleArrListPtr = doubleArrListPtr.share(NotesCAPI.numberPairSize);
+					}
+					
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, rethItem.getValue(),
+							valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else if (value instanceof Calendar[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Date[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof NotesTimeDate[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+			List<?> calendarOrCalendarArrList = toCalendarOrCalendarArrayList((List<?>) value);
+			
+			List<Calendar> calendarList = new ArrayList<Calendar>();
+			List<Calendar[]> calendarArrList = new ArrayList<Calendar[]>();
+			
+			for (int i=0; i<calendarOrCalendarArrList.size(); i++) {
+				Object currObj = calendarOrCalendarArrList.get(i);
+				if (currObj instanceof Calendar) {
+					calendarList.add((Calendar) currObj);
+				}
+				else if (currObj instanceof Calendar[]) {
+					calendarArrList.add((Calendar[]) currObj);
+				}
+			}
+			
+			if (calendarList.size() > 65535) {
+				throw new IllegalArgumentException("Date list size must fit in a WORD ("+calendarList.size()+">65535)");
+			}
+			if (calendarArrList.size() > 65535) {
+				throw new IllegalArgumentException("Date range list size must fit in a WORD ("+calendarArrList.size()+">65535)");
+			}
+
+			int valueSize = 2 + NotesCAPI.rangeSize + 
+					8 * calendarList.size() +
+					NotesCAPI.timeDatePairSize * calendarArrList.size();
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
+					valuePtr = valuePtr.share(2);
+					
+					Pointer rangePtr = valuePtr;
+					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+					range.ListEntries = (short) (calendarList.size() & 0xffff);
+					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
+					range.write();
+
+					Pointer dateListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					
+					for (Calendar currCal : calendarList) {
+						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
+						boolean hasTime = NotesDateTimeUtils.hasTime(currCal);
+						int[] innards = NotesDateTimeUtils.calendarToInnards(currCal, hasDate, hasTime);
+
+						dateListPtr.setInt(0, innards[0]);
+						dateListPtr = dateListPtr.share(4);
+						dateListPtr.setInt(0, innards[1]);
+						dateListPtr = dateListPtr.share(4);
+					}
+					
+					Pointer rangeListPtr = dateListPtr;
+					
+					for (int i=0; i<calendarArrList.size(); i++) {
+						Calendar[] currRangeVal = calendarArrList.get(i);
+						
+						boolean hasDateStart = NotesDateTimeUtils.hasDate(currRangeVal[0]);
+						boolean hasTimeStart = NotesDateTimeUtils.hasTime(currRangeVal[0]);
+						int[] innardsStart = NotesDateTimeUtils.calendarToInnards(currRangeVal[0], hasDateStart, hasTimeStart);
+
+						boolean hasDateEnd = NotesDateTimeUtils.hasDate(currRangeVal[1]);
+						boolean hasTimeEnd = NotesDateTimeUtils.hasTime(currRangeVal[1]);
+						int[] innardsEnd = NotesDateTimeUtils.calendarToInnards(currRangeVal[1], hasDateEnd, hasTimeEnd);
+
+						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
+						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
+						
+						NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(rangeListPtr);
+						timeDatePair.Lower = timeDateStart;
+						timeDatePair.Upper = timeDateEnd;
+						timeDatePair.write();
+
+						rangeListPtr = rangeListPtr.share(NotesCAPI.timeDatePairSize);
+					}
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
+					valuePtr = valuePtr.share(2);
+					
+					Pointer rangePtr = valuePtr;
+					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+					range.ListEntries = (short) (calendarList.size() & 0xffff);
+					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
+					range.write();
+
+					Pointer dateListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					
+					for (Calendar currCal : calendarList) {
+						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
+						boolean hasTime = NotesDateTimeUtils.hasTime(currCal);
+						int[] innards = NotesDateTimeUtils.calendarToInnards(currCal, hasDate, hasTime);
+
+						dateListPtr.setInt(0, innards[0]);
+						dateListPtr = dateListPtr.share(4);
+						dateListPtr.setInt(0, innards[1]);
+						dateListPtr = dateListPtr.share(4);
+					}
+					
+					Pointer rangeListPtr = dateListPtr;
+					
+					for (int i=0; i<calendarArrList.size(); i++) {
+						Calendar[] currRangeVal = calendarArrList.get(i);
+						
+						boolean hasDateStart = NotesDateTimeUtils.hasDate(currRangeVal[0]);
+						boolean hasTimeStart = NotesDateTimeUtils.hasTime(currRangeVal[0]);
+						int[] innardsStart = NotesDateTimeUtils.calendarToInnards(currRangeVal[0], hasDateStart, hasTimeStart);
+
+						boolean hasDateEnd = NotesDateTimeUtils.hasDate(currRangeVal[1]);
+						boolean hasTimeEnd = NotesDateTimeUtils.hasTime(currRangeVal[1]);
+						int[] innardsEnd = NotesDateTimeUtils.calendarToInnards(currRangeVal[1], hasDateEnd, hasTimeEnd);
+
+						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
+						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
+						
+						NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(rangeListPtr);
+						timeDatePair.Lower = timeDateStart;
+						timeDatePair.Upper = timeDateEnd;
+						timeDatePair.write();
+
+						rangeListPtr = rangeListPtr.share(NotesCAPI.timeDatePairSize);
+					}
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else if (value instanceof double[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof int[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof float[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof long[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Number[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Double[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Integer[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Float[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Long[]) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof NotesUniversalNoteId) {
+			NotesUniversalNoteIdStruct struct = ((NotesUniversalNoteId)value).getAdapter(NotesUniversalNoteIdStruct.class);
+
+			//date type + LIST structure + UNIVERSALNOTEID
+			int valueSize = 2 + 2 + 2 * NotesCAPI.timeDateSize;
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
+					valuePtr = valuePtr.share(2);
+					
+					//LIST structure
+					valuePtr.setShort(0, (short) 1);
+					valuePtr = valuePtr.share(2);
+					
+					struct.write();
+					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesCAPI.timeDateSize), 0, 2*NotesCAPI.timeDateSize);
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
+					valuePtr = valuePtr.share(2);
+					
+					//LIST structure
+					valuePtr.setShort(0, (short) 1);
+					valuePtr = valuePtr.share(2);
+					
+					struct.write();
+					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesCAPI.timeDateSize), 0, 2*NotesCAPI.timeDateSize);
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else {
+			throw new IllegalArgumentException("Unsupported value type: "+(value==null ? "null" : value.getClass().getName()));
+		}
+	}
+
+	private List<?> toNumberOrNumberArrayList(List<?> list) {
+		boolean allNumbers = true;
+		for (int i=0; i<list.size(); i++) {
+			if (!(list.get(i) instanceof double[]) && !(list.get(i) instanceof Double)) {
+				allNumbers = false;
+				break;
+			}
+		}
+		
+		if (allNumbers)
+			return (List<?>) list;
+		
+		List convertedList = new ArrayList();
+		for (int i=0; i<list.size(); i++) {
+			if (list.get(i) instanceof Number) {
+				//ok
+				convertedList.add(((Number)list.get(i)).doubleValue());
+			}
+			else if (list.get(i) instanceof double[]) {
+				if (((double[])list.get(i)).length!=2) {
+					throw new IllegalArgumentException("Length of double array entry must be 2 for number ranges");
+				}
+				//ok
+				convertedList.add((double[]) list.get(i));
+			}
+			else if (list.get(i) instanceof Number[]) {
+				Number[] numberArr = (Number[]) list.get(i);
+				if (numberArr.length!=2) {
+					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						numberArr[0].doubleValue(),
+						numberArr[1].doubleValue()
+				});
+			}
+			else if (list.get(i) instanceof Double[]) {
+				Double[] doubleArr = (Double[]) list.get(i);
+				if (doubleArr.length!=2) {
+					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						doubleArr[0],
+						doubleArr[1]
+				});
+			}
+			else if (list.get(i) instanceof Integer[]) {
+				Integer[] integerArr = (Integer[]) list.get(i);
+				if (integerArr.length!=2) {
+					throw new IllegalArgumentException("Length of Integer array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						integerArr[0].doubleValue(),
+						integerArr[1].doubleValue()
+				});
+			}
+			else if (list.get(i) instanceof Long[]) {
+				Long[] longArr = (Long[]) list.get(i);
+				if (longArr.length!=2) {
+					throw new IllegalArgumentException("Length of Long array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						longArr[0].doubleValue(),
+						longArr[1].doubleValue()
+				});
+			}
+			else if (list.get(i) instanceof Float[]) {
+				Float[] floatArr = (Float[]) list.get(i);
+				if (floatArr.length!=2) {
+					throw new IllegalArgumentException("Length of Float array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						floatArr[0].doubleValue(),
+						floatArr[1].doubleValue()
+				});
+			}
+			else if (list.get(i) instanceof int[]) {
+				int[] intArr = (int[]) list.get(i);
+				if (intArr.length!=2) {
+					throw new IllegalArgumentException("Length of int array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						intArr[0],
+						intArr[1]
+				});
+			}
+			else if (list.get(i) instanceof long[]) {
+				long[] longArr = (long[]) list.get(i);
+				if (longArr.length!=2) {
+					throw new IllegalArgumentException("Length of long array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						longArr[0],
+						longArr[1]
+				});
+			}
+			else if (list.get(i) instanceof float[]) {
+				float[] floatArr = (float[]) list.get(i);
+				if (floatArr.length!=2) {
+					throw new IllegalArgumentException("Length of float array entry must be 2 for number ranges");
+				}
+				
+				convertedList.add(new double[] {
+						floatArr[0],
+						floatArr[1]
+				});
+			}
+			else {
+				throw new IllegalArgumentException("Unsupported date format found in list: "+(list.get(i)==null ? "null" : list.get(i).getClass().getName()));
+			}
+		}
+		return convertedList;
+	}
+	private List<?> toCalendarOrCalendarArrayList(List<?> list) {
+		boolean allCalendar = true;
+		for (int i=0; i<list.size(); i++) {
+			if (!(list.get(i) instanceof Calendar[]) && !(list.get(i) instanceof Calendar)) {
+				allCalendar = false;
+				break;
+			}
+		}
+		
+		if (allCalendar)
+			return (List<?>) list;
+		
+		List convertedList = new ArrayList();
+		for (int i=0; i<list.size(); i++) {
+			if (list.get(i) instanceof Calendar) {
+				//ok
+				convertedList.add(list.get(i));
+			}
+			else if (list.get(i) instanceof Calendar[]) {
+				//ok
+				convertedList.add((Calendar[]) list.get(i));
+			}
+			else if (list.get(i) instanceof Date) {
+				Calendar cal = Calendar.getInstance();
+				cal.setTime((Date) list.get(i));
+				convertedList.add(cal);
+			}
+			else if (list.get(i) instanceof NotesTimeDate) {
+				Calendar cal = ((NotesTimeDate)list.get(i)).toCalendar();
+				convertedList.add(cal);
+			}
+			else if (list.get(i) instanceof Date[]) {
+				Date[] dateArr = (Date[]) list.get(i);
+				if (dateArr.length!=2) {
+					throw new IllegalArgumentException("Length of Date array entry must be 2 for date ranges");
+				}
+				Calendar val1 = Calendar.getInstance();
+				val1.setTime(dateArr[0]);
+
+				Calendar val2 = Calendar.getInstance();
+				val2.setTime(dateArr[1]);
+
+				convertedList.add(new Calendar[] {val1, val2});
+			}
+			else if (list.get(i) instanceof NotesTimeDate[]) {
+				NotesTimeDate[] ntdArr = (NotesTimeDate[]) list.get(i);
+				if (ntdArr.length!=2) {
+					throw new IllegalArgumentException("Length of NotesTimeDate array entry must be 2 for date ranges");
+				}
+				Calendar val1 = ntdArr[0].toCalendar();
+				Calendar val2 = ntdArr[1].toCalendar();
+				
+				convertedList.add(new Calendar[] {val1, val2});
+			}
+			else {
+				throw new IllegalArgumentException("Unsupported date format found in list: "+(list.get(i)==null ? "null" : list.get(i).getClass().getName()));
+			}
+		}
+		return convertedList;
+	}
+	
+	private boolean isStringList(List<?> list) {
+		if (list==null || list.isEmpty()) {
+			return false;
+		}
+		for (int i=0; i<list.size(); i++) {
+			if (!(list.get(i) instanceof String)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isCalendarOrCalendarArrayList(List<?> list) {
+		if (list==null || list.isEmpty()) {
+			return false;
+		}
+		for (int i=0; i<list.size(); i++) {
+			boolean isAccepted=false;
+			
+			Object currObj = list.get(i);
+			
+			if (currObj instanceof Calendar[]) {
+				Calendar[] calArr = (Calendar[]) currObj;
+				if (calArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Date[]) {
+				Date[] dateArr = (Date[]) currObj;
+				if (dateArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof NotesTimeDate[]) {
+				NotesTimeDate[] ndtArr = (NotesTimeDate[]) currObj;
+				if (ndtArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Calendar) {
+				isAccepted = true;
+			}
+			else if (currObj instanceof Date) {
+				isAccepted = true;
+			}
+			else if (currObj instanceof NotesTimeDate) {
+				isAccepted = true;
+			}
+			
+			if (!isAccepted) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	private boolean isNumberOrNumberArrayList(List<?> list) {
+		if (list==null || list.isEmpty()) {
+			return false;
+		}
+		for (int i=0; i<list.size(); i++) {
+			boolean isAccepted=false;
+			
+			Object currObj = list.get(i);
+			
+			if (currObj instanceof double[]) {
+				double[] valArr = (double[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			if (currObj instanceof int[]) {
+				int[] valArr = (int[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			if (currObj instanceof long[]) {
+				long[] valArr = (long[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			if (currObj instanceof float[]) {
+				float[] valArr = (float[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Number[]) {
+				Number[] valArr = (Number[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Integer[]) {
+				Integer[] valArr = (Integer[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Long[]) {
+				Long[] valArr = (Long[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Double[]) {
+				Double[] valArr = (Double[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Float[]) {
+				Float[] valArr = (Float[]) currObj;
+				if (valArr.length==2) {
+					isAccepted = true;
+				}
+			}
+			else if (currObj instanceof Number) {
+				isAccepted = true;
+			}
+			
+			if (!isAccepted) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Internal method that calls the C API method to write the item
+	 * 
+	 * @param itemName item name
+	 * @param flags item flags
+	 * @param itemType item type
+	 * @param hItemValue handle to memory block with item value
+	 * @param valueLength length of binary item value (without data type short)
+	 */
+	private NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, int itemType, int hItemValue, int valueLength) {
+		checkHandle();
+
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short flagsShort = ItemType.toBitMask(flags);
+		
+		NotesBlockIdStruct.ByValue valueBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		valueBlockIdByVal.pool = hItemValue;
+		valueBlockIdByVal.block = 0;
+		valueBlockIdByVal.write();
+		
+		NotesBlockIdStruct retItemBlockId = NotesBlockIdStruct.newInstance();
+		retItemBlockId.pool = 0;
+		retItemBlockId.block = 0;
+		retItemBlockId.write();
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFItemAppendByBLOCKID(m_hNote64, flagsShort, itemNameMem,
+					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
+					valueLength, retItemBlockId);
+		}
+		else {
+			result = notesAPI.b32_NSFItemAppendByBLOCKID(m_hNote32, flagsShort, itemNameMem,
+					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
+					valueLength, retItemBlockId);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		NotesItem item = new NotesItem(this, retItemBlockId, itemType, valueBlockIdByVal, valueLength);
+		return item;
+	}
+	
+	/**
+	 * Internal method that calls the C API method to write the item
+	 * 
+	 * @param itemName item name
+	 * @param flags item flags
+	 * @param itemType item type
+	 * @param itemValue binary item value
+	 * @param valueLength length of binary item value (without data type short)
+	 */
+//	private void appendItemx(String itemName, EnumSet<ItemType> flags, int itemType, Pointer itemValue, int valueLength) {
+//		checkHandle();
+//
+//		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
+//		
+//		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+//		short flagsShort = ItemType.toBitMask(flags);
+//		
+//		short result;
+//		if (NotesJNAContext.is64Bit()) {
+//			result = notesAPI.b64_NSFItemAppend(m_hNote64, flagsShort, itemNameMem, (short) 
+//					(itemNameMem==null ? 0 : itemNameMem.size()), (short) (itemType & 0xffff), itemValue, valueLength);
+//		}
+//		else {
+//			result = notesAPI.b32_NSFItemAppend(m_hNote32, flagsShort, itemNameMem, (short) 
+//					(itemNameMem==null ? 0 : itemNameMem.size()), (short) (itemType & 0xffff), itemValue, valueLength);
+//		}
+//		NotesErrorUtils.checkResult(result);
+//	}
 	
 	/**
 	 * This function signs the note using the specified ID.
@@ -1995,5 +3160,23 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+	
+	/**
+	 * Creates/overwrites a $REF item pointing to another {@NotesNote}
+	 * 
+	 * @param note $REF target note
+	 */
+	public void makeResponse(NotesNote note) {
+		makeResponse(note.getUNID());
+	}
+	
+	/**
+	 * Creates/overwrites a $REF item pointing to a UNID
+	 * 
+	 * @param targetUnid $REF target UNID
+	 */
+	public void makeResponse(String targetUnid) {
+		replaceItemValue("$REF", EnumSet.of(ItemType.SUMMARY), new NotesUniversalNoteId(targetUnid));
 	}
 }

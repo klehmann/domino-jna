@@ -925,6 +925,49 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 	
+	public short b64_ListAllocate(
+			short ListEntries,
+			short TextSize,
+			int fPrefixDataType,
+			LongByReference rethList,
+			Memory retpList,
+			ShortByReference retListSize);
+	
+	public short b32_ListAllocate(
+			short ListEntries,
+			short TextSize,
+			int fPrefixDataType,
+			IntByReference rethList,
+			Memory retpList,
+			ShortByReference retListSize);
+	
+	public short b64_ListAddEntry(
+			long hList,
+			int fPrefixDataType,
+			ShortByReference pListSize,
+			short EntryNumber,
+			Memory Text,
+			short TextSize);
+	
+	public short b32_ListAddEntry(
+			long hList,
+			int fPrefixDataType,
+			ShortByReference pListSize,
+			short EntryNumber,
+			Memory Text,
+			short TextSize);
+	
+	public short b64_ListGetSize(
+			Pointer pList,
+			int fPrefixDataType);
+	
+	public short b32_ListGetSize(
+			Pointer pList,
+			int fPrefixDataType);
+	
+	public short b64_ListGetNumEntries(Pointer vList, int noteItem);
+	public short b32_ListGetNumEntries(Pointer vList, int noteItem);
+	
 	public int TimeExtractTicks(Memory time);
 
 	public int TimeExtractJulianDate(Memory time);
@@ -1415,6 +1458,42 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b64_NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	public short b32_NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 
+	public short b64_NSFItemAppend(
+			long note_handle,
+			short  item_flags,
+			Memory item_name,
+			short name_len,
+			short  item_type,
+			Pointer item_value,
+			int value_len);
+	
+	public short b32_NSFItemAppend(
+			int note_handle,
+			short item_flags,
+			Memory item_name,
+			short name_len,
+			short  item_type,
+			Pointer item_value,
+			int value_len);
+
+	public short b64_NSFItemAppendByBLOCKID(
+			long note_handle,
+			short item_flags,
+			Memory item_name,
+			short name_len,
+			NotesBlockIdStruct.ByValue value_bid,
+			int value_len,
+			NotesBlockIdStruct item_bid_ptr);
+	
+	public short b32_NSFItemAppendByBLOCKID(
+			int note_handle,
+			short item_flags,
+			Memory item_name,
+			short name_len,
+			NotesBlockIdStruct.ByValue value_bid,
+			int value_len,
+			NotesBlockIdStruct item_bid_ptr);
+	
 	public short b32_NSFDbGetMultNoteInfo(
 			int  hDb,
 			short  Count,
@@ -2308,6 +2387,15 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 											Memory retServerName,
 											Memory retFileName);
 
+	/*	Define memory allocator hints, which re-use the top 2 bits of
+	the BLK_ codes so that we didn't have to add a new argument to
+	OSMemAlloc() */
+
+	/** Object may be used by multiple processes */
+	public short MEM_SHARE = (short) (0x8000 & 0xffff);
+	/** Object may be OSMemRealloc'ed LARGER */
+	public short MEM_GROWABLE = 0x4000;
+
 	public short b32_OSMemAlloc(
 			short  BlkType,
 			int  dwSize,
@@ -2614,6 +2702,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short b64_NSFDbSetOptionsExt(long hDB, Memory dbOptions, Memory mask);
 	public short b32_NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
 	
+	public short b64_NSFHideDesign(long hdb1, long hdb2, int param3, int param4);
+	public short b32_NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
+	
 	/** Enable full text indexing */
 	public static final int DBOPTBIT_FT_INDEX = 0;
 	/** TRUE if database is being used as an object store - for garbage collection */
@@ -2909,5 +3000,106 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	
 	public short fSECToken_EnableRenewal = 0x0001;
 
+	public int MAXONESEGSIZE = 0xffff - 1-128;
+	public int MQ_MAX_MSGSIZE = MAXONESEGSIZE - 0x50;
+	public short NOPRIORITY = (short) (0xffff & 0xffff);
+	public short LOWPRIORITY = (short) (0xffff & 0xffff);
+	public short HIGHPRIORITY = 0;
+
+	/*	Callback pointer type for MQScan() callback */
+
+	public interface MQScanCallback extends Callback { /* StdCallCallback if using __stdcall__ */
+        short invoke(Pointer pBuffer, short length, short priority, Pointer ctx); 
+    }
+
+	/*	Options to MQGet */
+
+	public short MQ_WAIT_FOR_MSG = 0x0001;
+
+	/* Options to MQOpen */
+	
+	/** Create the queue if it doesn't exist*/
+	public int MQ_OPEN_CREATE = 0x00000001;
+	
+	/*	Routine definitions */
+
+	public short MQCreate(Memory queueName, short quota, int options);
+	public short MQOpen(Memory queueName, int options, IntByReference retQueue);
+	public short MQClose(int queue, int options);
+	public short MQPut(int queue, short priority, ByteBuffer buffer, short length, 
+							int options);
+	public short MQGet(int queue, ByteBuffer buffer, short bufLength,
+						  	int options, int timeout, ShortByReference retMsgLength);
+	public short MQScan(int queue, ByteBuffer buffer, short bufLength, 
+							 int options, MQScanCallback actionRoutine,
+							 Pointer ctx, ShortByReference retMsgLength);
+
+	public void MQPutQuitMsg(int queue);
+	public boolean MQIsQuitPending(int queue);
+	public short MQGetCount(int queue);
+
+	/*	Public Queue Names */
+
+	/** Prepended to "addin" task name to form task's queue name */
+	public String TASK_QUEUE_PREFIX	= "MQ$";			
+												
+	/** DB Server */
+	public String SERVER_QUEUE_NAME	= "_SERVER";			
+	/** Replicator */
+	public String REPL_QUEUE_NAME = TASK_QUEUE_PREFIX + "REPLICATOR";
+	/** Mail Router */
+	public String ROUTER_QUEUE_NAME	= TASK_QUEUE_PREFIX + "ROUTER";
+	/** Index views & full text process */
+	public String UPDATE_QUEUE_NAME = TASK_QUEUE_PREFIX + "INDEXER";
+	/** Login Process */
+	public String LOGIN_QUEUE_NAME = TASK_QUEUE_PREFIX + "LOGIN";
+	/** Event process */
+	public String EVENT_QUEUE_NAME = TASK_QUEUE_PREFIX + "EVENT";
+	/** Report process */
+	public String REPORT_QUEUE_NAME = TASK_QUEUE_PREFIX + "REPORTER";
+	/** Cluster Replicator */
+	public String CLREPL_QUEUE_NAME = TASK_QUEUE_PREFIX + "CLREPL";
+	/** Fixup */
+	public String FIXUP_QUEUE_NAME = TASK_QUEUE_PREFIX + "FIXUP";
+	/** Collector*/
+	public String COLLECT_QUEUE_NAME = TASK_QUEUE_PREFIX + "COLLECTOR";
+	/** NOI Process */
+	public String NOI_QUEUE_NAME = TASK_QUEUE_PREFIX + "DIIOP";
+	/** Alarms Cache daemon */
+	public String ALARM_QUEUE_NAME = TASK_QUEUE_PREFIX + "ALARMS";
+	/** Monitor */
+	public String MONITOR_QUEUE_NAME = TASK_QUEUE_PREFIX + "MONITOR";
+	/** Monitor */
+	public String MONALARM_QUEUE_NAME = TASK_QUEUE_PREFIX + "MONITORALARM";
+	/** Admin Panel Daemon (Request Queue) */
+	public String APDAEMON_REQ_QUEUE = TASK_QUEUE_PREFIX + "APDAEMONREQ";
+	/** Admin Panel Daemon (File Response Queue) */
+	public String APDAEMON_FILERES_QUEUE = TASK_QUEUE_PREFIX + "APDAEMONFILERESPONSE";
+	/** Admin Panel Daemon (Server Response Queue) */
+	public String APDAEMON_FILEREQ_QUEUE = TASK_QUEUE_PREFIX + "APDAEMONFILEREQUEST";
+	/** bktasks */
+	public String BKTASKS_QUEUE_NAME = TASK_QUEUE_PREFIX + "BKTASKS";
+	/** Red Zone Interface to Collector */
+	public String RZINTER_QUEUE_NAME = TASK_QUEUE_PREFIX + "RZINTER";
+	/** Red Zone Extra MQ */
+	public String RZEXTRA_QUEUE_NAME = TASK_QUEUE_PREFIX + "RZEXTRA";
+	/** Red Zone Background MQ */
+	public String RZBG_QUEUE_NAME = TASK_QUEUE_PREFIX + "RZBG";
+	/** Red Zone Background Extra MQ */
+	public String RZBGEXTRA_QUEUE_NAME = TASK_QUEUE_PREFIX + "RZBGEXTRA";
+	/** Monitor */
+	public String REALTIME_STATS_QUEUE_NAME = TASK_QUEUE_PREFIX + "REALTIME";
+	/** Runjava (used by ISpy) */
+	public String RUNJAVA_QUEUE_NAME = TASK_QUEUE_PREFIX + "RUNJAVA";
+	/** Runjava (used by ISpy) */
+	public String STATS_QUEUE_NAME = TASK_QUEUE_PREFIX + "STATS";
+	/** Runjava (used by ISpy) */
+	public String LOG_SEARCH_QUEUE_NAME = TASK_QUEUE_PREFIX + "LOGSEARCH";
+	/** Event process */
+	public String DAEMON_EVENT_QUEUE_NAME = TASK_QUEUE_PREFIX + "DAEMONEVENT";
+	/** Collector*/
+	public String DAEMON_COLLECT_QUEUE_NAME = TASK_QUEUE_PREFIX + "DAEMONCOLLECTOR";
+	/** Dircat */
+	public String DIRCAT_QUEUE_NAME = TASK_QUEUE_PREFIX + "DIRCAT";
 	
 }

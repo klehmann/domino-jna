@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.ShortByReference;
@@ -195,6 +196,7 @@ public class NotesItem {
 	 * <li>{@link #TYPE_TIME} - List with Calendar object</li>
 	 * <li>{@link #TYPE_TIME_RANGE} - List of Calendar objects</li>
 	 * <li>{@link #TYPE_OBJECT} with the subtype Attachment (e.g. $File items) - List with {@link NotesAttachment} object</li>
+	 * <li>{@link #TYPE_NOTEREF_LIST} - List with one {@link NotesUniversalNoteId} object</li>
 	 * </ul>
 	 * Other data types may be read via {@link #getValueAsText(char)} or native support may be added at
 	 * a later time.
@@ -321,6 +323,189 @@ public class NotesItem {
 		loadItemNameAndFlags();
 		
 		return (m_itemFlags & NotesCAPI.ITEM_SUMMARY) == NotesCAPI.ITEM_SUMMARY;
+	}
+	
+	public void setSummary(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isSummary()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SUMMARY;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isSummary()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SUMMARY;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	public void setSealed(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isSealed()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SEAL;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isSealed()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SEAL;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	public void setSigned(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isSigned()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SIGN;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isSigned()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SIGN;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+
+	public void setNames(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isNames()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_NAMES;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isNames()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_NAMES;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+
+	public void setPlaceholder(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isPlaceholder()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_PLACEHOLDER;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isPlaceholder()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_PLACEHOLDER;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	public void setAuthors(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isAuthors()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_READWRITERS;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isAuthors()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_READWRITERS;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	public void setReaders(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isReaders()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_READERS;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isReaders()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_READERS;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+
+	public void setProtected(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isProtected()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_PROTECTED;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+		else {
+			if (isProtected()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_PROTECTED;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	private void setItemFlags(short newFlags) {
+		m_parentNote.checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		loadItemNameAndFlags();
+
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		itemBlockIdByVal.pool = m_itemBlockId.pool;
+		itemBlockIdByVal.block = m_itemBlockId.block;
+
+		Pointer poolPtr;
+		if (NotesJNAContext.is64Bit()) {
+			poolPtr = notesAPI.b64_OSLockObject((long) m_itemBlockId.pool);
+		}
+		else {
+			poolPtr = notesAPI.b32_OSLockObject(m_itemBlockId.pool);
+		}
+		
+		int block = (int) (m_itemBlockId.block & 0xffff);
+		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
+		Pointer itemFlagsPtr = new Pointer(poolPtrLong).share(16);
+		
+		try {
+			short oldFlags = itemFlagsPtr.getShort(0);
+			if (oldFlags==m_itemFlags) {
+				itemFlagsPtr.setShort(0, newFlags);
+				m_itemFlagsLoaded = false;
+			}
+		}
+		finally {
+			if (NotesJNAContext.is64Bit()) {
+				notesAPI.b64_OSUnlockObject((long) m_itemBlockId.pool);
+			}
+			else {
+				notesAPI.b32_OSUnlockObject(m_itemBlockId.pool);
+			}
+		}
 	}
 	
 	public boolean isReadWriters() {
