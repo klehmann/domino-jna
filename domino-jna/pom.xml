@@ -16,6 +16,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+		<jna.version>4.3.0</jna.version>
 	</properties>
 
 	<licenses>
@@ -126,7 +127,7 @@
 		<dependency>
 			<groupId>net.java.dev.jna</groupId>
 			<artifactId>jna</artifactId>
-			<version>4.1.0</version>
+			<version>${jna.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
