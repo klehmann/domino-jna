@@ -1435,7 +1435,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
 			int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
-		NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(startPosStr==null ? "0" : startPosStr);
+		NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(("last".equalsIgnoreCase(startPosStr) || startPosStr==null) ? "0" : startPosStr);
 		NotesCollectionPosition posWrap = new NotesCollectionPosition(pos);
 		
 		//decide whether we need to use the undocumented NIFReadEntriesExt
@@ -1509,8 +1509,44 @@ public class NotesCollection implements IRecyclableNotesObject {
 					break;
 				}
 
+				int useSkipCount;
+				if (firstLoopRun) {
+					if ("last".equalsIgnoreCase(startPosStr)) {
+						//first jump to the end of the view
+						useSkipCount = Integer.MAX_VALUE;
+					}
+					else {
+						useSkipCount = skipCount;
+					}
+				}
+				else {
+					//just skip the last entry that we returned on the last NIFReadEntries call
+					useSkipCount = 1;
+				}
+				EnumSet<Navigate> skipNav = returnNav.clone();
+				if (firstLoopRun) {
+					if ("last".equalsIgnoreCase(startPosStr)) {
+						//compute the skipNav by reversing the returnNav; e.g. for startPos="last"
+						//and returnNav=Navigate.PREV_SELECTED, we first jump to the end of the view
+						//with skipCount=INTEGER.MAX_VALUE Navigate.NEXT_SELECTED.
+						//Then we start reading n entries with Navigate.PREV_SELECTED,
+						//effectively returning the last n selected entries of the view
+						skipNav = EnumSet.noneOf(Navigate.class);
+						for (Navigate currNav : returnNav) {
+							skipNav.add(reverseNav(currNav));
+						}
+						//set NAVIGATE_CONTINUE to stop skipping on the last view element and not return an error
+						skipNav.add(Navigate.CONTINUE);
+					}
+					else {
+						skipNav = returnNav;
+					}
+				}
+				else {
+					skipNav = returnNav;
+				}
 				NotesViewLookupResultData data;
-				data = readEntriesExt(posWrap, returnNav, firstLoopRun ? skipCount : 1, returnNav, preloadEntryCount, returnMask,
+				data = readEntriesExt(posWrap, skipNav, useSkipCount, returnNav, preloadEntryCount, returnMask,
 						diffTime, diffIDTable, readSingleColumnIndex);
 				
 				retDiffTime = data.getReturnedDiffTime();
