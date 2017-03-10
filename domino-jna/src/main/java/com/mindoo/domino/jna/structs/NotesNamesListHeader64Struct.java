@@ -39,15 +39,14 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 	/**
 	 * Flag to mark the user as already authenticated, e.g. via web server
 	 */
-	public short Authenticated;
+	public int Authenticated;
 	
 	/**
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
 	public NotesNamesListHeader64Struct() {
 		super();
-		//set ALIGN to NONE, because the NAMES_LIST structure is directly followed by the usernames and wildcards in memory
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static NotesNamesListHeader64Struct newInstance() {
@@ -77,7 +76,7 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 	 */
 	public NotesNamesListHeader64Struct(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 		this.NumNames = numNames;
 		if ((id.length != this.ID.length)) 
 			throw new IllegalArgumentException("Wrong array size !");
@@ -106,7 +105,7 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 	 */
 	public NotesNamesListHeader64Struct(Pointer peer) {
 		super(peer);
-		setAlignType(ALIGN_NONE);
+		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static NotesNamesListHeader64Struct newInstance(final Pointer peer) {
