@@ -14,7 +14,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNamesListHeader64Struct extends BaseStructure {
+public class LinuxNotesNamesListHeader64Struct extends BaseStructure {
 	/** Number of names in list */
 	public short NumNames;
 
@@ -44,17 +44,17 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 	/**
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
-	public NotesNamesListHeader64Struct() {
+	public LinuxNotesNamesListHeader64Struct() {
 		super();
 		setAlignType(ALIGN_DEFAULT);
 	}
 	
-	public static NotesNamesListHeader64Struct newInstance() {
-		return AccessController.doPrivileged(new PrivilegedAction<NotesNamesListHeader64Struct>() {
+	public static LinuxNotesNamesListHeader64Struct newInstance() {
+		return AccessController.doPrivileged(new PrivilegedAction<LinuxNotesNamesListHeader64Struct>() {
 
 			@Override
-			public NotesNamesListHeader64Struct run() {
-				return new NotesNamesListHeader64Struct();
+			public LinuxNotesNamesListHeader64Struct run() {
+				return new LinuxNotesNamesListHeader64Struct();
 			}
 		});
 	}
@@ -74,7 +74,7 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 	 * @param authenticated  Flag to mark the user as already authenticated, e.g. via web server
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
-	public NotesNamesListHeader64Struct(short numNames, byte id[], byte product, byte check[], short authenticated) {
+	public LinuxNotesNamesListHeader64Struct(short numNames, byte id[], byte product, byte check[], short authenticated) {
 		super();
 		setAlignType(ALIGN_DEFAULT);
 		this.NumNames = numNames;
@@ -88,12 +88,12 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 		this.Authenticated = authenticated;
 	}
 	
-	public static NotesNamesListHeader64Struct newInstance(final short numNames, final byte id[], final byte product, final byte check[], final short authenticated) {
-		return AccessController.doPrivileged(new PrivilegedAction<NotesNamesListHeader64Struct>() {
+	public static LinuxNotesNamesListHeader64Struct newInstance(final short numNames, final byte id[], final byte product, final byte check[], final short authenticated) {
+		return AccessController.doPrivileged(new PrivilegedAction<LinuxNotesNamesListHeader64Struct>() {
 
 			@Override
-			public NotesNamesListHeader64Struct run() {
-				return new NotesNamesListHeader64Struct(numNames, id, product, check, authenticated);
+			public LinuxNotesNamesListHeader64Struct run() {
+				return new LinuxNotesNamesListHeader64Struct(numNames, id, product, check, authenticated);
 			}
 		});
 	}
@@ -103,25 +103,25 @@ public class NotesNamesListHeader64Struct extends BaseStructure {
 
 	 * @param peer pointer
 	 */
-	public NotesNamesListHeader64Struct(Pointer peer) {
+	public LinuxNotesNamesListHeader64Struct(Pointer peer) {
 		super(peer);
 		setAlignType(ALIGN_DEFAULT);
 	}
 	
-	public static NotesNamesListHeader64Struct newInstance(final Pointer peer) {
-		return AccessController.doPrivileged(new PrivilegedAction<NotesNamesListHeader64Struct>() {
+	public static LinuxNotesNamesListHeader64Struct newInstance(final Pointer peer) {
+		return AccessController.doPrivileged(new PrivilegedAction<LinuxNotesNamesListHeader64Struct>() {
 
 			@Override
-			public NotesNamesListHeader64Struct run() {
-				return new NotesNamesListHeader64Struct(peer);
+			public LinuxNotesNamesListHeader64Struct run() {
+				return new LinuxNotesNamesListHeader64Struct(peer);
 			}
 		});
 	}
 	
-	public static class ByReference extends NotesNamesListHeader64Struct implements Structure.ByReference {
+	public static class ByReference extends LinuxNotesNamesListHeader64Struct implements Structure.ByReference {
 		
 	};
-	public static class ByValue extends NotesNamesListHeader64Struct implements Structure.ByValue {
+	public static class ByValue extends LinuxNotesNamesListHeader64Struct implements Structure.ByValue {
 		
 	};
 }

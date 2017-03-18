@@ -8,11 +8,13 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.MacNotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -172,8 +174,18 @@ public class NotesNamesList implements IAllocatedMemory {
 				offset = namesList.size();
 				numNames = (int) (namesList.NumNames & 0xffff);
 			}
+			else if (notesAPI instanceof MacNotesCAPI) {
+				MacNotesNamesListHeader64Struct namesList = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+				namesList.read();
+
+				names = new ArrayList<String>(namesList.NumNames);
+
+				offset = namesList.size();
+				numNames = (int) (namesList.NumNames & 0xffff);
+
+			}
 			else {
-				NotesNamesListHeader64Struct namesList = NotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+				LinuxNotesNamesListHeader64Struct namesList = LinuxNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
 				names = new ArrayList<String>(namesList.NumNames);

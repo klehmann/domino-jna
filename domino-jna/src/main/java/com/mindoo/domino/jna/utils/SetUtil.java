@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.utils;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -50,4 +52,33 @@ public class SetUtil {
 		return allIds;
 	}
 
+	/**
+	 * Converts a set to an int array using the order of the {@link Set#iterator()}
+	 * 
+	 * @param set set
+	 * @return int array
+	 */
+	public static int[] toPrimitiveArray(Set<Integer> set) {
+		int[] arr = new int[set.size()];
+		int i=0;
+		Iterator<Integer> values = set.iterator();
+		while (values.hasNext()) {
+			arr[i++] = values.next().intValue();
+		}
+		return arr;
+	}
+	
+	/**
+	 * Converts an int array to a {@link LinkedHashSet} keeping the original order
+	 * 
+	 * @param arr int array
+	 * @return set
+	 */
+	public static LinkedHashSet<Integer> fromPrimitiveArray(int[] arr) {
+		LinkedHashSet<Integer> set = new LinkedHashSet<Integer>();
+		for (int i=0; i<arr.length; i++) {
+			set.add(Integer.valueOf(arr[i]));
+		}
+		return set;
+	}
 }

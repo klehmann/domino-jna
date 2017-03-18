@@ -12,11 +12,13 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.MacNotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.sun.jna.Memory;
@@ -260,9 +262,15 @@ public class NotesNamingUtils {
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
+		else if (notesAPI instanceof MacNotesCAPI) {
+			namesListMem = new Memory(NotesCAPI.macNamesListHeaderSize64);
+			MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListMem);
+			namesListHeader.NumNames = (short) (names.size() & 0xffff);
+			namesListHeader.write();
+		}
 		else {
-			namesListMem = new Memory(NotesCAPI.namesListHeaderSize64);
-			NotesNamesListHeader64Struct namesListHeader = NotesNamesListHeader64Struct.newInstance(namesListMem);
+			namesListMem = new Memory(NotesCAPI.linuxNamesListHeaderSize64);
+			LinuxNotesNamesListHeader64Struct namesListHeader = LinuxNotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
@@ -434,12 +442,29 @@ public class NotesNamingUtils {
 					namesListHeader.write();
 					namesListHeader.read();
 				}
-				else {
-					NotesNamesListHeader64Struct namesListHeader = NotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+				else if (notesAPI instanceof MacNotesCAPI) {
+					MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
-					//setting authenticated flag for the user is required when running on the server
+					
+					System.out.println("Setting privileges "+privileges+", namesListHeader.size()="+namesListHeader.size());
+					System.out.println("Old:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
+
 					namesListHeader.Authenticated = bitMaskAsShort;
 					namesListHeader.write();
+					System.out.println("New:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
+					namesListHeader.read();
+				}
+				else {
+					LinuxNotesNamesListHeader64Struct namesListHeader = LinuxNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+					
+					System.out.println("Setting privileges "+privileges+", namesListHeader.size()="+namesListHeader.size());
+					System.out.println("Old:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
+					
+					//setting authenticated flag for the user is required when running on the server
+					namesListHeader.Authenticated = bitMask;
+					namesListHeader.write();
+					System.out.println("New:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
 					namesListHeader.read();
 				}
 			}

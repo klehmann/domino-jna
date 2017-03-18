@@ -34,4 +34,29 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 	public interface MQScanCallbackWin extends MQScanCallback, StdCallCallback { /* StdCallCallback if using __stdcall__ */
     }
 
+	//callbacks for NSFDbGetNotes
+	
+	public interface NSFGetNotesCallbackWin extends NSFGetNotesCallback, StdCallCallback {
+    }
+
+	public interface b64_NSFNoteOpenCallbackWin extends b64_NSFNoteOpenCallback, StdCallCallback {
+    }
+
+	public interface b32_NSFNoteOpenCallbackWin extends b32_NSFNoteOpenCallback, StdCallCallback {
+    }
+
+	public interface b64_NSFObjectAllocCallbackWin extends b64_NSFObjectAllocCallback, StdCallCallback {
+    }
+
+	public interface b32_NSFObjectAllocCallbackWin extends b32_NSFObjectAllocCallback, StdCallCallback {
+    }
+
+	public interface b64_NSFObjectWriteCallbackWin extends b64_NSFObjectWriteCallback, StdCallCallback {
+    }
+
+	public interface b32_NSFObjectWriteCallbackWin extends b32_NSFObjectWriteCallback, StdCallCallback {
+    }
+
+	public interface NSFFolderAddCallbackWin extends NSFFolderAddCallback, StdCallCallback {
+    }
 }

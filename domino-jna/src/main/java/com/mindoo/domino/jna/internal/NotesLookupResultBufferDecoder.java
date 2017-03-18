@@ -20,6 +20,7 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -87,6 +88,8 @@ public class NotesLookupResultBufferDecoder {
 			bufferPtr = notesAPI.b32_OSLockObject((int) bufferHandle);
 		}
 
+		System.out.println("View lookup buffer:\n"+DumpUtil.dumpAsAscii(bufferPtr, 100));
+		
 		int bufferPos = 0;
 		
 		NotesCollectionStats collectionStats = null;
@@ -231,7 +234,9 @@ public class NotesLookupResultBufferDecoder {
 					Map<String,Object> itemValues = itemTableData.asMap(false);
 					newData.setSummaryData(itemValues);
 				}
-				
+				if (returnMask.contains(ReadMask.RETURN_READERSLIST)) {
+					
+				}
 				if (singleColumnLookupName!=null) {
 					newData.setSingleColumnLookupName(singleColumnLookupName);
 				}

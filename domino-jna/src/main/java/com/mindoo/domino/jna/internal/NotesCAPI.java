@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
+import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
@@ -14,7 +16,6 @@ import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
 import com.mindoo.domino.jna.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.structs.NotesItemValueTableStruct;
 import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
@@ -58,7 +59,8 @@ public interface NotesCAPI extends Library {
 	public final int winNamesListHeaderSize64 = WinNotesNamesListHeader64Struct.newInstance().size();
 	public final int winNamesListHeaderSize32 = WinNotesNamesListHeader32Struct.newInstance().size();
 	public final int namesListHeaderSize32 = NotesNamesListHeader32Struct.newInstance().size();
-	public final int namesListHeaderSize64 = NotesNamesListHeader64Struct.newInstance().size();
+	public final int linuxNamesListHeaderSize64 = LinuxNotesNamesListHeader64Struct.newInstance().size();
+	public final int macNamesListHeaderSize64 = MacNotesNamesListHeader64Struct.newInstance().size();
 	public final int objectDescriptorSize = NotesObjectDescriptorStruct.newInstance().size();
 	public final int fileObjectSize = NotesFileObjectStruct.newInstance().size();
 	public final int cdFieldSize = NotesCDFieldStruct.newInstance().size();
@@ -105,6 +107,15 @@ public interface NotesCAPI extends Library {
 	short b32_NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
 	short b64_NSFDbDeleteNotes(long hDB, long hTable, Memory retUNIDArray);
 
+	short b64_NSFNoteDelete(long db_handle, int note_id, short update_flags);
+	short b32_NSFNoteDelete(int db_handle, int note_id, short update_flags);
+
+	public short b64_NSFDbStampNotesMultiItem(long hDB, long hTable, long hInNote);
+	public short b32_NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
+
+	public short b64_NSFDbGenerateOID(long hDB, NotesOriginatorIdStruct retOID);
+	public short b32_NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
+	
 	/*  Replication flags
 
 	NOTE:  Please note the distinction between REPLFLG_DISABLE and
@@ -328,6 +339,72 @@ public interface NotesCAPI extends Library {
     
 	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
 	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, LongByReference rethTable);
+
+	//callbacks for NSFDbGetNotes
+	
+	public interface NSFGetNotesCallback extends Callback {
+        short invoke(Pointer param, int totalSizeLow, int totalSizeHigh); 
+    }
+
+	public interface b64_NSFNoteOpenCallback extends Callback {
+        short invoke(Pointer param, long hNote, int noteId, short status); 
+    }
+
+	public interface b32_NSFNoteOpenCallback extends Callback {
+        short invoke(Pointer param, int hNote, int noteId, short status); 
+    }
+
+	public interface b64_NSFObjectAllocCallback extends Callback {
+        short invoke(Pointer param, long hNote, int oldRRV, short status, int objectSize); 
+    }
+
+	public interface b32_NSFObjectAllocCallback extends Callback {
+        short invoke(Pointer param, int hNote, int oldRRV, short status, int objectSize); 
+    }
+
+	public interface b64_NSFObjectWriteCallback extends Callback {
+        short invoke(Pointer param, long hNote, int oldRRV, short status, Pointer buffer, int bufferSize); 
+    }
+
+	public interface b32_NSFObjectWriteCallback extends Callback {
+        short invoke(Pointer param, int hNote, int oldRRV, short status, Pointer buffer, int bufferSize); 
+    }
+
+	public interface NSFFolderAddCallback extends Callback {
+        short invoke(Pointer param, NotesUniversalNoteIdStruct noteUNID, int opBlock, int opBlockSize); 
+    }
+
+	public short b64_NSFDbGetNotes(
+			long hDB,
+			int NumNotes,
+			Memory NoteID, //NOTEID array
+			Memory NoteOpenFlags, // DWORD array
+			Memory SinceSeqNum, // DWORD array
+			int ControlFlags,
+			long hObjectDB,
+			Pointer CallbackParam,
+			NSFGetNotesCallback  GetNotesCallback,
+			b64_NSFNoteOpenCallback  NoteOpenCallback,
+			b64_NSFObjectAllocCallback  ObjectAllocCallback,
+			b64_NSFObjectWriteCallback  ObjectWriteCallback,
+			NotesTimeDateStruct FolderSinceTime,
+			NSFFolderAddCallback  FolderAddCallback);
+	
+	public short b32_NSFDbGetNotes(
+			int hDB,
+			int NumNotes,
+			Memory NoteID, //NOTEID array
+			Memory NoteOpenFlags, // DWORD array
+			Memory SinceSeqNum, // DWORD array
+			int ControlFlags,
+			int hObjectDB,
+			Pointer CallbackParam,
+			NSFGetNotesCallback  GetNotesCallback,
+			b32_NSFNoteOpenCallback  NoteOpenCallback,
+			b32_NSFObjectAllocCallback  ObjectAllocCallback,
+			b32_NSFObjectWriteCallback  ObjectWriteCallback,
+			NotesTimeDateStruct FolderSinceTime,
+			NSFFolderAddCallback  FolderAddCallback);
 	
 	short DNCanonicalize(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);
 	short DNAbbreviate(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);	
@@ -539,12 +616,17 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public static short _NOTE_DB = 0;		
 	/** (When adding new values, see the table in NTINFO.C */
 	public static short _NOTE_ID = 1;
+	/** Get/set the Originator ID (OID). */
 	public static short _NOTE_OID = 2;
+	/** Get/set the NOTE_CLASS (WORD). */
 	public static short _NOTE_CLASS	= 3;
+	/** Get/set the Modified in this file time/date (TIMEDATE : GMT normalized). */
 	public static short _NOTE_MODIFIED = 4;
 	/** For pre-V3 compatibility. Should use $Readers item */
 	public static short _NOTE_PRIVILEGES = 5;
+	/** Get/set the note flags (WORD). See NOTE_FLAG_xxx. */
 	public static short _NOTE_FLAGS = 7;
+	/** Get/set the Accessed in this file date (TIMEDATE). */
 	public static short _NOTE_ACCESSED = 8;
 	/** For response hierarchy */
 	public static short _NOTE_PARENT_NOTEID = 10;
@@ -2125,6 +2207,14 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			int  Reserved,
 			Pointer pReserved);
 	
+	public short b64_NSFNoteCopy(
+			long note_handle_src,
+			LongByReference note_handle_dst_ptr);
+	
+	public short b32_NSFNoteCopy(
+			int note_handle_src,
+			IntByReference note_handle_dst_ptr);
+	
 	/*	DecryptFlags used in NSFNoteDecrypt */
 
 	public short DECRYPT_ATTACHMENTS_IN_PLACE = 0x0001;
@@ -3049,7 +3139,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public String REPL_QUEUE_NAME = TASK_QUEUE_PREFIX + "REPLICATOR";
 	/** Mail Router */
 	public String ROUTER_QUEUE_NAME	= TASK_QUEUE_PREFIX + "ROUTER";
-	/** Index views & full text process */
+	/** Index views &amp; full text process */
 	public String UPDATE_QUEUE_NAME = TASK_QUEUE_PREFIX + "INDEXER";
 	/** Login Process */
 	public String LOGIN_QUEUE_NAME = TASK_QUEUE_PREFIX + "LOGIN";

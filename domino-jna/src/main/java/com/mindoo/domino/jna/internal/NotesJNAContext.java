@@ -72,6 +72,9 @@ public class NotesJNAContext {
 											if (osName.toLowerCase().indexOf("win") >= 0) {
 												return (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
 											}
+											else if (osName.toLowerCase().indexOf("mac") >= 0) {
+												return (NotesCAPI) Native.loadLibrary("notes", MacNotesCAPI.class, options);
+											}
 											else {
 												return (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
 											}

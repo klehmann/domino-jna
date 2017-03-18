@@ -322,7 +322,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * Note: The error code {@link INotesErrorConstants#ERR_MQ_QUITTING} indicates that the
 	 * message queue is in the QUIT state, denoting that applications that are reading
 	 * the message queue should terminate. For instance, a server addin's message queue
-	 * will be placed in the QUIT state when a "tell <addin> quit" command is input at the console.
+	 * will be placed in the QUIT state when a "tell &lt;addin&gt; quit" command is input at the console.
 
 	 * @param buffer buffer used to read data
 	 * @param waitForMessage if the specified message queue is empty, wait for a message to appear in the queue. The timeout argument specifies the amount of time to wait for a message.
@@ -339,7 +339,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * Note: The error code {@link INotesErrorConstants#ERR_MQ_QUITTING} indicates that the
 	 * message queue is in the QUIT state, denoting that applications that are reading
 	 * the message queue should terminate. For instance, a server addin's message queue
-	 * will be placed in the QUIT state when a "tell <addin> quit" command is input at the console.
+	 * will be placed in the QUIT state when a "tell &lt;addin&gt; quit" command is input at the console.
 
 	 * @param buffer buffer used to read data
 	 * @param waitForMessage if the specified message queue is empty, wait for a message to appear in the queue. The timeout argument specifies the amount of time to wait for a message.

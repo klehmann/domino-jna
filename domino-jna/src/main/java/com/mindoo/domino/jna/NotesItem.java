@@ -162,6 +162,15 @@ public class NotesItem {
 	}
 	
 	/**
+	 * Returns false if the item's type is {@link #TYPE_UNAVAILABLE}
+	 * 
+	 * @return true if available
+	 */
+	public boolean isAvailable() {
+		return m_dataType!=TYPE_UNAVAILABLE;
+	}
+	
+	/**
 	 * Returns the sequence number of the item
 	 * 
 	 * @return sequence number
@@ -197,6 +206,7 @@ public class NotesItem {
 	 * <li>{@link #TYPE_TIME_RANGE} - List of Calendar objects</li>
 	 * <li>{@link #TYPE_OBJECT} with the subtype Attachment (e.g. $File items) - List with {@link NotesAttachment} object</li>
 	 * <li>{@link #TYPE_NOTEREF_LIST} - List with one {@link NotesUniversalNoteId} object</li>
+	 * <li>{@link #TYPE_UNAVAILABLE} - returns an empty list; might e.g. be returned by {@link NotesDatabase#getNotes(int[], java.util.EnumSet[], int[], java.util.EnumSet, NotesDatabase, com.mindoo.domino.jna.NotesDatabase.IGetNotesCallback, com.mindoo.domino.jna.NotesDatabase.INoteOpenCallback, com.mindoo.domino.jna.NotesDatabase.IObjectAllocCallback, com.mindoo.domino.jna.NotesDatabase.IObjectWriteCallback, NotesTimeDate, com.mindoo.domino.jna.NotesDatabase.IFolderAddCallback)} with to high sequence numbers</li>
 	 * </ul>
 	 * Other data types may be read via {@link #getValueAsText(char)} or native support may be added at
 	 * a later time.

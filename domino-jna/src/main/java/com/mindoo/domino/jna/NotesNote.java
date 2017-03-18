@@ -411,7 +411,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 	 * @param updateFlags flags
 	 */
-	public void updateExtended(EnumSet<UpdateNote> updateFlags) {
+	public void update(EnumSet<UpdateNote> updateFlags) {
 		checkHandle();
 		
 		int updateFlagsBitmask = UpdateNote.toBitMaskForUpdateExt(updateFlags);
@@ -452,48 +452,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void update() {
 		update(EnumSet.noneOf(UpdateNote.class));
 	}
-	
-	/**
-	 * This function writes the in-memory version of a note to its database.<br>
-	 * Prior to issuing this call, a new note (or changes to a note) are not a part of
-	 * the on-disk database.<br>
-	 * <br>
-	 * This function only supports the set of 16-bit WORD options described in the entry {@link UpdateNote};
-	 * to use the extended 32-bit DWORD options, use the function {@link #updateExtended(EnumSet)}.<br>
-	 * <br>
-	 * You should also consider updating the collections associated with other Views in a database
-	 * via the function {@link NotesDatabase#openCollection(String, int, EnumSet)}
-	 * {@link NotesCollection#update()}, if you have added and/or deleted a substantial number of documents.<br>
-	 * If the Server's Indexer Task does not rebuild the collections associated with
-	 * the database's Views, the first user to access a View in the modified database
-	 * might experience an inordinant delay, while the collection is rebuilt by the
-	 * Notes Workstation (locally) or Server Application (remotely).<br>
-	 * <br>
-	 * Do not update notes to disk that contain invalid items.<br>
-	 * An example of an invalid item is a view design note that has a $Collation item
-	 * whose BufferSize member is set to zero.<br>
-	 * This update method may return an error for an invalid item that was not caught
-	 * in a previous release of Domino or Notes.<br>
-	 * 	Note: if you have enabled IMAP on a database, in the case of the
-	 * special NoteID "NOTEID_ADD_OR_REPLACE", a new note is always created.
-	 * 
-	 * @param updateFlags flags
-	 */
-	public void update(EnumSet<UpdateNote> updateFlags) {
-		checkHandle();
-		
-		short updateFlagsBitmask = UpdateNote.toBitMaskForUpdate(updateFlags);
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteUpdate(m_hNote64, updateFlagsBitmask);
-			NotesErrorUtils.checkResult(result);
-		}
-		else {
-			short result = notesAPI.b32_NSFNoteUpdate(m_hNote32, updateFlagsBitmask);
-			NotesErrorUtils.checkResult(result);
-		}
-	}
 
 	/**
 	 * The method checks whether an item exists
@@ -516,6 +474,57 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFItemInfo(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
 		}
 		return result == 0;	
+	}
+	
+	/**
+	 * This function deletes this note from the specified database with default flags (0).<br>
+	 * <br>
+	 * This function allows using extended 32-bit DWORD update options, as described in the entry {@link UpdateNote}.<br>
+	 * <br>
+	 * It deletes the specified note by updating it with a nil body, and marking the note as a deletion stub.<br>
+	 * The deletion stub identifies the deleted note to other replica copies of the database.<br>
+	 * This allows the replicator to delete copies of the note from replica databases.
+	 * <br>
+	 * The deleted note may be of any NOTE_CLASS_xxx.  The active user ID must have sufficient user access
+	 * in the databases's Access Control List (ACL) to carry out a deletion on the note or the function
+	 * will return an error code.
+	 */
+	public void delete() {
+		delete(EnumSet.noneOf(UpdateNote.class));
+	}
+	
+	/**
+	 * This function deletes this note from the specified database.<br>
+	 * <br>
+	 * This function allows using extended 32-bit DWORD update options, as described in the entry {@link UpdateNote}.<br>
+	 * <br>
+	 * It deletes the specified note by updating it with a nil body, and marking the note as a deletion stub.<br>
+	 * The deletion stub identifies the deleted note to other replica copies of the database.<br>
+	 * This allows the replicator to delete copies of the note from replica databases.
+	 * <br>
+	 * The deleted note may be of any NOTE_CLASS_xxx.  The active user ID must have sufficient user access
+	 * in the databases's Access Control List (ACL) to carry out a deletion on the note or the function
+	 * will return an error code.
+	 * 
+	 * @param flags flags
+	 */
+	public void delete(EnumSet<UpdateNote> flags) {
+		checkHandle();
+		
+		if (m_parentDb.isRecycled())
+			throw new NotesError(0, "Parent database already recycled");
+		
+		int flagsAsInt = UpdateNote.toBitMaskForUpdateExt(flags);
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
+		}
+		else {
+			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
@@ -1008,6 +1017,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
+			supportedType = true;
+		}
 		
 		if (!supportedType) {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
@@ -1097,6 +1109,9 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(valueDataPtr.share(2));
 			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
 			return Arrays.asList((Object) unid);
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
+			return Collections.emptyList();
 		}
 		else {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
@@ -1912,6 +1927,57 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 	
+	public NotesNote copyToDatabase(NotesDatabase targetDb) {
+		checkHandle();
+
+		if (targetDb.isRecycled()) {
+			throw new NotesError(0, "Target database already recycled");
+		}
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference note_handle_dst = new LongByReference();
+			short result = notesAPI.b64_NSFNoteCopy(m_hNote64, note_handle_dst);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote copyNote = new NotesNote(targetDb, note_handle_dst.getValue());
+			
+			NotesOriginatorId newOid = targetDb.generateOID();
+			NotesOriginatorIdStruct newOidStruct = newOid.getAdapter(NotesOriginatorIdStruct.class);
+			
+			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_ID, null);
+			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_OID, newOidStruct.getPointer());
+			
+			LongByReference targetDbHandle = new LongByReference();
+			targetDbHandle.setValue(targetDb.getHandle64());
+			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_DB, targetDbHandle.getPointer());
+			
+			NotesGC.__objectCreated(NotesNote.class, copyNote);
+			return copyNote;
+		}
+		else {
+			IntByReference note_handle_dst = new IntByReference();
+			short result = notesAPI.b32_NSFNoteCopy(m_hNote32, note_handle_dst);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote copyNote = new NotesNote(targetDb, note_handle_dst.getValue());
+			
+			NotesOriginatorId newOid = targetDb.generateOID();
+			NotesOriginatorIdStruct newOidStruct = newOid.getAdapter(NotesOriginatorIdStruct.class);
+			
+			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_ID, null);
+			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_OID, newOidStruct.getPointer());
+			
+			IntByReference targetDbHandle = new IntByReference();
+			targetDbHandle.setValue(targetDb.getHandle32());
+			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_DB, targetDbHandle.getPointer());
+			
+			NotesGC.__objectCreated(NotesNote.class, copyNote);
+			return copyNote;
+		}
+	}
+	
 	/**
 	 * This function decrypts an encrypted note, using the appropriate encryption key stored
 	 * in the user's ID file.<br>
@@ -2098,7 +2164,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * <li>{@link List} of date types for multiple dates</li>
 	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
 	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
-	 * <li>{@link NotesUniversalNoteId}</li> for $REF like items</li>
+	 * <li>{@link NotesUniversalNoteId} for $REF like items</li>
 	 * </ul>
 	 * 
 	 * @param itemName item name
@@ -3163,7 +3229,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Creates/overwrites a $REF item pointing to another {@NotesNote}
+	 * Creates/overwrites a $REF item pointing to another {@link NotesNote}
 	 * 
 	 * @param note $REF target note
 	 */

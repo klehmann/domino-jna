@@ -521,8 +521,23 @@ public class NotesSearch {
 		}
 	}
 
+	/**
+	 * Callback interface to process database search results
+	 * 
+	 * @author Karsten Lehmann
+	 */
 	public static interface ISearchCallback {
 		
+		/**
+		 * Implement this method to receive search results
+		 * 
+		 * @param parentDb parent database
+		 * @param noteId note id within database
+		 * @param noteClass class of the note
+		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
+		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesCAPI#_NOTE_MODIFIED}
+		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
+		 */
 		public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData);
 		
 	}

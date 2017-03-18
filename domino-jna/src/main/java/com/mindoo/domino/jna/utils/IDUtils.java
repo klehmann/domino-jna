@@ -455,6 +455,8 @@ public class IDUtils {
 	 * and using note encrypting ({@link NotesNote#copyAndEncrypt(NotesUserId, java.util.EnumSet)} /
 	 * {@link NotesNote#decrypt(NotesUserId)}).
 	 * 
+	 * @param <T> optional result type
+	 * 
 	 * @param idPath id path on disk
 	 * @param password id password
 	 * @param callback callback code to access the opened ID; we automatically close the ID file when the callback invocation is done

@@ -1254,4 +1254,38 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		addNotes(retIds, true);
 	}
+	
+	/**
+	 * This function takes the item values in the given note and stores (stamps) them in all the notes
+	 * specified by this ID Table.<br>
+	 * It overwrites the current item values, thereby updating the last modified time/date of
+	 * each Note processed.<br>
+	 * If the item does not exist or is of a different data type, this method will create/delete the item
+	 * and append the new value as required.<br>
+	 * <br>
+	 * If you do not have the proper access to modify any one of the notes in the ID Table,
+	 * {@link INotesErrorConstants#ERR_NOACCESS} will be returned.<br>
+	 * Only those documents you are able to modify have been stamped.
+	 * 
+	 * @param db database to load and change the notes
+	 * @param templateNote note containing specified item values to stamp to the set of notes contained in the table
+	 */
+	public void stampAllMultiItem(NotesDatabase db, NotesNote templateNote) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (db.isRecycled())
+			throw new NotesError(0, "Database already recycled");
+		if (templateNote.isRecycled())
+			throw new NotesError(0, "Template note already recycled");
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbStampNotesMultiItem(db.getHandle64(), m_idTableHandle64, templateNote.getHandle64());
+		}
+		else {
+			result = notesAPI.b32_NSFDbStampNotesMultiItem(db.getHandle32(), m_idTableHandle32, templateNote.getHandle32());
+		}
+		NotesErrorUtils.checkResult(result);
+	}
 }
