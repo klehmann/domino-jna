@@ -930,7 +930,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * in the databases's Access Control List (ACL) to carry out a deletion on the note or the function
 	 * will return an error code.
 	 * 
-	 * @pram noteId note id of note to be deleted
+	 * @param noteId note id of note to be deleted
 	 */
 	public void deleteNote(int noteId) {
 		deleteNote(noteId, EnumSet.noneOf(UpdateNote.class));
@@ -949,7 +949,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * in the databases's Access Control List (ACL) to carry out a deletion on the note or the function
 	 * will return an error code.
 	 * 
-	 * @pram noteId note id of note to be deleted
+	 * @param noteId note id of note to be deleted
 	 * @param flags flags
 	 */
 	public void deleteNote(int noteId, EnumSet<UpdateNote> flags) {
@@ -2030,8 +2030,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function reads a "soft deleted" note into memory.<br>
 	 * Its input is a database handle and a note ID within that database.<br>
-	 * Use {@link NotesNote#update(EnumSet)} or {@link NotesNote#updateExtended(EnumSet)}
-	 * to restore this "soft deleted" note.
+	 * Use {@link NotesNote#update(EnumSet)} to restore this "soft deleted" note.
 
 	 * @param noteId The ID of the "soft deleted" note to open
 	 * @return note
