@@ -46,6 +46,9 @@ public class NotesSchedEntryStruct extends BaseStructure implements IAdaptable {
 	 * @param Unid C type : UNID<br>
 	 * @param Interval C type : TIMEDATE_PAIR<br>
 	 * @param spare C type : BYTE[2]
+	 * @param Attr attributes
+	 * @param UserAttr user defined attributes
+	 * @param spare unused bytes
 	 * 
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */

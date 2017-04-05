@@ -249,7 +249,8 @@ public class NotesTimeDate implements IAdaptable {
 
 	/**
 	 * Returns a new {@link NotesTimeDate} with date only, set to tomorrow
-	 * @return
+	 * 
+	 * @return time date
 	 */
 	public static NotesTimeDate tomorrow() {
 		NotesTimeDate td = new NotesTimeDate();

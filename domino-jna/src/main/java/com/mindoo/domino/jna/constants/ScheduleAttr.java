@@ -12,7 +12,7 @@ import com.mindoo.domino.jna.NotesScheduleEntry;
 public enum ScheduleAttr {
 	/** Used by gateways to return foreign UNIDs */
 	FOREIGNUNID(0x10),
-	/** Used by V5 C&S to identify new repeating meetings */
+	/** Used by V5 C&amp;S to identify new repeating meetings */
 	REPEATEVENT(0x20),
 
 	/* these are the entry type bits */
