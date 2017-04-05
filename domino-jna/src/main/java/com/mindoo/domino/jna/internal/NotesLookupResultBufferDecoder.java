@@ -87,8 +87,6 @@ public class NotesLookupResultBufferDecoder {
 		else {
 			bufferPtr = notesAPI.b32_OSLockObject((int) bufferHandle);
 		}
-
-		System.out.println("View lookup buffer:\n"+DumpUtil.dumpAsAscii(bufferPtr, 100));
 		
 		int bufferPos = 0;
 		
@@ -471,7 +469,7 @@ public class NotesLookupResultBufferDecoder {
 //					decodedItemValues[j] = numberValues;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
-					List<Object> calendarValues = ItemDecoder.decodeTimeDateList(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
+					List<Object> calendarValues = ItemDecoder.decodeTimeDateList(notesAPI, itemValueBufferPointers[j], useDayLight, gmtOffset);
 					decodedItemValues[j] = calendarValues;
 					
 //					NotesRange range = new NotesRange(itemValueBufferPointers[j]);

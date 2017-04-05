@@ -127,7 +127,7 @@ public class ItemDecoder {
 		return numberValues;
 	}
 	
-	public static List<Object> decodeTimeDateList(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
+	public static List<Object> decodeTimeDateList(NotesCAPI notesAPI, Pointer ptr, boolean useDayLight, int gmtOffset) {
 		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		
