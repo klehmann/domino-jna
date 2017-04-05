@@ -445,26 +445,18 @@ public class NotesNamingUtils {
 				else if (notesAPI instanceof MacNotesCAPI) {
 					MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
-					
-					System.out.println("Setting privileges "+privileges+", namesListHeader.size()="+namesListHeader.size());
-					System.out.println("Old:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
 
 					namesListHeader.Authenticated = bitMaskAsShort;
 					namesListHeader.write();
-					System.out.println("New:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
 					namesListHeader.read();
 				}
 				else {
 					LinuxNotesNamesListHeader64Struct namesListHeader = LinuxNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					
-					System.out.println("Setting privileges "+privileges+", namesListHeader.size()="+namesListHeader.size());
-					System.out.println("Old:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
-					
 					//setting authenticated flag for the user is required when running on the server
 					namesListHeader.Authenticated = bitMask;
 					namesListHeader.write();
-					System.out.println("New:\n"+DumpUtil.dumpAsAscii(namesListBufferPtr, namesListHeader.size()+20));
 					namesListHeader.read();
 				}
 			}

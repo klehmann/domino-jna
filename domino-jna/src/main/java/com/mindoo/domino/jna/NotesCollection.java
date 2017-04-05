@@ -2418,7 +2418,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
 
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
-			System.out.println("Return lookup buffer length: "+iBufLength);
 			if (iBufLength==0) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
