@@ -20,6 +20,10 @@ import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.structs.NotesSchedEntryExtStruct;
+import com.mindoo.domino.jna.structs.NotesSchedEntryStruct;
+import com.mindoo.domino.jna.structs.NotesScheduleListStruct;
+import com.mindoo.domino.jna.structs.NotesScheduleStruct;
 import com.mindoo.domino.jna.structs.NotesSearchMatch32Struct;
 import com.mindoo.domino.jna.structs.NotesSearchMatch64Struct;
 import com.mindoo.domino.jna.structs.NotesTableItemStruct;
@@ -38,6 +42,7 @@ import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -64,6 +69,10 @@ public interface NotesCAPI extends Library {
 	public final int objectDescriptorSize = NotesObjectDescriptorStruct.newInstance().size();
 	public final int fileObjectSize = NotesFileObjectStruct.newInstance().size();
 	public final int cdFieldSize = NotesCDFieldStruct.newInstance().size();
+	public final int schedListSize = NotesScheduleListStruct.newInstance().size();
+	public final int schedEntrySize = NotesSchedEntryStruct.newInstance().size();
+	public final int schedEntryExtSize = NotesSchedEntryExtStruct.newInstance().size();
+	public final int scheduleSize = NotesScheduleStruct.newInstance().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -3192,4 +3201,171 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** Dircat */
 	public String DIRCAT_QUEUE_NAME = TASK_QUEUE_PREFIX + "DIRCAT";
 	
+	public short b32_SchFreeTimeSearch(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			short fFindFirstFit,
+			int dwReserved,
+			NotesTimeDatePairStruct pInterval,
+			short Duration,
+			Pointer pNames,
+			IntByReference rethRange);
+
+	public short b64_SchFreeTimeSearch(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			short fFindFirstFit,
+			int dwReserved,
+			NotesTimeDatePairStruct pInterval,
+			short Duration,
+			Pointer pNames,
+			LongByReference rethRange);
+
+	public short b64_SchRetrieve(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			int dwOptions,
+			NotesTimeDatePairStruct pInterval,
+			Pointer pNames,
+			LongByReference rethCntnr,
+			Pointer mustBeNull1,
+			Pointer mustBeNull2,
+			Pointer mustBeNull3);
+	public short b32_SchRetrieve(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			int dwOptions,
+			NotesTimeDatePairStruct pInterval,
+			Pointer pNames,
+			IntByReference rethCntnr,
+			Pointer mustBeNull1,
+			Pointer mustBeNull2,
+			Pointer mustBeNull3);
+	
+	public void b64_SchContainer_Free(long hCntnr);
+	public void b32_SchContainer_Free(int hCntnr);
+	
+	public short b64_SchContainer_GetFirstSchedule(
+			long hCntnr,
+			IntByReference rethObj,
+			Memory retpSchedule);
+
+	
+	public short b32_SchContainer_GetFirstSchedule(
+			int hCntnr,
+			IntByReference rethObj,
+			Memory retpSchedule);
+
+	public short b64_Schedule_Free(long hCntnr, int hSched);
+	public short b32_Schedule_Free(int hCntnr, int hSched);
+
+	public short b64_SchContainer_GetNextSchedule(
+			long hCntnr,
+			int hCurSchedule,
+			IntByReference rethNextSchedule,
+			Memory retpNextSchedule);
+	
+	public short b32_SchContainer_GetNextSchedule(
+			int hCntnr,
+			int hCurSchedule,
+			IntByReference rethNextSchedule,
+			Memory retpNextSchedule);
+	
+	public short b64_Schedule_ExtractFreeTimeRange(
+			long hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			short fFindFirstFit,
+			short wDuration,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			LongByReference rethRange);
+	
+	public short b32_Schedule_ExtractFreeTimeRange(
+			int hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			short fFindFirstFit,
+			short wDuration,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			IntByReference rethRange);
+	
+	public short b64_Schedule_ExtractBusyTimeRange(
+			long hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			LongByReference rethRange,
+			IntByReference rethMoreCtx);
+	
+	public short b32_Schedule_ExtractBusyTimeRange(
+			int hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			IntByReference rethRange,
+			IntByReference rethMoreCtx);
+	
+	public short b64_Schedule_ExtractMoreBusyTimeRange(
+			long hCntnr,
+			int hMoreCtx,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			LongByReference rethRange,
+			IntByReference rethMore);
+	
+	public short b32_Schedule_ExtractMoreBusyTimeRange(
+			int hCntnr,
+			int hMoreCtx,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			IntByReference rethRange,
+			IntByReference rethMore);
+	
+	public short b64_Schedule_ExtractSchedList(
+			long hCntnr,
+			int hSchedObj,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			LongByReference rethSchedList,
+			IntByReference rethMore);
+	
+	public short b32_Schedule_ExtractSchedList(
+			int hCntnr,
+			int hSchedObj,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			IntByReference rethSchedList,
+			IntByReference rethMore);
+	
+	public short b64_Schedule_ExtractMoreSchedList(
+			long hCntnr,
+			int hMoreCtx,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			LongByReference rethSchedList,
+			IntByReference rethMore);
+	
+	public short b32_Schedule_ExtractMoreSchedList(
+			int hCntnr,
+			int hMoreCtx,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			IntByReference rethSchedList,
+			IntByReference rethMore);
+	
+	public short b64_Schedule_Access(
+			long hCntnr,
+			int hSched,
+			PointerByReference pretSched);
+	
+	public short b32_Schedule_Access(
+			int hCntnr,
+			int hSched,
+			PointerByReference pretSched);
 }
