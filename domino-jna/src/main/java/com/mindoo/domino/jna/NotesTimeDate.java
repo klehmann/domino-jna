@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
@@ -53,6 +54,77 @@ public class NotesTimeDate implements IAdaptable {
 		this(NotesTimeDateStruct.newInstance(cal));
 	}
 
+	/**
+	 * Constructs a new date/time object
+	 * 
+	 * @param year year
+	 * @param month month, january is 1
+	 * @param day day
+	 * @param hour hour
+	 * @param minute minute
+	 * @param second second
+	 * @param millis milliseconds (Notes can only store hundredth seconds)
+	 * @param zone timezone
+	 */
+	public NotesTimeDate(int year, int month, int day, int hour, int minute, int second, int millis, TimeZone zone) {
+		this(createCalendar(year, month, day, hour, minute, second, millis, zone));
+	}
+
+	private static Calendar createCalendar(int year, int month, int day, int hour, int minute, int second, int millis, TimeZone zone) {
+		Calendar cal = Calendar.getInstance();
+		cal.set(Calendar.YEAR, year);
+		cal.set(Calendar.MONTH, month-1);
+		cal.set(Calendar.DAY_OF_MONTH, day);
+		cal.set(Calendar.HOUR_OF_DAY, hour);
+		cal.set(Calendar.MINUTE, minute);
+		cal.set(Calendar.SECOND, second);
+		cal.set(Calendar.MILLISECOND, millis);
+		cal.set(Calendar.ZONE_OFFSET, zone.getRawOffset());
+		return cal;
+	}
+	
+	/**
+	 * Constructs a new date/time object in the default timezone
+	 * 
+	 * @param year year
+	 * @param month month
+	 * @param day day
+	 * @param hour hour
+	 * @param minute minute
+	 * @param second second
+	 * @param millis milliseconds (Notes can only store hundredth seconds)
+	 */
+	public NotesTimeDate(int year, int month, int day, int hour, int minute, int second, int millis) {
+		this(year, month, day, hour, minute, second, millis, TimeZone.getDefault());
+	}
+	
+	/**
+	 * Constructs a new date/time object in the default timezone
+	 * 
+	 * @param year year
+	 * @param month month
+	 * @param day day
+	 * @param hour hour
+	 * @param minute minute
+	 * @param second second
+	 */
+	public NotesTimeDate(int year, int month, int day, int hour, int minute, int second) {
+		this(year, month, day, hour, minute, second, 0, TimeZone.getDefault());
+	}
+	
+	/**
+	 * Constructs a new date/time object in the default timezone
+	 * 
+	 * @param year year
+	 * @param month month
+	 * @param day day
+	 * @param hour hour
+	 * @param minute minute
+	 */
+	public NotesTimeDate(int year, int month, int day, int hour, int minute) {
+		this(year, month, day, hour, minute, 0, 0, TimeZone.getDefault());
+	}
+	
 	/**
 	 * Creates a new instance
 	 * 
@@ -151,6 +223,55 @@ public class NotesTimeDate implements IAdaptable {
 			return Arrays.equals(m_struct.Innards, ((NotesTimeDate)o).m_struct.Innards);
 		}
 		return false;
+	}
+	
+	/**
+	 * Returns a new {@link NotesTimeDate} with date and time info set to "now"
+	 * 
+	 * @return time date
+	 */
+	public static NotesTimeDate now() {
+		NotesTimeDate td = new NotesTimeDate();
+		td.setNow();
+		return td;
+	}
+
+	/**
+	 * Returns a new {@link NotesTimeDate} with date only, set to today
+	 * 
+	 * @return time date
+	 */
+	public static NotesTimeDate today() {
+		NotesTimeDate td = new NotesTimeDate();
+		td.setToday();
+		return td;
+	}
+
+	/**
+	 * Returns a new {@link NotesTimeDate} with date only, set to tomorrow
+	 * @return
+	 */
+	public static NotesTimeDate tomorrow() {
+		NotesTimeDate td = new NotesTimeDate();
+		td.setTomorrow();
+		return td;
+	}
+
+	/**
+	 * Returns a new {@link NotesTimeDate} with date and time info, adjusted from the current date/time
+	 * 
+	 * @param year positive or negative value or 0 for no change
+	 * @param month positive or negative value or 0 for no change
+	 * @param day positive or negative value or 0 for no change
+	 * @param hours positive or negative value or 0 for no change
+	 * @param minutes positive or negative value or 0 for no change
+	 * @param seconds positive or negative value or 0 for no change
+	 * @return timedate
+	 */
+	public static NotesTimeDate adjustedFromNow(int year, int month, int day, int hours, int minutes, int seconds) {
+		NotesTimeDate td = new NotesTimeDate();
+		td.adjust(year, month, day, hours, minutes, seconds);
+		return td;
 	}
 	
 	/**
