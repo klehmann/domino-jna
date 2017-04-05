@@ -29,6 +29,7 @@ The project provides functionality that is not available in the classic Java API
 * faster **formula execution on documents** with document modified/selected/deleted by formula check
 * **SSO token computation** (with tokens also working on Websphere)
 * APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
+* APIs to **read extended busytime information** like UNID/start/end of busytime entries (not just the freetime search that IBM provides)
 
 **Please note:**
 
