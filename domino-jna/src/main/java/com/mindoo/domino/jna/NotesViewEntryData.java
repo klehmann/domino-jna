@@ -663,7 +663,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a string
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a string
 	 * @return string value or null
 	 */
@@ -687,7 +687,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to an abbreviated name
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @return name or null
 	 */
 	public String getAsNameAbbreviated(String columnName) {
@@ -698,7 +698,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a list of abbreviated names
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @return names or null
 	 */
 	public List<String> getAsNamesListAbbreviated(String columnName) {
@@ -717,7 +717,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a string list
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return string list value or null
 	 */
@@ -756,7 +756,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a {@link Calendar}
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a Calendar
 	 * @return calendar value or null
 	 */
@@ -780,7 +780,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a {@link Calendar} list
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return calendar list value or null
 	 */
@@ -812,7 +812,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a double
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return double
 	 */
@@ -836,7 +836,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a double
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return integer
 	 */
@@ -860,7 +860,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a double list
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return double list
 	 */
@@ -910,7 +910,7 @@ public class NotesViewEntryData {
 	/**
 	 * Convenience function that converts a column value to a integer list
 	 * 
-	 * @param columnName programatic column name
+	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return integer list
 	 */
