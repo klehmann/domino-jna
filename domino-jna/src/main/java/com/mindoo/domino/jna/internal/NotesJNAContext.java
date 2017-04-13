@@ -6,6 +6,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.sun.jna.FunctionMapper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -69,14 +70,19 @@ public class NotesJNAContext {
 										});
 										
 										try {
-											if (osName.toLowerCase().indexOf("win") >= 0) {
+											String osNameLC = osName.toLowerCase();
+											
+											if (osNameLC.startsWith("windows")) {
 												return (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
 											}
-											else if (osName.toLowerCase().indexOf("mac") >= 0) {
+											else if (osNameLC.startsWith("mac")) {
 												return (NotesCAPI) Native.loadLibrary("notes", MacNotesCAPI.class, options);
 											}
-											else {
+											else if (osNameLC.startsWith("linux")) {
 												return (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+											}
+											else {
+												throw new UnsupportedPlatformError("Platform is unknown or not supported: "+osName);
 											}
 										}
 										catch (UnsatisfiedLinkError e) {
@@ -95,6 +101,9 @@ public class NotesJNAContext {
 							}
 						});
 					} catch (Throwable e) {
+						if (e instanceof UnsupportedPlatformError)
+							throw (UnsupportedPlatformError) e;
+						
 						throw new RuntimeException("Could not initialize Domino JNA API", e);
 					}
 				}
