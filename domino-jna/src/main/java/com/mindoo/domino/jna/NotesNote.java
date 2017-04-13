@@ -11,6 +11,7 @@ import java.util.List;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
+import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.UpdateNote;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -474,6 +475,58 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFItemInfo(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
 		}
 		return result == 0;	
+	}
+	
+	/**
+	 * The function NSFNoteHasComposite returns TRUE if the given note contains any TYPE_COMPOSITE items.
+	 * 
+	 * @return true if composite
+	 */
+	public boolean hasComposite() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NSFNoteHasComposite(m_hNote64) == 1;
+		}
+		else {
+			return notesAPI.b32_NSFNoteHasComposite(m_hNote32) == 1;
+		}
+	}
+	
+	/**
+	 * The function NSFNoteHasMIME returns TRUE if the given note contains either TYPE_RFC822_TEXT
+	 * items or TYPE_MIME_PART items.
+	 * 
+	 * @return true if mime
+	 */
+	public boolean hasMIME() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NSFNoteHasMIME(m_hNote64) == 1;
+		}
+		else {
+			return notesAPI.b32_NSFNoteHasMIME(m_hNote32) == 1;
+		}
+	}
+	
+	/**
+	 * The function NSFNoteHasMIMEPart returns TRUE if the given note contains any TYPE_MIME_PART items.
+	 * 
+	 * @return true if mime part
+	 */
+	public boolean hasMIMEPart() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			return notesAPI.b64_NSFNoteHasMIMEPart(m_hNote64) == 1;
+		}
+		else {
+			return notesAPI.b32_NSFNoteHasMIMEPart(m_hNote32) == 1;
+		}
 	}
 	
 	/**
@@ -3226,6 +3279,71 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+	
+	/**
+	 * Container for note signature data
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class SignatureData {
+		private NotesTimeDate m_whenSigned;
+		private String m_signer;
+		private String m_certifier;
+		
+		private SignatureData(NotesTimeDate whenSigned, String signer, String certifier) {
+			m_whenSigned = whenSigned;
+			m_signer = signer;
+			m_certifier = certifier;
+		}
+		
+		public NotesTimeDate getWhenSigned() {
+			return m_whenSigned;
+		}
+		
+		public String getSigner() {
+			return m_signer;
+		}
+		
+		public String getCertifier() {
+			return m_certifier;
+		}
+	}
+	
+	/**
+	 * This function verifies a signature on a note or section(s) within a note.<br>
+	 * It returns an error if a signature did not verify.<br>
+	 * <br>
+	 * Note:<br>
+	 * When the Notes user interface opens a note, it always uses the {@link OpenNote#EXPAND} option to
+	 * promote items of type number to number list, and items of type text to text list.
+	 * In order for a signature created or verified through this API call to work correctly with the
+	 * Notes user interface, the {@link OpenNote#EXPAND} option must be used when the note is opened.
+
+	 * @return signer data
+	 */
+	public SignatureData verifySignature() {
+		checkHandle();
+		
+		NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
+		Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
+		Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
+		}
+		else {
+			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
+		}
+		NotesErrorUtils.checkResult(result);
+
+		String signer = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
+		String certifier = NotesStringUtils.fromLMBCS(retCertifier, NotesStringUtils.getNullTerminatedLength(retCertifier));
+		SignatureData data = new SignatureData(new NotesTimeDate(retWhenSigned), signer, certifier);
+		return data;
 	}
 	
 	/**
