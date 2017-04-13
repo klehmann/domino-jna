@@ -1267,6 +1267,15 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			b32_CWFErrorProc ErrorRoutine,
 			Pointer CallersContext);
 	
+	public short b64_NSFNoteHasComposite(long hNote);
+	public short b32_NSFNoteHasComposite(int hNote);
+	
+	public short b64_NSFNoteHasMIME(long hNote);
+	public short b32_NSFNoteHasMIME(int hNote);
+
+	public short b64_NSFNoteHasMIMEPart(long hNote);
+	public short b32_NSFNoteHasMIMEPart(int hNote);
+	
 	/* 	Possible validation phases for NSFNoteComputeWithForm()  */
 	public short CWF_DV_FORMULA = 1;
 	public short CWF_IT_FORMULA	= 2;
