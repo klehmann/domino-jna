@@ -246,7 +246,7 @@ public class LegacyAPIUtils {
 
 		@Override
 		public int getHandle32() {
-			return intHandle[1];
+			return intHandle[0];
 		}
 
 		@Override
