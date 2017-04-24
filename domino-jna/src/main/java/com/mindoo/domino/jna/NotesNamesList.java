@@ -146,7 +146,7 @@ public class NotesNamesList implements IAllocatedMemory {
 				}
 			}
 		}
-		return m_names;
+		return new ArrayList<String>(m_names);
 	}
 	
 	/**
