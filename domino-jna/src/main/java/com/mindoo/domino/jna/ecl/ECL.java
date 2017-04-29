@@ -3,13 +3,19 @@ package com.mindoo.domino.jna.ecl;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.junit.experimental.categories.Categories.ExcludeCategory;
+
 import com.mindoo.domino.jna.NotesNamesList;
+import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.constants.Find;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -173,13 +179,19 @@ public class ECL {
 			}
 		}
 		
-		EnumSet<ECLCapability> set = EnumSet.noneOf(ECLCapability.class);
+		int retwCapabilitiesAsInt = (int) (retwCapabilities.getValue() & 0xffff);
+		int retwCapabilities2AsInt = (int) (retwCapabilities2.getValue() & 0xffff);
+		
+		EnumSet<ECLCapability> set = toCapabilitySet(retwCapabilitiesAsInt, retwCapabilities2AsInt);
 		if (retfUserCanModifyECL.getValue()==1) {
 			set.add(ECLCapability.ModifyECL);
 		}
-		
-		int retwCapabilitiesAsInt = (int) (retwCapabilities.getValue() & 0xffff);
-		int retwCapabilities2AsInt = (int) (retwCapabilities2.getValue() & 0xffff);
+
+		return set;
+	}
+	
+	private static EnumSet<ECLCapability> toCapabilitySet(int wCapabilitiesAsInt, int wCapabilities2AsInt) {
+		EnumSet<ECLCapability> set = EnumSet.noneOf(ECLCapability.class);
 		
 		for (ECLCapability currCapability : ECLCapability.values()) {
 			if (currCapability==ECLCapability.ModifyECL) {
@@ -190,16 +202,105 @@ public class ECL {
 			int currCapabilityInt = currCapability.getValue();
 			
 			if (currCapability.isWorkstationECL()) {
-				if ((retwCapabilities2AsInt & currCapabilityInt) == currCapabilityInt) {
+				if ((wCapabilities2AsInt & currCapabilityInt) == currCapabilityInt) {
 					set.add(currCapability);
 				}
 			}
 			else {
-				if ((retwCapabilitiesAsInt & currCapabilityInt) == currCapabilityInt) {
+				if ((wCapabilitiesAsInt & currCapabilityInt) == currCapabilityInt) {
 					set.add(currCapability);
 				}
 			}
 		}
+
+		return set;
+	}
+
+	/**
+	 * Method to modify the ECL for "-No signature-" and add trusted capabilities 
+	 * 
+	 * @param type ECL type
+	 * @param capabilities capabilities to trust
+	 * @param sessionOnly true to not permanently change the ECL
+	 * @return new capabilities
+	 */
+	public static EnumSet<ECLCapability> trustNoSignatureUser(ECLType type, EnumSet<ECLCapability> capabilities, boolean sessionOnly) {
+		return internalTrustSigner(null, type, capabilities, sessionOnly);
+	}
+
+	/**
+	 * Method to modify the ECL for the signer of the specified note and add trusted
+	 * capabilities
+	 * 
+	 * @param note signed note (we read $Signature internally)
+	 * @param type ECL type
+	 * @param capabilities capabilities to trust
+	 * @param sessionOnly true to not permanently change the ECL
+	 * @return new capabilities
+	 */
+	public static EnumSet<ECLCapability> trustSignerOfNote(NotesNote note, ECLType type, EnumSet<ECLCapability> capabilities, boolean sessionOnly) {
+		if (note==null)
+			throw new NullPointerException("Note cannot be null");
+		
+		return internalTrustSigner(note, type, capabilities, sessionOnly);
+	}
+
+	/**
+	 * Internal method with shared code
+	 * 
+	 * @param note signed note (we read $Signature internally) or null to use "-No signature-" entry
+	 * @param type ECL type
+	 * @param capabilities capabilities to trust
+	 * @param sessionOnly true to not permanently change the ECL
+	 * @return new capabilities
+	 */
+	private static EnumSet<ECLCapability> internalTrustSigner(NotesNote note, ECLType type, EnumSet<ECLCapability> capabilities, boolean sessionOnly) {
+		if (note!=null && note.isRecycled())
+			throw new NotesError(0, "Note already recycled");
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		ShortByReference retwCapabilities = new ShortByReference();
+		ShortByReference retwCapabilities2 = new ShortByReference();
+
+		short wCapabilities = ECLCapability.toBitMaskNotExtendedFlags(capabilities);
+		short wCapabilities2 = ECLCapability.toBitMaskExtendedFlags(capabilities);
+		
+		short result;
+		
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethCESCTX = new LongByReference();
+			if (note!=null) {
+				result = notesAPI.b64_CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);
+			}
+			else {
+				result = notesAPI.b64_CESGetNoSigCTX(rethCESCTX);
+			}
+			NotesErrorUtils.checkResult(result);				
+
+			result = notesAPI.b64_ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			IntByReference rethCESCTX = new IntByReference();
+			if (note!=null) {
+				result = notesAPI.b32_CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);				
+			}
+			else {
+				result = notesAPI.b32_CESGetNoSigCTX(rethCESCTX);
+			}
+			NotesErrorUtils.checkResult(result);
+
+			result = notesAPI.b32_ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
+			NotesErrorUtils.checkResult(result);
+		}
+		
+		int retwCapabilitiesAsInt = (int) (retwCapabilities.getValue() & 0xffff);
+		int retwCapabilities2AsInt = (int) (retwCapabilities2.getValue() & 0xffff);
+		
+		EnumSet<ECLCapability> set = toCapabilitySet(retwCapabilitiesAsInt, retwCapabilities2AsInt);
 
 		return set;
 	}
@@ -287,6 +388,35 @@ public class ECL {
 		public int getValue() {
 			return m_flag;
 		}
+		
+		public static short toBitMaskNotExtendedFlags(EnumSet<ECLCapability> capabilitySet) {
+			int result = 0;
+			if (capabilitySet!=null) {
+				for (ECLCapability currCapability : values()) {
+					if (!currCapability.isWorkstationECL()) {
+						if (capabilitySet.contains(currCapability)) {
+							result = result | currCapability.getValue();
+						}
+					}
+				}
+			}
+			return (short) (result & 0xffff);
+		}
+
+		public static short toBitMaskExtendedFlags(EnumSet<ECLCapability> capabilitySet) {
+			int result = 0;
+			if (capabilitySet!=null) {
+				for (ECLCapability currCapability : values()) {
+					if (currCapability.isWorkstationECL()) {
+						if (capabilitySet.contains(currCapability)) {
+							result = result | currCapability.getValue();
+						}
+					}
+				}
+			}
+			return (short) (result & 0xffff);
+		}
+
 	};
 
 }

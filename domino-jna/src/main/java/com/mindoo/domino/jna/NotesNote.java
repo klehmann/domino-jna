@@ -3214,6 +3214,56 @@ public class NotesNote implements IRecyclableNotesObject {
 //	}
 	
 	/**
+	 * This function signs a document by creating a unique electronic signature and appending this
+	 * signature to the note.<br>
+	 * <br>
+	 * A signature constitutes proof of the user's identity and serves to assure the reader that
+	 * the user was the real author of the document.<br>
+	 * <br>
+	 * The signature is derived from the User ID. A signature item has data type {@link NotesItem#TYPE_SIGNATURE}
+	 * and item flags {@link NotesCAPI.ITEM_SEAL}. The data value of the signature item is a digest
+	 * of the data stored in items in the note, signed with the user's private key.<br>
+	 * <br>
+	 * This method signs entire document. It creates a digest of all the items in the note, and
+	 * appends a signature item with field name $Signature (ITEM_NAME_NOTE_SIGNATURE).<br>
+	 * <br>
+	 * If the document to be signed is encrypted, this function will attempt to decrypt the
+	 * document in order to generate a valid signature.<br>
+	 * If you want the document to be signed and encrypted, you must sign the document
+	 * {@link #copyAndEncrypt(NotesUserId, EnumSet)}.<br>
+	 * <br>
+	 * Note:  When the Notes user interface opens a note, it always uses the {@link OpenNote#EXPAND}
+	 * option to promote items of type number to number list, and items of type text to text list.<br>
+	 */
+	public void sign() {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b64_NSFNoteSign(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+			
+		}
+		else {
+			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b32_NSFNoteSign(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
 	 * This function signs the note using the specified ID.
 	 * It allows you to pass a flag to determine how MIME parts will be signed.<br>
 	 * <br>

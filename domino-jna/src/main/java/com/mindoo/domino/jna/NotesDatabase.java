@@ -76,6 +76,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String m_replicaID;
 	private boolean m_isOnServer;
 	private boolean m_authenticateUser;
+	private boolean m_loginAsIdOwner;
 	NotesNamesList m_namesList;
 	
 	/**
@@ -162,6 +163,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			
+			if (namesForNamesList==null && asUserCanonical!=null && NotesNamingUtils.equalNames(asUserCanonical, session.getUserName())) {
+				m_loginAsIdOwner = true;
+			}
+			else {
+				m_loginAsIdOwner = false;
+			}
+			
 			if ("".equals(server)) {
 				m_authenticateUser = true;
 			}
@@ -201,8 +209,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongBuffer hDB = LongBuffer.allocate(1);
-			if (/* !m_isOnServer || */ (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
-				//open database as server
+			if ( m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+				//open database as id owner, not providing a NAMES_LIST
 				result = notesAPI.b64_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
@@ -251,7 +259,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntBuffer hDB = IntBuffer.allocate(1);
-			if (/*!m_isOnServer || */ (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+			if (m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+				//open database as id owner, not providing a NAMES_LIST
 				result = notesAPI.b32_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
 			}
@@ -1368,6 +1377,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public boolean isFTIndex() {
 		return getFTLastIndexTime() != null;
+	}
+	
+	/**
+	 * Checks whether a database is located on a remote server
+	 * 
+	 * @return true if remote
+	 */
+	public boolean isRemote() {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short isRemote;
+		if (NotesJNAContext.is64Bit()) {
+			isRemote = notesAPI.b64_NSFDbIsRemote(m_hDB64);
+		}
+		else {
+			isRemote = notesAPI.b32_NSFDbIsRemote(m_hDB32);
+		}
+		return isRemote==1;
 	}
 	
 	/**

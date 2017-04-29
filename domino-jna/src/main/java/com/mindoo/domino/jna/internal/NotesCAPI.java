@@ -928,6 +928,31 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short ECLGetListCapabilities(Pointer pNamesList, short ECLType, ShortByReference retwCapabilities,
 			ShortByReference retwCapabilities2, IntByReference retfUserCanModifyECL);
 
+	public short b64_CESCreateCTXFromNote(int hNote, LongByReference rethCESCTX);
+	public short b32_CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
+	
+	public short b64_CESGetNoSigCTX(LongByReference rethCESCTX);
+	public short b32_CESGetNoSigCTX(IntByReference rethCESCTX);
+	
+	public short b64_CESFreeCTX(long hCESCTX);
+	public short b32_CESFreeCTX(int hCESCTX);
+	
+	public short b64_ECLUserTrustSigner ( long hCESCtx, 
+			short ECLType,
+			short bSessionOnly,
+			short wCapabilities,
+			short wCapabilities2,
+			ShortByReference retwCurrentCapabilities,
+			ShortByReference retwCurrentCapabilities2);
+	
+	public short b32_ECLUserTrustSigner ( int hCESCtx, 
+			short ECLType,
+			short bSessionOnly,
+			short wCapabilities,
+			short wCapabilities2,
+			ShortByReference retwCurrentCapabilities,
+			ShortByReference retwCurrentCapabilities2);
+	
 	public short ECL_TYPE_LOTUS_SCRIPT = 0;
 	public short ECL_TYPE_JAVA_APPLET = 1;
 	public short ECL_TYPE_JAVASCRIPT = 2;
@@ -1179,6 +1204,9 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			long hDB,
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
+	
+	public short b64_NSFDbIsRemote(long hDb);
+	public short b32_NSFDbIsRemote(int hDb);
 	
 	public void b32_NSFNoteGetInfo(int hNote, short type, Memory retValue);
 	public void b64_NSFNoteGetInfo(long hNote, short type, Memory retValue);
