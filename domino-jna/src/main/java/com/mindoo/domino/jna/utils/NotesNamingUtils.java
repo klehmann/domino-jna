@@ -126,6 +126,26 @@ public class NotesNamingUtils {
 	}
 
 	/**
+	 * Method to compare two Notes names. We compare the abbreviated forms of both names
+	 * ignoring the case
+	 * 
+	 * @param p_sNotesName1 Notes name 1
+	 * @param p_sNotesName2 Notes name 2
+	 * @return true if equal
+	 */
+	public static boolean equalNames(String p_sNotesName1, String p_sNotesName2) {
+		String sNotesName1Abbr = toAbbreviatedName(p_sNotesName1);
+		String sNotesName2Abbr = toAbbreviatedName(p_sNotesName2);
+		
+		if (sNotesName1Abbr==null) {
+			return sNotesName2Abbr==null;
+		}
+		else {
+			return sNotesName1Abbr.equalsIgnoreCase(sNotesName2Abbr);
+		}
+	}
+
+	/**
 	 * This function converts a distinguished name in canonical format to abbreviated format.
 	 * A fully distinguished name is in canonical format - it contains all possible naming components.
 	 * The abbreviated format of a distinguished name removes the labels from the naming components.
