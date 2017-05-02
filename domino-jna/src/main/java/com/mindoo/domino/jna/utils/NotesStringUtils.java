@@ -260,8 +260,8 @@ public class NotesStringUtils {
 	public static String toUNID(long innardsFile, long innardsNote) {
 		Formatter formatter = new Formatter();
 		
-		formatter.format("%16x", innardsFile);
-		formatter.format("%16x", innardsNote);
+		formatter.format("%016x", innardsFile);
+		formatter.format("%016x", innardsNote);
 		String unid = formatter.toString().toUpperCase();
 		formatter.close();
 		return unid;
