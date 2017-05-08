@@ -1208,6 +1208,62 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public short b64_NSFDbIsRemote(long hDb);
 	public short b32_NSFDbIsRemote(int hDb);
 	
+	public short b64_NSFProfileOpen(
+			long hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength,
+			short CopyProfile,
+			LongByReference rethProfileNote);
+	
+	public short b32_NSFProfileOpen(
+			int hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength,
+			short CopyProfile,
+			IntByReference rethProfileNote);
+	
+	public short b64_NSFProfileUpdate(
+			long hProfile,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength);
+	
+	public short b32_NSFProfileUpdate(
+			int hProfile,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength);
+	
+	public short b64_NSFProfileSetField(
+			long hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength,
+			Memory FieldName,
+			short FieldNameLength,
+			short Datatype,
+			Pointer Value,
+			int ValueLength);
+	
+	public short b32_NSFProfileSetField(
+			int hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength,
+			Memory FieldName,
+			short FieldNameLength,
+			short Datatype,
+			Pointer Value,
+			int ValueLength);
+	
 	public void b32_NSFNoteGetInfo(int hNote, short type, Memory retValue);
 	public void b64_NSFNoteGetInfo(long hNote, short type, Memory retValue);
 	public void b32_NSFNoteSetInfo(int hNote, short type, Pointer value);
