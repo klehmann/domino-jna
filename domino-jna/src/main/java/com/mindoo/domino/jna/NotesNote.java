@@ -3221,7 +3221,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * the user was the real author of the document.<br>
 	 * <br>
 	 * The signature is derived from the User ID. A signature item has data type {@link NotesItem#TYPE_SIGNATURE}
-	 * and item flags {@link NotesCAPI.ITEM_SEAL}. The data value of the signature item is a digest
+	 * and item flags {@link NotesCAPI#ITEM_SEAL}. The data value of the signature item is a digest
 	 * of the data stored in items in the note, signed with the user's private key.<br>
 	 * <br>
 	 * This method signs entire document. It creates a digest of all the items in the note, and

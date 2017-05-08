@@ -3,11 +3,8 @@ package com.mindoo.domino.jna.ecl;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.experimental.categories.Categories.ExcludeCategory;
-
 import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.NotesNote;
-import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;

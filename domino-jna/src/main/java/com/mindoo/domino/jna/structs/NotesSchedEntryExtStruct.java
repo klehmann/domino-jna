@@ -58,7 +58,13 @@ public class NotesSchedEntryExtStruct extends BaseStructure implements IAdaptabl
 	 * 
 	 * @param Unid C type : UNID<br>
 	 * @param Interval C type : TIMEDATE_PAIR<br>
+	 * @param Attr SCHED_ATTR_xxx attributes defined by Notes
+	 * @param UserAttr Application specific attributes
 	 * @param spare C type : BYTE[2]
+	 * @param ApptUnid ApptUNID of the appointment note
+	 * @param dwEntrySize Size of this entry (for future ease of expansion)
+	 * @param nLongitude Geographical coordinates of the entry: longitude
+	 * @param nLatitude Geographical coordinates of the entry: latitude
 	 * 
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
