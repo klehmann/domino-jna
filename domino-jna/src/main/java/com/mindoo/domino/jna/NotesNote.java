@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.junit.rules.Verifier;
+
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
@@ -3361,14 +3363,30 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the signer of a note
+	 * 
+	 * @return signer or empty string if not signed
+	 */
+	public String getSigner() {
+		try {
+			SignatureData signatureData = verifySignature();
+			
+			return signatureData.getSigner();
+		}
+		catch (NotesError e) {
+			if (e.getId()==INotesErrorConstants.ERR_NOTE_NOT_SIGNED) {
+				return "";
+			}
+			else {
+				throw e;
+			}
+		}
+	}
+	
+	/**
 	 * This function verifies a signature on a note or section(s) within a note.<br>
 	 * It returns an error if a signature did not verify.<br>
 	 * <br>
-	 * Note:<br>
-	 * When the Notes user interface opens a note, it always uses the {@link OpenNote#EXPAND} option to
-	 * promote items of type number to number list, and items of type text to text list.
-	 * In order for a signature created or verified through this API call to work correctly with the
-	 * Notes user interface, the {@link OpenNote#EXPAND} option must be used when the note is opened.
 
 	 * @return signer data
 	 */
@@ -3381,14 +3399,27 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-
+		
 		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+			NotesErrorUtils.checkResult(result);
+
 			result = notesAPI.b64_NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			NotesErrorUtils.checkResult(result);
 		}
 		else {
+			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			NotesErrorUtils.checkResult(result);
+			
 			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
+			NotesErrorUtils.checkResult(result);
+			
+			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			NotesErrorUtils.checkResult(result);
 		}
-		NotesErrorUtils.checkResult(result);
 
 		String signer = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
 		String certifier = NotesStringUtils.fromLMBCS(retCertifier, NotesStringUtils.getNullTerminatedLength(retCertifier));
