@@ -517,35 +517,44 @@ public class TestViewTraversal extends BaseJNATestClass {
 						EnumSet.of(ReadMask.NOTEID, ReadMask.NOTEUNID, ReadMask.SUMMARY), new EntriesAsListCallback(Integer.MAX_VALUE));
 				
 				for (NotesViewEntryData currEntry : entries) {
-					
-					//col_namevariants - stringlist
-					Object nameVariants = currEntry.get("col_namevariants");
-					Assert.assertTrue("Numberlist column contains correct datatype", nameVariants!=null && (nameVariants instanceof List && isListOfType((List<?>)nameVariants, String.class)));
-					
-					//col_namevariantlengths - numberlist
-					Object nameVariantLengths = currEntry.get("col_namevariantlengths");
-					Assert.assertTrue("Numberlist column contains correct datatype", nameVariantLengths!=null && (nameVariantLengths instanceof List && isListOfType((List<?>)nameVariantLengths, Double.class)));
-					
-					//col_createdmodified - datelist
-					Object createdModified = currEntry.get("col_createdmodified");
-					Assert.assertTrue("Datelist column contains correct datatype", createdModified!=null && (createdModified instanceof List && isListOfType((List<?>)createdModified, Calendar.class)));
-					
-					//lastname - string
-					Object lastName = currEntry.get("lastname");
-					Assert.assertTrue("String column contains correct datatype", lastName!=null && lastName instanceof String);
-					
-					//HTTPPasswordChangeDate - datetime
-					Object httpPwdChangeDate = currEntry.get("HTTPPasswordChangeDate");
-					Assert.assertTrue("Datetime column contains correct datatype", httpPwdChangeDate!=null && httpPwdChangeDate instanceof Calendar);
-					
-					//col_internetaddresslength - number
-					Object internetAddressLength = currEntry.get("col_internetaddresslength");
-					Assert.assertTrue("Number column contains correct datatype", internetAddressLength!=null && internetAddressLength instanceof Double);
-					
-					//col_createdmodifiedrange - daterange
-					Object createModifiedRange = currEntry.get("col_createdmodifiedrange");
-					
-					Assert.assertTrue("Daterange column of note unid "+currEntry.getUNID()+" contains correct datatype", createModifiedRange!=null && (createModifiedRange instanceof List && isListOfType((List<?>)createModifiedRange, Calendar[].class)));
+					String lastNameStr = currEntry.getAsString("lastname", "");
+					if (lastNameStr.toLowerCase().startsWith("hidden")) {
+						//lastname - string
+						Object lastName = currEntry.get("lastname");
+						if (lastName!=null)
+							Assert.assertTrue("String column contains correct datatype", lastName instanceof String);
+
+						//col_namevariants - stringlist
+						Object nameVariants = currEntry.get("col_namevariants");
+						if (nameVariants!=null)
+							Assert.assertTrue("Numberlist column contains correct datatype", (nameVariants instanceof List && isListOfType((List<?>)nameVariants, String.class)));
+						
+						//col_namevariantlengths - numberlist
+						Object nameVariantLengths = currEntry.get("col_namevariantlengths");
+						if (nameVariantLengths!=null)
+							Assert.assertTrue("Numberlist column contains correct datatype", (nameVariantLengths instanceof List && isListOfType((List<?>)nameVariantLengths, Double.class)));
+						
+						//col_createdmodified - datelist
+						Object createdModified = currEntry.get("col_createdmodified");
+						if (createdModified!=null)
+							Assert.assertTrue("Datelist column contains correct datatype", (createdModified instanceof List && isListOfType((List<?>)createdModified, Calendar.class)));
+						
+						
+						//HTTPPasswordChangeDate - datetime
+						Object httpPwdChangeDate = currEntry.get("HTTPPasswordChangeDate");
+						if (httpPwdChangeDate!=null)
+							Assert.assertTrue("Datetime column contains correct datatype", httpPwdChangeDate instanceof Calendar);
+						
+						//col_internetaddresslength - number
+						Object internetAddressLength = currEntry.get("col_internetaddresslength");
+						if (internetAddressLength!=null)
+							Assert.assertTrue("Number column contains correct datatype", internetAddressLength instanceof Double);
+						
+						//col_createdmodifiedrange - daterange
+						Object createModifiedRange = currEntry.get("col_createdmodifiedrange");
+						if (createModifiedRange!=null)
+							Assert.assertTrue("Daterange column of note unid "+currEntry.getUNID()+" contains correct datatype", createModifiedRange!=null && (createModifiedRange instanceof List && isListOfType((List<?>)createModifiedRange, Calendar[].class)));
+					}
 				}
 				
 				return null;
