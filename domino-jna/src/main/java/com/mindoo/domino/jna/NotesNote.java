@@ -8,8 +8,6 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.rules.Verifier;
-
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
