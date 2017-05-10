@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: com.sun.jna
 Bundle-SymbolicName: com.sun.jna
-Bundle-Version: 4.1.0
+Bundle-Version: 4.3.0
 Bundle-Vendor: JNA Development Team
 Bundle-ClassPath: .,
  lib/jna-4.3.0.jar,
