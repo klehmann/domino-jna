@@ -49,6 +49,9 @@ public class NotesJNAContext {
 
 							@Override
 							public NotesCAPI run() throws Exception {
+								//enforce using the extracted JNA .dll/.so instead of what we find on the PATH
+								System.setProperty("jna.nosys", "true");
+								
 								Exception t = null;
 								for (int i=0; i<3; i++) {
 									try {

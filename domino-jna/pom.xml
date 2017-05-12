@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna</artifactId>
-	<version>0.9.5-SNAPSHOT</version>
+	<version>0.9.4-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA</name>
@@ -16,7 +16,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-		<jna.version>4.3.0</jna.version>
+		<jna.version>4.4.0</jna.version>
 	</properties>
 
 	<licenses>
@@ -124,11 +124,12 @@
 	</profiles>
 
 	<dependencies>
+		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
 		<dependency>
-			<groupId>net.java.dev.jna</groupId>
-			<artifactId>jna</artifactId>
-			<version>${jna.version}</version>
-		</dependency>
+		    <groupId>org.elasticsearch</groupId>
+		    <artifactId>jna</artifactId>
+		    <version>4.4.0</version>
+		</dependency>		
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
