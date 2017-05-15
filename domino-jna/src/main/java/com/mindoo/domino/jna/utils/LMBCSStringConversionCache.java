@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -13,7 +14,57 @@ import com.sun.jna.Memory;
  */
 public class LMBCSStringConversionCache {
 	private static final String CACHE_KEY = "LMBCSStringCache";
-	private static final int MAX_STRINGCACHE_SIZE = 200;
+	
+	private static final int MAX_STRINGCACHE_SIZE_SHARED = 100000;
+	private static final int MAX_STRINGCACHE_SIZE_PERTHREAD = 1000;
+
+	//switch to change cache scope for performance testing
+	private static final boolean USE_SHARED_CACHE = true;
+	//cache instance is shared across threads to improve reuse of strings
+	private static final Map<LMBCSString,String> SHAREDSTRINGCONVERSIONCACHE = !USE_SHARED_CACHE ? null : Collections.synchronizedMap(new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
+		private static final long serialVersionUID = -5818239831757810895L;
+
+		@Override
+		protected boolean removeEldestEntry (Map.Entry<LMBCSString,String> eldest) {
+			if (size() > MAX_STRINGCACHE_SIZE_SHARED) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+	});
+
+	public static int getCacheSize() {
+		return getCache().size();
+	}
+	
+	private static Map<LMBCSString,String> getCache() {
+		Map<LMBCSString,String> cache;
+		if (USE_SHARED_CACHE) {
+			cache = SHAREDSTRINGCONVERSIONCACHE;
+		}
+		else {
+			cache = (Map<LMBCSString, String>) NotesGC.getCustomValue(CACHE_KEY);
+			if (cache==null) {
+				cache = new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
+					private static final long serialVersionUID = -5818239831757810895L;
+
+					@Override
+					protected boolean removeEldestEntry (Map.Entry<LMBCSString,String> eldest) {
+						if (size() > MAX_STRINGCACHE_SIZE_PERTHREAD) {
+							return true;
+						}
+						else {
+							return false;
+						}
+					}
+				};
+				NotesGC.setCustomValue(CACHE_KEY, cache);
+			}
+		}
+		return cache;
+	}
 	
 	/**
 	 * Converts an LMBCS string to a Java String. If already cached, no native call is made.
@@ -22,31 +73,9 @@ public class LMBCSStringConversionCache {
 	 * @return converted string
 	 */
 	public static String get(LMBCSString lmbcsString) {
-		@SuppressWarnings("unchecked")
-		Map<LMBCSString,String> cache = (Map<LMBCSString, String>) NotesGC.getCustomValue(CACHE_KEY);
-		String stringFromCache;
+		Map<LMBCSString,String> cache = getCache();
 		
-		if (cache==null) {
-			cache = new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
-				private static final long serialVersionUID = -5818239831757810895L;
-
-				@Override
-				protected boolean removeEldestEntry (Map.Entry<LMBCSString,String> eldest) {
-					if (size() > MAX_STRINGCACHE_SIZE) {
-						return true;
-					}
-					else {
-						return false;
-					}
-				}
-			};
-			NotesGC.setCustomValue(CACHE_KEY, cache);
-			stringFromCache = null;
-		}
-		else {
-			stringFromCache = cache.get(lmbcsString);
-		}
-
+		String stringFromCache = cache.get(lmbcsString);
 		String convertedString;
 		
 		if (stringFromCache==null) {
