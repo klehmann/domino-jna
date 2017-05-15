@@ -232,9 +232,6 @@ public class NotesLookupResultBufferDecoder {
 					Map<String,Object> itemValues = itemTableData.asMap(false);
 					newData.setSummaryData(itemValues);
 				}
-				if (returnMask.contains(ReadMask.RETURN_READERSLIST)) {
-					
-				}
 				if (singleColumnLookupName!=null) {
 					newData.setSingleColumnLookupName(singleColumnLookupName);
 				}
