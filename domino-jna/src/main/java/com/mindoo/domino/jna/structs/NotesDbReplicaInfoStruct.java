@@ -62,7 +62,7 @@ public class NotesDbReplicaInfoStruct extends BaseStructure implements IAdaptabl
 	
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
-		if (clazz == NotesTimeDateStruct.class) {
+		if (clazz == NotesDbReplicaInfoStruct.class) {
 			return (T) this;
 		}
 		else if (clazz == Pointer.class) {
