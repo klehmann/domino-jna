@@ -9,6 +9,7 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDbReplicaInfo;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -32,6 +33,86 @@ public class TestStringUtils extends BaseJNATestClass {
 	public static final Character UML_U_BIG = Character.valueOf((char)220);
 	public static final Character SZ = Character.valueOf((char)223);
 
+	/**
+	 * Tests whether our optimization to not let Domino's OSTranslate convert pure ascii strings
+	 * works properly
+	 */
+	@Test
+	public void testAsciiOptimization() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				final int randomStringSize = 100000;
+
+				String pureAsciiString = computeRandomString(randomStringSize, false, false);
+				String pureAsciiStringWithNull = computeRandomString(randomStringSize, false, true);
+				String nonAsciiString = computeRandomString(randomStringSize, true, false);
+				String nonAsciiStringWithNull = computeRandomString(randomStringSize, true, true);
+
+				NotesGC.setCustomValue("NotesStringUtils.useAsciiOptimization", true);
+				Memory pureAsciiStringMem_withOptinization = NotesStringUtils.toLMBCS(pureAsciiString, false);
+				Memory pureAsciiStringWithNullMem_withOptinization = NotesStringUtils.toLMBCS(pureAsciiStringWithNull, false);
+				Memory nonAsciiStringMem_withOptinization = NotesStringUtils.toLMBCS(nonAsciiString, false);
+				Memory nonAsciiStringWithNullMem_withOptinization = NotesStringUtils.toLMBCS(nonAsciiStringWithNull, false);
+
+				NotesGC.setCustomValue("NotesStringUtils.useAsciiOptimization", false);
+				Memory pureAsciiStringMem_noOptinization = NotesStringUtils.toLMBCS(pureAsciiString, false);
+				Memory pureAsciiStringWithNullMem_noOptinization = NotesStringUtils.toLMBCS(pureAsciiStringWithNull, false);
+				Memory nonAsciiStringMem_noOptinization = NotesStringUtils.toLMBCS(nonAsciiString, false);
+				Memory nonAsciiStringWithNullMem_noOptinization = NotesStringUtils.toLMBCS(nonAsciiStringWithNull, false);
+
+				Assert.assertTrue("Optimized conversion correct for pure ascii strings", Arrays.equals(toByteArray(pureAsciiStringMem_withOptinization), toByteArray(pureAsciiStringMem_noOptinization)));
+				Assert.assertTrue("Optimized conversion correct for pure ascii strings with null", Arrays.equals(toByteArray(pureAsciiStringWithNullMem_withOptinization), toByteArray(pureAsciiStringWithNullMem_noOptinization)));
+				Assert.assertTrue("Optimized conversion correct for non ascii strings", Arrays.equals(toByteArray(nonAsciiStringMem_withOptinization), toByteArray(nonAsciiStringMem_noOptinization)));
+				Assert.assertTrue("Optimized conversion correct for non ascii strings with null", Arrays.equals(toByteArray(nonAsciiStringWithNullMem_withOptinization), toByteArray(nonAsciiStringWithNullMem_noOptinization)));				
+				return null;
+			}
+		});
+	}
+	
+	private byte[] toByteArray(Memory m) {
+		byte[] arr = new byte[(int) m.size()];
+		m.read(0, arr, 0, arr.length);
+		return arr;
+	}
+	
+	private String computeRandomString(int len, boolean withUmlauts, boolean withNulls) {
+		List<Character> chars = new ArrayList<Character>();
+		for (char c='a'; c<='z'; c++) {
+			chars.add(c);
+		}
+		for (char c='A'; c<='Z'; c++) {
+			chars.add(c);
+		}
+		for (char c='0'; c<='9'; c++) {
+			chars.add(c);
+		}
+		if (withUmlauts) {
+			//add some German umlauts
+			chars.add(UML_A_SMALL);
+			chars.add(UML_O_SMALL);
+			chars.add(UML_U_SMALL);
+			chars.add(UML_A_BIG);
+			chars.add(UML_O_BIG);
+			chars.add(UML_U_BIG);
+			chars.add(SZ);
+		}
+		if (withNulls) {
+			chars.add(Character.valueOf((char)0));
+		}
+		
+		StringBuilder randomStrBuilder = new StringBuilder();
+		for (int i=0; i<len; i++) {
+			int randomIdx = (int) (Math.random() * chars.size());
+			Character randomChar = chars.get(randomIdx);
+			randomStrBuilder.append(randomChar.charValue());
+		}
+
+		String randomStr = randomStrBuilder.toString();
+		return randomStr;
+	}
+	
 	/**
 	 * Tests whether our LMBCS / UTF-8 conversion functions work
 	 */
