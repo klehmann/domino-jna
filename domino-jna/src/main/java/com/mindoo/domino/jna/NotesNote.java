@@ -180,6 +180,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return UNID
 	 */
 	public String getUNID() {
+		NotesOriginatorIdStruct oid = getOIDStruct();
+		String unid = oid.getUNIDAsString();
+		return unid;
+	}
+
+	/**
+	 * Internal method to get the populated {@link NotesOriginatorIdStruct} object
+	 * for this note
+	 * 
+	 * @return oid structure
+	 */
+	private NotesOriginatorIdStruct getOIDStruct() {
 		checkHandle();
 		
 		Memory retOid = new Memory(NotesCAPI.oidSize);
@@ -192,12 +204,23 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
 		}
-		NotesOriginatorIdStruct oid = NotesOriginatorIdStruct.newInstance(retOid);
-		oid.read();
-		String unid = oid.getUNIDAsString();
-		return unid;
+		NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
+		oidStruct.read();
+		
+		return oidStruct;
 	}
-
+	
+	/**
+	 * Returns the {@link NotesOriginatorId} for this note
+	 * 
+	 * @return oid
+	 */
+	public NotesOriginatorId getOID() {
+		NotesOriginatorIdStruct oidStruct = getOIDStruct();
+		NotesOriginatorId oid = new NotesOriginatorId(oidStruct);
+		return oid;
+	}
+	
 	/**
 	 * Returns the last modified date of the note
 	 * 
@@ -222,6 +245,24 @@ public class NotesNote implements IRecyclableNotesObject {
 		return cal;
 	}
 
+	/**
+	 * Returns the creation date of this note
+	 * 
+	 * @return creation date
+	 */
+	public Calendar getCreationDate() {
+		checkHandle();
+		
+		Calendar creationDate = getItemValueDateTime("$CREATED");
+		if (creationDate!=null) {
+			return creationDate;
+		}
+		
+		NotesOriginatorIdStruct oidStruct = getOIDStruct();
+		NotesTimeDateStruct creationDateStruct = oidStruct.Note;
+		return creationDateStruct.toCalendar();
+	}
+	
 	/**
 	 * Returns the last access date of the note
 	 * 
