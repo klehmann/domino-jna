@@ -2003,7 +2003,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethDstNote = new LongByReference();
-			result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id==null ? 0 : id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			if (id==null) {
+				result = notesAPI.b64_NSFNoteCopyAndEncrypt(m_hNote64, flagsShort, rethDstNote);
+			}
+			else {
+				result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
@@ -2012,7 +2017,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethDstNote = new IntByReference();
-			result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id==null ? 0 : id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			if (id==null) {
+				result = notesAPI.b32_NSFNoteCopyAndEncrypt(m_hNote32, flagsShort, rethDstNote);
+			}
+			else {
+				result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
