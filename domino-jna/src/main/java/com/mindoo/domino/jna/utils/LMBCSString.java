@@ -21,6 +21,15 @@ public class LMBCSString {
 		m_data = data;
 	}
 	
+	/**
+	 * Returns the size of the internal data in bytes
+	 * 
+	 * @return size
+	 */
+	public int size() {
+		return m_data.length;
+	}
+	
 	public byte[] getData() {
 		return m_data;
 	}

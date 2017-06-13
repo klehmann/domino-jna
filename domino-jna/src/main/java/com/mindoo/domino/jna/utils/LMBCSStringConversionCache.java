@@ -1,9 +1,5 @@
 package com.mindoo.domino.jna.utils;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.sun.jna.Memory;
 
@@ -17,55 +13,33 @@ public class LMBCSStringConversionCache {
 	
 	private static final int MAX_STRINGCACHE_SIZE_SHARED = 100000;
 	private static final int MAX_STRINGCACHE_SIZE_PERTHREAD = 1000;
+	
+	private static final int MAX_STRINGCACHE_SIZE_SHARED_BYTES = 750000;
+	private static final int MAX_STRINGCACHE_SIZE_PERTHREAD_BYTES = 40000;
 
 	//switch to change cache scope for performance testing
 	private static final boolean USE_SHARED_CACHE = true;
-	//cache instance is shared across threads to improve reuse of strings
-	private static final Map<LMBCSString,String> SHAREDSTRINGCONVERSIONCACHE = !USE_SHARED_CACHE ? null : Collections.synchronizedMap(new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
-		private static final long serialVersionUID = -5818239831757810895L;
-
-		@Override
-		protected boolean removeEldestEntry (Map.Entry<LMBCSString,String> eldest) {
-			if (size() > MAX_STRINGCACHE_SIZE_SHARED) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-	});
+	private static LRULMBCCache SHAREDSTRINGCONVERSIONCACHE = new LRULMBCCache(MAX_STRINGCACHE_SIZE_SHARED_BYTES);
 
 	public static int getCacheSize() {
-		return getCache().size();
+		return getCache().getCurrentCacheSizeInUnits();
 	}
-	
-	private static Map<LMBCSString,String> getCache() {
-		Map<LMBCSString,String> cache;
+
+	private static LRULMBCCache getCache() {
+		LRULMBCCache cache;
 		if (USE_SHARED_CACHE) {
 			cache = SHAREDSTRINGCONVERSIONCACHE;
 		}
 		else {
-			cache = (Map<LMBCSString, String>) NotesGC.getCustomValue(CACHE_KEY);
+			cache = (LRULMBCCache) NotesGC.getCustomValue(CACHE_KEY);
 			if (cache==null) {
-				cache = new LinkedHashMap<LMBCSString, String>(16,0.75f, true) {
-					private static final long serialVersionUID = -5818239831757810895L;
-
-					@Override
-					protected boolean removeEldestEntry (Map.Entry<LMBCSString,String> eldest) {
-						if (size() > MAX_STRINGCACHE_SIZE_PERTHREAD) {
-							return true;
-						}
-						else {
-							return false;
-						}
-					}
-				};
+				cache = new LRULMBCCache(MAX_STRINGCACHE_SIZE_PERTHREAD_BYTES);
 				NotesGC.setCustomValue(CACHE_KEY, cache);
 			}
 		}
 		return cache;
 	}
-	
+
 	/**
 	 * Converts an LMBCS string to a Java String. If already cached, no native call is made.
 	 * 
@@ -73,7 +47,7 @@ public class LMBCSStringConversionCache {
 	 * @return converted string
 	 */
 	public static String get(LMBCSString lmbcsString) {
-		Map<LMBCSString,String> cache = getCache();
+		LRULMBCCache cache = getCache();
 		
 		String stringFromCache = cache.get(lmbcsString);
 		String convertedString;
@@ -92,4 +66,31 @@ public class LMBCSStringConversionCache {
 		return convertedString;
 	}
 	
+	public static class LRULMBCCache extends SizeLimitedLRUCache<LMBCSString,String> {
+
+		public LRULMBCCache(int maxSizeUnits) {
+			super(maxSizeUnits);
+		}
+
+		@Override
+		protected int computeSize(CacheEntry<LMBCSString,String> entry) {
+			LMBCSString key = entry.getKey();
+			String value = entry.getValue();
+			
+			return key.size() + value.length()*2;
+		}
+
+		@Override
+		protected void entryAdded(
+				com.mindoo.domino.jna.utils.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
+
+//			System.out.println("Added to cache: "+entry.getValue());
+		}
+		
+		@Override
+		protected void entryRemoved(com.mindoo.domino.jna.utils.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
+//			System.out.println("Removed from cache: "+entry.getValue());
+		}
+		
+	}
 }
