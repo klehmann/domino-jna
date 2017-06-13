@@ -59,4 +59,8 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 
 	public interface NSFFolderAddCallbackWin extends NSFFolderAddCallback, StdCallCallback {
     }
+	
+	public interface LogRestoreCallbackFunctionWin extends LogRestoreCallbackFunction, StdCallCallback {
+	}
+
 }

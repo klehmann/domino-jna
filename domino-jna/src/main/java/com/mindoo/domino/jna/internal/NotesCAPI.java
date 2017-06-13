@@ -2274,6 +2274,11 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
        short invoke(Pointer pCDField, short phase, short error, int hErrorText, short wErrorTextSize, Pointer ctx); 
     }
 
+	public interface LogRestoreCallbackFunction extends Callback {
+		short invoke(NotesUniversalNoteIdStruct logID, int logNumber, Memory logSegmentPathName);
+	}
+	
+	
 	public int CWF_CONTINUE_ON_ERROR = 0x0001;		/*	Ignore compute errors */
 
 	public short b64_NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
@@ -2308,7 +2313,16 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			IntByReference rethDstNote,
 			int  Reserved,
 			Pointer pReserved);
-	
+	public short b64_NSFNoteCopyAndEncrypt(
+			long hSrcNote,
+			short EncryptFlags,
+			LongByReference rethDstNote);
+
+	public short b32_NSFNoteCopyAndEncrypt(
+			int hSrcNote,
+			short EncryptFlags,
+			IntByReference rethDstNote);
+
 	public short b64_NSFNoteCopy(
 			long note_handle_src,
 			LongByReference note_handle_dst_ptr);
@@ -2896,6 +2910,78 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	
 	public short b64_NSFHideDesign(long hdb1, long hdb2, int param3, int param4);
 	public short b32_NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
+	
+	//backup APIs
+	public short b64_NSFDbGetLogInfo(long hDb, int Flags, ShortByReference LOGGED, NotesUniversalNoteIdStruct LogID,
+			NotesUniversalNoteIdStruct DbIID, IntByReference LogExtent);
+
+	public short b32_NSFDbGetLogInfo(int hDb, int Flags, ShortByReference LOGGED, NotesUniversalNoteIdStruct LogID,
+			NotesUniversalNoteIdStruct DbIID, IntByReference LogExtent);
+
+	public short b64_NSFBackupStart(long hDB, int Flags, IntByReference BackupContext, IntByReference FileSizeLow,
+			IntByReference FileSizeHigh);
+
+	public short b32_NSFBackupStart(int hDB, int Flags, IntByReference BackupContext, IntByReference FileSizeLow,
+			IntByReference FileSizeHigh);
+
+	public short b64_NSFBackupStop(long hDB, int BackupContext);
+	
+	public short b32_NSFBackupStop(int hDB, int BackupContext);
+	
+	public short b64_NSFBackupEnd(long hDB, int BackupContext, int Options);
+	
+	public short b32_NSFBackupEnd(int hDB, int BackupContext, int Options);
+	
+	public short b64_NSFBackupGetChangeInfoSize( long hDB, int hBackupContext, int Flags, IntByReference InfoSizeLow,
+			IntByReference InfoSizeHigh);
+	
+	public short b32_NSFBackupGetChangeInfoSize(int hDB, int hBackupContext, int Flags, IntByReference InfoSizeLow,
+			IntByReference InfoSizeHigh);
+	
+	public short b64_NSFBackupStartApplyChangeInfo(IntByReference ApplyInfoContext, Memory CopyFilePath, int Flags,
+			int InfoSizeLow, int InfoSizeHigh);
+	
+	public short b32_NSFBackupStartApplyChangeInfo(IntByReference ApplyInfoContext, Memory CopyFilePath, int Flags,
+			int InfoSizeLow, int InfoSizeHigh);
+	
+	public short b64_NSFBackupGetNextChangeInfo(long hDB, int hBackupContext, int Flags, Memory Buffer, int BufferSize,
+			IntByReference FilledSize);
+	
+	public short b32_NSFBackupGetNextChangeInfo(int hDB, int hBackupContext, int Flags, Memory Buffer, int BufferSize,
+			IntByReference FilledSize);
+	
+	public short b64_NSFBackupApplyNextChangeInfo(long ApplyInfoContext, int Flags, Memory Buffer, int BufferSize);
+	
+	public short b32_NSFBackupApplyNextChangeInfo(int ApplyInfoContext, int Flags, Memory Buffer, int BufferSize);
+	
+	public short b64_NSFBackupEndApplyChangeInfo(int ApplyInfoContext, int Flags);
+	
+	public short b32_NSFBackupEndApplyChangeInfo(int ApplyInfoContext, int Flags);
+	
+	//backup of transaction logs
+	public short NSFGetTransLogStyle(ShortByReference LogType);
+
+	public short NSFBeginArchivingLogs();
+	
+	public short NSFGetFirstLogToArchive(NotesUniversalNoteIdStruct LogID, IntByReference LogNumber, Memory LogPath);
+
+	public short NSFGetNextLogToArchive(
+			NotesUniversalNoteIdStruct LogID, IntByReference LogNumber, Memory LogPath);
+	
+	public short NSFDoneArchivingLog(NotesUniversalNoteIdStruct LogID, IntByReference LogSequenceNumber);
+	
+	public short NSFEndArchivingLogs();
+	
+	public short NSFTakeDatabaseOffline(Memory dbPath, int WaitTime, int options);
+	
+	public short NSFRecoverDatabases(Memory dbNames,
+			LogRestoreCallbackFunction restoreCB,
+			int Flags,
+			ShortByReference errDbIndex,
+			NotesTimeDatePairStruct recoveryTime);
+
+	public short NSFBringDatabaseOnline(Memory dbPath, int options);
+	
 	
 	/** Enable full text indexing */
 	public static final int DBOPTBIT_FT_INDEX = 0;
