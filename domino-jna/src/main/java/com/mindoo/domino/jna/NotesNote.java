@@ -1943,7 +1943,54 @@ public class NotesNote implements IRecyclableNotesObject {
 			return m_mode;
 		}
 	};
-	
+
+	/**
+	 * This function copies and encrypts (seals) the encryption enabled fields in a note
+	 * (including the note's file objects), using the current ID file.<br>
+	 * <br>
+	 * It can encrypt a note in several ways -- by using the Domino public key of the caller,
+	 * by using specified secret encryption keys stored in the caller's ID, or by using the
+	 * Domino public keys of specified users, if the note does not have any mime parts.<br>
+	 * <br>
+	 * The method decides which type of encryption to do based upon the setting of the flag
+	 * passed to it in its <code>encryptionMode</code> argument.<br>
+	 * <br>
+	 * If the {@link EncryptionMode#ENCRYPT_WITH_USER_PUBLIC_KEY} flag is set, it uses the
+	 * caller's public ID to encrypt the note.<br>
+	 * In this case, only the user who encodes the note can decrypt it.<br>
+	 * This feature allows an individual to protect information from anyone else.<br>
+	 * <br>
+	 * If, instead, the {@link EncryptionMode#ENCRYPT_WITH_USER_PUBLIC_KEY} flag is not set,
+	 * then the function expects the note to contain  a field named "SecretEncryptionKeys"
+	 * a field named "PublicEncryptionKeys", or both.<br>
+	 * Each field is either a TYPE_TEXT or TYPE_TEXT_LIST field.<br>
+	 * <br>
+	 * "SecretEncryptionKeys" contains the name(s) of the secret encryption keys in the
+	 * calling user's ID to be used to encrypt the note.<br>
+	 * This feature is intended to allow a group to encrypt some of the notes in a single
+	 * database in a way that only they can decrypt them -- they must share the secret encryption
+	 * keys among themselves first for this to work.<br>
+	 * <br>
+	 * "PublicEncryptionKeys" contains the name(s) of  users, in canonical format.<br>
+	 * The note will be encrypted with each user's Domino public key.<br>
+	 * The user can then decrypt the note with the private key in the user's ID.<br>
+	 * This feature provides a way to encrypt documents, such as mail documents, for another user.<br>
+	 * <br>
+	 * The note must contain at least one encryption enabled item (an item with the ITEM_SEAL flag set)
+	 * in order to be encrypted.<br>
+	 * If the note has mime parts and flag {@link EncryptionMode#ENCRYPT_SMIME_IF_MIME_PRESENT}
+	 * is set, then it is SMIME encrypted.<br>
+	 * <br>
+	 * If the document is to be signed as well as encrypted, you must sign the document
+	 * before using this method.
+
+	 * @param encryptionMode encryption mode
+	 * @return encrypted note copy
+	 */
+	public NotesNote copyAndEncrypt(EnumSet<EncryptionMode> encryptionMode) {
+		return copyAndEncrypt(null, encryptionMode);
+	}
+		
 	/**
 	 * This function copies and encrypts (seals) the encryption enabled fields in a note
 	 * (including the note's file objects), using a handle to an ID file.<br>
