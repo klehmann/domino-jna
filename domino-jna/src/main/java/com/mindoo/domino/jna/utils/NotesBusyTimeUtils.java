@@ -285,7 +285,7 @@ public class NotesBusyTimeUtils {
 
 			result = notesAPI.b32_ListAllocate((short) 0, 
 					(short) 0,
-					1, rethList, null, retListSize);
+					0, rethList, null, retListSize);
 			
 			NotesErrorUtils.checkResult(result);
 
@@ -296,7 +296,7 @@ public class NotesBusyTimeUtils {
 				String currName = namesCanonical.get(i);
 				Memory currNameMem = NotesStringUtils.toLMBCS(currName, false);
 
-				result = notesAPI.b32_ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currNameMem,
+				result = notesAPI.b32_ListAddEntry(hList, 0, retListSize, (short) (i & 0xffff), currNameMem,
 						(short) (currNameMem==null ? 0 : (currNameMem.size() & 0xffff)));
 				NotesErrorUtils.checkResult(result);
 			}
@@ -309,7 +309,7 @@ public class NotesBusyTimeUtils {
 				result = notesAPI.b32_SchRetrieve(unidStruct, null, optionsAsInt, intervalPair, valuePtr, rethCntnr, null, null,null);
 				NotesErrorUtils.checkResult(result);
 				
-				long hCntnr = rethCntnr.getValue();
+				int hCntnr = rethCntnr.getValue();
 				
 				NotesScheduleContainer scheduleContainer = new NotesScheduleContainer(hCntnr);
 				NotesGC.__objectCreated(NotesScheduleContainer.class, scheduleContainer);

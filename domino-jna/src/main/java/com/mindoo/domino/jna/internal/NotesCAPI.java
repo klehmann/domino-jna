@@ -1066,7 +1066,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			short TextSize);
 	
 	public short b32_ListAddEntry(
-			long hList,
+			int hList,
 			int fPrefixDataType,
 			ShortByReference pListSize,
 			short EntryNumber,
@@ -2872,6 +2872,16 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
 
 	public void OSPathAddTrailingPathSep(Memory retPathName);
+
+	public int OSGetEnvironmentInt(Memory variableName);
+
+	public short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
+	
+	public long OSGetEnvironmentLong(Memory variableName);
+
+	public void OSSetEnvironmentVariable(Memory variableName, Memory Value);
+
+	public void OSSetEnvironmentInt(Memory variableName, int Value);
 	
 	public static int MAXDWORD = 0xffffffff;
 	public static short MAXWORD = (short) (0xffff & 0xffff);

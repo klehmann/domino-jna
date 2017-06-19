@@ -11,6 +11,7 @@ import com.sun.jna.FunctionMapper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLibrary;
+import com.sun.jna.Structure;
 
 /**
  * Class containing a singleton instance to the JNA class wrapping the Notes C API
@@ -18,8 +19,10 @@ import com.sun.jna.NativeLibrary;
  * @author Karsten Lehmann
  */
 public class NotesJNAContext {
+	private static volatile boolean m_initialized;
 	private static volatile NotesCAPI m_api;
 	private static volatile Boolean m_is64Bit;
+	private static volatile Integer m_platformAlignment;
 	
 	/**
 	 * Checks if the current JVM is running in 64 bit mode
@@ -28,10 +31,32 @@ public class NotesJNAContext {
 	 */
 	public static boolean is64Bit() {
 		if (m_is64Bit==null) {
-			String arch = System.getProperty("os.arch");
-			m_is64Bit = "xmd64".equals(arch) || "x86_64".equals(arch) || "amd64".equals(arch);
+			initAPI();
 		}
 		return m_is64Bit;
+	}
+	
+	/**
+	 * Returns the alignment to be used for the current platform
+	 * @return
+	 */
+	public static int getPlatformAlignment() {
+		if (m_platformAlignment==null) {
+			initAPI();
+		}
+		return m_platformAlignment;
+	}
+
+	/**
+	 * Returns the {@link NotesCAPI} singleton instance to call C methods
+	 * 
+	 * @return API
+	 */
+	public static NotesCAPI getNotesAPI()  {
+		if (m_api==null) {
+			initAPI();
+		}
+		return m_api;
 	}
 	
 	/**
@@ -40,22 +65,26 @@ public class NotesJNAContext {
 	 * @return API
 	 */
 	@SuppressWarnings("unchecked")
-	public static NotesCAPI getNotesAPI()  {
-		if (m_api==null) {
+	private static void initAPI()  {
+		if (!m_initialized) {
 			synchronized (NotesJNAContext.class) {
-				if (m_api==null) {
+				if (!m_initialized) {
 					try {
-						m_api = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCAPI>() {
+						 AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
 
 							@Override
-							public NotesCAPI run() throws Exception {
+							public Object run() throws Exception {
 								//enforce using the extracted JNA .dll/.so instead of what we find on the PATH
 								System.setProperty("jna.nosys", "true");
 								
 								Exception t = null;
 								for (int i=0; i<3; i++) {
 									try {
+										String arch = System.getProperty("os.arch");
+										m_is64Bit = "xmd64".equals(arch) || "x86_64".equals(arch) || "amd64".equals(arch);
+
 										String osName = System.getProperty("os.name");
+										
 										Native.setProtected(true);
 										@SuppressWarnings("rawtypes")
 										Map options = new HashMap();
@@ -76,13 +105,29 @@ public class NotesJNAContext {
 											String osNameLC = osName.toLowerCase();
 											
 											if (osNameLC.startsWith("windows")) {
-												return (NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
+												m_api=(NotesCAPI) Native.loadLibrary("nnotes", WinNotesCAPI.class, options);
+												if (Boolean.TRUE.equals(m_is64Bit)) {
+													m_platformAlignment = Structure.ALIGN_DEFAULT;
+												}
+												else {
+													m_platformAlignment = Structure.ALIGN_NONE;
+												}
+												return null;
 											}
 											else if (osNameLC.startsWith("mac")) {
-												return (NotesCAPI) Native.loadLibrary("notes", MacNotesCAPI.class, options);
+												m_api=(NotesCAPI) Native.loadLibrary("notes", MacNotesCAPI.class, options);
+												if (Boolean.TRUE.equals(m_is64Bit)) {
+													m_platformAlignment = Structure.ALIGN_NONE;
+												}
+												else {
+													m_platformAlignment = Structure.ALIGN_DEFAULT;
+												}
+												return null;
 											}
 											else if (osNameLC.startsWith("linux")) {
-												return (NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+												m_api=(NotesCAPI) Native.loadLibrary("notes", NotesCAPI.class, options);
+												m_platformAlignment = Structure.ALIGN_DEFAULT;
+												return null;
 											}
 											else {
 												throw new UnsupportedPlatformError("Platform is unknown or not supported: "+osName);
@@ -112,7 +157,6 @@ public class NotesJNAContext {
 				}
 			}
 		}
-		return m_api;
 	}
 	
 }

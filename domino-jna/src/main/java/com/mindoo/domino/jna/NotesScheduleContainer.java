@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -104,6 +105,9 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		if (NotesJNAContext.is64Bit()) {
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
 			result = notesAPI.b64_SchContainer_GetFirstSchedule(m_hCntnr64, rethObj, schedulePtrMem);
+			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			if (rethObj.getValue()==0) {
@@ -126,13 +130,16 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		else {
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
 			result = notesAPI.b32_SchContainer_GetFirstSchedule(m_hCntnr32, rethObj, schedulePtrMem);
+			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 
 			if (rethObj.getValue()==0) {
 				return null;
 			}
 			
-			long peer = schedulePtrMem.getLong(0);
+			long peer = Pointer.nativeValue(schedulePtrMem.getPointer(0));
 			if (peer==0)
 				return null;
 			Pointer schedulePtr = new Pointer(peer);
@@ -167,6 +174,9 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
 			result = notesAPI.b64_SchContainer_GetNextSchedule(m_hCntnr64, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
+			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 
 			long peer = schedulePtrMem.getLong(0);
@@ -184,13 +194,16 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			return nextSchedule;
 		}
 		else {
-			int hCurSchedule = (int) schedule.getHandle64();
+			int hCurSchedule = (int) schedule.getHandle32();
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
 			result = notesAPI.b32_SchContainer_GetNextSchedule(m_hCntnr32, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
+			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 
-			long peer = schedulePtrMem.getLong(0);
+			long peer = Pointer.nativeValue(schedulePtrMem.getPointer(0));
 			if (peer==0)
 				return null;
 

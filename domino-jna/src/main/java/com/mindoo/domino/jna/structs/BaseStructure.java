@@ -5,6 +5,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
 
+import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.TypeMapper;
@@ -19,30 +20,37 @@ public abstract class BaseStructure extends Structure {
 
 	protected BaseStructure() {
 		super();
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 	
 	public BaseStructure(int alignType, TypeMapper mapper) {
 		super(alignType, mapper);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 
 	public BaseStructure(int alignType) {
 		super(alignType);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p, int alignType, TypeMapper mapper) {
 		super(p, alignType, mapper);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p, int alignType) {
 		super(p, alignType);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p) {
 		super(p);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 
 	public BaseStructure(TypeMapper mapper) {
 		super(mapper);
+		setAlignType(NotesJNAContext.getPlatformAlignment());
 	}
 	
 	@Override
