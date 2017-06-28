@@ -1586,12 +1586,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
 			notesAPI.b64_NSFNoteIsSignedOrSealed(m_hNote64, signed_flag_ptr, sealed_flag_ptr);
-			byte sealed = signed_flag_ptr.getValue();
+			byte sealed = sealed_flag_ptr.getValue();
 			return sealed == 1;
 		}
 		else {
 			notesAPI.b32_NSFNoteIsSignedOrSealed(m_hNote32, signed_flag_ptr, sealed_flag_ptr);
-			byte sealed = signed_flag_ptr.getValue();
+			byte sealed = sealed_flag_ptr.getValue();
 			return sealed == 1;
 		}
 	}
