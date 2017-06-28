@@ -2050,12 +2050,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		short result;
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethDstNote = new LongByReference();
-			if (id==null) {
-				result = notesAPI.b64_NSFNoteCopyAndEncrypt(m_hNote64, flagsShort, rethDstNote);
-			}
-			else {
-				result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
-			}
+			result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id==null ? 0 : id.getHandle64(), flagsShort, rethDstNote, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
@@ -2064,12 +2059,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethDstNote = new IntByReference();
-			if (id==null) {
-				result = notesAPI.b32_NSFNoteCopyAndEncrypt(m_hNote32, flagsShort, rethDstNote);
-			}
-			else {
-				result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id.getKFCHandle(), flagsShort, rethDstNote, 0, null);
-			}
+			result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id==null ? 0 : id.getHandle32(), flagsShort, rethDstNote, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
@@ -2130,6 +2120,19 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * This function decrypts an encrypted note, using the current user's ID file.<br>
+	 * If the user does not have the appropriate encryption key to decrypt the note, an error is returned.<br>
+	 * <br>
+	 * This function supports new cryptographic keys and algorithms introduced in Release 8.0.1 as
+	 * well as any from releases prior to 8.0.1.
+	 * <br>
+	 * The current implementation of this function automatically decrypts attachments as well.
+	 */
+	public void decrypt() {
+		decrypt(null);
+	}
+	
+	/**
 	 * This function decrypts an encrypted note, using the appropriate encryption key stored
 	 * in the user's ID file.<br>
 	 * If the user does not have the appropriate encryption key to decrypt the note, an error is returned.<br>
@@ -2150,11 +2153,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		short result;
 		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteCipherDecrypt(m_hNote64, id==null ? 0 : id.getKFCHandle(), decryptFlags,
+			result = notesAPI.b64_NSFNoteCipherDecrypt(m_hNote64, id==null ? 0 : id.getHandle64(), decryptFlags,
 					null, 0, null);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteCipherDecrypt(m_hNote32, id==null ? 0 : id.getKFCHandle(), decryptFlags,
+			result = notesAPI.b32_NSFNoteCipherDecrypt(m_hNote32, id==null ? 0 : id.getHandle32(), decryptFlags,
 					null, 0, null);
 		}
 		NotesErrorUtils.checkResult(result);
@@ -3395,7 +3398,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteSignExt3(m_hNote64, id==null ? 0 : id.getKFCHandle(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			result = notesAPI.b64_NSFNoteSignExt3(m_hNote64, id==null ? 0 : id.getHandle64(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			result = notesAPI.b64_NSFNoteContract(m_hNote64);
@@ -3413,7 +3416,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b32_NSFNoteSignExt3(m_hNote32, id==null ? 0 : id.getKFCHandle(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			result = notesAPI.b32_NSFNoteSignExt3(m_hNote32, id==null ? 0 : id.getHandle32(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 
 			result = notesAPI.b32_NSFNoteContract(m_hNote32);

@@ -34,7 +34,7 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	public static String extractUserIdFromVault(String userName, String password, String idPath, String serverName) {
-		return _getUserIdFromVault(userName, password, idPath, null, serverName);
+		return _getUserIdFromVault(userName, password, idPath, null, null, serverName);
 	}
 	
 	/**
@@ -48,9 +48,17 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	public static NotesUserId getUserIdFromVault(String userName, String password, String serverName) {
-		LongByReference rethKFC = new LongByReference();
-		_getUserIdFromVault(userName, password, null, rethKFC, serverName);
-		NotesUserId userId = new NotesUserId(rethKFC.getValue());
+		NotesUserId userId;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethKFC = new LongByReference();
+			_getUserIdFromVault(userName, password, null, rethKFC, null, serverName);
+			userId = new NotesUserId(rethKFC.getValue());
+		}
+		else {
+			IntByReference rethKFC = new IntByReference();
+			_getUserIdFromVault(userName, password, null, null, rethKFC, serverName);
+			userId = new NotesUserId(rethKFC.getValue());
+		}
 		return userId;
 	}
 	
@@ -60,12 +68,13 @@ public class IDUtils {
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
 	 * @param idPath if not null, path to where the download ID file should be created or overwritten
-	 * @param rethKFC if not null, returns the hKFC handle to the in-memory id
+	 * @param rethKFC64 if not null, returns the hKFC handle to the in-memory id for 64 bit
+	 * @param rethKFC32 if not null, returns the hKFC handle to the in-memory id for 32 bit
 	 * @param serverName Name of server to contact
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	private static String _getUserIdFromVault(String userName, String password, String idPath, LongByReference rethKFC, String serverName) {
+	private static String _getUserIdFromVault(String userName, String password, String idPath, LongByReference rethKFC64, IntByReference rethKFC32, String serverName) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
@@ -87,7 +96,13 @@ public class IDUtils {
 			}
 		}
 		
-		short result = notesAPI.SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC, serverNameMem, 0, (short) 0, null);
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC64, serverNameMem, 0, (short) 0, null);
+		}
+		else {
+			result = notesAPI.b32_SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC32, serverNameMem, 0, (short) 0, null);
+		}
 		NotesErrorUtils.checkResult(result);
 		
 		int vaultServerNameLength = 0;
@@ -115,7 +130,7 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	public static String putUserIdIntoVault(Session session, String userName, String password, String idPath, String serverName) {
-		return _putUserIdIntoVault(session, userName, password, idPath, null, serverName);
+		return _putUserIdIntoVault(session, userName, password, idPath, null, null, serverName);
 	}
 	
 	/**
@@ -131,15 +146,21 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	public static String putUserIdIntoVault(Session session, String userName, String password, NotesUserId userId, String serverName) {
-		LongByReference phKFC = new LongByReference();
-		if (userId!=null) {
-			phKFC.setValue(userId.getKFCHandle());
-		}
-		else {
-			phKFC = null;
-		}
+		LongByReference phKFC64 = null;
+		IntByReference phKFC32 = null;
 		
-		return _putUserIdIntoVault(session, userName, password, null, phKFC, serverName);
+		if (userId!=null) {
+			if (NotesJNAContext.is64Bit()) {
+				phKFC64 = new LongByReference();
+				phKFC64.setValue(userId.getHandle64());
+			}
+			else {
+				phKFC32 = new IntByReference();
+				phKFC32.setValue(userId.getHandle32());
+			}
+		}
+			
+		return _putUserIdIntoVault(session, userName, password, null, phKFC64, phKFC32, serverName);
 	}
 	
 	/**
@@ -150,12 +171,14 @@ public class IDUtils {
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
 	 * @param idPath Path to where the download ID file should be created or overwritten or null to use the in-memory id
-	 * @param phKFC handle to the in-memory id or null to use an id file on disk
+	 * @param phKFC64 handle to the in-memory id or null to use an id file on disk for 64 bit
+	 * @param phKFC32 handle to the in-memory id or null to use an id file on disk for 32 bit
 	 * @param serverName Name of server to contact
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	private static String _putUserIdIntoVault(Session session, String userName, String password, String idPath, LongByReference phKFC, String serverName) {
+	private static String _putUserIdIntoVault(Session session, String userName, String password, String idPath,
+			LongByReference phKFC64, IntByReference phKFC32, String serverName) {
 		//opening any database on the server is required before putting the id fault, according to the
 		//C API documentation and sample "idvault.c"
 		NotesDatabase anyServerDb = new NotesDatabase(session, serverName, "names.nsf");
@@ -181,15 +204,32 @@ public class IDUtils {
 				}
 			}
 			
-			short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			short result;
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			}
+			else {
+				result = notesAPI.b32_SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				result = notesAPI.SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC, serverNameMem, 0, (short) 0, null);
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null);
+				}
+				else {
+					result = notesAPI.b32_SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null);
+				}
 				NotesErrorUtils.checkResult(result);
 			}
 			finally {
-				result = notesAPI.SECKFMClose(phKFC, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_SECKFMClose(phKFC64, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+					
+				}
+				else {
+					result = notesAPI.b32_SECKFMClose(phKFC32, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+				}
 				NotesErrorUtils.checkResult(result);
 			}
 					
@@ -276,18 +316,35 @@ public class IDUtils {
 			}
 		}
 		
-		LongByReference phKFC = new LongByReference();
+		LongByReference phKFC64 = new LongByReference();
+		IntByReference phKFC32 = new IntByReference();
 		IntByReference retdwFlags = new IntByReference();
 		
-		short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+		}
+		else {
+			result = notesAPI.b32_SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+		}
 		NotesErrorUtils.checkResult(result);
 		
 		try {
-			result = notesAPI.SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC, serverNameMem, 0, (short) 0, null, retdwFlags);
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null, retdwFlags);
+			}
+			else {
+				result = notesAPI.b32_SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null, retdwFlags);
+			}
 			NotesErrorUtils.checkResult(result);
 		}
 		finally {
-			result = notesAPI.SECKFMClose(phKFC, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_SECKFMClose(phKFC64, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+			}
+			else {
+				result = notesAPI.b32_SECKFMClose(phKFC32, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+			}
 			NotesErrorUtils.checkResult(result);
 		}
 	
@@ -421,13 +478,23 @@ public class IDUtils {
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		
-		LongByReference phKFC = new LongByReference();
-		
-		short result = notesAPI.SECKFMOpen(phKFC, idPathMem, passwordMem, 0, 0, null);
-		NotesErrorUtils.checkResult(result);
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference phKFC64 = new LongByReference();
+			result = notesAPI.b64_SECKFMOpen(phKFC64, idPathMem, passwordMem, 0, 0, null);
+			NotesErrorUtils.checkResult(result);
 
-		result = notesAPI.SECKFMClose(phKFC, 0, 0, null);
-		NotesErrorUtils.checkResult(result);
+			result = notesAPI.b64_SECKFMClose(phKFC64, 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			IntByReference phKFC32 = new IntByReference();
+			result = notesAPI.b32_SECKFMOpen(phKFC32, idPathMem, passwordMem, 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+
+			result = notesAPI.b32_SECKFMClose(phKFC32, 0, 0, null);
+			NotesErrorUtils.checkResult(result);
+		}
 	}
 	
 	/**
@@ -469,22 +536,42 @@ public class IDUtils {
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		
-		LongByReference phKFC = new LongByReference();
 		
 		//open the id file
-		short result = notesAPI.SECKFMOpen (phKFC, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
-		NotesErrorUtils.checkResult(result);
-		
-		try {
-			NotesUserId id = new NotesUserId(phKFC.getValue());
-			//invoke callback code
-			return callback.accessId(id);
-		}
-		finally {
-			//and close the ID file afterwards
-			result = notesAPI.SECKFMClose(phKFC, 0, 0, null);
-			NotesErrorUtils.checkResult(result);
-		}
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference phKFC64 = new LongByReference();
 			
+			result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			try {
+				NotesUserId id = new NotesUserId(phKFC64.getValue());
+				//invoke callback code
+				return callback.accessId(id);
+			}
+			finally {
+				//and close the ID file afterwards
+				result = notesAPI.b64_SECKFMClose(phKFC64, 0, 0, null);
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+		else {
+			IntByReference phKFC32 = new IntByReference();
+			
+			result = notesAPI.b32_SECKFMOpen(phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			try {
+				NotesUserId id = new NotesUserId(phKFC32.getValue());
+				//invoke callback code
+				return callback.accessId(id);
+			}
+			finally {
+				//and close the ID file afterwards
+				result = notesAPI.b32_SECKFMClose(phKFC32, 0, 0, null);
+				NotesErrorUtils.checkResult(result);
+			}
+		}
 	}
 }

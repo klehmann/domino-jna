@@ -1286,7 +1286,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Pointer pReserved);
 	
 	public short b32_NSFNoteSignExt3(int hNote, 
-			long	hKFC,
+			int hKFC,
 			Memory SignatureItemName,
 			short ItemCount, int hItemIDs, 
 			int Flags, int Reserved,
@@ -2308,7 +2308,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public short b32_NSFNoteCopyAndEncryptExt2(
 			int hSrcNote,
-			long hKFC,
+			int hKFC,
 			short EncryptFlags,
 			IntByReference rethDstNote,
 			int  Reserved,
@@ -2345,7 +2345,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public short b32_NSFNoteCipherDecrypt(
 			int  hNote,
-			long  hKFC,
+			int hKFC,
 			int  DecryptFlags,
 			LongByReference rethCipherForAttachments,
 			int  Reserved,
@@ -3225,28 +3225,45 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int fKFM_switchid_DontSetEnvVar	= 0x00000008;
 
 	
-	public short SECKFMOpen(LongByReference phKFC, Memory pIDFileName, Memory pPassword,
+	public short b64_SECKFMOpen(LongByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
+
+	public short b32_SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
+			int Flags, int Reserved, Pointer pReserved);
+
+	public short b64_SECKFMClose(LongByReference phKFC, int Flags, int Reserved, Pointer pReserved);
+	public short b32_SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
 	
-	public short SECKFMClose(LongByReference phKFC, int Flags, int Reserved, Pointer pReserved);
 	public short SECKFMChangePassword(Memory pIDFile, Memory pOldPassword, Memory pNewPassword);
 	public short SECKFMGetUserName(Memory retUserName);
 	
 	public short SECKFMSwitchToIDFile(Memory pIDFileName, Memory pPassword, Memory pUserName,
 			short  MaxUserNameLength, int Flags, Pointer pReserved);
 	
-	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
+	public short b64_SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
 			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
 
-	public short SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
+	public short b32_SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
+			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved);
+
+	public short b64_SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
 			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
 	
-	public short SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
+	public short b32_SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
+			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved);
+
+	public short b64_SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
 			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved, IntByReference retdwFlags);
-	
+
+	public short b32_SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
+			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
+			Pointer pReserved, IntByReference retdwFlags);
+
 	public short SECidvResetUserPassword(Memory pServer, Memory pUserName, Memory pPassword,
 			short wDownloadCount, int ReservedFlags, Pointer pReserved);
 	

@@ -1,12 +1,15 @@
 package com.mindoo.domino.jna;
 
+import com.mindoo.domino.jna.internal.NotesJNAContext;
+
 /**
  * Container for an in-memory user ID fetched from the ID vault
  * 
  * @author Karsten Lehmann
  */
 public class NotesUserId  {
-	private long m_memHandle;
+	private long m_memHandle64;
+	private int m_memHandle32;
 	
 	/**
 	 * Creates a new instance
@@ -14,15 +17,37 @@ public class NotesUserId  {
 	 * @param hKFC id handle
 	 */
 	public NotesUserId(long hKFC) {
-		m_memHandle = hKFC;
+		if (!NotesJNAContext.is64Bit())
+			throw new IllegalStateException("Constructor is 64bit only");
+		m_memHandle64 = hKFC;
 	}
 
 	/**
-	 * Returns the handle to the in-memory ID
+	 * Creates a new instance
+	 * 
+	 * @param hKFC id handle
+	 */
+	public NotesUserId(int hKFC) {
+		if (NotesJNAContext.is64Bit())
+			throw new IllegalStateException("Constructor is 32bit only");
+		m_memHandle32 = hKFC;
+	}
+
+	/**
+	 * Returns the handle to the in-memory ID for 32 bit
 	 * 
 	 * @return handle
 	 */
-	public long getKFCHandle() {
-		return m_memHandle;
+	public int getHandle32() {
+		return m_memHandle32;
+	}
+	
+	/**
+	 * Returns the handle to the in-memory ID for 64 bit
+	 * 
+	 * @return handle
+	 */
+	public long getHandle64() {
+		return m_memHandle64;
 	}
 }
