@@ -180,4 +180,20 @@ public class NotesCollectionPosition implements IAdaptable {
 	public int getTumbler(int level) {
 		return m_struct.Tumbler[level];
 	}
+	
+	/**
+	 * Converts the position object to a position string like "1.2.3".<br>
+	 * <br>
+	 * Please note that we also support an advanced syntax in contrast to IBM's API in order
+	 * to specify the min/max level parameters: "1.2.3|0-2" for minlevel=0, maxlevel=2. These
+	 * levels can be used to limit reading entries in a categorized view to specified depths.<br>
+	 * <br>
+	 * This method will returns a string with the advanced syntax if MinLevel or MaxLevel is not 0.
+	 * 
+	 * @return position string
+	 */
+	public String toPosString() {
+		return m_struct.toPosString();
+	}
+
 }
