@@ -2474,7 +2474,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
 				
 				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
+					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
 					valuePtr = valuePtr.share(2);
 
 					NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
