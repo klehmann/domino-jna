@@ -639,6 +639,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else {
 			result = notesAPI.b32_NSFItemDelete(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff));
 		}
+		if (result==INotesErrorConstants.ERR_ITEM_NOT_FOUND) {
+			return;
+		}
 		NotesErrorUtils.checkResult(result);
 	}
 	
