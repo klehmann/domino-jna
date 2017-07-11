@@ -331,6 +331,40 @@ public class NotesTimeDate implements IAdaptable {
 	}
 
 	/**
+	 * Removes the time part of this timedate
+	 */
+	public void setAnyTime() {
+		m_struct.Innards[0] = NotesCAPI.ALLDAY;
+		m_struct.write();
+	}
+	
+	/**
+	 * Checks whether the time part of this timedate is a wildcard
+	 * 
+	 * @return true if there is no time
+	 */
+	public boolean isAnyTime() {
+		return m_struct.Innards[0] == NotesCAPI.ALLDAY;
+	}
+	
+	/**
+	 * Removes the date part of this timedate
+	 */
+	public void setAnyDate() {
+		m_struct.Innards[1] = NotesCAPI.ANYDAY;
+		m_struct.write();
+	}
+	
+	/**
+	 * Checks whether the date part of this timedate is a wildcard
+	 * 
+	 * @return true if there is no date
+	 */
+	public boolean isAnyDate() {
+		return m_struct.Innards[1] == NotesCAPI.ANYDAY;
+	}
+	
+	/**
 	 * Creates a new {@link NotesTimeDate} instance with the same data as this one
 	 */
 	public NotesTimeDate clone() {

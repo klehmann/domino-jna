@@ -200,6 +200,40 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 	}
 
 	/**
+	 * Removes the time part of this timedate
+	 */
+	public void setAnyTime() {
+		this.Innards[0] = NotesCAPI.ALLDAY;
+		write();
+	}
+	
+	/**
+	 * Checks whether the time part of this timedate is a wildcard
+	 * 
+	 * @return true if there is no time
+	 */
+	public boolean isAnyTime() {
+		return this.Innards[0] == NotesCAPI.ALLDAY;
+	}
+	
+	/**
+	 * Removes the date part of this timedate
+	 */
+	public void setAnyDate() {
+		this.Innards[1] = NotesCAPI.ANYDAY;
+		write();
+	}
+	
+	/**
+	 * Checks whether the date part of this timedate is a wildcard
+	 * 
+	 * @return true if there is no date
+	 */
+	public boolean isAnyDate() {
+		return this.Innards[1] == NotesCAPI.ANYDAY;
+	}
+	
+	/**
 	 * Creates a new {@link NotesTimeDateStruct} instance with the same data as this one
 	 */
 	public NotesTimeDateStruct clone() {
