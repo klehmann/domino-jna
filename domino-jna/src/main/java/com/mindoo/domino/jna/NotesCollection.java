@@ -40,6 +40,7 @@ import com.mindoo.domino.jna.queries.condition.Selection;
 import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -1305,7 +1306,39 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		return getAllEntriesInCategory(category, skipCount, returnNav, null, null, preloadEntryCount, returnMask, callback);
 	}
-	
+
+	/**
+	 * Convenience method that reads all note ids located under a category
+	 * 
+	 * @param category category
+	 * @param returnNav navigator to be used to scan for collection entries
+	 * @return ids in view order
+	 */
+	public LinkedHashSet<Integer> getAllIdsInCategory(String category, EnumSet<Navigate> returnNav) {
+		return getAllEntriesInCategory(category, 0, returnNav, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID),
+				new ViewLookupCallback<LinkedHashSet<Integer>>() {
+
+			@Override
+			public LinkedHashSet<Integer> startingLookup() {
+				return new LinkedHashSet<Integer>();
+			}
+
+			@Override
+			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
+					LinkedHashSet<Integer> ctx, NotesViewEntryData entryData) {
+
+				ctx.add(entryData.getNoteId());
+				return Action.Continue;
+			}
+
+			@Override
+			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
+				return result;
+			}
+
+		});
+	}
+
 	/**
 	 * The method reads a number of entries located under a specified category from the collection/view.
 	 * It internally takes care of view index changes while reading view data and restarts reading
@@ -1331,91 +1364,62 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
 	 */
-	public <T> T getAllEntriesInCategory(String category, int skipCount, EnumSet<Navigate> returnNav,
+	public <T> T getAllEntriesInCategory(final String category, int skipCount, EnumSet<Navigate> returnNav,
 			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
 			final ViewLookupCallback<T> callback) {
 		
 		final String[] categoryPos = new String[1];
-		final int[] expectedLkViewMod = new int[1];
 		
-		while (true) {
-			expectedLkViewMod[0] = getIndexModifiedSequenceNo();
-			
-			//find category entry using NIFFindByKeyExtended2 with flag FIND_CATEGORY_MATCH
-			NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.CATEGORY_MATCH,
-					Find.FIND_REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
-					EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), category);
-			
-			List<NotesViewEntryData> catEntries = catLkResult.getEntries();
-			if (catEntries.isEmpty()) {
-				//category not found
-				T result = callback.startingLookup();
-				result = callback.lookupDone(result);
-				return result;
-			}
-			
-			if (catLkResult.getIndexModifiedSequenceNo() != expectedLkViewMod[0]) {
-				callback.viewIndexChangeDetected();
-				continue;
-			}
-			
-			NotesViewEntryData catEntry = catEntries.get(0);
-			
-			categoryPos[0] = catEntry.getPositionStr();
-			
-			NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(categoryPos[0]);
-			pos.MinLevel = (byte) (pos.Level+1);
-			pos.MaxLevel = 32;
-			pos.write();
-			
-			final boolean[] viewIndexModified = new boolean[1];
-			
-			EnumSet<Navigate> useReturnNav = returnNav.clone();
-//			useReturnNav.add(Navigate.MINLEVEL);
-			useReturnNav.add(Navigate.ALL_DESCENDANTS);
-			
-			EnumSet<ReadMask> useReturnMask = returnMask.clone();
-			useReturnMask.add(ReadMask.INDEXPOSITION);
-			
-			T result = getAllEntries(pos.toPosString(), skipCount, useReturnNav,
-					preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
-				int cnt=0;
+		IStartPositionRetriever catPosRetriever = new IStartPositionRetriever() {
+
+			@Override
+			public String getStartPosition() {
+				//find category entry using NIFFindByKeyExtended2 with flag FIND_CATEGORY_MATCH
+				NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.MATCH_CATEGORYORLEAF,
+						Find.REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
+						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), category);
 				
-				@Override
-				public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
-						NotesViewEntryData entryData) {
-					cnt++;
-					
-					//check if this entry is still one of the descendants of the category entry
-					String entryPos = entryData.getPositionStr();
-					if (entryPos.startsWith(categoryPos[0])) {
-						return super.entryRead(result, entryData);
-					}
-					
-					if ((cnt % 100)==0) {
-						int currViewIndexMod = getIndexModifiedSequenceNo();
-						if (currViewIndexMod!=expectedLkViewMod[0]) {
-							viewIndexModified[0] = true;
-							return Action.Stop;
-						}
-					}
+				if (catLkResult.getReturnCount()==0) {
+					//category not found
+					return null;
+				}
+				
+				categoryPos[0] = catLkResult.getPosition();
+				if (StringUtil.isEmpty(categoryPos[0])) {
+					//category not found
+					return null;
+				}
+				else {
+					return categoryPos[0];
+				}
+			}
+		};
+		
+		EnumSet<ReadMask> useReturnMask = returnMask.clone();
+		//make sure that we get the entry position for the range check
+		useReturnMask.add(ReadMask.INDEXPOSITION);
+
+		return getAllEntries(catPosRetriever, skipCount, returnNav,
+				preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
+			
+			@Override
+			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
+					NotesViewEntryData entryData) {
+				
+				//check if this entry is still one of the descendants of the category entry
+				String entryPos = entryData.getPositionStr();
+				if (entryPos.equals(categoryPos[0])) {
+					//skip category entry
 					return Action.Continue;
 				}
-			});
-			if (viewIndexModified[0]) {
-				callback.viewIndexChangeDetected();
-				continue;
+				else if (entryPos.startsWith(categoryPos[0])) {
+					return super.entryRead(result, entryData);
+				}
+				else {
+					return Action.Stop;
+				}
 			}
-			
-			int currViewIndexMod = getIndexModifiedSequenceNo();
-			if (currViewIndexMod!=expectedLkViewMod[0]) {
-				//view has changed, restart
-				callback.viewIndexChangeDetected();
-				continue;
-			}
-			
-			return result;
-		}
+		});
 	}
 
 	/**
@@ -1461,11 +1465,58 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param <T> type of lookup result object
 	 */
-	public <T> T getAllEntries(String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
+	public <T> T getAllEntries(final String startPosStr, int skipCount, EnumSet<Navigate> returnNav,
 			int preloadEntryCount,
 			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
-		NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(("last".equalsIgnoreCase(startPosStr) || startPosStr==null) ? "0" : startPosStr);
-		NotesCollectionPosition posWrap = new NotesCollectionPosition(pos);
+		
+		return getAllEntries(new IStartPositionRetriever() {
+
+			@Override
+			public String getStartPosition() {
+				return startPosStr;
+			}
+			
+		}, skipCount, returnNav, preloadEntryCount, returnMask, callback);
+	}
+	
+	/**
+	 * Callback to dynamically locate the start position of a collection scan, e.g.
+	 * the position of a category entry. We use a callback to be able to react on
+	 * view index updates. Since a lookup may be repeated when the view index changes,
+	 * this callback may be called multiple times to return a fresh starting position
+	 * for the lookup.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	private static interface IStartPositionRetriever {
+		
+		/**
+		 * Implement this method to find the lookup start position
+		 * 
+		 * @return start position or null if not found
+		 */
+		public String getStartPosition();
+		
+	}
+	
+	/**
+	 * The method reads a number of entries from the collection/view. It internally takes care
+	 * of view index changes while reading view data and restarts reading if such a change has been
+	 * detected.
+	 * 
+	 * @param startPosRetriever callback to find the start position to read
+	 * @param skipCount number entries to skip before reading
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param callback callback that is called for each entry read from the collection
+	 * @return lookup result
+	 * 
+	 * @param <T> type of lookup result object
+	 */
+	private <T> T getAllEntries(IStartPositionRetriever startPosRetriever, int skipCount, EnumSet<Navigate> returnNav,
+			int preloadEntryCount,
+			EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback) {
 		
 		EnumSet<ReadMask> useReturnMask = returnMask;
 
@@ -1500,6 +1551,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 
 		while (true) {
+			int indexModifiedBeforeGettingStartPos = getIndexModifiedSequenceNo();
+			
+			String startPosStr = startPosRetriever.getStartPosition();
+			if (StringUtil.isEmpty(startPosStr)) {
+				T result = callback.startingLookup();
+				result = callback.lookupDone(result);
+				return result;
+			}
+			
+			int indexModifiedAfterGettingStartPos = getIndexModifiedSequenceNo();
+
+			if (indexModifiedBeforeGettingStartPos != indexModifiedAfterGettingStartPos) {
+				//view index was changed while reading; restart scan
+				callback.viewIndexChangeDetected();
+				update();
+				continue;
+			}
+			
+			NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.toPosition(("last".equalsIgnoreCase(startPosStr) || startPosStr==null) ? "0" : startPosStr);
+			NotesCollectionPosition posWrap = new NotesCollectionPosition(pos);
+
 			T result = callback.startingLookup();
 			
 			if (preloadEntryCount==0) {
@@ -1542,6 +1614,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 				int useSkipCount;
 				if (firstLoopRun) {
 					if ("last".equalsIgnoreCase(startPosStr)) {
+						//TODO make "last" work when called from getAllEntriesInCategory
+						
 						//first jump to the end of the view
 						useSkipCount = Integer.MAX_VALUE;
 					}
@@ -1579,6 +1653,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 				data = readEntriesExt(posWrap, skipNav, useSkipCount, returnNav, preloadEntryCount, useReturnMask,
 						diffTime, diffIDTable, readSingleColumnIndex);
 				
+				int indexModifiedAfterDataLookup = getIndexModifiedSequenceNo();
+
+				if (indexModifiedAfterGettingStartPos != indexModifiedAfterDataLookup) {
+					//view index was changed while reading; restart scan
+					callback.viewIndexChangeDetected();
+					update();
+					continue;
+				}
+
 				if (useReturnMask.contains(ReadMask.INIT_POS_NOTEID)) {
 					//make sure to only use this flag on the first lookup call
 					useReturnMask.remove(ReadMask.INIT_POS_NOTEID);
