@@ -101,7 +101,7 @@ public enum Find {
 	AND_READ_MATCHES(0x2000),
 	
 	/** Use the case and accent sensitivity flags specified in the view */
-	FIND_VIEW_SENSITIVE(0x00010000),
+	VIEW_SENSITIVE(0x00010000),
     
 	/** Find first category match */
 	CATEGORY_MATCH(0x00020000),
@@ -123,7 +123,7 @@ public enum Find {
 	SPECIFIC_MATCHES(0x00400000),
 	
 	/** If the collection needs it, call NIFUpdateColletion prior to find (NIFFindByKeyExtended2 only */
-	FIND_REFRESH_FIRST(0x00800000);
+	REFRESH_FIRST(0x00800000);
 
 	private int m_val;
 	
