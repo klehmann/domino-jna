@@ -217,7 +217,8 @@ public class NotesItem {
 	public List<Object> getValues() {
 		loadItemNameAndFlags();
 		
-		List<Object> values = m_parentNote.getItemValue(m_itemName, m_itemBlockId, m_valueBlockId, m_valueLength);
+		int valueLength = getValueLength();
+		List<Object> values = m_parentNote.getItemValue(m_itemName, m_itemBlockId, m_valueBlockId, valueLength);
 		return values;
 	}
 
@@ -248,12 +249,13 @@ public class NotesItem {
 				short retBufferSize = (short) (Math.min(60*1024, MAX_TEXT_ITEM_VALUE.size()) & 0xffff);
 
 				short length;
-
+				int valueLength = getValueLength();
+				
 				if (NotesJNAContext.is64Bit()) {
-					length = notesAPI.b64_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, m_valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
+					length = notesAPI.b64_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
 				else {
-					length = notesAPI.b32_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, m_valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
+					length = notesAPI.b32_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
 				
 				int lengthAsInt = (int) length & 0xffff;
