@@ -2011,26 +2011,6 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Pointer EnumRoutineParameter,
 			NotesTimeDateStruct retUntil);
 
-//	STATUS far PASCAL NSFSearchExtended3 (DBHANDLE hDB,
-//            FORMULAHANDLE hFormula,
-//            DHANDLE hFilter,
-//            DWORD FilterFlags,
-//            char *ViewTitle,
-//            DWORD SearchFlags,
-//            DWORD SearchFlags1,
-//            DWORD SearchFlags2,
-//            DWORD SearchFlags3,
-//            DWORD SearchFlags4,
-//            WORD NoteClassMask,
-//            TIMEDATE *Since,
-//            STATUS (far PASCAL *EnumRoutine)
-//                                    (void *EnumRoutineParameter,
-//                                    SEARCH_MATCH *SearchMatch,
-//                                    ITEM_TABLE *SummaryBuffer),
-//            void *EnumRoutineParameter,
-//            TIMEDATE *retUntil,
-//            DHANDLE namelist) 
-//	
 	public short b64_NSFSearchExtended3 (long hDB, 
             long hFormula, 
             long hFilter, 
