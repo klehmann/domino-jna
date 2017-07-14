@@ -13,7 +13,7 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class WinNotesSSOTokenStruct64 extends Structure {
+public class WinNotesSSOTokenStruct64 extends BaseStructure {
 	public int mhName;
 	public int mhDomainList;
 	public short wNumDomains;
@@ -25,7 +25,6 @@ public class WinNotesSSOTokenStruct64 extends Structure {
 	 */
 	public WinNotesSSOTokenStruct64() {
 		super();
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static WinNotesSSOTokenStruct64 newInstance() {
@@ -60,7 +59,6 @@ public class WinNotesSSOTokenStruct64 extends Structure {
 		this.wNumDomains = wNumDomains;
 		this.bSecureOnly = bSecureOnly ? 1 :0;
 		this.mhData = mhData;
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static WinNotesSSOTokenStruct64 newInstance(final int mhName, final int mhDomainList, final short wNumDomains, final boolean bSecureOnly, final int mhData) {
@@ -84,7 +82,6 @@ public class WinNotesSSOTokenStruct64 extends Structure {
 	 */
 	public WinNotesSSOTokenStruct64(Pointer peer) {
 		super(peer);
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static WinNotesSSOTokenStruct64 newInstance(final Pointer p) {
