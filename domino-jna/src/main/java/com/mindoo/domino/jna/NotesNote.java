@@ -1468,7 +1468,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		int dataType = retDataType.getValue();
 		
 		NotesItem itemInfo = new NotesItem(this, itemBlockIdClone, dataType,
-				valueBlockIdClone, retValueLen.getValue());
+				valueBlockIdClone);
 		
 		Action action = callback.itemFound(itemInfo);
 		if (action != Action.Continue) {
@@ -1512,7 +1512,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			dataType = retDataType.getValue();
 
 			itemInfo = new NotesItem(this, itemBlockIdClone, dataType,
-					valueBlockIdClone, retValueLen.getValue());
+					valueBlockIdClone);
 			
 			action = callback.itemFound(itemInfo);
 			if (action != Action.Continue) {
@@ -3284,7 +3284,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		NotesErrorUtils.checkResult(result);
 		
-		NotesItem item = new NotesItem(this, retItemBlockId, itemType, valueBlockIdByVal, valueLength);
+		NotesItem item = new NotesItem(this, retItemBlockId, itemType, valueBlockIdByVal);
 		return item;
 	}
 	

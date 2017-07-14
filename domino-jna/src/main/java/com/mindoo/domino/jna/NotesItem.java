@@ -97,12 +97,11 @@ public class NotesItem {
 	 * @param valueLength value length in bytes
 	 */
 	NotesItem(NotesNote parentNote, NotesBlockIdStruct itemBlockId, int dataType,
-			NotesBlockIdStruct valueBlockId, int valueLength) {
+			NotesBlockIdStruct valueBlockId) {
 		m_parentNote = parentNote;
 		m_itemBlockId = itemBlockId;
 		m_dataType = dataType;
 		m_valueBlockId = valueBlockId;
-		m_valueLength = valueLength;
 	}
 
 	/**
@@ -138,6 +137,8 @@ public class NotesItem {
 	 * @return length
 	 */
 	int getValueLength() {
+		loadItemNameAndFlags();
+		
 		return m_valueLength;
 	}
 	
@@ -314,6 +315,7 @@ public class NotesItem {
 		m_dupItemId = retDupItemID.getValue();
 		m_itemFlags = (int) (retItem_flags.getValue() & 0xffff);
 		m_itemName = NotesStringUtils.fromLMBCS(item_name, (int) (retName_len.getValue() & 0xffff));
+		m_valueLength = retValueLen.getValue();
 		m_itemFlagsLoaded = true;
 	}
 	
