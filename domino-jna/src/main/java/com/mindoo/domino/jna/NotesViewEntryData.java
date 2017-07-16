@@ -549,6 +549,27 @@ public class NotesViewEntryData {
 	}
 	
 	/**
+	 * Returns a list of reader that are allowed to see this view entry.
+	 * This data is only retrieved when {@link ReadMask#SUMMARY} and
+	 * {@link ReadMask#RETURN_READERSLIST} are both used to read the
+	 * collection data.
+	 * 
+	 * @return readers or null if not read
+	 */
+	public List<String> getReadersList() {
+		Object readersList = get("$c1$");
+		if (readersList instanceof List) {
+			return (List<String>) readersList;
+		}
+		else if (readersList instanceof String) {
+			return Arrays.asList((String) readersList);
+		}
+		else {
+			return null;
+		}
+	}
+	
+	/**
 	 * Method to check whether the the view entry contains a non-null value for a programmatic column
 	 * name
 	 * 

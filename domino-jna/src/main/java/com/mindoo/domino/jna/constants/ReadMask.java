@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.constants;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.NotesCollectionStats;
+import com.mindoo.domino.jna.NotesViewEntryData;
 
 /**
  * These flags control what information is returned by NIFReadEntries
@@ -63,7 +64,9 @@ public enum ReadMask {
 	INDEXCHILDREN_NOCATS(0x00400000),
 	/** DWORD/WORD of # descendants below entry - not done for categories */ 
 	INDEXDESCENDANTS_NOCATS(0x00800000),
-	/** Return the readers list field */ 
+	/** Return the readers list as field "$c1$" in the summary buffer;
+	 * requires {@link ReadMask#SUMMARY} to be set as well.
+	 * Value can be read via {@link NotesViewEntryData#getReadersList()} */ 
 	RETURN_READERSLIST(0x01000000),
 	/** Return only entries which hNames would disallow (requires full access set) */ 
 	PRIVATE_ONLY(0x02000000),
