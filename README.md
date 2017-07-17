@@ -7,6 +7,7 @@ The project provides functionality that is not available in the classic Java API
 * **view lookups using different key formats** (e.g. strings, numbers, dates, date ranges) and equality/**inequality searches (e.g. find less or greater than a search key)**
 * **decodes all available types of view column data types** (string, string list, number, number list, datetime, datetime list) **and row data** (e.g. just note id, UNID, counts, unread flag etc.)
 * read view data as **another Notes user**
+* extract **read access information for rows in a view** that Domino stores in the view index
 * **separation of Notes views and their data into multiple databases** (like programmatically creating private views and keeping them up-to-date incrementally)
 * **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
 * **reading categorized views** with expanded/collapsed entries and min/max level
