@@ -6,6 +6,7 @@ import java.nio.LongBuffer;
 
 import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
@@ -292,7 +293,23 @@ public interface NotesCAPI extends Library {
 			ShortByReference retSignalFlags,
 			LongByReference rethBuffer,
 			IntByReference retSequence);
-
+	
+	short b32_NIFFindByKeyExtended3 (int hCollection,
+			Memory keyBuffer, int findFlags,
+			int returnFlags,
+			NotesCollectionPositionStruct retIndexPos,
+			IntByReference retNumMatches, ShortByReference retSignalFlags,
+			IntByReference rethBuffer, IntByReference retSequence,
+			NIFFindByKeyProc NIFFindByKeyCallback, NIFFindByKeyContextStruct Ctx);
+	
+	public long b64_NIFFindByKeyExtended3 (long hCollection,
+			Memory keyBuffer, int findFlags,
+			int returnFlags,
+			NotesCollectionPositionStruct retIndexPos,
+			IntByReference retNumMatches, ShortByReference retSignalFlags,
+			LongByReference rethBuffer, IntByReference retSequence,
+			NIFFindByKeyProc NIFFindByKeyCallback, NIFFindByKeyContextStruct Ctx);
+	
 	short b64_NIFIsNoteInView(long hCollection, int noteID, IntByReference retIsInView);
 	short b32_NIFIsNoteInView(int hCollection, int noteID, IntByReference retIsInView);
 
@@ -2258,6 +2275,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 		short invoke(NotesUniversalNoteIdStruct logID, int logNumber, Memory logSegmentPathName);
 	}
 	
+	public interface NIFFindByKeyProc extends Callback {
+		short invoke(NIFFindByKeyContextStruct ctx);
+	}
 	
 	public int CWF_CONTINUE_ON_ERROR = 0x0001;		/*	Ignore compute errors */
 

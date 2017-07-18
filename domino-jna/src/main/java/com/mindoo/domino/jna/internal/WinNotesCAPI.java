@@ -63,4 +63,6 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 	public interface LogRestoreCallbackFunctionWin extends LogRestoreCallbackFunction, StdCallCallback {
 	}
 
+	public interface NIFFindByKeyProcWin extends NIFFindByKeyProc, StdCallCallback {
+	}
 }
