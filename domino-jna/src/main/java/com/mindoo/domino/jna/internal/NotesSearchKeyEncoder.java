@@ -68,8 +68,14 @@ public class NotesSearchKeyEncoder {
 			else if (currKey instanceof Double) {
 				addNumberKey(metaDataByteOut, valueDataByteOut, ((Double) currKey).doubleValue());
 			}
+			else if (currKey instanceof Float) {
+				addNumberKey(metaDataByteOut, valueDataByteOut, ((Float) currKey).doubleValue());
+			}
 			else if (currKey instanceof Integer) {
 				addNumberKey(metaDataByteOut, valueDataByteOut, ((Integer) currKey).doubleValue());
+			}
+			else if (currKey instanceof Long) {
+				addNumberKey(metaDataByteOut, valueDataByteOut, ((Long) currKey).doubleValue());
 			}
 			else if (currKey instanceof Date) {
 				Calendar cal = Calendar.getInstance();
@@ -93,13 +99,6 @@ public class NotesSearchKeyEncoder {
 				//date range
 				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, (Calendar[]) currKey);
 			}
-//			else if (currKey instanceof Interval) {
-//				Interval interval = (Interval) currKey;
-//				DateTime startDateTime = interval.getStart();
-//				DateTime endDateTime = interval.getEnd();
-//				
-//				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, new Calendar[] {startDateTime.toCalendar(Locale.getDefault()), endDateTime.toCalendar(Locale.getDefault())});
-//			}
 			else if (currKey instanceof double[]) {
 				//looks like this does not work (the C API documentation says it does not work either)
 				addNumberRangeKey(metaDataByteOut, valueDataByteOut, (double[]) currKey);
