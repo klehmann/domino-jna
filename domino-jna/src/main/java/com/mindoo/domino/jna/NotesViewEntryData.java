@@ -855,7 +855,7 @@ public class NotesViewEntryData {
 	}
 
 	/**
-	 * Convenience function that converts a column value to a double
+	 * Convenience function that converts a column value to an integer
 	 * 
 	 * @param columnName programatic column name or column title
 	 * @param defaultValue default value if column is empty or is not a number
@@ -878,6 +878,30 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
+	/**
+	 * Convenience function that converts a column value to a long
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return long
+	 */
+	public Long getAsLong(String columnName, Long defaultValue) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return ((Number) val).longValue();
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (!valAsList.isEmpty()) {
+				Object firstVal = valAsList.get(0);
+				if (firstVal instanceof Number) {
+					return ((Number) firstVal).longValue();
+				}
+			}
+		}
+		return defaultValue;
+	}
+	
 	/**
 	 * Convenience function that converts a column value to a double list
 	 * 
@@ -978,6 +1002,56 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
+	/**
+	 * Convenience function that converts a column value to a list of longs
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return list of longs
+	 */
+	public List<Long> getAsLongList(String columnName, List<Long> defaultValue) {
+		Object val = get(columnName);
+		if (val instanceof Number) {
+			return Arrays.asList(((Number) val).longValue());
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType=true;
+			boolean numberList=true;
+			
+			for (int i=0; i<valAsList.size(); i++) {
+				Object currObj = valAsList.get(i);
+				
+				if (currObj instanceof Long) {
+					//ok
+				}
+				else if (currObj instanceof Number) {
+					correctType=false;
+					numberList=true;
+				}
+				else {
+					correctType=false;
+					numberList=false;
+				}
+			}
+			
+			if (correctType) {
+				return (List<Long>) valAsList;
+			}
+			else if (numberList) {
+				List<Long> intList = new ArrayList<Long>(valAsList.size());
+				for (int i=0; i<valAsList.size(); i++) {
+					intList.add(((Number)valAsList.get(i)).longValue());
+				}
+				return intList;
+			}
+			else {
+				return defaultValue;
+			}
+		}
+		return defaultValue;
+	}
+	
 	/**
 	 * Sets the sizes in bytes of the collection entry column values
 	 * 
