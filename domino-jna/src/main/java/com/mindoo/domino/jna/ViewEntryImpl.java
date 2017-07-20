@@ -3,6 +3,8 @@ package com.mindoo.domino.jna;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -155,41 +157,66 @@ public class ViewEntryImpl implements ViewEntry {
 		if (m_colValues==null) {
 			m_colValues = new Vector<Object>();
 			
-			Iterator<String> colNames = m_data.getColumnNames();
+			TreeMap<Integer,Object> columnValuesByColValuesIndex = new TreeMap<Integer,Object>();
+			NotesCollection parentCol = m_data.getParent();
+			
+			Iterator<String> colNames = parentCol.getColumnNames();
 			while (colNames.hasNext()) {
 				String currColName = colNames.next();
-				Object currColValue = m_data.get(currColName);
-				
-				if (currColValue instanceof List) {
-					List<?> currColValueAsList = (List<?>) currColValue;
+				int colValuesIndex = m_data.getParent().getColumnValuesIndex(currColName);
+				if (colValuesIndex<65535) {
+					Object currColValue = m_data.get(currColName);
 					
-					//convert column value to a Vector
-					Vector<Object> currColValueAsVector = new Vector<Object>(currColValueAsList.size());
-					
-					for (int i=0; i<currColValueAsList.size(); i++) {
-						Object currListVal = currColValueAsList.get(i);
+					if (currColValue instanceof Calendar) {
+						currColValue = ((Calendar)currColValue).getTime();
+					}
+					else if (currColValue instanceof List) {
+						List<?> currColValueAsList = (List<?>) currColValue;
 						
-						//replace Calendar[] with date range info with a Vector of Calendar
-						if (currListVal instanceof Calendar[]) {
-							Calendar[] calArr = (Calendar[]) currListVal;
-							Vector<Object> currDateRangeValuesAsVector = new Vector<Object>();
-							for (int j=0; j<calArr.length; j++) {
-								if (calArr[j]!=null) {
-									currDateRangeValuesAsVector.add(calArr[j]);
-								}
+						//convert column value to a Vector
+						Vector<Object> currColValueAsVector = new Vector<Object>(currColValueAsList.size());
+						
+						for (int i=0; i<currColValueAsList.size(); i++) {
+							Object currListVal = currColValueAsList.get(i);
+							
+							if (currColValue instanceof Calendar) {
+								currListVal = ((Calendar)currListVal).getTime();
 							}
-							currListVal = currDateRangeValuesAsVector;
+							else if (currListVal instanceof Calendar[]) {
+								//replace Calendar[] with date range info with a Vector of Date
+								Calendar[] calArr = (Calendar[]) currListVal;
+								Vector<Object> currDateRangeValuesAsVector = new Vector<Object>(calArr.length);
+								for (int j=0; j<calArr.length; j++) {
+									if (calArr[j]!=null) {
+										currDateRangeValuesAsVector.add(calArr[j].getTime());
+									}
+								}
+								currListVal = currDateRangeValuesAsVector;
+							}
+							
+							currColValueAsVector.add(currListVal);
 						}
 						
-						currColValueAsVector.add(currListVal);
+						currColValue = currColValueAsVector;
 					}
 					
-					currColValue = currColValueAsVector;
+					columnValuesByColValuesIndex.put(colValuesIndex, currColValue);
 				}
-				
-				m_colValues.add(currColValue);
+			}
+			
+			Object[] colValuesArr = new Object[columnValuesByColValuesIndex.isEmpty() ? 0 : (columnValuesByColValuesIndex.lastKey()+1)];
+			for (Entry<Integer,Object> currEntry : columnValuesByColValuesIndex.entrySet()) {
+				colValuesArr[currEntry.getKey()] = currEntry.getValue();
+			}
+			m_colValues = new Vector<Object>(colValuesArr.length);
+			for (int i=0; i<colValuesArr.length; i++) {
+				if (colValuesArr[i]==null)
+					m_colValues.add("");
+				else
+					m_colValues.add(colValuesArr[i]);
 			}
 		}
+
 		return m_colValues;
 	}
 	
