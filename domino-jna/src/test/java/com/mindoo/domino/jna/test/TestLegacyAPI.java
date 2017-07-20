@@ -6,6 +6,7 @@ import java.util.Vector;
 
 import org.junit.Test;
 
+import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 
@@ -44,6 +45,16 @@ public class TestLegacyAPI extends BaseJNATestClass {
 				
 				Assert.assertTrue("Usernameslist of session contains specified user", userNamesList.contains("CN=Test User/O=Mindoo"));
 				Assert.assertTrue("Usernameslist of session contains specified group", userNamesList.contains("Group1"));
+				
+				NotesDatabase dbWithHandle = LegacyAPIUtils.toNotesDatabase(dbAsUser);
+				
+				String absFilePath = dbWithHandle.getAbsoluteFilePathOnLocal();
+				String relFilePath = dbWithHandle.getRelativeFilePath();
+				
+				System.out.println("Absolute filePath: "+absFilePath);
+				System.out.println("Relative filePath: "+relFilePath);
+				
+				Assert.assertEquals("Filepaths are equal", dbAsUser.getFilePath(), relFilePath);
 				
 				return null;
 			}

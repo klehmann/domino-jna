@@ -26,6 +26,7 @@ import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -45,6 +46,7 @@ import com.mindoo.domino.jna.structs.NotesFTIndexStatsStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
@@ -56,6 +58,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
+import lotus.domino.Database;
 import lotus.domino.Name;
 import lotus.domino.NotesException;
 import lotus.domino.Session;
@@ -78,6 +81,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private boolean m_authenticateUser;
 	private boolean m_loginAsIdOwner;
 	NotesNamesList m_namesList;
+	private Database m_legacyDbRef;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -310,6 +314,43 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(NotesDatabase.class, this);
 	}
 
+	/**
+	 * Creates a new NotesDatabase
+	 * 
+	 * @param adaptable adaptable providing enough information to create the database
+	 */
+	public NotesDatabase(IAdaptable adaptable) {
+		Database legacyDB = adaptable.getAdapter(Database.class);
+		if (legacyDB!=null) {
+			if (isRecycled(legacyDB))
+				throw new NotesError(0, "Legacy database already recycled");
+			
+			long dbHandle = LegacyAPIUtils.getDBHandle(legacyDB);
+			if (dbHandle==0)
+				throw new NotesError(0, "Could not read db handle");
+			
+			if (NotesJNAContext.is64Bit()) {
+				m_hDB64 = dbHandle;
+			}
+			else {
+				m_hDB32 = (int) dbHandle;
+			}
+			NotesGC.__objectCreated(NotesDatabase.class, this);
+			setNoRecycleDb();
+			m_legacyDbRef = legacyDB;
+			
+			//compute usernames list used
+			NotesNote note = createNote();
+			List userNamesList = FormulaExecution.evaluate("@UserNamesList", note);
+			note.recycle();
+			
+			m_namesList = NotesNamingUtils.writeNewNamesList(userNamesList);
+		}
+		else {
+			throw new NotesError(0, "Unsupported adaptable parameter");
+		}
+	}
+	
 	/** Available encryption strengths for database creation */
 	public static enum Encryption {None, Simple, Medium, Strong};
 	
@@ -487,6 +528,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	private void loadPaths() {
 		if (m_paths==null) {
+			checkHandle();
+			
 			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 			Memory retCanonicalPathName = new Memory(NotesCAPI.MAXPATH);
 			Memory retExpandedPathName = new Memory(NotesCAPI.MAXPATH);
@@ -596,10 +639,25 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		m_noRecycleDb=true;
 	}
 	
+	private boolean isRecycled(Database db) {
+		try {
+			//call any method to check recycled state
+			db.isInService();
+		}
+		catch (NotesException e) {
+			if (e.id==4376 || e.id==4466)
+				return true;
+		}
+		return false;
+	}
+	
 	/**
 	 * Checks if the database is already recycled
 	 */
 	private void checkHandle() {
+		if (m_legacyDbRef!=null && isRecycled(m_legacyDbRef))
+			throw new NotesError(0, "Wrapped legacy database already recycled");
+		
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hDB64==0)
 				throw new NotesError(0, "Database already recycled");

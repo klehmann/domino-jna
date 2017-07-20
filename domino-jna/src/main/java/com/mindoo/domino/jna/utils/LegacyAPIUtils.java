@@ -1,10 +1,14 @@
 package com.mindoo.domino.jna.utils;
 
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
+import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -25,38 +29,81 @@ import lotus.domino.Session;
  */
 public class LegacyAPIUtils {
 	private static boolean m_initialized;
-	
-	private static Method getDocumentHandleRW;
-	private static Method createDocument;
-	private static Method createDatabase;
-	
-	private static Method createXPageSession;
-	
-	private static void initialize() {
+
+	private static volatile Method getDocumentHandleRW;
+	private static volatile Method createDocument;
+	private static volatile Method createDatabase;
+	private static volatile Method createXPageSession;
+	private static volatile Method getDBHandle;
+
+	private static synchronized void initialize() {
 		if (m_initialized)
 			return;
-		
+
 		m_initialized = true;
-		
-		try {
-			//This class only works when lwpd.domino.napi.jar and lwpd.commons.jar are in the classpath
-			Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
-			Method initLibrary = cClass.getMethod("initLibrary", String.class);
-			initLibrary.invoke(null, "");
-			
-			Class<?> backendBridgeClass = Class.forName("com.ibm.domino.napi.c.BackendBridge");
-			getDocumentHandleRW = backendBridgeClass.getMethod("getDocumentHandleRW", lotus.domino.Document.class);
-			createDatabase = backendBridgeClass.getMethod("createDatabase", lotus.domino.Session.class, Long.TYPE);
-			createDocument = backendBridgeClass.getMethod("createDocument", lotus.domino.Database.class, Long.TYPE);
-			
-			Class<?> xspNativeClass = Class.forName("com.ibm.domino.napi.c.xsp.XSPNative");
-			createXPageSession = xspNativeClass.getMethod("createXPageSession", String.class, Long.TYPE, Boolean.TYPE, Boolean.TYPE);
-		}
-		catch (Throwable t) {
-			//API does not seem to be available, e.g. in Basic Client
-		}
+
+		AccessController.doPrivileged(new PrivilegedAction<Object>() {
+
+			@Override
+			public Object run() {
+				try {
+					//This class only works when lwpd.domino.napi.jar and lwpd.commons.jar are in the classpath
+					Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
+					Method initLibrary = cClass.getMethod("initLibrary", String.class);
+					initLibrary.invoke(null, "");
+
+					try {
+						Class<?> backendBridgeClass = Class.forName("com.ibm.domino.napi.c.BackendBridge");
+						try {
+							getDocumentHandleRW = backendBridgeClass.getMethod("getDocumentHandleRW", lotus.domino.Document.class);
+						}
+						catch (Exception e) {
+							//
+						}
+						try {
+							createDatabase = backendBridgeClass.getMethod("createDatabase", lotus.domino.Session.class, Long.TYPE);
+						}
+						catch (Exception e) {
+							//
+						}
+						try {
+							createDocument = backendBridgeClass.getMethod("createDocument", lotus.domino.Database.class, Long.TYPE);
+						}
+						catch (Exception e) {
+							//
+						}
+					}
+					catch (Exception e) {
+						//
+					}
+
+					try {
+						Class<?> xspNativeClass = Class.forName("com.ibm.domino.napi.c.xsp.XSPNative");
+						try {
+							createXPageSession = xspNativeClass.getMethod("createXPageSession", String.class, Long.TYPE, Boolean.TYPE, Boolean.TYPE);
+						}
+						catch (Exception e) {
+							//
+						}
+						try {
+							getDBHandle = xspNativeClass.getMethod("getDBHandle", Database.class);
+						}
+						catch (Exception e) {
+							//
+						}
+					}
+					catch (Exception e) {
+						//
+					}
+				}
+				catch (Exception t) {
+					//
+				}
+				return null;
+			}
+		});
 	}
-	
+
 	/**
 	 * Reads the C handle for the specific legacy {@link Document}
 	 * 
@@ -65,56 +112,87 @@ public class LegacyAPIUtils {
 	 */
 	public static long getHandle(Document doc) {
 		initialize();
-		
+
 		if (getDocumentHandleRW==null) {
-			throw new NotesError(0, "Required BackendBridge class not available in this environment");
+			throw new NotesError(0, "Required method BackendBridge.getDocumentHandleRW(Document) class not available in this environment");
 		}
-		
+
 		try {
 			long cHandle = (Long) getDocumentHandleRW.invoke(null, doc);
 			return cHandle;
-		} catch (Throwable e) {
+		} catch (Exception e) {
 			throw new NotesError(0, "Could not read document c handle", e);
 		}
 	}
-	
+
+	/**
+	 * Reads the C handle for the specific legacy {@link Database}
+	 * 
+	 * @param db database
+	 * @return handle
+	 */
+	public static long getDBHandle(Database db) {
+		initialize();
+
+		if (getDBHandle==null) {
+			throw new NotesError(0, "Required method XSPNative.getDBHandle(Database) not available in this environment");
+		}
+
+		try {
+			long cHandle = (Long) getDBHandle.invoke(null, db);
+			return cHandle;
+		} catch (Exception e) {
+			throw new NotesError(0, "Could not get db handle", e);
+		}
+	}
+
 	/**
 	 * Converts a C handle to a legacy {@link Document}
 	 * 
 	 * @param db parent database
 	 * @param handle handle
 	 * @return document
+	 * @deprecated does not seem to work yet, always returns null
 	 */
 	public static Document createDocument(Database db, long handle) {
 		initialize();
-		
+
 		if (createDocument==null) {
-			throw new NotesError(0, "Required BackendBridge class not available in this environment");
+			throw new NotesError(0, "Required method BackendBridge.createDocument(Database,long) not available in this environment");
 		}
-		
+
 		try {
 			Document doc = (Document) createDocument.invoke(null, db, handle);
 			return doc;
-		} catch (Throwable e) {
+		} catch (Exception e) {
 			throw new NotesError(0, "Could not convert document c handle", e);
 		}
 	}
-	
+
+	/**
+	 * Method to convert a handle to a legacy {@link Database}
+	 * 
+	 * @param session session
+	 * @param handle handle
+	 * @return legacy database
+	 * @deprecated does not seem to work yet, always returns null
+	 */
 	public static Database createDatabase(Session session, long handle) {
 		initialize();
-		
+
 		if (createDatabase==null) {
-			throw new NotesError(0, "Required BackendBridge class not available in this environment");
+			throw new NotesError(0, "Required method BackendBridge.createDatabase(Session,long) not available in this environment");
 		}
-		
+
 		try {
-			Database db = (Database) createDatabase.invoke(null, session, handle);
+			Database db = (Database) createDatabase.invoke(null, null, handle);
+			db = (Database) createDatabase.invoke(null, session, handle);
 			return db;
-		} catch (Throwable e) {
+		} catch (Exception e) {
 			throw new NotesError(0, "Could not convert database c handle", e);
 		}
 	}
-	
+
 	/**
 	 * Creates a legacy {@link Session} for a usernames list
 	 * 
@@ -155,18 +233,18 @@ public class LegacyAPIUtils {
 	 */
 	public static Session createSessionAs(NotesNamesList namesList) {
 		initialize();
-		
+
 		if (createXPageSession==null) {
-			throw new NotesError(0, "Required XSPNative class not available in this environment");
+			throw new NotesError(0, "Required method XSPNative.createXPageSession(String, long, boolean, boolean) not available in this environment");
 		}
 
 		try {
 			long hList = NotesJNAContext.is64Bit() ? namesList.getHandle64() : namesList.getHandle32();
 			final Session session = (Session) createXPageSession.invoke(null, namesList.getNames().get(0), hList, true, false);
-			
+
 			final long[] longHandle = new long[1];
 			final int[] intHandle = new int[1];
-			
+
 			if (NotesJNAContext.is64Bit()) {
 				Long oldHandle = (Long) NotesGC.getCustomValue("FakeSessionHandle");
 				if (oldHandle==null) {
@@ -190,11 +268,11 @@ public class LegacyAPIUtils {
 			NotesGC.__objectCreated(Session.class, new DummySessionRecyclableNotesObject(intHandle, longHandle, namesList.getNames(), session));
 			return session;
 		}
-		catch (Throwable t) {
+		catch (Exception t) {
 			throw new NotesError(0, "Could not create session", t);
 		}
 	}
-	
+
 	/**
 	 * Implementation of {@link IRecyclableNotesObject} that recycles a legacy {@link Session}
 	 * as part of the auto GC process
@@ -232,7 +310,7 @@ public class LegacyAPIUtils {
 				if (e.id==4376 || e.id==4466)
 					return true;
 			}
-			catch (Throwable t) {
+			catch (Exception t) {
 				t.printStackTrace();
 				return true;
 			}
@@ -260,4 +338,19 @@ public class LegacyAPIUtils {
 		}
 	}
 
+	/**
+	 * Converts a legacy {@link Database} to a {@link NotesDatabase}
+	 * 
+	 * @param db legacy DB
+	 * @return JNA db
+	 */
+	public static NotesDatabase toNotesDatabase(final Database db) {
+		return new NotesDatabase(new IAdaptable() {
+
+			@Override
+			public <T> T getAdapter(Class<T> clazz) {
+				return (T) db;
+			}
+		});
+	}
 }
