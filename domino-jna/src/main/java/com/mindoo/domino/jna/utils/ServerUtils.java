@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.ClusterLookup;
@@ -60,15 +61,19 @@ public class ServerUtils {
 			result = notesAPI.b64_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
 			NotesErrorUtils.checkResult(result);
 			
-			Pointer pList = notesAPI.b64_OSLockObject(phList.getValue());
+			long hList = phList.getValue();
+			if (hList==0)
+				return Collections.emptyList();
+			
+			Pointer pList = notesAPI.b64_OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
 				List clusterMates = ItemDecoder.decodeTextListValue(notesAPI, pList, false);
 				return clusterMates;
 			}
 			finally {
-				notesAPI.b64_OSUnlockObject(phList.getValue());
-				notesAPI.b64_OSMemFree(phList.getValue());
+				notesAPI.b64_OSUnlockObject(hList);
+				notesAPI.b64_OSMemFree(hList);
 			}
 		}
 		else {
@@ -76,15 +81,20 @@ public class ServerUtils {
 			
 			result = notesAPI.b32_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
 			NotesErrorUtils.checkResult(result);
-			Pointer pList = notesAPI.b32_OSLockObject(phList.getValue());
+			
+			int hList = phList.getValue();
+			if (hList==0)
+				return Collections.emptyList();
+
+			Pointer pList = notesAPI.b32_OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
 				List clusterMates = ItemDecoder.decodeTextListValue(notesAPI, pList, false);
 				return clusterMates;
 			}
 			finally {
-				notesAPI.b32_OSUnlockObject(phList.getValue());
-				notesAPI.b32_OSMemFree(phList.getValue());
+				notesAPI.b32_OSUnlockObject(hList);
+				notesAPI.b32_OSMemFree(hList);
 			}
 		}
 	}
