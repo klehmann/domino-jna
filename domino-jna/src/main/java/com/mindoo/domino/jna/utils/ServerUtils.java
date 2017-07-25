@@ -59,6 +59,8 @@ public class ServerUtils {
 			LongByReference phList = new LongByReference();
 			
 			result = notesAPI.b64_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
+			if (result == 2078) // "No cluster mates found"
+				return Collections.emptyList();
 			NotesErrorUtils.checkResult(result);
 			
 			long hList = phList.getValue();
@@ -80,6 +82,8 @@ public class ServerUtils {
 			IntByReference phList = new IntByReference();
 			
 			result = notesAPI.b32_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
+			if (result == 2078) // "No cluster mates found"
+				return Collections.emptyList();
 			NotesErrorUtils.checkResult(result);
 			
 			int hList = phList.getValue();
