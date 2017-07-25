@@ -3574,4 +3574,32 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			int hCntnr,
 			int hSched,
 			PointerByReference pretSched);
+	
+	/** Instructs the NSGetServerClusterMates function to not use the cluster name cache
+	 * and forces a lookup on the target server instead */
+	public static int CLUSTER_LOOKUP_NOCACHE = 0x00000001;
+	
+	/** Instructs the NSGetServerClusterMates function to only use the cluster name cache
+	 * and restricts lookup to the workstation cache */
+	public static int CLUSTER_LOOKUP_CACHEONLY = 0x00000002;
+	
+	public short b64_NSGetServerClusterMates(
+			Memory pServerName,
+			int dwFlags,
+			LongByReference phList);
+	
+	public short b32_NSGetServerClusterMates(
+			Memory pServerName,
+			int dwFlags,
+			IntByReference phList);
+	
+	public short b64_NSPingServer(
+			Memory pServerName,
+			IntByReference pdwIndex,
+			LongByReference phList);
+	
+	public short b32_NSPingServer(
+			Memory pServerName,
+			IntByReference pdwIndex,
+			IntByReference phList);
 }
