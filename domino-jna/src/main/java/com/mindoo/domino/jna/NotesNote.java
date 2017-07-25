@@ -1134,7 +1134,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			return txtVal==null ? Collections.emptyList() : Arrays.asList((Object) txtVal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TEXT_LIST) {
-			List<Object> textList = ItemDecoder.decodeTextListValue(notesAPI, valueDataPtr, valueDataLength, false);
+			List<Object> textList = valueDataLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(notesAPI, valueDataPtr, false);
 			return textList==null ? Collections.emptyList() : textList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NUMBER) {

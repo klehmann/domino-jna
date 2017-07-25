@@ -2,7 +2,6 @@ package com.mindoo.domino.jna.internal;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -43,11 +42,7 @@ public class ItemDecoder {
 		}
 	}
 	
-	public static List<Object> decodeTextListValue(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean convertStringsLazily) {
-		if (valueLength==0) {
-			return Collections.emptyList();
-		}
-		
+	public static List<Object> decodeTextListValue(NotesCAPI notesAPI, Pointer ptr, boolean convertStringsLazily) {
 		//read a text list item value
 		int listCountAsInt = ptr.getShort(0) & 0xffff;
 		
