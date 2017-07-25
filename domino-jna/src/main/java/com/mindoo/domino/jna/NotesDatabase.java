@@ -399,6 +399,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return session
 	 * @deprecated will be removed if {@link NotesCollection} can decode the collation info without falling back to the legacy API
 	 */
+	@Deprecated
 	Session getSession() {
 		return m_session;
 	}
@@ -567,10 +568,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 	
+	@Override
 	public int getHandle32() {
 		return m_hDB32;
 	}
 
+	@Override
 	public long getHandle64() {
 		return m_hDB64;
 	}
@@ -589,6 +592,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @return true if recycled
 	 */
+	@Override
 	public boolean isRecycled() {
 		if (NotesJNAContext.is64Bit()) {
 			return m_hDB64==0;
@@ -601,6 +605,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Recycle this object, if not already recycled
 	 */
+	@Override
 	public void recycle() {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (!m_noRecycleDb) {
