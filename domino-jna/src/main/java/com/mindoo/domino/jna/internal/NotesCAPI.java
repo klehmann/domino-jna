@@ -2918,6 +2918,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short b64_NSFDbSetOptionsExt(long hDB, Memory dbOptions, Memory mask);
 	public short b32_NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
 	
+	public void b64_NSFDbAccessGet(long hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
+	public void b32_NSFDbAccessGet(int hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
+	
 	public short b64_NSFHideDesign(long hdb1, long hdb2, int param3, int param4);
 	public short b32_NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
 	
@@ -3602,4 +3605,57 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			Memory pServerName,
 			IntByReference pdwIndex,
 			IntByReference phList);
+	
+	/** Authors can't create new notes (only edit existing ones) */
+	public short ACL_FLAG_AUTHOR_NOCREATE = 0x0001;
+	/** Entry represents a Server (V4) */
+	public short ACL_FLAG_SERVER = 0x0002;
+	/** User cannot delete notes */
+	public short ACL_FLAG_NODELETE = 0x0004;
+	/** User can create personal agents (V4) */
+	public short ACL_FLAG_CREATE_PRAGENT = 0x0008;
+	/** User can create personal folders (V4) */
+	public short ACL_FLAG_CREATE_PRFOLDER = 0x0010;
+	/** Entry represents a Person (V4) */
+	public short ACL_FLAG_PERSON = 0x0020;
+	/** Entry represents a group (V4) */
+	public short ACL_FLAG_GROUP = 0x0040;
+	/** User can create and update shared views &amp; folders (V4)<br>
+This allows an Editor to assume some Designer-level access */
+	public short ACL_FLAG_CREATE_FOLDER = 0x0080;
+	/** User can create LotusScript */
+	public short ACL_FLAG_CREATE_LOTUSSCRIPT = 0x0100;
+	/** User can read public notes */
+	public short ACL_FLAG_PUBLICREADER = 0x0200;
+	/** User can write public notes */
+	public short ACL_FLAG_PUBLICWRITER = 0x0400;
+	/** User CANNOT register monitors for this database */
+	public short ACL_FLAG_MONITORS_DISALLOWED = 0x800;
+	/** User cannot replicate or copy this database */
+	public short ACL_FLAG_NOREPLICATE = 0x1000;
+	/** Admin server can modify reader and author fields in db */
+	public short ACL_FLAG_ADMIN_READERAUTHOR = 0X4000;
+	/** Entry is administration server (V4) */
+	public short ACL_FLAG_ADMIN_SERVER = (short) (0x8000 & 0xffff);
+
+	/** User or Server has no access to the database. */
+	public short ACL_LEVEL_NOACCESS = 0;
+	/** User or Server can add new data documents to a database, but cannot examine the new document or the database. */
+	public short ACL_LEVEL_DEPOSITOR = 1;
+	/** User or Server can only view data documents in the database. */
+	public short ACL_LEVEL_READER = 2;
+	/** User or Server can create and/or edit their own data documents and examine existing ones in the database. */
+	public short ACL_LEVEL_AUTHOR = 3;
+	/** User or Server can create and/or edit any data document. */
+	public short ACL_LEVEL_EDITOR = 4;
+	/** User or Server can create and/or edit any data document and/or design document. */
+	public short ACL_LEVEL_DESIGNER = 5;
+	/** User or Server can create and/or maintain any type of database or document, including the ACL. */
+	public short ACL_LEVEL_MANAGER = 6;
+
+	/** Highest access level */
+	public short ACL_LEVEL_HIGHEST = 6;
+	/** Number of access levels */
+	public short ACL_LEVEL_COUNT = 7;
+
 }
