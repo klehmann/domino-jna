@@ -13,6 +13,8 @@ import java.util.Set;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
+import com.mindoo.domino.jna.constants.AclFlag;
+import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.GetNotes;
@@ -3018,5 +3020,62 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		retOIDStruct.read();
 		
 		return new NotesOriginatorId(retOIDStruct);
+	}
+	
+	/**
+	 * This function gets the level of database access granted to the username that opened the database.
+	 * 
+	 * @return access level and flags
+	 */
+	public AccessInfoAndFlags getAccessInfoAndFlags() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		ShortByReference retAccessLevel = new ShortByReference();
+		ShortByReference retAccessFlag = new ShortByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			notesAPI.b64_NSFDbAccessGet(m_hDB64, retAccessLevel, retAccessFlag);
+		}
+		else {
+			notesAPI.b32_NSFDbAccessGet(m_hDB32, retAccessLevel, retAccessFlag);
+		}
+		
+		int iAccessLevel = retAccessLevel.getValue();
+		AclLevel retLevel = AclLevel.toLevel(iAccessLevel);
+		
+		int iAccessFlag = (int) (retAccessFlag.getValue() & 0xffff);
+		EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
+		for (AclFlag currFlag : AclFlag.values()) {
+			if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
+				retFlags.add(currFlag);
+			}
+		}
+		
+		return new AccessInfoAndFlags(retLevel, retFlags);
+	}
+	
+	/**
+	 * Container class for the current user's access level and flags to this database
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class AccessInfoAndFlags {
+		private AclLevel m_aclLevel;
+		private EnumSet<AclFlag> m_aclFlags;
+		
+		private AccessInfoAndFlags(AclLevel aclLevel, EnumSet<AclFlag> aclFlags) {
+			m_aclLevel = aclLevel;
+			m_aclFlags = aclFlags;
+		}
+		
+		public AclLevel getAclLevel() {
+			return m_aclLevel;
+		}
+		
+		public EnumSet<AclFlag> getAclFlags() {
+			return m_aclFlags;
+		}
 	}
 }
