@@ -38,7 +38,7 @@ public class NotesJNAContext {
 	
 	/**
 	 * Returns the alignment to be used for the current platform
-	 * @return
+	 * @return alignment
 	 */
 	public static int getPlatformAlignment() {
 		if (m_platformAlignment==null) {
