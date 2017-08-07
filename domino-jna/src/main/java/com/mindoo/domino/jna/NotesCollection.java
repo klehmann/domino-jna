@@ -755,17 +755,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			NotesIDTable resultsIdTable = null;
-
-			long hResults = rethResults.getValue();
-			if (hResults!=0) {
-				resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
-			}
-			if (options.contains(FTSearch.RET_IDTABLE) && resultsIdTable==null) {
-				resultsIdTable = new NotesIDTable();
-			}
-
-			return new SearchResult(resultsIdTable, retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 		else {
 			IntByReference rethResults = new IntByReference();
@@ -787,17 +777,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			NotesIDTable resultsIdTable = null;
-			
-			int hResults = rethResults.getValue();
-			if (hResults!=0) {
-				resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
-			}
-			if (options.contains(FTSearch.RET_IDTABLE) && resultsIdTable==null) {
-				resultsIdTable = new NotesIDTable();
-			}
-
-			return new SearchResult(resultsIdTable, retNumDocs.getValue());
+			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
 		}
 	}
 	
