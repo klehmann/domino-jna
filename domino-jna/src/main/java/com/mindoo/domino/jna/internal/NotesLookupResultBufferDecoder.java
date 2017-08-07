@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.internal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,6 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.structs.NotesItemTableStruct;
-import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -384,7 +384,8 @@ public class NotesLookupResultBufferDecoder {
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_TEXT_LIST) {
 					//read a text list item value
-					List<Object> listValues = ItemDecoder.decodeTextListValue(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), convertStringsLazily);
+					int valueLength = (int) (itemValueBufferSizes[j] & 0xffff);
+					List<Object> listValues = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(notesAPI, itemValueBufferPointers[j], convertStringsLazily);
 					decodedItemValues[j]  = listValues;
 					
 //					int listCountAsInt = itemValueBufferPointers[j].getShort(0) & 0xffff;

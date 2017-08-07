@@ -34,7 +34,16 @@ public class NIFFindByKeyContextStruct extends BaseStructure {
 		return Arrays.asList("EntriesThisChunk", "wSizeOfChunk", "SummaryBuffer", "hUserData", "UserDataLen", "TotalDataInBuffer");
 	}
 
-	/** @param SummaryBuffer C type : void* */
+	/**
+	 * Creates a new context
+	 * 
+	 * @param EntriesThisChunk entries in this chunk
+	 * @param wSizeOfChunk size of chunk
+	 * @param SummaryBuffer summary buffer pointer
+	 * @param hUserData handle user data
+	 * @param UserDataLen length of user data
+	 * @param TotalDataInBuffer total size of buffer
+	 */
 	public NIFFindByKeyContextStruct(short EntriesThisChunk, short wSizeOfChunk, Pointer SummaryBuffer, int hUserData, int UserDataLen, int TotalDataInBuffer) {
 		super();
 		this.EntriesThisChunk = EntriesThisChunk;
