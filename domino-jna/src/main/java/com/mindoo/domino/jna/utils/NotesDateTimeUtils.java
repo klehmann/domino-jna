@@ -259,8 +259,8 @@ public class NotesDateTimeUtils {
 		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
 			return null;
 		
-        boolean hasTime=(innards[0]!=0 && innards[0]!=NotesCAPI.ALLDAY);
-        boolean hasDate=(innards[1]!=0 && innards[1]!=NotesCAPI.ANYDAY);
+        boolean hasTime=(innards[0]!=NotesCAPI.ALLDAY);
+        boolean hasDate=(innards[1]!=NotesCAPI.ANYDAY);
 
         NotesTimeStruct time = NotesTimeStruct.newInstance();
 		time.GM.Innards[0] = innards[0];
