@@ -222,6 +222,35 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Sets a new UNID in the {@link NotesOriginatorId} for this note
+	 * 
+	 * @param newUnid new universal id
+	 */
+	public void setUNID(String newUnid) {
+		checkHandle();
+		
+		Memory retOid = new Memory(NotesCAPI.oidSize);
+		retOid.clear();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		if (NotesJNAContext.is64Bit()) {
+			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
+		}
+		else {
+			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+		}
+		NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
+		oidStruct.read();
+		oidStruct.setUNID(newUnid);
+		if (NotesJNAContext.is64Bit()) {
+			notesAPI.b64_NSFNoteSetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
+		}
+		else {
+			notesAPI.b32_NSFNoteSetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+		}
+	}
+	
+	/**
 	 * Returns the last modified date of the note
 	 * 
 	 * @return last modified date
@@ -616,7 +645,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
 		}
 		else {
-			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
+			result = notesAPI.b32_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
 		}
 		NotesErrorUtils.checkResult(result);
 	}

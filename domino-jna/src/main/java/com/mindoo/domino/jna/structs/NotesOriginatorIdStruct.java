@@ -1,16 +1,21 @@
 package com.mindoo.domino.jna.structs;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.LongBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
+import java.util.Locale;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
+
+import junit.framework.Assert;
 /**
  * The Originator ID (OID) for a note identifies all replica copies of the same note and distinguishes
  * between different revisions of that note.  The Originator ID is composed of two parts:<br>
@@ -201,5 +206,48 @@ public class NotesOriginatorIdStruct extends BaseStructure implements IAdaptable
 		String unid = formatter.toString().replace(" ", "0").toUpperCase();
 		formatter.close();
 		return unid;
+	}
+	
+	/**
+	 * Sets a new universal id stored by this OID
+	 * 
+	 * @param unid new universal id
+	 */
+	public void setUNID(String unid) {
+		if (unid.length()!=32) {
+			throw new IllegalArgumentException("Invalid unid: "+unid);
+		}
+		
+		for (int i=0; i<32; i++) {
+			char c = unid.charAt(i);
+			if ((c>='0' && c<='9') || (c>='A' && c<='F') || (c>='a' && c<='f')) {
+				
+			}
+			else {
+				throw new IllegalArgumentException("Invalid unid: "+unid);
+			}
+		}
+		
+		write();
+		
+		Pointer oidPtr = getPointer();
+		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
+		LongBuffer longBuffer = data.asLongBuffer();
+		
+		String firstPart = unid.substring(0, 16);
+		long firstPartAsLong = new BigInteger(firstPart, 16).longValue();
+		longBuffer.put(0, firstPartAsLong);
+		
+		String secondPart = unid.substring(16);
+		long secondPartAsLong = new BigInteger(secondPart, 16).longValue();
+		longBuffer.put(1, secondPartAsLong);
+		
+		read();
+		
+		String newWrittenUnid = getUNIDAsString();
+		if (!unid.equalsIgnoreCase(newWrittenUnid)) {
+			//should not happen ;-)
+			throw new IllegalStateException("Error setting new UNID in OID structure. Probably wrong memory alignment. Please contact dev.");
+		}
 	}
 }
