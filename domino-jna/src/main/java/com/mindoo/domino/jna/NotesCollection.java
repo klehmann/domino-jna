@@ -2702,6 +2702,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return column name or null if index is unknown / invalid
 	 */
 	public String getColumnName(int index) {
+		if (m_columnNamesByIndex==null) {
+			scanColumns();
+		}
 		String colName = m_columnNamesByIndex.get(index);
 		return colName;
 	}
@@ -2726,6 +2729,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return title
 	 */
 	public String getColumnTitle(int columnIndex) {
+		if (m_columnTitlesByIndex==null) {
+			scanColumns();
+		}
 		return m_columnTitlesByIndex.get(columnIndex);
 	}
 	
