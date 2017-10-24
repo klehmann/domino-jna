@@ -284,7 +284,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				do {
 					//try opening the database multiple times; we had issues here when opening
 					//many dbs remotely that could be solved by retrying
-					result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					if (m_loginAsIdOwner) {
+						result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					}
+					else {
+						result = notesAPI.b64_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					}
 					retries--;
 					if (result!=0) {
 						try {
@@ -333,7 +338,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				do {
 					//try opening the database multiple times; we had issues here when opening
 					//many dbs remotely that could be solved by retrying
-					result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					if (m_loginAsIdOwner) {
+						result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					}
+					else {
+						result = notesAPI.b32_NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					}
 					retries--;
 					if (result!=0) {
 						try {
