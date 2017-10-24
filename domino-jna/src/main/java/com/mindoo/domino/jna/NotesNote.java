@@ -1010,28 +1010,39 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * to check for item existence.
 	 * 
 	 * @param itemName item name
-	 * @return double value
+	 * @return long value
 	 */
 	public long getItemValueLong(String itemName) {
-		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
-		
-		LongByReference number_item_default = new LongByReference();
-		number_item_default.setValue(0);
-		
-		if (NotesJNAContext.is64Bit()) {
-			long longVal = notesAPI.b64_NSFItemGetLong(m_hNote64, itemNameMem, number_item_default);
-			return longVal;
+		List<?> values = getItemValue(itemName);
+		if (values.size()==0)
+			return 0;
+		Object firstVal = values.get(0);
+		if (firstVal instanceof Number) {
+			return ((Number)firstVal).longValue();
 		}
-		else {
-			long longVal = notesAPI.b32_NSFItemGetLong(m_hNote32, itemNameMem, number_item_default);
-			return longVal;
-		}
+		return 0;
 	}
 
+	/**
+	 * Use this function to read the value of a number item as integer.<br>
+	 * <br>
+	 * If the item does not exist, the method returns 0. Use {@link #hasItem(String)}
+	 * to check for item existence.
+	 * 
+	 * @param itemName item name
+	 * @return int value
+	 */
+	public int getItemValueInteger(String itemName) {
+		List<?> values = getItemValue(itemName);
+		if (values.size()==0)
+			return 0;
+		Object firstVal = values.get(0);
+		if (firstVal instanceof Number) {
+			return ((Number)firstVal).intValue();
+		}
+		return 0;
+	}
+	
 	/**
 	 * Use this function to read the value of a timedate item as {@link Calendar}.<br>
 	 * <br>

@@ -1593,15 +1593,15 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Memory ItemName,
 			DoubleByReference retNumber);
 	
-	public long b32_NSFItemGetLong(
+	public int b32_NSFItemGetLong(
 			int note_handle,
 			Memory number_item_name,
-			LongByReference number_item_default);
+			int number_item_default);
 
-	public long b64_NSFItemGetLong(
+	public int b64_NSFItemGetLong(
 			long note_handle,
 			Memory number_item_name,
-			LongByReference number_item_default);
+			int number_item_default);
 
 	public short b32_NSFItemSetNumber(
 			int  hNote,
