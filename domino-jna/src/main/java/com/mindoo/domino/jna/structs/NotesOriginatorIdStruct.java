@@ -9,13 +9,10 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
-import java.util.Locale;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-
-import junit.framework.Assert;
 /**
  * The Originator ID (OID) for a note identifies all replica copies of the same note and distinguishes
  * between different revisions of that note.  The Originator ID is composed of two parts:<br>
