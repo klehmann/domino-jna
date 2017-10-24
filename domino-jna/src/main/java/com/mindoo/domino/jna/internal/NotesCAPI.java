@@ -3218,6 +3218,26 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** Large Summary Support (LSS) */
 	public static final int DBOPTBIT_LARGE_BUCKETS_ENABLED = 104;
 
+	/** Open with scan lock to prevent other opens with scan lock (used by replicator) */
+	public static final short DBOPEN_WITH_SCAN_LOCK = 0x0001;
+	/** DbPurge while opening */
+	public static final short DBOPEN_PURGE = 0x0002;	
+	/** No user info may be available, so don't ask for it */
+	public static final short DBOPEN_NO_USERINFO	= 0x0004;
+	/** Force a database fixup */
+	public static final short DBOPEN_FORCE_FIXUP = 0x0008	;
+	/** Scan all notes and all items (not incremental) */
+	public static final short DBOPEN_FIXUP_FULL_NOTE_SCAN = 0x0010;
+	/** Do not delete bad notes during note scan */
+	public static final short DBOPEN_FIXUP_NO_NOTE_DELETE = 0x0020;
+	/** If open fails try cluster failover */
+	public static final short DBOPEN_CLUSTER_FAILOVER	 = 0x0080;
+	/** Close session on error paths */
+	public static final short DBOPEN_CLOSE_SESS_ON_ERROR = 0x0100	;
+	/** don't log errors - used when opening log database! */
+	public static final short DBOPEN_NOLOG = 0x0200;
+
+
 	/** Open and read all information out of the id file */
 	public static final int SECKFM_open_All = 0x00000001;
 	/** Write information conatined inthe handle out to the specified ID file */

@@ -20,6 +20,7 @@ import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.GetNotes;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.OpenCollection;
+import com.mindoo.domino.jna.constants.OpenDatabase;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
@@ -48,6 +49,7 @@ import com.mindoo.domino.jna.structs.NotesFTIndexStatsStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -94,6 +96,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public NotesDatabase(Session session, String server, String filePath) {
 		this(session, server, filePath, getEffectiveUserName(session));
+	}
+
+	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param session session to read the name of the server the API is running on
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param openFlags flags to specify how to open the database
+	 */
+	public NotesDatabase(Session session, String server, String filePath, EnumSet<OpenDatabase> openFlags) {
+		this(session, server, filePath, (List<String>) null, getEffectiveUserName(session), openFlags);
 	}
 
 	/**
@@ -144,6 +158,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
 	 */
 	private NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList, String asUserCanonical) {
+		this(session, server, filePath, namesForNamesList, asUserCanonical, (EnumSet<OpenDatabase>) null);
+	}
+	
+	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param session session to read the name of the server the API is running on
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param namesForNamesList optional names list
+	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
+	 * @param openFlags flags to specify how to open the database
+	 */
+	private NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
 		m_session = session;
 		
 		try {
@@ -213,9 +241,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retFullNetPath = newMem;
 		}
 		
+		short openOptions = openFlags==null ? 0 : OpenDatabase.toBitMaskForOpen(openFlags);
+		if (openOptions!=0) {
+			//if open flags are specified, we enforce the usage of NSFDbOpenExtended even
+			//if no username / names list have been set
+			if (namesForNamesList==null) {
+				if (m_asUserCanonical==null) {
+					m_asUserCanonical = IDUtils.getCurrentUsername();
+				}
+			}
+		}
+		
 		if (NotesJNAContext.is64Bit()) {
 			LongBuffer hDB = LongBuffer.allocate(1);
-			if ( m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+			if ((m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) && openOptions==0) {
 				//open database as id owner, not providing a NAMES_LIST
 				result = notesAPI.b64_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
@@ -237,7 +276,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 				
 				//now try to open the database as this user
-				short openOptions = 0;
 				NotesTimeDateStruct modifiedTime = null;
 				NotesTimeDateStruct retDataModified = NotesTimeDateStruct.newInstance();
 				NotesTimeDateStruct retNonDataModified = NotesTimeDateStruct.newInstance();
@@ -265,7 +303,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntBuffer hDB = IntBuffer.allocate(1);
-			if (m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) {
+			if ((m_loginAsIdOwner || (StringUtil.isEmpty(m_asUserCanonical) && namesForNamesList==null)) && openOptions==0) {
 				//open database as id owner, not providing a NAMES_LIST
 				result = notesAPI.b32_NSFDbOpen(retFullNetPath, hDB);
 				NotesErrorUtils.checkResult(result);
@@ -287,7 +325,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 				
 				//now try to open the database as this user
-				short openOptions = 0;
 				NotesTimeDateStruct modifiedTime = null;
 				NotesTimeDateStruct retDataModified = NotesTimeDateStruct.newInstance();
 				NotesTimeDateStruct retNonDataModified = NotesTimeDateStruct.newInstance();
