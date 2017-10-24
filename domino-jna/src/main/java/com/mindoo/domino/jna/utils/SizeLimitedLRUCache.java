@@ -88,7 +88,7 @@ public abstract class SizeLimitedLRUCache<K,V> {
 					oldHead.setPrev(entry);
 					m_head = entry;
 					
-					if (m_tail.equals(entry)) {
+					if (m_tail!=null && m_tail.equals(entry)) {
 						//entry was tail
 						m_tail = oldEntryPrev;
 					}
@@ -128,7 +128,7 @@ public abstract class SizeLimitedLRUCache<K,V> {
 				entry.setNext(null);
 			}
 			
-			if (m_tail.equals(entry)) {
+			if (m_tail!=null && m_tail.equals(entry)) {
 				//entry was tail
 				m_tail = oldEntryPrev;
 			}
