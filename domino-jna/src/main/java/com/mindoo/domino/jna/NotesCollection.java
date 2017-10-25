@@ -2356,6 +2356,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the number of top level entries in the view
+	 * 
+	 * @return top level entries
+	 */
+	public int getTopLevelEntries() {
+		NotesViewLookupResultData lkData = readEntries(new NotesCollectionPosition("0"), EnumSet.of(Navigate.CURRENT), 0, EnumSet.of(Navigate.CURRENT), 0, EnumSet.of(ReadMask.COLLECTIONSTATS));
+		return lkData.getStats().getTopLevelEntries();
+	}
+	
+	/**
 	 * Reads collection entries (using NIFReadEntries method).<br>
 	 * <br>
 	 * This method provides low-level API access. In general, it is safer to use high-level functions like
