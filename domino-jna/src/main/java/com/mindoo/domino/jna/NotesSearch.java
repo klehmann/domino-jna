@@ -324,7 +324,6 @@ public class NotesSearch {
 
 			if (notesAPI instanceof WinNotesCAPI) {
 				apiCallback = new WinNotesCAPI.b32_NsfSearchProcWin() {
-					final Throwable invocationEx[] = new Throwable[1];
 
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
