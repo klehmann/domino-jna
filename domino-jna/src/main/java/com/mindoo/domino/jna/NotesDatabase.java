@@ -387,7 +387,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesGC.__objectCreated(NotesDatabase.class, this);
 			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
-			
+			try {
+				m_session = legacyDB.getParent();
+			} catch (NotesException e) {
+				throw new NotesError(e.id, e.getLocalizedMessage());
+			}
+
 			//compute usernames list used
 			NotesNote note = createNote();
 			List userNamesList = FormulaExecution.evaluate("@UserNamesList", note);
