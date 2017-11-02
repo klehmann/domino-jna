@@ -2656,7 +2656,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public void resortView(String progColumnName, Direction direction) {
 		short collation = findCollation(progColumnName, direction);
 		if (collation==-1) {
-			throw new NotesError(0, "Column "+progColumnName+" does not exist or is not sortable in "+direction+" direction");
+			throw new NotesError(0, "Column "+progColumnName+" does not exist in view "+getName()+" or is not sortable in "+direction+" direction");
 		}
 		setCollation(collation);
 	}
