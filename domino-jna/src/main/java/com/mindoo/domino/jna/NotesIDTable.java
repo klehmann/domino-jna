@@ -195,6 +195,11 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		m_noRecycle=true;
 	}
 	
+	@Override
+	public boolean isNoRecycle() {
+		return m_noRecycle;
+	}
+	
 	public int getHandle32() {
 		return m_idTableHandle32;
 	}

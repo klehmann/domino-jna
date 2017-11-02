@@ -35,10 +35,13 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
+import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.queries.condition.Selection;
+import com.mindoo.domino.jna.structs.NotesCollectionDataStruct;
 import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
@@ -616,6 +619,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 	public void setNoRecycle() {
 		m_noRecycle=true;
+	}
+	
+	@Override
+	public boolean isNoRecycle() {
+		return m_noRecycle;
 	}
 	
 	private void checkHandle() {
@@ -3140,6 +3148,96 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		finally {
 			idTable.recycle();
+		}
+	}
+	
+	/**
+	 * Returns the total number of documents in the view
+	 * 
+	 * @return document count
+	 */
+	public int getDocumentCount() {
+		return getCollectionData().getDocCount();
+	}
+	
+	/**
+	 * Retrieve detailed information about the collection itself, such as the number of documents
+	 * in the collection and the total size of the document entries in the collection.<br>
+	 * This function returns a {@link NotesCollectionData} object.<br>
+	 * 
+	 * It is only useful for providing information about a collection which is not categorized.<br>
+	 * The index of a categorized collection is implemented using nested B-Trees, and it is not possible to provide
+	 * useful information about all of the B-Trees which make up the index.<br>
+	 * If this method is called for a categorized collection, the data that is returned pertains
+	 * only to the top-level category entries, and not to the main notes in the collection.
+	 * 
+	 * @return collection data
+	 */
+	public NotesCollectionData getCollectionData() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		NotesCollectionDataStruct struct;
+		ItemValueTableData[] itemValueTables = new ItemValueTableData[NotesCAPI.PERCENTILE_COUNT];
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethCollData = new LongByReference();
+			result = notesAPI.b64_NIFGetCollectionData(m_hCollection64, rethCollData);
+			NotesErrorUtils.checkResult(result);
+			
+			long hCollData = rethCollData.getValue();
+			Pointer ptrCollectionData = notesAPI.b64_OSLockObject(hCollData);
+			try {
+				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
+				struct.read();
+				
+				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				boolean convertStringsLazily = false;
+				
+				for (int i=0; i<NotesCAPI.PERCENTILE_COUNT; i++) {
+					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight, convertStringsLazily);
+				}
+				
+				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,
+						struct.btreeLeafNodes, struct.btreeDepth, itemValueTables);
+				return data;
+			}
+			finally {
+				notesAPI.b64_OSUnlockObject(hCollData);
+				notesAPI.b64_OSMemFree(hCollData);
+			}
+		}
+		else {
+			IntByReference rethCollData = new IntByReference();
+			result = notesAPI.b32_NIFGetCollectionData(m_hCollection32, rethCollData);
+			NotesErrorUtils.checkResult(result);
+			
+			int hCollData = rethCollData.getValue();
+			Pointer ptrCollectionData = notesAPI.b32_OSLockObject(hCollData);
+			try {
+				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
+				struct.read();
+				
+				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				boolean convertStringsLazily = false;
+				
+				for (int i=0; i<NotesCAPI.PERCENTILE_COUNT; i++) {
+					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight, convertStringsLazily);
+				}
+				
+				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,
+						struct.btreeLeafNodes, struct.btreeDepth, itemValueTables);
+				return data;
+			}
+			finally {
+				notesAPI.b32_OSUnlockObject(hCollData);
+				notesAPI.b32_OSMemFree(hCollData);
+			}
 		}
 	}
 }

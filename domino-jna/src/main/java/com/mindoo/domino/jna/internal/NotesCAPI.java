@@ -3678,4 +3678,29 @@ This allows an Editor to assume some Designer-level access */
 	/** Number of access levels */
 	public short ACL_LEVEL_COUNT = 7;
 
+	public short b64_NIFGetCollectionData(
+			long hCollection,
+			LongByReference rethCollData);
+	public short b32_NIFGetCollectionData(
+			int hCollection,
+			IntByReference rethCollData);
+	
+	/**
+	 * Keys in a COLLECTIONDATA structure are divided into percentiles - divisions
+	 * corresponding to one-tenth of the total range of keys - and a table of the keys
+	 * marking the divisions is returned with that structure.  These constants are provided for indexing into the table.
+	 */
+	public static int PERCENTILE_COUNT = 11;
+	public static int PERCENTILE_0 = 0;
+	public static int PERCENTILE_10 = 1;
+	public static int PERCENTILE_20 = 2;
+	public static int PERCENTILE_30 = 3;
+	public static int PERCENTILE_40 = 4;
+	public static int PERCENTILE_50 = 5;
+	public static int PERCENTILE_60 = 6;
+	public static int PERCENTILE_70 = 7;
+	public static int PERCENTILE_80 = 8;
+	public static int PERCENTILE_90 = 9;
+	public static int PERCENTILE_100 = 10;
+
 }

@@ -116,6 +116,11 @@ public class NotesAgent implements IRecyclableNotesObject {
 	}
 
 	@Override
+	public boolean isNoRecycle() {
+		return false;
+	}
+	
+	@Override
 	public int getHandle32() {
 		return m_hAgentB32;
 	}

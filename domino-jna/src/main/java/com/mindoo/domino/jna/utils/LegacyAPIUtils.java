@@ -318,6 +318,11 @@ public class LegacyAPIUtils {
 		}
 
 		@Override
+		public boolean isNoRecycle() {
+			return false;
+		}
+		
+		@Override
 		public long getHandle64() {
 			return longHandle[0];
 		}

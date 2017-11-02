@@ -184,7 +184,7 @@ public class NotesGC {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			
 			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(key, obj);
-			if (oldObj!=null && oldObj!=obj) {
+			if (!obj.isNoRecycle() && oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
@@ -192,7 +192,7 @@ public class NotesGC {
 			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
 			
 			IRecyclableNotesObject oldObj = m_b32OpenHandlesDominoObjects.get().put(key, obj);
-			if (oldObj!=null && oldObj!=obj) {
+			if (!obj.isNoRecycle() && oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}

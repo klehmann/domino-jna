@@ -384,8 +384,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			else {
 				m_hDB32 = (int) dbHandle;
 			}
-			NotesGC.__objectCreated(NotesDatabase.class, this);
 			setNoRecycleDb();
+			NotesGC.__objectCreated(NotesDatabase.class, this);
 			m_legacyDbRef = legacyDB;
 			try {
 				m_session = legacyDB.getParent();
@@ -696,6 +696,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public void setNoRecycleDb() {
 		m_noRecycleDb=true;
+	}
+	
+	@Override
+	public boolean isNoRecycle() {
+		return m_noRecycleDb;
 	}
 	
 	private boolean isRecycled(Database db) {

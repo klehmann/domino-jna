@@ -60,6 +60,11 @@ public class NotesSchedule implements IRecyclableNotesObject {
 	}
 
 	@Override
+	public boolean isNoRecycle() {
+		return m_noRecycle;
+	}
+	
+	@Override
 	public void recycle() {
 		if (m_noRecycle || isRecycled())
 			return;

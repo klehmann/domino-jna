@@ -18,7 +18,14 @@ public interface IRecyclableNotesObject {
 	 * @return true if recycled
 	 */
 	public boolean isRecycled();
-	
+
+	/**
+	 * Returns true if the object should not be auto recycled
+	 * 
+	 * @return true to skip auto gc
+	 */
+	public boolean isNoRecycle();
+
 	/**
 	 * Returns the main object handle for 32 bit, used to hash the object
 	 * 
