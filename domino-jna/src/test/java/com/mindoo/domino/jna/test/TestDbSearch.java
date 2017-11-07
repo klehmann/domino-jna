@@ -8,11 +8,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
+import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.FileType;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
-import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.Database;
@@ -51,18 +52,16 @@ public class TestDbSearch extends BaseJNATestClass {
 				EnumSet<Search> searchFlags = EnumSet.of(Search.NOABSTRACTS,
 						Search.SESSION_USERNAME, Search.SUMMARY);
 				
-				short noteClassMask = NotesCAPI.NOTE_CLASS_DOCUMENT;
-				
 				long t0=System.currentTimeMillis();
 				System.out.println("Running database search with formula: "+formula);
 				final int[] cnt = new int[1];
 				
 				//since = null to search in all documents
 				NotesTimeDate since = null;
-				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, noteClassMask, since, new ISearchCallback() {
+				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new ISearchCallback() {
 
 					@Override
-					public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+					public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 						
 						cnt[0]++;
@@ -111,14 +110,13 @@ public class TestDbSearch extends BaseJNATestClass {
 				String server = "";
 				String directory = "";
 				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
-//				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS + NotesCAPI.FILE_RECURSE;
-				int fileType = NotesCAPI.FILE_DBANY + NotesCAPI.FILE_DIRS;
-
+				EnumSet<FileType> fileTypes = EnumSet.of(FileType.DBANY, FileType.DIRS);
+				
 				//check if our local fakenames database is in the returned list
 				final boolean[] fakeNamesDbFound = new boolean[1];
 				
 				System.out.println("Scanning top level of local directory");
-				DirectoryScanner scanner = new DirectoryScanner(session, server, directory, fileType) {
+				DirectoryScanner scanner = new DirectoryScanner(session, server, directory, fileTypes) {
 					private String toString(Calendar cal) {
 						return cal==null ? "null" : cal.getTime().toString();
 					}

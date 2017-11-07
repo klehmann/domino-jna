@@ -184,7 +184,7 @@ public class NotesGC {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			
 			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(key, obj);
-			if (!obj.isNoRecycle() && oldObj!=null && oldObj!=obj) {
+			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
@@ -192,7 +192,7 @@ public class NotesGC {
 			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
 			
 			IRecyclableNotesObject oldObj = m_b32OpenHandlesDominoObjects.get().put(key, obj);
-			if (!obj.isNoRecycle() && oldObj!=null && oldObj!=obj) {
+			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
@@ -238,9 +238,10 @@ public class NotesGC {
 	 * 
 	 * @param objClazz class of Notes object
 	 * @param handle handle
+	 * @return Notes object
 	 * @throws NotesError if handle does not exist
 	 */
-	public static void __b64_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, long handle) {
+	public static IRecyclableNotesObject __b64_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, long handle) {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
@@ -248,6 +249,9 @@ public class NotesGC {
 		IRecyclableNotesObject obj = m_b64OpenHandlesDominoObjects.get().get(key);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
+		}
+		else {
+			return obj;
 		}
 	}
 
@@ -273,9 +277,10 @@ public class NotesGC {
 	 * 
 	 * @param objClazz class of Notes object
 	 * @param handle handle
+	 * @return Notes object
 	 * @throws NotesError if handle does not exist
 	 */
-	public static void __b32_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, int handle) {
+	public static IRecyclableNotesObject __b32_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, int handle) {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
@@ -284,6 +289,8 @@ public class NotesGC {
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
+		else
+			return obj;
 	}
 
 	/**

@@ -214,7 +214,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 				throw new IllegalArgumentException("Only lotus.domino.local.Document is supported");
 			}
 			
-			cHandle = LegacyAPIUtils.getHandle(doc);
+			cHandle = LegacyAPIUtils.getDocHandle(doc);
 		}
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();

@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback.Action;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -1218,10 +1219,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		final Set<Integer> retIds = new TreeSet<Integer>();
 		
 		NotesSearch.search(db, this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
-				NotesCAPI.NOTE_CLASS_DOCUMENT, null, new NotesSearch.ISearchCallback() {
+				EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 
 			@Override
-			public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+			public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 				retIds.add(noteId);
 			}
@@ -1246,10 +1247,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		final Set<Integer> retIds = new TreeSet<Integer>();
 
-		NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), NotesCAPI.NOTE_CLASS_DOCUMENT, null, new NotesSearch.ISearchCallback() {
+		NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 
 			@Override
-			public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+			public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 				retIds.add(noteId);
 			}

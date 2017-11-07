@@ -65,4 +65,23 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 
 	public interface NIFFindByKeyProcWin extends NIFFindByKeyProc, StdCallCallback {
 	}
+	
+	public interface OSSIGPROCWin extends OSSIGPROC, StdCallCallback {
+	}
+	
+	public interface OSSIGMSGPROCWin extends OSSIGMSGPROC, StdCallCallback {
+	}
+	
+	public interface OSSIGBUSYPROCWin extends OSSIGBUSYPROC, StdCallCallback {
+	}
+	
+	public interface OSSIGBREAKPROCWin extends OSSIGBREAKPROC, StdCallCallback {
+	}
+	
+	public interface OSSIGPROGRESSPROCWin extends OSSIGPROGRESSPROC, StdCallCallback {
+	}
+	
+	public interface OSSIGREPLPROCWin extends OSSIGREPLPROC, StdCallCallback {
+	}
+	
 }

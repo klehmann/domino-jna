@@ -1,9 +1,12 @@
 package com.mindoo.domino.jna;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.Formatter;
@@ -17,12 +20,15 @@ import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
+import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.GetNotes;
 import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.OpenDatabase;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
@@ -49,12 +55,15 @@ import com.mindoo.domino.jna.structs.NotesFTIndexStatsStruct;
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.structs.ReplExtensionsStruct;
+import com.mindoo.domino.jna.structs.ReplServStatsStruct;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.SignalHandlerUtil;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -384,8 +393,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			else {
 				m_hDB32 = (int) dbHandle;
 			}
-			setNoRecycleDb();
 			NotesGC.__objectCreated(NotesDatabase.class, this);
+			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
 			try {
 				m_session = legacyDB.getParent();
@@ -1133,14 +1142,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <br>
 	 * Note: You program is responsible for freeing up the returned id table handle.
 	 * 
-	 * @param noteClassMask the appropriate NOTE_CLASS_xxx mask for the documents you wish to select. Symbols can be OR'ed to obtain the desired Note classes in the resulting ID Table.  
+	 * @param noteClassMaskEnum the appropriate {@link NoteClass} mask for the documents you wish to select. Symbols can be OR'ed to obtain the desired Note classes in the resulting ID Table.  
 	 * @param since A TIMEDATE structure containing the starting date used when selecting notes to be added to the ID Table built by this function. To include ALL notes (including those deleted during the time span) of a given note class, use {@link NotesDateTimeUtils#setWildcard(NotesTimeDate)}.  To include ALL notes of a given note class, but excluding those notes deleted during the time span, use {@link NotesDateTimeUtils#setMinimum(NotesTimeDate)}.
 	 * @param retUntil A pointer to a {@link NotesTimeDate} structure into which the ending time of this search will be returned.  This can subsequently be used as the starting time in a later search.
 	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
 	 */
-	public NotesIDTable getModifiedNoteTable(short noteClassMask, NotesTimeDate since, NotesTimeDate retUntil) {
+	public NotesIDTable getModifiedNoteTable(EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, NotesTimeDate retUntil) {
 		checkHandle();
 
+		short noteClassMask = NoteClass.toBitMask(noteClassMaskEnum);
+		
 		//make sure retUntil is not null
 		if (retUntil==null)
 			retUntil = new NotesTimeDate();
@@ -1280,12 +1291,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesCAPI}.
 	 * 
-	 * @param noteClasses bitmask of note classes to sign
+	 * @param noteClassesEnum bitmask of note classes to sign
 	 * @param callback optional callback to get notified about signed notes or null
 	 */
-	public void signAll(int noteClasses, SignCallback callback) {
+	public void signAll(EnumSet<NoteClass> noteClassesEnum, SignCallback callback) {
 		checkHandle();
 
+		int noteClasses = NoteClass.toBitMaskInt(noteClassesEnum);
+		
 		//TODO improve performance by checking first if the current signer has already signed the documents (like in the legacy API)
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
@@ -1691,17 +1704,80 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param formula formula or null
 	 * @param viewTitle optional view title that will be returned for "@ ViewTitle" within the formula or null
 	 * @param searchFlags flags to control searching ({@link Search})
-	 * @param noteClassMask bitmask of noteclasses to search
+	 * @param noteClassMaskEnum bitmask of noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, int, NotesTimeDate, ISearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, ISearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
-		NotesTimeDate endTimeDate = NotesSearch.search(this, null, formula, viewTitle, searchFlags, noteClassMask, since, callback);
+	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags,
+			EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+		NotesTimeDate endTimeDate = NotesSearch.search(this, null, formula, viewTitle, searchFlags, noteClassMaskEnum, since, callback);
 		return endTimeDate;
 	}
 	
+	/**
+	 * This function scans all the notes in a database or files in a directory.<br>
+	 * <br>
+	 * Based on several search criteria, the function calls a user-supplied routine (an action routine)
+	 * for every note or file that matches the criteria. NSFSearch is a powerful function that provides
+	 * the general search mechanism for tasks that process all or some of the documents in a
+	 * database or all or some of the databases in a directory.<br>
+	 * <br>
+	 * Specify a formula argument to improve efficiency when processing a subset of the notes in a database.<br>
+	 * <br>
+	 * In addition, the formula argument can be used to return computed "on-the-fly" information.<br>
+	 * <br>
+	 * To do this, you specify that a value returned from a formula is to be stored in a
+	 * temporary field of each note.<br>
+	 * <br>
+	 * This temporary field and its value is then accessible in the summary buffer received by
+	 * the NSFSearch action routine without having to open the note.<br>
+	 * <br>
+	 * For example, suppose you want the size of each note found by NSFSearch.<br>
+	 * Do the following before the call to NSFSearch:<br>
+	 * Call search with a formula like this:<br>
+	 * "DEFAULT dLength := @DocLength; @All"<br>
+	 * and specify {@link Search#SUMMARY} for the SearchFlags argument.<br>
+	 * <br>
+	 * In the action routine of NSFSearch, if you get a search match, look at the summary information.<br>
+	 * The dLength field will be one of the items in the summary information buffer.<br>
+	 * <br>
+	 * Specify a note class to restrict the search to certain classes of notes.<br>
+	 * Specify {@link NotesCAPI#NOTE_CLASS_DOCUMENT} to find documents.<br>
+	 * Specify the "since" argument to limit the search to notes created or modified
+	 * in the database since a certain time/date.<br>
+	 * When used to search a database, NSFSearch will search the database file sequentially
+	 * if NULL is passed as the "Since" time.<br>
+	 * If the search is not time-constrained (the "Since" argument is NULL or specifies
+	 * the TIMEDATE_WILDCARD, ANYDAY/ALLDAY), then NSFSearch may find a given note more
+	 * than once during the same search. If a non-time-constrained search passes a
+	 * certain note to the action routine, and that note is subsequently updated,
+	 * then NSFSearch may find that note again and pass it to the action routine a
+	 * second time during the same search. This may happen if Domino or Notes relocates
+	 * the updated note to a position farther down in the file. If your algorithm requires
+	 * processing each note once and only once, then use time-constrained searches.<br>
+	 * Save the return value of type {@link NotesTimeDate} of the present search and use
+	 * that as the "Since" time on the next search.<br>
+	 * <br>
+	 * Alternatively, build an ID table as you search, avoid updating notes in the action
+	 * routine, and process the ID table after the search completes. ID tables are
+	 * guaranteed not to contain a given ID more than once.
+	 * 
+	 * @param formula formula or null
+	 * @param viewTitle optional view title that will be returned for "@ ViewTitle" within the formula or null
+	 * @param searchFlags flags to control searching ({@link Search})
+	 * @param fileTypeEnum filetypes to search
+	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
+	 * @param callback callback to be called for every found note
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, ISearchCallback)} as the "Since" argument.
+	 * @throws FormulaCompilationError if formula syntax is invalid
+	 */
+	public NotesTimeDate searchFiles(final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<FileType> fileTypeEnum, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+		NotesTimeDate endTimeDate = NotesSearch.searchFiles(this, null, formula, viewTitle, searchFlags, fileTypeEnum, since, callback);
+		return endTimeDate;
+	}
+
 	/**
 	 * Data container that stores the lookup result for note info
 	 * 
@@ -1831,8 +1907,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * 
 		 * @return class
 		 */
-		public short getNoteClass() {
-			return m_noteClass;
+		public NoteClass getNoteClass() {
+			return NoteClass.toNoteClass((int) (m_noteClass & 0xffff));
 		}
 		
 		/**
@@ -3134,5 +3210,95 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		public EnumSet<AclFlag> getAclFlags() {
 			return m_aclFlags;
 		}
+	}
+	
+	/**
+	 * Replicates this Domino database with a specified server.<br>
+	 * <br>
+	 * Replication can be performed in either direction or both directions (push, pull, or both).<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * Run this method inside {@link SignalHandlerUtil#runInterruptable(java.util.concurrent.Callable, com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler)}
+	 * to be able to cancel the process and inside {@link SignalHandlerUtil#runWithProgress(java.util.concurrent.Callable, com.mindoo.domino.jna.utils.SignalHandlerUtil.IProgressListener)}
+	 * to get progress info.</b>
+	 * 
+	 * @param serverName destination server (either abbreviated or canonical format)
+	 * @param options replication options
+	 * @param timeLimitMin If non-zero, number of minutes replication is allowed to execute before cancellation. If not specified, no limit is imposed
+	 * @return replication stats
+	 */
+	public NotesReplicationStats replicateWithServer(String serverName, EnumSet<ReplicateOption> options, int timeLimitMin) {
+		String dbPathWithServer;
+		
+		String server = getServer();
+		if (!StringUtil.isEmpty(server)) {
+			dbPathWithServer = server + "!!" + getRelativeFilePath();
+		}
+		else {
+			dbPathWithServer = getAbsoluteFilePathOnLocal();
+		}
+		return replicateDbsWithServer(serverName, options, Arrays.asList(dbPathWithServer), timeLimitMin);
+	}
+	
+	/**
+	 * This routine replicates Domino database files on the local system with a specified server.<br>
+	 * <br>
+	 * Either all common files can be replicated or a specified list of files can be replicated.<br>
+	 * <br>
+	 * Replication can be performed in either direction or both directions (push, pull, or both).<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * Run this method inside {@link SignalHandlerUtil#runInterruptable(java.util.concurrent.Callable, com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler)}
+	 * to be able to cancel the process and inside {@link SignalHandlerUtil#runWithProgress(java.util.concurrent.Callable, com.mindoo.domino.jna.utils.SignalHandlerUtil.IProgressListener)}
+	 * to get progress info.</b>
+	 * 
+	 * @param serverName destination server (either abbreviated or canonical format)
+	 * @param options replication options
+	 * @param fileList list of files to replicate, use server!!filepath format to specify databases on other servers
+	 * @param timeLimitMin If non-zero, number of minutes replication is allowed to execute before cancellation. If not specified, no limit is imposed
+	 * @return replication stats
+	 */
+	public static NotesReplicationStats replicateDbsWithServer(String serverName, EnumSet<ReplicateOption> options, List<String> fileList,
+			int timeLimitMin) {
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		Memory serverNameMem = NotesStringUtils.toLMBCS(NotesNamingUtils.toAbbreviatedName(serverName), true);
+
+		ReplServStatsStruct retStatsStruct = new ReplServStatsStruct();
+		ReplExtensionsStruct extendedOptions = new ReplExtensionsStruct();
+		extendedOptions.Size = 2 + 2;
+		extendedOptions.TimeLimit = (short) (timeLimitMin & 0xffff);
+		
+		short numFiles = 0;
+		Memory fileListMem = null;
+		if (fileList!=null && !fileList.isEmpty()) {
+			if (fileList.size() > 65535)
+				throw new IllegalArgumentException("Number of files exceeds max size (65535)");
+			numFiles = (short) (fileList.size() & 0xffff);
+			ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+			for (String currFileName : fileList) {
+				if (currFileName.length() > 0) {
+					Memory currFileNameMem = NotesStringUtils.toLMBCS(currFileName, true);
+					try {
+						bOut.write(currFileNameMem.getByteArray(0, (int) currFileNameMem.size()));
+					} catch (IOException e) {
+						throw new NotesError(0, "Error writing file list to memory", e);
+					}
+				}
+			}
+			fileListMem = new Memory(bOut.size());
+			byte[] bOutArr = bOut.toByteArray();
+			fileListMem.write(0, bOutArr, 0, (int) bOutArr.length); 
+		}
+		
+		int optionsInt = ReplicateOption.toBitMaskInt(options);
+		short result = notesAPI.ReplicateWithServerExt(null, serverNameMem, optionsInt, numFiles,
+				fileListMem, extendedOptions, retStatsStruct);
+		NotesErrorUtils.checkResult(result);
+		
+		retStatsStruct.read();
+		NotesReplicationStats retStats = new NotesReplicationStats(retStatsStruct);
+		return retStats;
 	}
 }

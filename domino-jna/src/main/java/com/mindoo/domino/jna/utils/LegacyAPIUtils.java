@@ -10,6 +10,7 @@ import java.util.List;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNamesList;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
@@ -110,7 +111,7 @@ public class LegacyAPIUtils {
 	 * @param doc document
 	 * @return handle
 	 */
-	public static long getHandle(Document doc) {
+	public static long getDocHandle(Document doc) {
 		initialize();
 
 		if (getDocumentHandleRW==null) {
@@ -354,8 +355,31 @@ public class LegacyAPIUtils {
 
 			@Override
 			public <T> T getAdapter(Class<T> clazz) {
-				return (T) db;
+				if (clazz == Database.class)
+					return (T) db;
+				else
+					return null;
 			}
 		});
 	}
+	
+	/**
+	 * Converts a legacy {@link Document} to a {@link NotesNote}
+	 * 
+	 * @param doc legacy document
+	 * @return JNA note
+	 */
+	public static NotesNote toNotesNote(final Document doc) {
+		return new NotesNote(new IAdaptable() {
+
+			@Override
+			public <T> T getAdapter(Class<T> clazz) {
+				if (clazz == Document.class)
+					return (T) doc;
+				else
+					return null;
+			}
+		});
+	}
+
 }

@@ -6,8 +6,9 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.FileType;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
-import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.DbDirectory;
@@ -25,7 +26,7 @@ public abstract class DirectoryScanner {
 	private Session m_session;
 	private String m_serverName;
 	private String m_directory;
-	private int m_fileType;
+	private EnumSet<FileType> m_fileTypes;
 
 	/**
 	 * Creates a new scanner instance
@@ -33,13 +34,13 @@ public abstract class DirectoryScanner {
 	 * @param session current session
 	 * @param serverName server name, either abbreviated, canonical or common name
 	 * @param directory directory to scan or "" for top level
-	 * @param fileType type of data to return e,g, {@link NotesCAPI#FILE_DBANY} or {@link NotesCAPI#FILE_DIRS}, optionally or'red with a flag like {@link NotesCAPI#FILE_RECURSE}
+	 * @param fileTypes type of data to return e,g, {@link FileType#DBANY} or {@link FileType#DIRS}, optionally you can add a flag like {@link FileType#RECURSE}
 	 */
-	public DirectoryScanner(Session session, String serverName, String directory, int fileType) {
+	public DirectoryScanner(Session session, String serverName, String directory, EnumSet<FileType> fileTypes) {
 		m_session = session;
 		m_serverName = serverName;
 		m_directory = directory==null ? "" : directory;
-		m_fileType = fileType;
+		m_fileTypes = fileTypes;
 	}
 
 	/**
@@ -49,10 +50,10 @@ public abstract class DirectoryScanner {
 	public void scan() {
 		NotesDatabase dir = new NotesDatabase(m_session, m_serverName, m_directory, "");
 		try {
-			dir.search(null, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileType, null, new NotesDatabase.ISearchCallback() {
+			dir.searchFiles(null, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.ISearchCallback() {
 
 				@Override
-				public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate created,
+				public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate created,
 						NotesTimeDate modified, ItemTableData summaryBufferData) {
 
 					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);

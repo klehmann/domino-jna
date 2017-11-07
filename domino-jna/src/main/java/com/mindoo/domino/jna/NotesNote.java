@@ -1,12 +1,18 @@
 package com.mindoo.domino.jna;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
@@ -19,12 +25,22 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.html.CommandId;
+import com.mindoo.domino.jna.html.IHtmlApiReference;
+import com.mindoo.domino.jna.html.IHtmlApiUrlTargetComponent;
+import com.mindoo.domino.jna.html.IHtmlConversionResult;
+import com.mindoo.domino.jna.html.IHtmlImageRef;
+import com.mindoo.domino.jna.html.ReferenceType;
+import com.mindoo.domino.jna.html.TargetType;
+import com.mindoo.domino.jna.internal.CollationDecoder;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.b32_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesCAPI.b64_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.ViewFormatDecoder;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.structs.NoteIdStruct;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
@@ -35,6 +51,9 @@ import com.mindoo.domino.jna.structs.NotesRangeStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.structs.html.HTMLAPIReference32Struct;
+import com.mindoo.domino.jna.structs.html.HTMLAPIReference64Struct;
+import com.mindoo.domino.jna.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -42,6 +61,7 @@ import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.StringArray;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
@@ -50,6 +70,7 @@ import com.sun.jna.ptr.ShortByReference;
 
 import lotus.domino.Database;
 import lotus.domino.Document;
+import lotus.domino.NotesException;
 
 /**
  * Object wrapping a Notes document / note
@@ -61,7 +82,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	private long m_hNote64;
 	private boolean m_noRecycle;
 	private NotesDatabase m_parentDb;
-	
+	private Document m_legacyDocRef;
+
 	/**
 	 * Creates a new instance
 	 * 
@@ -89,6 +111,66 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Creates a new NotesDatabase
+	 * 
+	 * @param adaptable adaptable providing enough information to create the database
+	 */
+	public NotesNote(IAdaptable adaptable) {
+		Document legacyDoc = adaptable.getAdapter(Document.class);
+		if (legacyDoc!=null) {
+			if (isRecycled(legacyDoc))
+				throw new NotesError(0, "Legacy database already recycled");
+			
+			long docHandle = LegacyAPIUtils.getDocHandle(legacyDoc);
+			if (docHandle==0)
+				throw new NotesError(0, "Could not read db handle");
+			
+			if (NotesJNAContext.is64Bit()) {
+				m_hNote64 = docHandle;
+			}
+			else {
+				m_hNote32 = (int) docHandle;
+			}
+			NotesGC.__objectCreated(NotesNote.class, this);
+			setNoRecycle();
+			m_legacyDocRef = legacyDoc;
+			
+			Database legacyDb;
+			try {
+				legacyDb = legacyDoc.getParentDatabase();
+			} catch (NotesException e1) {
+				throw new NotesError(0, "Could not read parent legacy db from document", e1);
+			}
+			long dbHandle = LegacyAPIUtils.getDBHandle(legacyDb);
+			try {
+				if (NotesJNAContext.is64Bit()) {
+					m_parentDb = (NotesDatabase) NotesGC.__b64_checkValidObjectHandle(NotesDatabase.class, dbHandle);
+				}
+				else {
+					m_parentDb = (NotesDatabase) NotesGC.__b32_checkValidObjectHandle(NotesDatabase.class, (int) dbHandle);
+				}
+			} catch (NotesError e) {
+				m_parentDb = LegacyAPIUtils.toNotesDatabase(legacyDb);
+			}
+		}
+		else {
+			throw new NotesError(0, "Unsupported adaptable parameter");
+		}
+	}
+
+	private boolean isRecycled(Document doc) {
+		try {
+			//call any method to check recycled state
+			doc.hasItem("~-~-~-~-~-~");
+		}
+		catch (NotesException e) {
+			if (e.id==4376 || e.id==4466)
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Converts a legacy {@link lotus.domino.Document} to a
 	 * {@link NotesNote}.
 	 * 
@@ -97,7 +179,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return note
 	 */
 	public static NotesNote toNote(NotesDatabase parentDb, Document doc) {
-		long handle = LegacyAPIUtils.getHandle(doc);
+		long handle = LegacyAPIUtils.getDocHandle(doc);
 		NotesNote note;
 		if (NotesJNAContext.is64Bit()) {
 			note = new NotesNote(parentDb, handle);
@@ -438,6 +520,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	void checkHandle() {
+		if (m_legacyDocRef!=null && isRecycled(m_legacyDocRef))
+			throw new NotesError(0, "Wrapped legacy document already recycled");
+		
 		if (NotesJNAContext.is64Bit()) {
 			if (m_hNote64==0)
 				throw new NotesError(0, "Note already recycled");
@@ -650,7 +735,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
+			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
 		}
 		NotesErrorUtils.checkResult(result);
 	}
@@ -1159,6 +1244,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_COLLATION) {
+			supportedType = true;
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_VIEW_FORMAT) {
+			supportedType = true;
+		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			supportedType = true;
 		}
@@ -1251,6 +1342,14 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(valueDataPtr.share(2));
 			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
 			return Arrays.asList((Object) unid);
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_COLLATION) {
+			NotesCollationInfo colInfo = CollationDecoder.decodeCollation(valueDataPtr);
+			return Arrays.asList((Object) colInfo);
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_VIEW_FORMAT) {
+			NotesViewFormat viewFormatInfo = ViewFormatDecoder.decodeViewFormat(valueDataPtr,  valueDataLength);
+			return Arrays.asList((Object) viewFormatInfo);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			return Collections.emptyList();
@@ -3590,5 +3689,659 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void makeResponse(String targetUnid) {
 		replaceItemValue("$REF", EnumSet.of(ItemType.SUMMARY), new NotesUniversalNoteId(targetUnid));
+	}
+
+	/**
+	 * Callback interface that receives data of images embedded in a HTML conversion result
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IHtmlItemImageConversionCallback {
+		public static enum Action {Continue, Stop};
+		
+		/**
+		 * Reports the size of the image
+		 * 
+		 * @param size size
+		 * @return return how many bytes to skip before reading
+		 */
+		public int setSize(int size);
+		
+		/**
+		 * Implement this method to receive element data
+		 * 
+		 * @param data data
+		 * @return action, either Continue or Stop
+		 */
+		public Action read(byte[] data);
+	}
+	
+	public enum HtmlConvertOption {
+		ForceSectionExpand,
+		RowAtATimeTableAlt,
+		ForceOutlineExpand;
+		
+		public static String[] toStringArray(EnumSet<HtmlConvertOption> options) {
+			List<String> optionsAsStrList = new ArrayList<String>(options.size());
+			for (HtmlConvertOption currOption : options) {
+				optionsAsStrList.add(currOption.toString()+"=1");
+			}
+			return optionsAsStrList.toArray(new String[optionsAsStrList.size()]);
+		}
+	}
+	
+	/**
+	 * Convenience method to read the binary data of a {@link IHtmlImageRef}
+	 * 
+	 * @param image image reference
+	 * @param callback callback to receive the data
+	 */
+	public void convertHtmlElement(IHtmlImageRef image, IHtmlItemImageConversionCallback callback) {
+		String itemName = image.getItemName();
+		int itemIndex = image.getItemIndex();
+		int itemOffset = image.getItemOffset();
+		EnumSet<HtmlConvertOption> options = image.getOptions();
+		
+		convertHtmlElement(itemName, options, itemIndex, itemOffset, callback);
+	}
+	
+	/**
+	 * Method to access images embedded in HTML conversion result. Compute index and offset parameters
+	 * from the img tag path like this: 1.3E =&gt; index=1, offset=63
+	 * 
+	 * @param itemName  rich text field which is being converted
+	 * @param options conversion options
+	 * @param itemIndex the relative item index -- if there is more than one, Item with the same pszItemName, then this indicates which one (zero relative)
+	 * @param itemOffset byte offset in the Item where the element starts
+	 * @param callback callback to receive the data
+	 */
+	public void convertHtmlElement(String itemName, EnumSet<HtmlConvertOption> options, int itemIndex, int itemOffset, IHtmlItemImageConversionCallback callback) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference phHTML = new IntByReference();
+		short result = notesAPI.HTMLCreateConverter(phHTML);
+		NotesErrorUtils.checkResult(result);
+		
+		int hHTML = phHTML.getValue();
+		
+		try {
+			if (!options.isEmpty()) {
+				result = notesAPI.HTMLSetHTMLOptions(hHTML, new StringArray(HtmlConvertOption.toStringArray(options)));
+				NotesErrorUtils.checkResult(result);
+			}
+
+			Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+
+			int totalLen;
+			
+			int skip;
+			
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_HTMLConvertElement(hHTML, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
+				NotesErrorUtils.checkResult(result);
+				
+				Memory tLenMem = new Memory(4);
+				result = notesAPI.b64_HTMLGetProperty(hHTML, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				NotesErrorUtils.checkResult(result);
+				totalLen = tLenMem.getInt(0);
+				skip = callback.setSize(totalLen);
+			}
+			else {
+				result = notesAPI.b32_HTMLConvertElement(hHTML, getParent().getHandle32(), m_hNote32, itemNameMem, itemIndex, itemOffset);
+				NotesErrorUtils.checkResult(result);
+				
+				Memory tLenMem = new Memory(4);
+				result = notesAPI.b32_HTMLGetProperty(hHTML, (int) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				NotesErrorUtils.checkResult(result);
+				totalLen = tLenMem.getInt(0);
+				skip = callback.setSize(totalLen);
+			}
+
+			if (skip > totalLen)
+				throw new IllegalArgumentException("Skip value cannot be greater than size: "+skip+" > "+totalLen);
+			
+			IntByReference len = new IntByReference();
+			len.setValue(NotesCAPI.MAXPATH);
+			int startOffset=skip;
+			Memory bufMem = new Memory(NotesCAPI.MAXPATH+1);
+			
+			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
+				len.setValue(NotesCAPI.MAXPATH);
+				
+				result = notesAPI.HTMLGetText(hHTML, startOffset, len, bufMem);
+				NotesErrorUtils.checkResult(result);
+				
+				byte[] data = bufMem.getByteArray(0, len.getValue());
+				IHtmlItemImageConversionCallback.Action action = callback.read(data);
+				if (action == IHtmlItemImageConversionCallback.Action.Stop)
+					break;
+				
+				startOffset += len.getValue();
+			}
+		}
+		finally {
+			result = notesAPI.HTMLDestroyConverter(hHTML);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+
+	/**
+	 * Method to convert the whole note to HTML
+	 * 
+	 * @param options conversion options
+	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
+	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
+	 * @return conversion result
+	 */
+	public IHtmlConversionResult convertNoteToHtml(EnumSet<HtmlConvertOption> options,
+			EnumSet<ReferenceType> refTypeFilter,
+			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
+		return internalConvertItemToHtml(null, options, refTypeFilter, targetTypeFilter);
+	}
+	
+	/**
+	 * Method to convert a single item of this note to HTML
+	 * 
+	 * @param itemName item name
+	 * @param options conversion options
+	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
+	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
+	 * @return conversion result
+	 */
+	public IHtmlConversionResult convertItemToHtml(String itemName, EnumSet<HtmlConvertOption> options,
+			EnumSet<ReferenceType> refTypeFilter,
+			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
+		if (StringUtil.isEmpty(itemName))
+			throw new NullPointerException("Item name cannot be null");
+		
+		return internalConvertItemToHtml(itemName, options, refTypeFilter, targetTypeFilter);
+	}
+
+	/**
+	 * Implementation of {@link IHtmlConversionResult} that contains the HTML conversion result
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	private class HtmlConversionResult implements IHtmlConversionResult {
+		private String m_html;
+		private List<IHtmlApiReference> m_references;
+		private EnumSet<HtmlConvertOption> m_options;
+		
+		private HtmlConversionResult(String html, List<IHtmlApiReference> references, EnumSet<HtmlConvertOption> options) {
+			m_html = html;
+			m_references = references;
+			m_options = options;
+		}
+		
+		@Override
+		public String getText() {
+			return m_html;
+		}
+
+		@Override
+		public List<IHtmlApiReference> getReferences() {
+			return m_references;
+		}
+		
+		private IHtmlImageRef createImageRef(final String refText, final String fieldName, final int itemIndex,
+				final int itemOffset, final String format) {
+			return new IHtmlImageRef() {
+				
+				@Override
+				public void readImage(IHtmlItemImageConversionCallback callback) {
+					NotesNote.this.convertHtmlElement(this, callback);
+				}
+				
+				@Override
+				public void writeImage(File f) throws IOException {
+					if (f.exists() && !f.delete())
+						throw new IOException("Cannot delete existing file "+f.getAbsolutePath());
+						
+					final FileOutputStream fOut = new FileOutputStream(f);
+					final IOException[] ex = new IOException[1];
+					try {
+						NotesNote.this.convertHtmlElement(this, new IHtmlItemImageConversionCallback() {
+
+							@Override
+							public int setSize(int size) {
+								return 0;
+							}
+
+							@Override
+							public Action read(byte[] data) {
+								try {
+									fOut.write(data);
+									return Action.Continue;
+								} catch (IOException e) {
+									ex[0] = e;
+									return Action.Stop;
+								}
+							}
+						});
+						
+						if (ex[0]!=null)
+							throw ex[0];
+					}
+					finally {
+						fOut.close();
+					}
+				}
+				
+				@Override
+				public void writeImage(final OutputStream out) throws IOException {
+					final IOException[] ex = new IOException[1];
+
+					NotesNote.this.convertHtmlElement(this, new IHtmlItemImageConversionCallback() {
+
+						@Override
+						public int setSize(int size) {
+							return 0;
+						}
+
+						@Override
+						public Action read(byte[] data) {
+							try {
+								out.write(data);
+								return Action.Continue;
+							} catch (IOException e) {
+								ex[0] = e;
+								return Action.Stop;
+							}
+						}
+					});
+					
+					if (ex[0]!=null)
+						throw ex[0];
+					
+					out.flush();
+				}
+				
+				@Override
+				public String getReferenceText() {
+					return refText;
+				}
+				
+				@Override
+				public EnumSet<HtmlConvertOption> getOptions() {
+					return m_options;
+				}
+				
+				@Override
+				public int getItemOffset() {
+					return itemOffset;
+				}
+				
+				@Override
+				public String getItemName() {
+					return fieldName;
+				}
+				
+				@Override
+				public int getItemIndex() {
+					return itemIndex;
+				}
+				
+				@Override
+				public String getFormat() {
+					return format;
+				}
+			};
+		}
+		
+		public java.util.List<com.mindoo.domino.jna.html.IHtmlImageRef> getImages() {
+			List<IHtmlImageRef> imageRefs = new ArrayList<IHtmlImageRef>();
+			
+			for (IHtmlApiReference currRef : m_references) {
+				if (currRef.getType() == ReferenceType.IMG) {
+					String refText = currRef.getReferenceText();
+					String format = "gif";
+					int iFormatPos = refText.indexOf("FieldElemFormat=");
+					if (iFormatPos!=-1) {
+						String remainder = refText.substring(iFormatPos + "FieldElemFormat=".length());
+						int iNextDelim = remainder.indexOf('&');
+						if (iNextDelim==-1) {
+							format = remainder;
+						}
+						else {
+							format = remainder.substring(0, iNextDelim);
+						}
+					}
+					
+					IHtmlApiUrlTargetComponent<?> fieldOffsetTarget = currRef.getTargetByType(TargetType.FIELDOFFSET);
+					if (fieldOffsetTarget!=null) {
+						Object fieldOffsetObj = fieldOffsetTarget.getValue();
+						if (fieldOffsetObj instanceof String) {
+							String fieldOffset = (String) fieldOffsetObj;
+							// 1.3E -> index=1, offset=63
+							int iPos = fieldOffset.indexOf('.');
+							if (iPos!=-1) {
+								String indexStr = fieldOffset.substring(0, iPos);
+								String offsetStr = fieldOffset.substring(iPos+1);
+								
+								int itemIndex = Integer.parseInt(indexStr, 16);
+								int itemOffset = Integer.parseInt(offsetStr, 16);
+								
+								IHtmlApiUrlTargetComponent<?> fieldTarget = currRef.getTargetByType(TargetType.FIELD);
+								if (fieldTarget!=null) {
+									Object fieldNameObj = fieldTarget.getValue();
+									String fieldName = (fieldNameObj instanceof String) ? (String) fieldNameObj : null;
+									
+									IHtmlImageRef newImgRef = createImageRef(refText, fieldName, itemIndex, itemOffset, format);
+									imageRefs.add(newImgRef);
+								}
+							}
+							
+						}
+					}
+				}
+			}
+			
+			return imageRefs;
+		};
+		
+	}
+
+	private static class HTMLApiReference implements IHtmlApiReference {
+		private ReferenceType m_type;
+		private String m_refText;
+		private String m_fragment;
+		private CommandId m_commandId;
+		private List<IHtmlApiUrlTargetComponent<?>> m_targets;
+		private Map<TargetType, IHtmlApiUrlTargetComponent<?>> m_targetByType;
+		
+		private HTMLApiReference(ReferenceType type, String refText, String fragment, CommandId commandId,
+				List<IHtmlApiUrlTargetComponent<?>> targets) {
+			m_type = type;
+			m_refText = refText;
+			m_fragment = fragment;
+			m_commandId = commandId;
+			m_targets = targets;
+		}
+		
+		@Override
+		public ReferenceType getType() {
+			return m_type;
+		}
+
+		@Override
+		public String getReferenceText() {
+			return m_refText;
+		}
+
+		@Override
+		public String getFragment() {
+			return m_fragment;
+		}
+
+		@Override
+		public CommandId getCommandId() {
+			return m_commandId;
+		}
+
+		@Override
+		public List<IHtmlApiUrlTargetComponent<?>> getTargets() {
+			return m_targets;
+		}
+
+		@Override
+		public IHtmlApiUrlTargetComponent<?> getTargetByType(TargetType type) {
+			if (m_targetByType==null) {
+				m_targetByType = new HashMap<TargetType, IHtmlApiUrlTargetComponent<?>>();
+				if (m_targets!=null && !m_targets.isEmpty()) {
+					for (IHtmlApiUrlTargetComponent<?> currTarget : m_targets) {
+						m_targetByType.put(currTarget.getType(), currTarget);
+					}
+				}
+			}
+			return m_targetByType.get(type);
+		}
+	}
+	
+	private static class HtmlApiUrlTargetComponent<T> implements IHtmlApiUrlTargetComponent<T> {
+		private TargetType m_type;
+		private Class<T> m_valueClazz;
+		private T m_value;
+		
+		private HtmlApiUrlTargetComponent(TargetType type, Class<T> valueClazz, T value) {
+			m_type = type;
+			m_valueClazz = valueClazz;
+			m_value = value;
+		}
+		
+		@Override
+		public TargetType getType() {
+			return m_type;
+		}
+
+		@Override
+		public Class<T> getValueClass() {
+			return m_valueClazz;
+		}
+
+		@Override
+		public T getValue() {
+			return m_value;
+		}
+	}
+
+	/**
+	 * Internal method doing the HTML conversion work
+	 * 
+	 * @param itemName item name to be converted or null for whole note
+	 * @param options conversion options
+	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
+	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
+	 * @return conversion result
+	 */
+	private IHtmlConversionResult internalConvertItemToHtml(String itemName,
+			EnumSet<HtmlConvertOption> options, EnumSet<ReferenceType> refTypeFilter,
+			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference phHTML = new IntByReference();
+		short result = notesAPI.HTMLCreateConverter(phHTML);
+		NotesErrorUtils.checkResult(result);
+		
+		int hHTML = phHTML.getValue();
+		
+		try {
+			if (!options.isEmpty()) {
+				result = notesAPI.HTMLSetHTMLOptions(hHTML, new StringArray(HtmlConvertOption.toStringArray(options)));
+				NotesErrorUtils.checkResult(result);
+			}
+
+			Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+			
+			int totalLen;
+			
+			if (NotesJNAContext.is64Bit()) {
+				if (itemName==null) {
+					result = notesAPI.b64_HTMLConvertNote(hHTML, getParent().getHandle64(), m_hNote64, 0, null);
+					NotesErrorUtils.checkResult(result);
+				}
+				else {
+					result = notesAPI.b64_HTMLConvertItem(hHTML, getParent().getHandle64(), m_hNote64, itemNameMem);
+					NotesErrorUtils.checkResult(result);
+				}
+				
+				Memory tLenMem = new Memory(4);
+				result = notesAPI.b64_HTMLGetProperty(hHTML, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				NotesErrorUtils.checkResult(result);
+				totalLen = tLenMem.getInt(0);
+			}
+			else {
+				if (itemName==null) {
+					result = notesAPI.b32_HTMLConvertNote(hHTML, getParent().getHandle32(), m_hNote32, 0, null);
+					NotesErrorUtils.checkResult(result);
+				}
+				else {
+					result = notesAPI.b32_HTMLConvertItem(hHTML, getParent().getHandle32(), m_hNote32, itemNameMem);
+					NotesErrorUtils.checkResult(result);
+					
+				}
+
+				Memory tLenMem = new Memory(4);
+				result = notesAPI.b32_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				NotesErrorUtils.checkResult(result);
+				totalLen = tLenMem.getInt(0);
+
+			}
+			
+			IntByReference len = new IntByReference();
+			len.setValue(NotesCAPI.MAXPATH);
+			int startOffset=0;
+			Memory textMem = new Memory(NotesCAPI.MAXPATH+1);
+			
+			StringBuilder htmlText = new StringBuilder();
+			
+			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
+				len.setValue(NotesCAPI.MAXPATH);
+				textMem.setByte(0, (byte) 0);
+				
+				result = notesAPI.HTMLGetText(hHTML, startOffset, len, textMem);
+				NotesErrorUtils.checkResult(result);
+				
+				if (result == 0) {
+					textMem.setByte(len.getValue(), (byte) 0);
+					
+					String currText = NotesStringUtils.fromLMBCS(textMem, -1);
+					htmlText.append(currText);
+					
+					startOffset += len.getValue();
+				}
+			}
+			
+			Memory refCount = new Memory(4);
+			
+			if (NotesJNAContext.is64Bit()) {
+				result=notesAPI.b64_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+			}
+			else {
+				result=notesAPI.b32_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			int iRefCount = refCount.getInt(0);
+
+			List<IHtmlApiReference> references = new ArrayList<IHtmlApiReference>();
+			
+			for (int i=0; i<iRefCount; i++) {
+				IntByReference phRef = new IntByReference();
+				
+				result = notesAPI.HTMLGetReference(hHTML, i, phRef);
+				NotesErrorUtils.checkResult(result);
+				
+				Memory ppRef = new Memory(Pointer.SIZE);
+				int hRef = phRef.getValue();
+				
+				result = notesAPI.HTMLLockAndFixupReference(hRef, ppRef);
+				NotesErrorUtils.checkResult(result);
+				try {
+					int iRefType;
+					Pointer pRefText;
+					Pointer pFragment;
+					int iCmdId;
+					int nTargets;
+					Pointer pTargets;
+					
+					//use separate structs for 64/32, because RefType uses 8 bytes on 64 and 4 bytes on 32 bit
+					if (NotesJNAContext.is64Bit()) {
+						HTMLAPIReference64Struct htmlApiRef = HTMLAPIReference64Struct.newInstance(ppRef.getPointer(0));
+						htmlApiRef.read();
+						iRefType = (int) htmlApiRef.RefType;
+						pRefText = htmlApiRef.pRefText;
+						pFragment = htmlApiRef.pFragment;
+						iCmdId = (int) htmlApiRef.CommandId;
+						nTargets = htmlApiRef.NumTargets;
+						pTargets = htmlApiRef.pTargets;
+					}
+					else {
+						HTMLAPIReference32Struct htmlApiRef = HTMLAPIReference32Struct.newInstance(ppRef.getPointer(0));
+						htmlApiRef.read();
+						iRefType = htmlApiRef.RefType;
+						pRefText = htmlApiRef.pRefText;
+						pFragment = htmlApiRef.pFragment;
+						iCmdId = htmlApiRef.CommandId;
+						nTargets = htmlApiRef.NumTargets;
+						pTargets = htmlApiRef.pTargets;
+					}
+
+					ReferenceType refType = ReferenceType.getType((int) iRefType);
+					
+					if (refTypeFilter==null || refTypeFilter.contains(refType)) {
+						String refText = NotesStringUtils.fromLMBCS(pRefText, -1);
+						String fragment = NotesStringUtils.fromLMBCS(pFragment, -1);
+						
+						CommandId cmdId = CommandId.getCommandId(iCmdId);
+						
+						List<IHtmlApiUrlTargetComponent<?>> targets = new ArrayList<IHtmlApiUrlTargetComponent<?>>(nTargets);
+						
+						for (int t=0; t<nTargets; t++) {
+							Pointer pCurrTarget = pTargets.share(t * NotesCAPI.htmlApiUrlComponentSize);
+							HtmlApi_UrlTargetComponentStruct currTarget = HtmlApi_UrlTargetComponentStruct.newInstance(pCurrTarget);
+							currTarget.read();
+							
+							int iTargetType = currTarget.AddressableType;
+							TargetType targetType = TargetType.getType(iTargetType);
+							
+							EnumSet<TargetType> targetTypeFilterForRefType = targetTypeFilter==null ? null : targetTypeFilter.get(refType);
+							
+							if (targetTypeFilterForRefType==null || targetTypeFilterForRefType.contains(targetType)) {
+								switch (currTarget.ReferenceType) {
+								case NotesCAPI.URT_Name:
+									currTarget.Value.setType(Pointer.class);
+									currTarget.Value.read();
+									String name = NotesStringUtils.fromLMBCS(currTarget.Value.name, -1);
+									targets.add(new HtmlApiUrlTargetComponent(targetType, String.class, name));
+									break;
+								case NotesCAPI.URT_NoteId:
+									currTarget.Value.setType(NoteIdStruct.class);
+									currTarget.Value.read();
+									NoteIdStruct noteIdStruct = currTarget.Value.nid;
+									int iNoteId = noteIdStruct.nid;
+									targets.add(new HtmlApiUrlTargetComponent(targetType, Integer.class, iNoteId));
+									break;
+								case NotesCAPI.URT_Unid:
+									currTarget.Value.setType(NotesUniversalNoteIdStruct.class);
+									currTarget.Value.read();
+									NotesUniversalNoteIdStruct unidStruct = currTarget.Value.unid;
+									unidStruct.read();
+									String unid = unidStruct.toString();
+									targets.add(new HtmlApiUrlTargetComponent(targetType, String.class, unid));
+									break;
+								case NotesCAPI.URT_None:
+									targets.add(new HtmlApiUrlTargetComponent(targetType, Object.class, null));
+									break;
+								case NotesCAPI.URT_RepId:
+									//TODO find out how to decode this one
+									break;
+								case NotesCAPI.URT_Special:
+									//TODO find out how to decode this one
+									break;
+								}
+							}
+						}
+						
+						IHtmlApiReference newRef = new HTMLApiReference(refType, refText, fragment,
+								cmdId, targets);
+						references.add(newRef);
+					}
+				}
+				finally {
+					if (hRef!=0) {
+						notesAPI.OSMemoryUnlock(hRef);
+						notesAPI.OSMemoryFree(hRef);
+					}
+				}
+			}
+			
+			return new HtmlConversionResult(htmlText.toString(), references, options);
+		}
+		finally {
+			result = notesAPI.HTMLDestroyConverter(hHTML);
+			NotesErrorUtils.checkResult(result);
+		}
 	}
 }

@@ -145,7 +145,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 					
 					String currLastname = (String) currEntry.get("lastname");
 					
-					Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal) >=0);
+					if (currLastname!=null) {
+						Assert.assertTrue("Lastname "+currLastname+" of entry with note id "+currEntry.getNoteId()+" should be greater or equal "+minVal, currLastname.compareToIgnoreCase(minVal) >=0);
+					}
 				}
 				
 				NotesIDTable selectedList = colFromDbData.getSelectedList();

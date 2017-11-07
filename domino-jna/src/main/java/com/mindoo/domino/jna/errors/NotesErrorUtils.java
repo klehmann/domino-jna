@@ -25,7 +25,13 @@ public class NotesErrorUtils {
 			if (status==0)
 				return;
 			
-			String message = errToString(status);
+			String message;
+			try {
+				message = errToString(status);
+			}
+			catch (Throwable e) {
+				throw new NotesError(result, "ERR "+result);
+			}
 			throw new NotesError(result, "ERR "+result+": "+ message);
 		}
 	}

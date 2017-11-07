@@ -1,9 +1,11 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.EnumSet;
+
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback;
 import com.mindoo.domino.jna.NotesViewEntryData;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.constants.NoteClass;
 
 import lotus.domino.Session;
 
@@ -23,7 +25,7 @@ public class TestSignDb extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase db = new NotesDatabase(session, "", "test/signtest.nsf");
-				db.signAll(NotesCAPI.NOTE_CLASS_ALLNONDATA, new SignCallback() {
+				db.signAll(EnumSet.of(NoteClass.ALLNONDATA), new SignCallback() {
 
 					@Override
 					public boolean shouldSign(NotesViewEntryData noteData, String currSigner) {

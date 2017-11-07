@@ -2442,4 +2442,9 @@ public String ERR_MSG_SCOS_FILE_SIZE = "\nSCOS database specification out of ran
 	public short ERR_MQSCAN_DELETE = PKG_MISC+107;
 	public String ERR_MSG_MQSCAN_DELETE = "Delete current message in enumeration";
 	
+	public short PKG_OS = 0x0100;
+	
+	public short ERR_CANCEL = PKG_OS+157;
+	public String ERR_MSG_CANCEL = "Operation stopped at your request";
+
 }

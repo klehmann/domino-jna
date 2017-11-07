@@ -4,6 +4,7 @@ import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import com.mindoo.domino.jna.NotesViewEntryData.CacheableViewEntryData;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
@@ -83,6 +85,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private Map<Integer, Boolean> m_columnIsCategoryByIndex;
 	private Map<Integer, String> m_columnTitlesLCByIndex;
 	private Map<Integer, String> m_columnTitlesByIndex;
+	private NotesNote m_viewNote;
+	private NotesViewFormat m_viewFormat;
 	
 	/**
 	 * Creates a new instance, 32 bit mode
@@ -2362,7 +2366,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			return m_hasExactNumberOfMatches;
 		}
 	}
-	
+
 	/**
 	 * Returns the number of top level entries in the view
 	 * 
@@ -2752,13 +2756,102 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		return m_columnTitlesByIndex.get(columnIndex);
 	}
+
+	private void scanColumns() {
+		scanColumnsNew();
+	}
+
+	/**
+	 * New method to read information about view columns and sortings using C methods
+	 */
+	private void scanColumnsNew() {
+		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
+		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
+		m_columnNamesByIndex = new TreeMap<Integer, String>();
+		m_columnIsCategoryByIndex = new TreeMap<Integer, Boolean>();
+		m_columnTitlesLCByIndex = new TreeMap<Integer, String>();
+		m_columnTitlesByIndex = new TreeMap<Integer, String>();
+
+		m_viewNote = m_parentDb.openNoteByUnid(m_viewUNID);
+		
+		//read collations
+		CollationInfo collationInfo = new CollationInfo();
+
+		int colNo = 0;
+		boolean readCollations = false;
+		
+		while (m_viewNote.hasItem("$Collation"+(colNo==0 ? "" : colNo))) {
+			List<Object> collationInfoList = m_viewNote.getItemValue("$Collation"+(colNo==0 ? "" : colNo));
+			if (collationInfoList!=null && !collationInfoList.isEmpty()) {
+				readCollations = true;
+				
+				NotesCollationInfo colInfo = (NotesCollationInfo) collationInfoList.get(0);
+				
+				List<NotesCollateDescriptor> collateDescList = colInfo.getDescriptors();
+				NotesCollateDescriptor firstCollateDesc = collateDescList.get(0);
+				String currItemName = firstCollateDesc.getName();
+				Direction currDirection = firstCollateDesc.getDirection();
+				
+				collationInfo.addCollation((short) colNo, currItemName, currDirection);
+			}
+			colNo++;
+		}
+		
+		m_collationInfo = collationInfo;
+
+		if (!readCollations) {
+			throw new AssertionError("View note with UNID "+m_viewUNID+" contains collations");
+		}
+		
+		
+		//read view columns
+		List<Object> viewFormatList = m_viewNote.getItemValue("$VIEWFORMAT");
+		if (!(viewFormatList!=null && !viewFormatList.isEmpty()))
+			throw new AssertionError("View note with UNID "+m_viewUNID+" has item $VIEWFORMAT");
+		
+		NotesViewFormat format = (NotesViewFormat) viewFormatList.get(0);
+		m_viewFormat = format;
+		List<NotesViewColumn> columns = format.getColumns();
+		
+		for (int i=0; i<columns.size(); i++) {
+			NotesViewColumn currCol = columns.get(i);
+			String currItemName = currCol.getItemName();
+			String currItemNameLC = currItemName.toLowerCase(Locale.ENGLISH);
+			String currTitle = currCol.getTitle();
+			String currTitleLC = currTitle.toLowerCase(Locale.ENGLISH);
+			
+			int currColumnValuesIndex = currCol.getColumnValuesIndex();
+			
+			m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
+			m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
+
+			if (!currCol.isConstant()) {
+				m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+				m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
+				m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
+				
+				boolean isCategory = currCol.isCategory();
+				m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
+			}
+		}
+	}
 	
 	/**
-	 * Returns programmatic names and sorting of sortable columns
+	 * Returns design information about the view
 	 * 
-	 * @return info object with collation info
+	 * @return view columns
 	 */
-	private void scanColumns() {
+	public List<NotesViewColumn> getColumns() {
+		if (m_viewFormat==null) {
+			scanColumnsNew();
+		}
+		return Collections.unmodifiableList(m_viewFormat.getColumns());
+	}
+	
+	/**
+	 * Old (unused) method to read information about view columns and sortings using the legacy API
+	 */
+	private void scanColumnsOld() {
 		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
 		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
 		m_columnNamesByIndex = new TreeMap<Integer, String>();
@@ -2826,7 +2919,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		catch (Throwable t) {
 			throw new NotesError(0, "Could not read collation information for view "+getName(), t);
 		}
-		}
+	}
 	
 	/**
 	 * Container class with view collation information (collation index vs. sort item name and sort direction)
@@ -3126,10 +3219,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 			final Set<Integer> retIds = new TreeSet<Integer>();
 			
 			NotesSearch.search(m_parentDb, idTable, formula, "-",
-					EnumSet.of(Search.SESSION_USERNAME), NotesCAPI.NOTE_CLASS_DATA, null, new NotesSearch.ISearchCallback() {
+					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 						
 						@Override
-						public void noteFound(NotesDatabase parentDb, int noteId, short noteClass, NotesTimeDate dbCreated,
+						public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 								NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 							retIds.add(noteId);
 						}

@@ -7,6 +7,7 @@ import java.util.Vector;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 
@@ -24,37 +25,48 @@ import lotus.domino.Session;
 public class TestLegacyAPI extends BaseJNATestClass {
 
 	/**
-	 * Tests session creation as another user
+	 * Tests conversion functions from legacy API database and document to JNA API objects
 	 */
 	@Test
 	public void testLegacyAPI_createSession() {
-		final Session[] sessionAsUser = new Session[1];
+		final Session[] sessionAsFakeUser = new Session[1];
 
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				sessionAsUser[0] = LegacyAPIUtils.createSessionAs(Arrays.asList(
+				//we create a new session for a fake user
+				sessionAsFakeUser[0] = LegacyAPIUtils.createSessionAs(Arrays.asList(
 						"CN=Test User/O=Mindoo",
 						"Group1"
 						), EnumSet.of(Privileges.FullAdminAccess));
 
-				Database dbAsUser = sessionAsUser[0].getDatabase("", BaseJNATestClass.DBPATH_FAKENAMES_NSF);
-				Document docTmp = dbAsUser.createDocument();
-				Vector<?> userNamesList = sessionAsUser[0].evaluate("@UserNamesList", docTmp);
+				Database legacyDbAsFakeUser = sessionAsFakeUser[0].getDatabase("", BaseJNATestClass.DBPATH_FAKENAMES_NSF);
+				Document docTmp = legacyDbAsFakeUser.createDocument();
+				Vector<?> userNamesList = sessionAsFakeUser[0].evaluate("@UserNamesList", docTmp);
+				docTmp.recycle();
 				
 				Assert.assertTrue("Usernameslist of session contains specified user", userNamesList.contains("CN=Test User/O=Mindoo"));
 				Assert.assertTrue("Usernameslist of session contains specified group", userNamesList.contains("Group1"));
 				
-				NotesDatabase dbWithHandle = LegacyAPIUtils.toNotesDatabase(dbAsUser);
+				NotesDatabase notesDatabaseForlegacyDbAsFakeUser = LegacyAPIUtils.toNotesDatabase(legacyDbAsFakeUser);
 				
-				String absFilePath = dbWithHandle.getAbsoluteFilePathOnLocal();
-				String relFilePath = dbWithHandle.getRelativeFilePath();
+				String absFilePath = notesDatabaseForlegacyDbAsFakeUser.getAbsoluteFilePathOnLocal();
+				String relFilePath = notesDatabaseForlegacyDbAsFakeUser.getRelativeFilePath();
 				
 				System.out.println("Absolute filePath: "+absFilePath);
 				System.out.println("Relative filePath: "+relFilePath);
 				
-				Assert.assertEquals("Filepaths are equal", dbAsUser.getFilePath(), relFilePath);
+				Assert.assertEquals("Filepaths are equal", legacyDbAsFakeUser.getFilePath(), relFilePath);
+				
+				//wrap a new legacy document into a NotesNote and check whether both point to the
+				//same memory area
+				Document docTest = legacyDbAsFakeUser.createDocument();
+				NotesNote noteForDocTest = LegacyAPIUtils.toNotesNote(docTest);
+				docTest.replaceItemValue("field1", "abc");
+				String testValue = noteForDocTest.getItemValueString("field1");
+				
+				Assert.assertEquals("Document and NotesNote point to the same memory",  "abc", testValue);
 				
 				return null;
 			}
@@ -62,7 +74,7 @@ public class TestLegacyAPI extends BaseJNATestClass {
 
 		boolean isRecycled = false;
 		try {
-			sessionAsUser[0].isOnServer();
+			sessionAsFakeUser[0].isOnServer();
 		}
 		catch (NotesException e) {
 			if (e.id==4376 || e.id==4466)

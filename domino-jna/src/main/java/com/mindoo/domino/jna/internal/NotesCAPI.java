@@ -7,6 +7,7 @@ import java.nio.LongBuffer;
 import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NIFFindByKeyContextStruct;
+import com.mindoo.domino.jna.structs.NoteIdStruct;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
@@ -32,8 +33,26 @@ import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.structs.ReplExtensionsStruct;
+import com.mindoo.domino.jna.structs.ReplServStatsStruct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.structs.collation.NotesCollateDescriptorStruct;
+import com.mindoo.domino.jna.structs.collation.NotesCollationStruct;
+import com.mindoo.domino.jna.structs.html.HtmlApi_UrlArgStruct;
+import com.mindoo.domino.jna.structs.html.HtmlApi_UrlComponentStruct;
+import com.mindoo.domino.jna.structs.html.HtmlApi_UrlTargetComponentStruct;
+import com.mindoo.domino.jna.structs.html.StringListStruct;
+import com.mindoo.domino.jna.structs.html.ValueUnion;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat2Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat3Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat4Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat5Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormatStruct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat2Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat4Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat5Struct;
+import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormatStruct;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
@@ -74,7 +93,41 @@ public interface NotesCAPI extends Library {
 	public final int schedEntrySize = NotesSchedEntryStruct.newInstance().size();
 	public final int schedEntryExtSize = NotesSchedEntryExtStruct.newInstance().size();
 	public final int scheduleSize = NotesScheduleStruct.newInstance().size();
+	public final int notesUniversalNoteIdSize = NotesUniversalNoteIdStruct.newInstance().size();
+	public final int noteIdSize = NoteIdStruct.newInstance().size();
+	public final int slistStructSize = StringListStruct.newInstance().size();
+	public final int valueUnionSize = Math.max(
+			ValueUnion.newInstance(0).size(),
+			Math.max(ValueUnion.newInstance(NotesUniversalNoteIdStruct.newInstance()).size(),
+					Math.max(ValueUnion.newInstance(NoteIdStruct.newInstance()).size(), ValueUnion.newInstance(StringListStruct.newInstance()).size())));
 	
+	public final int htmlApiUrlTargetComponentSize = Math.max(
+			HtmlApi_UrlTargetComponentStruct.newInstance(0, 0, ValueUnion.newInstance(new Pointer(0))).size(),
+			Math.max(
+					HtmlApi_UrlTargetComponentStruct.newInstance(0, 0, ValueUnion.newInstance(NotesUniversalNoteIdStruct.newInstance())).size(),
+					HtmlApi_UrlTargetComponentStruct.newInstance(0, 0, ValueUnion.newInstance(StringListStruct.newInstance())).size()
+					)
+			);
+	public final int htmlApiUrlArgSize = Math.max(
+			HtmlApi_UrlArgStruct.newInstance(0, 0, ValueUnion.newInstance(new Pointer(0))).size(),
+			Math.max(
+					HtmlApi_UrlArgStruct.newInstance(0, 0, ValueUnion.newInstance(NotesUniversalNoteIdStruct.newInstance())).size(),
+					HtmlApi_UrlArgStruct.newInstance(0, 0, ValueUnion.newInstance(StringListStruct.newInstance())).size()
+					)
+			);
+	public final int htmlApiUrlComponentSize = Math.max(htmlApiUrlTargetComponentSize, htmlApiUrlArgSize);
+	public final int notesCollationSize = NotesCollationStruct.newInstance().size();
+	public final int notesCollateDescriptorSize = NotesCollateDescriptorStruct.newInstance().size();
+	public final int notesViewTableFormatSize = NotesViewTableFormatStruct.newInstance().size();
+	public final int notesViewTableFormat2Size = NotesViewTableFormat2Struct.newInstance().size();
+	public final int notesViewTableFormat4Size = NotesViewTableFormat4Struct.newInstance().size();
+	public final int notesViewTableFormat5Size = NotesViewTableFormat5Struct.newInstance().size();
+	public final int notesViewColumnFormatSize = NotesViewColumnFormatStruct.newInstance().size();
+	public final int notesViewColumnFormat2Size = NotesViewColumnFormat2Struct.newInstance().size();
+	public final int notesViewColumnFormat3Size = NotesViewColumnFormat3Struct.newInstance().size();
+	public final int notesViewColumnFormat4Size = NotesViewColumnFormat4Struct.newInstance().size();
+	public final int notesViewColumnFormat5Size = NotesViewColumnFormat5Struct.newInstance().size();
+
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
@@ -530,7 +583,7 @@ public interface NotesCAPI extends Library {
 	public static final short NOTE_CLASS_PRIVATE = 0x1000;
 	/** MODIFIER - default version of each */
 	public static final short NOTE_CLASS_DEFAULT = (short) (0x8000 & 0xffff);
-	/** see SEARCH_NOTIFYDELETIONS */
+	/** see {@link #SEARCH_NOTIFYDELETIONS} */
 	public static final short NOTE_CLASS_NOTIFYDELETION	= NOTE_CLASS_DEFAULT;
 	/** all note types */
 	public static final short NOTE_CLASS_ALL = 0x7fff;
@@ -2006,6 +2059,9 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public short NotesInitExtended(int  argc, StringArray argvPtr);
 	public void NotesTerm();
 
+	public short NotesInitThread();
+	public void NotesTermThread();
+	
 	public short b32_NSFSearch(
 			int hDB,
 			int hFormula,
@@ -2393,6 +2449,18 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			ShortByReference retCompileErrorOffset,
 			ShortByReference retCompileErrorLength);
 
+	public short b64_NSFFormulaDecompile(
+			Memory pFormulaBuffer,
+			boolean fSelectionFormula,
+			LongByReference rethFormulaText,
+			ShortByReference retFormulaTextLength);
+	
+	public short b32_NSFFormulaDecompile(
+			Memory pFormulaBuffer,
+			boolean fSelectionFormula,
+			IntByReference rethFormulaText,
+			ShortByReference retFormulaTextLength);
+	
 	public short b64_NSFComputeStart(
 			short Flags,
 			Pointer lpCompiledFormula,
@@ -2882,6 +2950,8 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public void OSSetEnvironmentVariable(Memory variableName, Memory Value);
 
 	public void OSSetEnvironmentInt(Memory variableName, int Value);
+	
+	public static short MAXENVVALUE = 256;
 	
 	public static int MAXDWORD = 0xffffffff;
 	public static short MAXWORD = (short) (0xffff & 0xffff);
@@ -3702,5 +3772,604 @@ This allows an Editor to assume some Designer-level access */
 	public static int PERCENTILE_80 = 8;
 	public static int PERCENTILE_90 = 9;
 	public static int PERCENTILE_100 = 10;
+
+	public short ReplicateWithServerExt(
+			Memory PortName,
+			Memory ServerName,
+			int Options,
+			short NumFiles,
+			Memory FileList,
+			ReplExtensionsStruct ExtendedOptions,
+			ReplServStatsStruct retStats);
+	
+	/*  Options used when calling ReplicateWithServer */
+
+	/** Receive notes from server (pull) */
+	public int REPL_OPTION_RCV_NOTES = 0x00000001;
+	/** Send notes to server (push) */
+	public int REPL_OPTION_SEND_NOTES = 0x00000002;
+	/** Replicate all database files */
+	public int REPL_OPTION_ALL_DBS = 0x00000004;
+	/** Close sessions when done */
+	public int REPL_OPTION_CLOSE_SESS = 0x00000040;
+	/** Replicate NTFs as well */
+	public int REPL_OPTION_ALL_NTFS = 0x00000400;
+	/** Low, Medium &amp; High priority databases */
+	public int REPL_OPTION_PRI_LOW = 0x00000000;
+	/** Medium &amp; High priority databases only */
+	public int REPL_OPTION_PRI_MED = 0x00004000;
+	/** High priority databases only */
+	public int REPL_OPTION_PRI_HI = 0x00008000;
+	
+	 /* Use following bits with
+		ReplicateWithServerExt only */
+	
+/* 0x00010000-0x8000000 WILL NOT BE HONORED BY V3 SERVERS, BECAUSE V3 ONLY LOOKS AT THE FIRST 16 BITS! */
+	
+	/** Abstract/truncate docs to summary data and first RTF field. (~40K) */
+	public int REPL_OPTION_ABSTRACT_RTF = 0x00010000;
+	/** Abstract/truncate docs to summary only data. */
+	public int REPL_OPTION_ABSTRACT_SMRY = 0x00020000;
+	/** Replicate private documents even if not selected by default. */
+	public int REPL_OPTION_PRIVATE = 0x00400000;
+	
+	public int REPL_OPTION_ALL_FILES = (REPL_OPTION_ALL_DBS | REPL_OPTION_ALL_NTFS);
+
+	
+	public OSSIGPROC OSGetSignalHandler(short signalHandlerID);
+	public OSSIGPROC OSSetSignalHandler(short signalHandlerID, OSSIGPROC routine);
+
+	public interface OSSIGPROC extends Callback {
+	}
+
+	/** Indirect way to call NEMMessageBox */;
+	public short OS_SIGNAL_MESSAGE = 3;
+
+	/*	STATUS = Proc(Message, OSMESSAGETYPE_xxx) */
+	public interface OSSIGMSGPROC extends OSSIGPROC {
+		public short invoke(Pointer message, short type);
+	}
+
+	/** Paint busy indicator on screen */
+	public short OS_SIGNAL_BUSY = 4;
+
+	public interface OSSIGBUSYPROC extends OSSIGPROC {
+		public short invoke(short busytype);
+	}
+
+	/*	Definitions specific to busy signal handler */
+
+	/** Remove the "File Activity" indicator */
+	public short BUSY_SIGNAL_FILE_INACTIVE = 0;
+	/** Display the "File Activity" indicator (not supported on all platforms) */
+	public short BUSY_SIGNAL_FILE_ACTIVE = 1;
+	/** Remove the "Network Activity" indicator. */
+	public short BUSY_SIGNAL_NET_INACTIVE = 2;
+	/** Display the "Network Activity" indicator. */
+	public short BUSY_SIGNAL_NET_ACTIVE = 3;
+	/** Display the "Poll" indicator. */
+	public short BUSY_SIGNAL_POLL = 4;
+	/** Display the "Wan Sending" indicator. */
+	public short BUSY_SIGNAL_WAN_SENDING = 5;
+	/** Display the "Wan Receiving" indicator. */
+	public short BUSY_SIGNAL_WAN_RECEIVING = 6;
+
+	/** Called from NET to see if user cancelled I/O */
+	public short OS_SIGNAL_CHECK_BREAK = 5;
+
+	public interface OSSIGBREAKPROC extends OSSIGPROC {
+		short invoke(); 
+	}
+
+	/** Put up and manipulate the system wide progress indicator. */
+	public short OS_SIGNAL_PROGRESS = 13;
+
+	public interface OSSIGPROGRESSPROC extends OSSIGPROC {
+		public short invoke(short option, Pointer data1, Pointer data2);
+	}
+
+	/**	N/A						N/A		*/
+	public short PROGRESS_SIGNAL_BEGIN = 0;
+	/**	N/A						N/A		*/
+	public short PROGRESS_SIGNAL_END = 1;
+	/**	Range					N/A		*/
+	public short PROGRESS_SIGNAL_SETRANGE = 2;
+	/**	pText1					pText2 - usually NULL. */
+	public short PROGRESS_SIGNAL_SETTEXT = 3;
+	/**	New progress pos		N/A		*/
+	public short PROGRESS_SIGNAL_SETPOS = 4;
+	/**	Delta of progress pos	N/A		*/
+	public short PROGRESS_SIGNAL_DELTAPOS = 5;
+	/**  Total Bytes */
+	public short PROGRESS_SIGNAL_SETBYTERANGE = 6;
+	/**	Bytes Done	*/
+	public short PROGRESS_SIGNAL_SETBYTEPOS = 7;
+
+	
+	public short OS_SIGNAL_REPL = 15;
+
+	public interface OSSIGREPLPROC extends OSSIGPROC {
+		public void invoke(short state, Pointer pText1, Pointer pText2);
+	}
+
+	/*  Definitions for replication state signal handler */
+	/*	pText1		pText2. */
+
+	/**	None					*/
+	public short REPL_SIGNAL_IDLE = 0;
+	/**	None					*/
+	public short REPL_SIGNAL_PICKSERVER = 1;
+	/**	pServer		pPort		*/
+	public short REPL_SIGNAL_CONNECTING = 2;
+	/**	pServer		pPort		*/
+	public short REPL_SIGNAL_SEARCHING = 3;
+	/**	pServerFile	pLocalFile	*/
+	public short REPL_SIGNAL_SENDING = 4;
+	/**	pServerFile	pLocalFile	*/
+	public short REPL_SIGNAL_RECEIVING = 5;
+	/**	pSrcFile				*/
+	public short REPL_SIGNAL_SEARCHINGDOCS = 6;
+	/**	pLocalFile	pReplFileStats */
+	public short REPL_SIGNAL_DONEFILE = 7;
+	/**	pServerFile pLocalFile	*/
+	public short REPL_SIGNAL_REDIRECT = 8;
+	/**	None				*/
+	public short REPL_SIGNAL_BUILDVIEW = 9;
+	/**	None				*/
+	public short REPL_SIGNAL_ABORT = 10;
+
+	public short HTMLCreateConverter(IntByReference phHTML);
+	
+	public short HTMLDestroyConverter(int hHTML);
+	
+	public short HTMLSetHTMLOptions(int hHTML, StringArray optionList);
+	
+	
+	public short b64_HTMLConvertItem(
+			int hHTML,
+			long hDB,
+			long hNote,
+			Memory pszItemName);
+	
+	public short b32_HTMLConvertItem(
+			int hHTML,
+			int hDB,
+			int hNote,
+			Memory pszItemName);
+	
+	public short b64_HTMLConvertNote(
+			int hHTML,
+			long hDB,
+			long hNote,
+			int NumArgs,
+			HtmlApi_UrlComponentStruct pArgs);
+	
+	public short b32_HTMLConvertNote(
+			int hHTML,
+			int hDB,
+			int hNote,
+			int NumArgs,
+			HtmlApi_UrlComponentStruct pArgs);
+	
+	public int HTMLAPI_PROP_TEXTLENGTH = 0;
+	public int HTMLAPI_PROP_NUMREFS = 1;
+	public int HTMLAPI_PROP_USERAGENT_LEN = 3;
+	public int HTMLAPI_PROP_USERAGENT = 4;
+	public int HTMLAPI_PROP_BINARYDATA = 6;
+	public int HTMLAPI_PROP_MIMEMAXLINELENSEEN = 102;
+	
+	int CAI_Start = 0;
+	int CAI_StartKey = 1;
+	int CAI_Count = 2;
+	int CAI_Expand = 3;
+	int CAI_FullyExpand = 4;
+	int CAI_ExpandView = 5;
+	int CAI_Collapse = 6;
+	int CAI_CollapseView = 7;
+	int CAI_3PaneUI = 8;
+	int CAI_TargetFrame = 9;
+	int CAI_FieldElemType = 10;
+	int CAI_FieldElemFormat = 11;
+	int CAI_SearchQuery = 12;
+	int CAI_OldSearchQuery = 13;
+	int CAI_SearchMax = 14;
+	int CAI_SearchWV = 15;
+	int CAI_SearchOrder = 16;
+	int CAI_SearchThesarus = 17;
+	int CAI_ResortAscending = 18;
+	int CAI_ResortDescending = 19;
+	int CAI_ParentUNID = 20;
+	int CAI_Click = 21;
+	int CAI_UserName = 22;
+	int CAI_Password = 23;
+	int CAI_To = 24;
+	int CAI_ISMAPx = 25;
+	int CAI_ISMAPy = 26;
+	int CAI_Grid = 27;
+	int CAI_Date = 28;
+	int CAI_TemplateType = 29;
+	int CAI_TargetUNID = 30;
+	int CAI_ExpandSection = 31;
+	int CAI_Login = 32;
+	int CAI_PickupCert = 33;
+	int CAI_PickupCACert = 34;
+	int CAI_SubmitCert = 35;
+	int CAI_ServerRequest = 36;
+	int CAI_ServerPickup = 37;
+	int CAI_PickupID = 38;
+	int CAI_TranslateForm = 39;
+	int CAI_SpecialAction = 40;
+	int CAI_AllowGetMethod = 41;
+	int CAI_Seq = 42;
+	int CAI_BaseTarget = 43;
+	int CAI_ExpandOutline = 44;
+	int CAI_StartOutline = 45;
+	int CAI_Days = 46;
+	int CAI_TableTab = 47;
+	int CAI_MIME = 48;
+	int CAI_RestrictToCategory = 49;
+	int CAI_Highlight = 50;
+	int CAI_Frame = 51;
+	int CAI_FrameSrc = 52;
+	int CAI_Navigate = 53;
+	int CAI_SkipNavigate = 54;
+	int CAI_SkipCount = 55;
+	int CAI_EndView = 56;
+	int CAI_TableRow = 57;
+	int CAI_RedirectTo = 58;
+	int CAI_SessionId = 59;
+	int CAI_SourceFolder = 60;
+	int CAI_SearchFuzzy = 61;
+	int CAI_HardDelete = 62;
+	int CAI_SimpleView = 63;
+	int CAI_SearchEntry = 64;
+	int CAI_Name = 65;
+	int CAI_Id = 66;
+	int CAI_RootAlias = 67;
+	int CAI_Scope = 68;
+	int CAI_DblClkTarget = 69;
+	int CAI_Charset = 70;
+	int CAI_EmptyTrash = 71;
+	int CAI_EndKey = 72;
+	int CAI_PreFormat = 73;
+	int CAI_ImgIndex = 74;
+	int CAI_AutoFramed = 75;
+	int CAI_OutputFormat = 76;
+	int CAI_InheritParent = 77;
+	int CAI_Last = 78;
+	
+	int kUnknownCmdId = 0;
+	int kOpenServerCmdId = 1;
+	int kOpenDatabaseCmdId = 2;
+	int kOpenViewCmdId = 3;
+	int kOpenDocumentCmdId = 4;
+	int kOpenElementCmdId = 5;
+	int kOpenFormCmdId = 6;
+	int kOpenAgentCmdId = 7;
+	int kOpenNavigatorCmdId = 8;
+	int kOpenIconCmdId = 9;
+	int kOpenAboutCmdId = 10;
+	int kOpenHelpCmdId = 11;
+	int kCreateDocumentCmdId = 12;
+	int kSaveDocumentCmdId = 13;
+	int kEditDocumentCmdId = 14;
+	int kDeleteDocumentCmdId = 15;
+	int kSearchViewCmdId = 16;
+	int kSearchSiteCmdId = 17;
+	int kNavigateCmdId = 18;
+	int kReadFormCmdId = 19;
+	int kRequestCertCmdId = 20;
+	int kReadDesignCmdId = 21;
+	int kReadViewEntriesCmdId = 22;
+	int kReadEntriesCmdId = 23;
+	int kOpenPageCmdId = 24;
+	int kOpenFrameSetCmdId = 25;
+	/** OpenField command for Java applet(s) and HAPI */
+	int kOpenFieldCmdId = 26;
+	int kSearchDomainCmdId = 27;
+	int kDeleteDocumentsCmdId = 28;
+	int kLoginUserCmdId = 29;
+	int kLogoutUserCmdId = 30;
+	int kOpenImageResourceCmdId = 31;
+	int kOpenImageCmdId = 32;
+	int kCopyToFolderCmdId = 33;
+	int kMoveToFolderCmdId = 34;
+	int kRemoveFromFolderCmdId = 35;
+	int kUndeleteDocumentsCmdId = 36;
+	int kRedirectCmdId = 37;
+	int kGetOrbCookieCmdId = 38;
+	int kOpenCssResourceCmdId = 39;
+	int kOpenFileResourceCmdId = 40;
+	int kOpenJavascriptLibCmdId = 41;
+	int kUnImplemented_01 = 42;
+	int kChangePasswordCmdId = 43;
+	int kOpenPreferencesCmdId = 44;
+	int kOpenWebServiceCmdId = 45;
+	int kWsdlCmdId = 46;
+	int kGetImageCmdId = 47;
+	int kNumberOfCmds = 48;
+	/**
+	 * arg value is a pointer to a nul-terminated string
+	 */
+	int CAVT_String = 0;
+	/**
+	 * arg value is an int
+	 */
+	int CAVT_Int = 1;
+	/**
+	 * arg value is a NOTEID
+	 */
+	int CAVT_NoteId = 2;
+	/**
+	 * arg value is an UNID
+	 */
+	int CAVT_UNID = 3;
+	/**
+	 * arg value is a list of null-terminated strings
+	 */
+	int CAVT_StringList = 4;
+	
+	int UAT_None = 0;
+	int UAT_Server = 1;
+	int UAT_Database = 2;
+	int UAT_View = 3;
+	int UAT_Form = 4;
+	int UAT_Navigator = 5;
+	int UAT_Agent = 6;
+	int UAT_Document = 7;
+	/** internal filename of attachment */
+	int UAT_Filename = 8;
+	/** external filename of attachment if different */
+	int UAT_ActualFilename = 9;
+	int UAT_Field = 10;
+	int UAT_FieldOffset = 11;
+	int UAT_FieldSuboffset = 12;
+	int UAT_Page = 13;
+	int UAT_FrameSet = 14;
+	int UAT_ImageResource = 15;
+	int UAT_CssResource = 16;
+	int UAT_JavascriptLib = 17;
+	int UAT_FileResource = 18;
+	int UAT_About = 19;
+	int UAT_Help = 20;
+	int UAT_Icon = 21;
+	int UAT_SearchForm = 22;
+	int UAT_SearchSiteForm = 23;
+	int UAT_Outline = 24;
+	/** must be the last one */
+	int UAT_NumberOfTypes = 25;
+	
+	int URT_None = 0;
+	int URT_Name = 1;
+	int URT_Unid = 2;
+	int URT_NoteId = 3;
+	int URT_Special = 4;
+	int URT_RepId = 5;
+	int USV_About = 0;
+	int USV_Help = 1;
+	int USV_Icon = 2;
+	int USV_DefaultView = 3;
+	int USV_DefaultForm = 4;
+	int USV_DefaultNav = 5;
+	int USV_SearchForm = 6;
+	int USV_DefaultOutline = 7;
+	int USV_First = 8;
+	int USV_FileField = 9;
+	int USV_NumberOfValues = 10;
+	/**
+	 * unknown purpose
+	 */
+	int HTMLAPI_REF_UNKNOWN = 0;
+	/**
+	 * A tag HREF= value
+	 */
+	int HTMLAPI_REF_HREF = 1;
+	/**
+	 * IMG tag SRC= value
+	 */
+	int HTMLAPI_REF_IMG = 2;
+	/**
+	 * (I)FRAME tag SRC= value
+	 */
+	int HTMLAPI_REF_FRAME = 3;
+	/**
+	 * Java applet reference
+	 */
+	int HTMLAPI_REF_APPLET = 4;
+	/**
+	 * plugin SRC= reference
+	 */
+	int HTMLAPI_REF_EMBED = 5;
+	/**
+	 * active object DATA= referendce
+	 */
+	int HTMLAPI_REF_OBJECT = 6;
+	/**
+	 * BASE tag value
+	 */
+	int HTMLAPI_REF_BASE = 7;
+	/**
+	 * BODY BACKGROUND
+	 */
+	int HTMLAPI_REF_BACKGROUND = 8;
+	/**
+	 * IMG SRC= value from MIME message
+	 */
+	int HTMLAPI_REF_CID = 9;
+	
+	public short b64_HTMLGetProperty(
+			int hHTML,
+			long PropertyType,
+			Pointer pProperty);
+
+	public short b32_HTMLGetProperty(
+			int hHTML,
+			int PropertyType,
+			Pointer pProperty);
+
+	public short b64_HTMLSetProperty(
+			int hHTML,
+			long PropertyType,
+			Memory pProperty);
+
+	public short b32_HTMLSetProperty(
+			int hHTML,
+			int PropertyType,
+			Memory pProperty);
+
+	public short HTMLGetText(
+			int hHTML,
+			int StartingOffset,
+			IntByReference pTextLength,
+			Memory pText);
+	
+	public short HTMLGetReference(
+			int hHTML,
+			int Index,
+			IntByReference phRef);
+	
+	public short HTMLLockAndFixupReference(
+			int hRef,
+			Memory ppRef);
+
+	public short b64_HTMLConvertElement(
+			int hHTML,
+			long hDB,
+			long hNote,
+			Memory pszItemName,
+			int ItemIndex,
+			int Offset);
+	
+	public short b32_HTMLConvertElement(
+			int hHTML,
+			int hDB,
+			int hNote,
+			Memory pszItemName,
+			int ItemIndex,
+			int Offset);
+
+	public short HTMLConvertImage(
+			int hHTML,
+			Memory pszImageName);
+	
+	/** Flag to indicate unique keys. */
+	public static byte COLLATION_FLAG_UNIQUE = 0x01;
+	/** Flag to indicate only build demand. */
+	public static byte COLLATION_FLAG_BUILD_ON_DEMAND = 0x02;
+
+	public static byte COLLATION_SIGNATURE = 0x44;
+
+	/** Collate by key in summary buffer (requires key name string) */
+	public static byte COLLATE_TYPE_KEY = 0;
+	/** Collate by note ID */
+	public static byte COLLATE_TYPE_NOTEID = 3;
+	/** Collate by "tumbler" summary key (requires key name string) */
+	public static byte COLLATE_TYPE_TUMBLER = 6;
+	/** Collate by "category" summary key (requires key name string) */
+	public static byte COLLATE_TYPE_CATEGORY = 7;
+	
+	public static byte COLLATE_TYPE_MAX = 7;
+
+	/** True if descending */
+	public static byte CDF_S_descending = 0;
+	/** False if ascending order (default) */
+	public static byte CDF_M_descending = 0x01;
+	/** Obsolete - see new constant below */
+	public static byte CDF_M_caseinsensitive = 0x02;
+	/** If prefix list, then ignore for sorting */
+	public static byte CDF_M_ignoreprefixes = 0x02;
+	/** Obsolete - see new constant below */
+	public static byte CDF_M_accentinsensitive = 0x04;
+	/** If set, lists are permuted */
+	public static byte CDF_M_permuted = 0x08;
+	/** Qualifier if lists are permuted; if set, lists are pairwise permuted, otherwise lists are multiply permuted. */
+	public static byte CDF_M_permuted_pairwise = 0x10;
+	/** If set, treat as permuted */
+	public static byte CDF_M_flat_in_v5 = 0x20;
+	/** If set, text compares are case-sensitive */
+	public static byte CDF_M_casesensitive_in_v5 = 0x40;
+	/** If set, text compares are accent-sensitive */
+	public static byte CDF_M_accentsensitive_in_v5 = (byte) (0x80 & 0xff);
+	
+	public static byte COLLATE_DESCRIPTOR_SIGNATURE = 0x66;
+
+	/** Value for the wSig member of the VIEW_TABLE_FORMAT2 structure. */
+	public static short VALID_VIEW_FORMAT_SIG = 0x2BAD;
+
+	/** The VIEW_COLUMN_FORMAT record begins with a WORD value for the Signature of the record.<br>
+	 * This symbol specifies the signature of the VIEW_COLUMN_FORMAT record. */
+	public static short VIEW_COLUMN_FORMAT_SIGNATURE = 0x4356;
+	/**
+	 * The VIEW_COLUMN_FORMAT2 record begins with a WORD value for the Signature of the record.<br>
+	 * This symbol specifies the signature of the VIEW_COLUMN_FORMAT2 record.  
+	 */
+	public static short VIEW_COLUMN_FORMAT_SIGNATURE2 = 0x4357;
+	/**
+	 * The VIEW_COLUMN_FORMAT3 record begins with a WORD value for the Signature of the record.<br>
+	 * This symbol specifies the signature of the VIEW_COLUMN_FORMAT3 record.  
+	 */
+	public static short VIEW_COLUMN_FORMAT_SIGNATURE3 = 0x4358;
+	/**
+	 * The VIEW_COLUMN_FORMAT4 record begins with a WORD value for the Signature of the record.<br>
+	 * This symbol specifies the signature of the VIEW_COLUMN_FORMAT4 record.  
+	 */
+	public static short VIEW_COLUMN_FORMAT_SIGNATURE4 = 0x4359;
+	/**
+	 * The VIEW_COLUMN_FORMAT5 record begins with a WORD value for the Signature of the record.<br>
+	 * This symbol specifies the signature of the VIEW_COLUMN_FORMAT5 record.  
+	 */
+	public static short VIEW_COLUMN_FORMAT_SIGNATURE5 = 0x4360;
+	
+	/*	Flags for COLOR_VALUE */
+	
+	/** Color space is RGB */
+	public static short COLOR_VALUE_FLAGS_ISRGB = 0x0001;
+	/** This object has no color */
+	public static short COLOR_VALUE_FLAGS_NOCOLOR = 0x0004;
+	/** Use system default color, ignore color here */
+	public static short COLOR_VALUE_FLAGS_SYSTEMCOLOR = 0x0008;
+	/** This color has a gradient color that follows */
+	public static short COLOR_VALUE_FLAGS_HASGRADIENT = 0x0010;
+	/** upper 4 bits are reserved for application specific use */
+	public static short COLOR_VALUE_FLAGS_APPLICATION_MASK = (short) (0xf000 & 0xffff);
+
+	/**  Defined for Yellow Highlighting, (not reserved). */
+	public static short COLOR_VALUE_FLAGS_RESERVED1 = (short) (0x8000 & 0xffff);
+	/** Defined for Pink Highlighting, (not reserved). */
+	public static short COLOR_VALUE_FLAGS_RESERVED2 = 0x4000;
+	/** Defined for Blue Highlighting, (not reserved). */
+	public static short COLOR_VALUE_FLAGS_RESERVED3 = 0x2000;
+	/** Reserved. */
+	public static short COLOR_VALUE_FLAGS_RESERVED4 = 0x1000;
+
+	public static short VCF1_M_Sort = 0x0001;
+	public static short VCF1_M_SortCategorize = 0x0002;
+	public static short VCF1_M_SortDescending = 0x0004;
+	public static short VCF1_M_Hidden = 0x0008;
+	public static short VCF1_M_Response = 0x0010;
+	public static short VCF1_M_HideDetail = 0x0020;
+	public static short VCF1_M_Icon = 0x0040;
+	public static short VCF1_M_NoResize = 0x0080;
+	public static short VCF1_M_ResortAscending = 0x0100;
+	public static short VCF1_M_ResortDescending = 0x0200;
+	public static short VCF1_M_Twistie = 0x0400;
+	public static short VCF1_M_ResortToView = 0x0800;
+	public static short VCF1_M_SecondResort = 0x1000;
+	public static short VCF1_M_SecondResortDescending = 0x2000;
+	/* The following 4 constants are obsolete - see new VCF3_ constants below. */
+	public static short VCF1_M_CaseInsensitiveSort = 0x4000;
+	public static short VCF1_M_AccentInsensitiveSort = (short) (0x8000 & 0xffff);
+
+	public static short VCF2_M_DisplayAlignment = 0x0003;
+	public static short VCF2_M_SubtotalCode = 0x003c;
+	public static short VCF2_M_HeaderAlignment = 0x00c0;
+	public static short VCF2_M_SortPermute = 0x0100;
+	public static short VCF2_M_SecondResortUniqueSort = 0x0200;
+	public static short VCF2_M_SecondResortCategorized = 0x0400;
+	public static short VCF2_M_SecondResortPermute = 0x0800;
+	public static short VCF2_M_SecondResortPermutePair = 0x1000;
+	public static short VCF2_M_ShowValuesAsLinks = 0x2000;
+	public static short VCF2_M_DisplayReadingOrder = 0x4000;
+	public static short VCF2_M_HeaderReadingOrder = (short) (0x8000 & 0xffff);
 
 }
