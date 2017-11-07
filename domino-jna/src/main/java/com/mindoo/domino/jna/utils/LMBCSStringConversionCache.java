@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.utils;
 
+import java.nio.charset.Charset;
+
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.sun.jna.Memory;
 
@@ -54,6 +56,22 @@ public class LMBCSStringConversionCache {
 		
 		if (stringFromCache==null) {
 			byte[] dataArr = lmbcsString.getData();
+			
+			boolean isPureAscii = true;
+			for (int i=0; i < dataArr.length; i++) {
+				byte b = dataArr[i];
+				if (b <= 0x1f || b >= 0x80) {
+					isPureAscii = false;
+					break;
+				}
+			}
+			
+			if (isPureAscii) {
+				String asciiStr = new String(dataArr, Charset.forName("ASCII"));
+				cache.put(lmbcsString, asciiStr);
+				return asciiStr;
+			}
+			
 			Memory dataMem = new Memory(dataArr.length);
 			dataMem.write(0, dataArr, 0, dataArr.length);
 			

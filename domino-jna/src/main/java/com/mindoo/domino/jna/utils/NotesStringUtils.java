@@ -23,20 +23,6 @@ import com.sun.jna.Pointer;
 public class NotesStringUtils {
 
 	/**
-	 * Checks whether an optimization should be used for the LMBCS conversion that
-	 * skips conversion for pure ascii strings, because they would map 1:1 anyway
-	 * 
-	 * @return true if enabled (on by default)
-	 */
-	private static boolean isUseAsciiOptimization() {
-		Boolean enabled = (Boolean) NotesGC.getCustomValue("NotesStringUtils.useAsciiOptimization");
-		if (enabled==null)
-			return true;
-		else
-			return enabled.booleanValue();
-	}
-	
-	/**
 	 * Scans the Memory object for null values
 	 * 
 	 * @param in memory
@@ -103,7 +89,7 @@ public class NotesStringUtils {
 	public static String fromLMBCS(Pointer inPtr, long textLen) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-		if (textLen==0) {
+		if (inPtr==null || textLen==0) {
 			return "";
 		}
 		
@@ -111,34 +97,31 @@ public class NotesStringUtils {
 			int foundLen = 0;
 			int offset = 0;
 			while (true) {
-				foundLen++;
-				
 				if (inPtr.getByte(offset)==0) {
 					break;
 				}
+				foundLen++;
 				offset++;
 			}
 			textLen = foundLen;
 		}
 		
-		if (isUseAsciiOptimization()) {
-			boolean isPureAscii = true;
-			
-			for (int i=0; i < textLen; i++) {
-				byte b = inPtr.getByte(i);
-				if (b <= 0x1f || b >= 0x80) {
-					isPureAscii = false;
-					break;
-				}
-			}
-			
-			if (isPureAscii) {
-				byte[] asciiBytes = inPtr.getByteArray(0, (int) textLen);
-				String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
-				return asciiStr;
+		boolean isPureAscii = true;
+		
+		for (int i=0; i < textLen; i++) {
+			byte b = inPtr.getByte(i);
+			if (b <= 0x1f || b >= 0x80) {
+				isPureAscii = false;
+				break;
 			}
 		}
 		
+		if (isPureAscii) {
+			byte[] asciiBytes = inPtr.getByteArray(0, (int) textLen);
+			String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
+			return asciiStr;
+		}
+	
 		Pointer pText = inPtr;
 		
 		Memory pBuf_utf8 = null;
@@ -212,35 +195,33 @@ public class NotesStringUtils {
 			}
 		}
 		
-		if (isUseAsciiOptimization()) {
-			//check if string only contains ascii characters that map 1:1 to LMBCS;
-			//in this case we can skip the OSTranslate call
-			boolean isPureAscii = true;
-			for (int i=0; i<inStr.length(); i++) {
-				char c = inStr.charAt(i);
-				if (c <= 0x1f || c >= 0x80) {
-					isPureAscii = false;
-					break;
-				}
-			}
-			
-			if (isPureAscii) {
-				byte[] asciiBytes = inStr.getBytes(Charset.forName("ASCII"));
-				
-				if (addNull) {
-					Memory m = new Memory(asciiBytes.length + 1);
-					m.write(0, asciiBytes, 0, asciiBytes.length);
-					m.setByte(asciiBytes.length, (byte) 0);
-					return m;
-				}
-				else {
-					Memory m = new Memory(asciiBytes.length);
-					m.write(0, asciiBytes, 0, asciiBytes.length);
-					return m;
-				}
+		//check if string only contains ascii characters that map 1:1 to LMBCS;
+		//in this case we can skip the OSTranslate call
+		boolean isPureAscii = true;
+		for (int i=0; i<inStr.length(); i++) {
+			char c = inStr.charAt(i);
+			if (c <= 0x1f || c >= 0x80) {
+				isPureAscii = false;
+				break;
 			}
 		}
 		
+		if (isPureAscii) {
+			byte[] asciiBytes = inStr.getBytes(Charset.forName("ASCII"));
+			
+			if (addNull) {
+				Memory m = new Memory(asciiBytes.length + 1);
+				m.write(0, asciiBytes, 0, asciiBytes.length);
+				m.setByte(asciiBytes.length, (byte) 0);
+				return m;
+			}
+			else {
+				Memory m = new Memory(asciiBytes.length);
+				m.write(0, asciiBytes, 0, asciiBytes.length);
+				return m;
+			}
+		}
+			
 		if (inStr.contains("\n")) {
 			//replace line breaks with null characters
 			String[] lines = inStr.split("\\r?\\n", -1);
