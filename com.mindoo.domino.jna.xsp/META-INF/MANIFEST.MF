@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Domino JNA XSP Integrator Plugin
 Bundle-SymbolicName: com.mindoo.domino.jna.xsp;singleton:=true
-Bundle-Version: 0.9.6.qualifier
+Bundle-Version: 0.9.7.qualifier
 Bundle-Vendor: Mindoo GmbH
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: com.ibm.designer.runtime.domino.adapter,
