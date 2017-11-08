@@ -75,7 +75,8 @@ public class LMBCSStringConversionCache {
 			Memory dataMem = new Memory(dataArr.length);
 			dataMem.write(0, dataArr, 0, dataArr.length);
 			
-			convertedString = NotesStringUtils.fromLMBCS(dataMem, dataArr.length);
+			boolean skipAsciiCheck = true;
+			convertedString = NotesStringUtils.fromLMBCS(dataMem, dataArr.length, skipAsciiCheck);
 			cache.put(lmbcsString, convertedString);
 		}
 		else {

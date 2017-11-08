@@ -87,6 +87,18 @@ public class NotesStringUtils {
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(Pointer inPtr, long textLen) {
+		return fromLMBCS(inPtr, textLen, false);
+	}
+	
+	/**
+	 * Converts an LMBCS string to a Java String
+	 * 
+	 * @param inPtr pointer in memory
+	 * @param textLen length of text, use -1 to let the method search for a terminating \0
+	 * @param skipAsciiCheck true to skip the check whether the memory contains pure ASCII (parameter added to avoid a duplicate check), will always result in a C API call to convert the string
+	 * @return decoded String
+	 */
+	public static String fromLMBCS(Pointer inPtr, long textLen, boolean skipAsciiCheck) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		if (inPtr==null || textLen==0) {
@@ -106,20 +118,22 @@ public class NotesStringUtils {
 			textLen = foundLen;
 		}
 		
-		boolean isPureAscii = true;
-		
-		for (int i=0; i < textLen; i++) {
-			byte b = inPtr.getByte(i);
-			if (b <= 0x1f || b >= 0x80) {
-				isPureAscii = false;
-				break;
+		if (!skipAsciiCheck) {
+			boolean isPureAscii = true;
+			
+			for (int i=0; i < textLen; i++) {
+				byte b = inPtr.getByte(i);
+				if (b <= 0x1f || b >= 0x80) {
+					isPureAscii = false;
+					break;
+				}
 			}
-		}
-		
-		if (isPureAscii) {
-			byte[] asciiBytes = inPtr.getByteArray(0, (int) textLen);
-			String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
-			return asciiStr;
+			
+			if (isPureAscii) {
+				byte[] asciiBytes = inPtr.getByteArray(0, (int) textLen);
+				String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
+				return asciiStr;
+			}
 		}
 	
 		Pointer pText = inPtr;
