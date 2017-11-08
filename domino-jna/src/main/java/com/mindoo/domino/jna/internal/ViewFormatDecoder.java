@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat2Struct;
 import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat4Struct;
 import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat5Struct;
 import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormatStruct;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Pointer;
 
@@ -84,7 +85,7 @@ public class ViewFormatDecoder {
 			colFormat.read();
 			
 			if (NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE != colFormat.Signature)
-				throw new AssertionError("Signature of column #"+i+" with format v1 is correct");
+				throw new AssertionError("Signature of column #"+i+" with format v1 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesViewTableFormatSize + (colCount * NotesCAPI.notesViewColumnFormatSize)));
 			
 			columnsFormat1.put(i, colFormat);
 			
@@ -133,7 +134,7 @@ public class ViewFormatDecoder {
 			tableFormat2.read();
 			
 			if (NotesCAPI.VALID_VIEW_FORMAT_SIG != tableFormat2.wSig)
-				throw new AssertionError("Signature of view table format v2 is correct");
+				throw new AssertionError("Signature of view table format v2 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesViewTableFormatSize + (colCount * NotesCAPI.notesViewColumnFormatSize) + NotesCAPI.notesViewTableFormat2Size));
 			
 			int tableFormat2Size = (int) (tableFormat2.Length & 0xffff);
 			currPtr = currPtr.share(tableFormat2Size);

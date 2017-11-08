@@ -8,6 +8,7 @@ import com.mindoo.domino.jna.NotesCollationInfo;
 import com.mindoo.domino.jna.constants.CollateType;
 import com.mindoo.domino.jna.structs.collation.NotesCollateDescriptorStruct;
 import com.mindoo.domino.jna.structs.collation.NotesCollationStruct;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Pointer;
 
@@ -31,7 +32,7 @@ public class CollationDecoder {
 
 		//sanity check that the signature byte is at the right position
 		if (NotesCAPI.COLLATION_SIGNATURE != collationStruct.signature)
-			throw new AssertionError("Collation signature byte is correct");
+			throw new AssertionError("Collation signature byte is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesCollationSize));
 		
 		List<NotesCollateDescriptor> collateDescriptors = new ArrayList<NotesCollateDescriptor>();
 		int items = (int) (collationStruct.Items & 0xffff);
@@ -50,7 +51,7 @@ public class CollationDecoder {
 			
 			//sanity check that the signature byte is at the right position
 			if (NotesCAPI.COLLATE_DESCRIPTOR_SIGNATURE != descStruct.signature) {
-				throw new AssertionError("Descriptor signature byte is correct");
+				throw new AssertionError("Descriptor signature byte is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesCollationSize + (items * NotesCAPI.notesCollateDescriptorSize)));
 			}
 			
 			int currTextBufferOffset = (int) (descStruct.NameOffset & 0xffff);
