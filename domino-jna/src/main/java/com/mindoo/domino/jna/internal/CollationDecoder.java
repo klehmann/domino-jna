@@ -52,7 +52,7 @@ public class CollationDecoder {
 				currDescType = CollateType.toType(descStruct.keytype);
 			}
 			catch (IllegalArgumentException e) {
-				throw new AssertionError("Collation structure invalid, collate type unknown for column #"+i+".\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesCollationSize + (items * NotesCAPI.notesCollateDescriptorSize)), e);
+				throw new AssertionError("Collation structure invalid, collate type "+descStruct.keytype+" unknown for column #"+i+".\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesCollationSize + (items * NotesCAPI.notesCollateDescriptorSize)));
 			}
 			
 			//sanity check that the signature byte is at the right position
