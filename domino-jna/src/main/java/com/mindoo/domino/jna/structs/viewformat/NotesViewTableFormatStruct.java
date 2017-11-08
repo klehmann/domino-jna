@@ -25,6 +25,7 @@ public class NotesViewTableFormatStruct extends BaseStructure {
 	public short Flags2;
 	public NotesViewTableFormatStruct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewTableFormatStruct newInstance() {
@@ -54,6 +55,7 @@ public class NotesViewTableFormatStruct extends BaseStructure {
 		this.ItemSequenceNumber = ItemSequenceNumber;
 		this.Flags = Flags;
 		this.Flags2 = Flags2;
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewTableFormatStruct newInstance(final NotesViewFormatHeaderStruct Header, final short Columns, final short ItemSequenceNumber,
@@ -69,6 +71,7 @@ public class NotesViewTableFormatStruct extends BaseStructure {
 
 	public NotesViewTableFormatStruct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewTableFormatStruct newInstance(final Pointer peer) {

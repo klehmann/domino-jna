@@ -47,6 +47,7 @@ public class NotesViewColumnFormat3Struct extends BaseStructure {
 	public int Unused;
 	public NotesViewColumnFormat3Struct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat3Struct newInstance() {
@@ -64,6 +65,7 @@ public class NotesViewColumnFormat3Struct extends BaseStructure {
 	}
 	public NotesViewColumnFormat3Struct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat3Struct newInstance(final Pointer peer) {

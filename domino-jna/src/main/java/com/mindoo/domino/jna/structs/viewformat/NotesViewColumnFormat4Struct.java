@@ -42,6 +42,7 @@ public class NotesViewColumnFormat4Struct extends BaseStructure {
 	public int Unused4;
 	public NotesViewColumnFormat4Struct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat4Struct newInstance() {
@@ -59,6 +60,7 @@ public class NotesViewColumnFormat4Struct extends BaseStructure {
 	}
 	public NotesViewColumnFormat4Struct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat4Struct newInstance(final Pointer peer) {

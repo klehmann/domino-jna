@@ -58,6 +58,7 @@ public class NotesViewTableFormat2Struct extends BaseStructure {
 	public short[] Spare = new short[4];
 	public NotesViewTableFormat2Struct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewTableFormat2Struct newInstance() {
@@ -75,6 +76,7 @@ public class NotesViewTableFormat2Struct extends BaseStructure {
 	}
 	public NotesViewTableFormat2Struct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewTableFormat2Struct newInstance(final Pointer peer) {

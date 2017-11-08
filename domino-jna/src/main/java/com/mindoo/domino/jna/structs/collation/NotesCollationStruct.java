@@ -23,6 +23,7 @@ public class NotesCollationStruct extends BaseStructure {
 	public byte signature;
 	public NotesCollationStruct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollationStruct newInstance() {
@@ -50,6 +51,7 @@ public class NotesCollationStruct extends BaseStructure {
 		this.Items = Items;
 		this.Flags = Flags;
 		this.signature = signature;
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollationStruct newInstance(final short BufferSize, final short Items, final byte Flags, final byte signature) {
@@ -64,6 +66,7 @@ public class NotesCollationStruct extends BaseStructure {
 
 	public NotesCollationStruct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollationStruct newInstance(final Pointer p) {

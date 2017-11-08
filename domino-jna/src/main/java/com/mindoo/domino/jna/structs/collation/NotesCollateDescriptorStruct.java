@@ -25,6 +25,7 @@ public class NotesCollateDescriptorStruct extends BaseStructure {
 	public short NameLength;
 	public NotesCollateDescriptorStruct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollateDescriptorStruct newInstance() {
@@ -54,6 +55,7 @@ public class NotesCollateDescriptorStruct extends BaseStructure {
 		this.keytype = keytype;
 		this.NameOffset = NameOffset;
 		this.NameLength = NameLength;
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollateDescriptorStruct newInstance(final byte Flags, final byte signature, final byte keytype, final short NameOffset, final short NameLength) {
@@ -68,6 +70,7 @@ public class NotesCollateDescriptorStruct extends BaseStructure {
 
 	public NotesCollateDescriptorStruct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesCollateDescriptorStruct newInstance(final Pointer p) {

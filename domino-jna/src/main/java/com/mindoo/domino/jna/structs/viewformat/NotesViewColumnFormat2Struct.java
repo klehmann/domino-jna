@@ -44,6 +44,7 @@ public class NotesViewColumnFormat2Struct extends BaseStructure {
 	public NotesColorValueStruct HeaderFontColor;
 	public NotesViewColumnFormat2Struct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat2Struct newInstance() {
@@ -61,6 +62,7 @@ public class NotesViewColumnFormat2Struct extends BaseStructure {
 	}
 	public NotesViewColumnFormat2Struct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat2Struct newInstance(final Pointer peer) {

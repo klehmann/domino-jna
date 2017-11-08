@@ -53,6 +53,7 @@ public class NotesViewColumnFormatStruct extends BaseStructure {
 	public short ListSep;
 	public NotesViewColumnFormatStruct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormatStruct newInstance() {
@@ -70,6 +71,7 @@ public class NotesViewColumnFormatStruct extends BaseStructure {
 	}
 	public NotesViewColumnFormatStruct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormatStruct newInstance(final Pointer peer) {

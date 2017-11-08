@@ -29,6 +29,7 @@ public class NotesViewColumnFormat5Struct extends BaseStructure {
 	public int[] dwReserved = new int[4];
 	public NotesViewColumnFormat5Struct() {
 		super();
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat5Struct newInstance() {
@@ -63,9 +64,11 @@ public class NotesViewColumnFormat5Struct extends BaseStructure {
 		if ((dwReserved.length != this.dwReserved.length)) 
 			throw new IllegalArgumentException("Wrong array size !");
 		this.dwReserved = dwReserved;
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	public NotesViewColumnFormat5Struct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_NONE);
 	}
 	
 	public static NotesViewColumnFormat5Struct newInstance(final Pointer peer) {
