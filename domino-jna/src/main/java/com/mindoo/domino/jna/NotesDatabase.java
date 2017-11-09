@@ -175,7 +175,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	private NotesDatabase(String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
 		//make sure server and username are in canonical format
-		m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
+		m_asUserCanonical = StringUtil.isEmpty(asUserCanonical) ? null : NotesNamingUtils.toCanonicalName(asUserCanonical);
 		
 		if (server==null)
 			server = "";
@@ -198,7 +198,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 		}
 		
-		if (namesForNamesList==null && ("".equals(asUserCanonical) || (asUserCanonical!=null && NotesNamingUtils.equalNames(asUserCanonical, idUserName)))) {
+		if (namesForNamesList==null && (StringUtil.isEmpty(m_asUserCanonical) || (m_asUserCanonical!=null && NotesNamingUtils.equalNames(m_asUserCanonical, idUserName)))) {
 			m_loginAsIdOwner = true;
 		}
 		else {
@@ -208,7 +208,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if ("".equals(server)) {
 			m_authenticateUser = true;
 		}
-		else if (isOnServer && (namesForNamesList!=null || !StringUtil.isEmpty(asUserCanonical))) {
+		else if (isOnServer && (namesForNamesList!=null || !StringUtil.isEmpty(m_asUserCanonical))) {
 			m_authenticateUser = true;
 		}
 		
