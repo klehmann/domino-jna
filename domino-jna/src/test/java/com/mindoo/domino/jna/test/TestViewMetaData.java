@@ -37,12 +37,14 @@ public class TestViewMetaData extends BaseJNATestClass {
 				NotesDatabase dbData = getFakeNamesDb();
 				Database dbDataLegacy = getFakeNamesDbLegacy();
 
-				NotesCollection colFromDbData = dbData.openCollectionByName("CompaniesHierarchical");
-
-				View viewCompanies = dbDataLegacy.getView("CompaniesHierarchical");
-
+				//CompaniesHierarchical
+				NotesCollection colFromDbData = dbData.openCollectionByName("AnotherAlias");
+				
+				View viewCompanies = dbDataLegacy.getView("AnotherAlias");
+				
 				Assert.assertEquals("Name correct", viewCompanies.getName(), colFromDbData.getName());
 				Assert.assertEquals("Aliases correct", viewCompanies.getAliases(), colFromDbData.getAliases());
+				Assert.assertEquals("Selection formula correct", viewCompanies.getSelectionFormula(), colFromDbData.getSelectionFormula());
 
 				return null;
 			}

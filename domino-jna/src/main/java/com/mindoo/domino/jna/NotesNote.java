@@ -17,6 +17,7 @@ import java.util.Map;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.UpdateNote;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
@@ -83,7 +84,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	private boolean m_noRecycle;
 	private NotesDatabase m_parentDb;
 	private Document m_legacyDocRef;
-
+	private EnumSet<NoteClass> m_noteClass;
+	
 	/**
 	 * Creates a new instance
 	 * 
@@ -234,6 +236,31 @@ public class NotesNote implements IRecyclableNotesObject {
 			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retNoteId);
 		}
 		return retNoteId.getInt(0);
+	}
+	
+	/**
+	 * Returns the note class of the note
+	 * 
+	 * @return note class
+	 */
+	public EnumSet<NoteClass> getNoteClass() {
+		if (m_noteClass==null) {
+			checkHandle();
+			
+			Memory retNoteClass = new Memory(2);
+			retNoteClass.clear();
+			
+			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+			if (NotesJNAContext.is64Bit()) {
+				notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_CLASS, retNoteClass);
+			}
+			else {
+				notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_CLASS, retNoteClass);
+			}
+			int noteClassMask = retNoteClass.getShort(0);
+			m_noteClass = NoteClass.toNoteClasses(noteClassMask);
+		}
+		return m_noteClass;
 	}
 	
 	/**
@@ -1250,6 +1277,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_VIEW_FORMAT) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_FORMULA) {
+			supportedType = true;
+		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			supportedType = true;
 		}
@@ -1350,6 +1380,44 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_VIEW_FORMAT) {
 			NotesViewFormat viewFormatInfo = ViewFormatDecoder.decodeViewFormat(valueDataPtr,  valueDataLength);
 			return Arrays.asList((Object) viewFormatInfo);
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_FORMULA) {
+			boolean isSelectionFormula = "$FORMULA".equalsIgnoreCase(itemName) && getNoteClass().contains(NoteClass.VIEW);
+			
+			if (NotesJNAContext.is64Bit()) {
+				LongByReference rethFormulaText = new LongByReference();
+				ShortByReference retFormulaTextLength = new ShortByReference();
+				short result = notesAPI.b64_NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
+				NotesErrorUtils.checkResult(result);
+
+				Pointer formulaPtr = notesAPI.b64_OSLockObject(rethFormulaText.getValue());
+				try {
+					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
+					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
+					return Arrays.asList((Object) formula);
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethFormulaText.getValue());
+					notesAPI.b64_OSMemFree(rethFormulaText.getValue());
+				}
+			}
+			else {
+				IntByReference rethFormulaText = new IntByReference();
+				ShortByReference retFormulaTextLength = new ShortByReference();
+				short result = notesAPI.b32_NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer formulaPtr = notesAPI.b32_OSLockObject(rethFormulaText.getValue());
+				try {
+					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
+					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
+					return Arrays.asList((Object) formula);
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethFormulaText.getValue());
+					notesAPI.b32_OSMemFree(rethFormulaText.getValue());
+				}
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			return Collections.emptyList();

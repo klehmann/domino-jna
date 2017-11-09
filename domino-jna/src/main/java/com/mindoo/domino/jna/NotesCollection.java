@@ -86,7 +86,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private Map<Integer, String> m_columnTitlesByIndex;
 	private NotesNote m_viewNote;
 	private NotesViewFormat m_viewFormat;
-	
+
 	/**
 	 * Creates a new instance, 32 bit mode
 	 * 
@@ -155,6 +155,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 			decodeNameAndAliases();
 		}
 		return m_name;
+	}
+	
+	/**
+	 * Returns the collection's selection formula
+	 * 
+	 * @return formula
+	 */
+	public String getSelectionFormula() {
+		NotesNote note = getViewNote();
+		List<Object> formulaObj = note.getItemValue("$FORMULA");
+		String formula = formulaObj!=null && !formulaObj.isEmpty() ? formulaObj.get(0).toString() : "";
+		return formula;
 	}
 	
 	/**
@@ -3057,6 +3069,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Method to check whether this collection is a folder
+	 * 
+	 * @return true if folder
+	 */
+	public boolean isFolder() {
+		NotesNote viewNote = getViewNote();
+		String flags = viewNote.getItemValueString(NotesCAPI.DESIGN_FLAGS);
+		return flags.contains(NotesCAPI.DESIGN_FLAG_FOLDER_VIEW);
+	}
+	
 	/**
 	 * Check if the collection is currently being updated
 	 * 

@@ -865,6 +865,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public static int DESIGN_FLAGS_MAX = 32;
 
+	public static String DESIGN_FLAGS = "$Flags";
+
+	public static String DESIGN_FLAG_FOLDER_VIEW = "F";	/*	VIEW: This is a V4 folder view. */
+
 	public short b32_FTOpenSearch(IntByReference rethSearch);
 	public short b64_FTOpenSearch(LongByReference rethSearch);
 	
@@ -2450,13 +2454,13 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			ShortByReference retCompileErrorLength);
 
 	public short b64_NSFFormulaDecompile(
-			Memory pFormulaBuffer,
+			Pointer pFormulaBuffer,
 			boolean fSelectionFormula,
 			LongByReference rethFormulaText,
 			ShortByReference retFormulaTextLength);
 	
 	public short b32_NSFFormulaDecompile(
-			Memory pFormulaBuffer,
+			Pointer pFormulaBuffer,
 			boolean fSelectionFormula,
 			IntByReference rethFormulaText,
 			ShortByReference retFormulaTextLength);
