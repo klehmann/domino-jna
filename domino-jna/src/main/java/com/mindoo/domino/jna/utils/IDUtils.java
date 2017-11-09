@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.utils;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesUserId;
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -10,6 +11,7 @@ import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.ShortByReference;
 
 import lotus.domino.Session;
 
@@ -497,6 +499,53 @@ public class IDUtils {
 		}
 	}
 	
+	/**
+	 * Helper method that reads an ID info field as string
+	 * 
+	 * @param notesAPI api
+	 * @param idPathMem Memory with id path
+	 * @param infoType info type
+	 * @param initialBufferSize initial buffer size
+	 * @return result
+	 */
+	private static String getIDInfoAsString(NotesCAPI notesAPI, Memory idPathMem, short infoType, int initialBufferSize) {
+		Memory retMem = new Memory(initialBufferSize);
+		ShortByReference retActualLen = new ShortByReference();
+		
+		short result = notesAPI.REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
+		if (result == INotesErrorConstants.ERR_VALUE_LENGTH) {
+			int requiredLen = (int) (retActualLen.getValue() & 0xffff);
+			retMem = new Memory(requiredLen);
+			result = notesAPI.REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
+		}
+		
+		NotesErrorUtils.checkResult(result);
+		String data = NotesStringUtils.fromLMBCS(retMem, (int) (retActualLen.getValue() & 0xffff)-1);
+		return data;
+	}
+	
+	/**
+	 * This function will extract the username from an ID file.
+	 *
+	 * @param idPath id path
+	 * @return canonical username
+	 */
+	public static String getUsernameFromId(String idPath) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
+		
+		String name = getIDInfoAsString(notesAPI, idPathMem, NotesCAPI.REGIDGetName, NotesCAPI.MAXUSERNAME+1);
+		return name;
+	}
+	
+	/**
+	 * Method to detect whether the current session is running on a server
+	 * 
+	 * @return true for server
+	 */
+	public static boolean isOnServer() {
+		return !StringUtil.isEmpty(NotesIniUtils.getEnvironmentString("ServerName"));
+	}
 	/**
 	 * Callback interface to work with an opened ID
 	 * 

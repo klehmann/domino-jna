@@ -2447,4 +2447,7 @@ public String ERR_MSG_SCOS_FILE_SIZE = "\nSCOS database specification out of ran
 	public short ERR_CANCEL = PKG_OS+157;
 	public String ERR_MSG_CANCEL = "Operation stopped at your request";
 
+	public short ERR_VALUE_LENGTH = PKG_MISC+15;
+	public String ERR_MSG_VALUE_LENGTH = "Value too long";
+
 }

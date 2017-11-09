@@ -4372,4 +4372,50 @@ This allows an Editor to assume some Designer-level access */
 	public static short VCF2_M_DisplayReadingOrder = 0x4000;
 	public static short VCF2_M_HeaderReadingOrder = (short) (0x8000 & 0xffff);
 
+	public short REGGetIDInfo(
+			Memory IDFileName,
+			short InfoType,
+			Memory OutBufr,
+			short OutBufrLen,
+			ShortByReference ActualLen);
+	
+	/* 	Definitions ---------------------------------------------------------- */
+	/* The following InfoType codes are defined for REGGetIDInfo */
+	/* Note that the Certifier Flag can only exist on a hierarchical ID */
+	/* and that Certifier, NotesExpress, and Desktop flags are not */
+	/* present in safe copies of ID files */
+
+	public short REGIDGetUSAFlag = 1;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetHierarchicalFlag = 2;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetSafeFlag = 3;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetCertifierFlag = 4;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetNotesExpressFlag = 5;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetDesktopFlag = 6;
+	/* Data structure returned is BOOL */
+
+	public short REGIDGetName = 7;
+	/* Data structure returned is char xx[MAXUSERNAME] */
+
+	public short REGIDGetPublicKey = 8;
+	/* Data structure returned is char xx[xx] */
+
+	public short REGIDGetPrivateKey = 9;
+	/* Data structure returned is char xx[xx] */
+
+	public short REGIDGetIntlPublicKey = 10;
+	/* Data structure returned is char xx[xx] */
+
+	public short REGIDGetIntlPrivateKey = 11;
+	/* Data structure returned is char xx[xx] */
+
 }
