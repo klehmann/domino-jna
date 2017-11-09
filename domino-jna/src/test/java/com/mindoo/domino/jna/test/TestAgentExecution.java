@@ -49,7 +49,7 @@ public class TestAgentExecution extends BaseJNATestClass {
 						);
 				NotesNamesList namesList = NotesNamingUtils.writeNewNamesList(namesListStr);
 				
-				NotesDatabase dbData = new NotesDatabase(getSession(), "", "fakenames.nsf", namesListStr);
+				NotesDatabase dbData = new NotesDatabase("", "fakenames.nsf", namesListStr);
 				NotesAgent testAgent = dbData.getAgent("AgentRun Test LS");
 				System.out.println("Agent.isRunAsWebUser(): "+testAgent.isRunAsWebUser());
 				

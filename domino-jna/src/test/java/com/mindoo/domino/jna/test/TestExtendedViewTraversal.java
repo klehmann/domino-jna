@@ -253,7 +253,7 @@ public class TestExtendedViewTraversal extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 //				NotesDatabase db = getFakeNamesDb();
-				NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf", (String)null);
+				NotesDatabase db = new NotesDatabase("", "fakenames.nsf", (String)null);
 
 				NotesCollection col = db.openCollectionByName("People");
 				String formula = "@Begins(LastName;\"L\")";

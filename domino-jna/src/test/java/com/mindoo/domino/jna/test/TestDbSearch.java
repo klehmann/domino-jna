@@ -116,7 +116,7 @@ public class TestDbSearch extends BaseJNATestClass {
 				final boolean[] fakeNamesDbFound = new boolean[1];
 				
 				System.out.println("Scanning top level of local directory");
-				DirectoryScanner scanner = new DirectoryScanner(session, server, directory, fileTypes) {
+				DirectoryScanner scanner = new DirectoryScanner(server, directory, fileTypes) {
 					private String toString(Calendar cal) {
 						return cal==null ? "null" : cal.getTime().toString();
 					}

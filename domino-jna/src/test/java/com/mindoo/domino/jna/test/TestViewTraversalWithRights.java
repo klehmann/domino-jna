@@ -30,12 +30,12 @@ import lotus.domino.Session;
 public class TestViewTraversalWithRights extends BaseJNATestClass {
 
 	public NotesDatabase getFakeNamesDbAs(List<String> namesList) throws NotesException {
-		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf", namesList);
+		NotesDatabase db = new NotesDatabase("", "fakenames.nsf", namesList);
 		return db;
 	}
 
 	public NotesDatabase getFakeNamesDbAs(String userName) throws NotesException {
-		NotesDatabase db = new NotesDatabase(getSession(), "", "fakenames.nsf", userName);
+		NotesDatabase db = new NotesDatabase("", "fakenames.nsf", userName);
 		return db;
 	}
 

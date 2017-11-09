@@ -12,7 +12,6 @@ import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.DbDirectory;
-import lotus.domino.Session;
 
 /**
  * This class scans a local or remote Domino data directory for folders or database of
@@ -23,7 +22,6 @@ import lotus.domino.Session;
  * @author Karsten Lehmann
  */
 public abstract class DirectoryScanner {
-	private Session m_session;
 	private String m_serverName;
 	private String m_directory;
 	private EnumSet<FileType> m_fileTypes;
@@ -31,13 +29,11 @@ public abstract class DirectoryScanner {
 	/**
 	 * Creates a new scanner instance
 	 * 
-	 * @param session current session
 	 * @param serverName server name, either abbreviated, canonical or common name
 	 * @param directory directory to scan or "" for top level
 	 * @param fileTypes type of data to return e,g, {@link FileType#DBANY} or {@link FileType#DIRS}, optionally you can add a flag like {@link FileType#RECURSE}
 	 */
-	public DirectoryScanner(Session session, String serverName, String directory, EnumSet<FileType> fileTypes) {
-		m_session = session;
+	public DirectoryScanner(String serverName, String directory, EnumSet<FileType> fileTypes) {
 		m_serverName = serverName;
 		m_directory = directory==null ? "" : directory;
 		m_fileTypes = fileTypes;
@@ -48,7 +44,7 @@ public abstract class DirectoryScanner {
 	 * every entry we found
 	 */
 	public void scan() {
-		NotesDatabase dir = new NotesDatabase(m_session, m_serverName, m_directory, "");
+		NotesDatabase dir = new NotesDatabase(m_serverName, m_directory, "");
 		try {
 			dir.searchFiles(null, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.ISearchCallback() {
 

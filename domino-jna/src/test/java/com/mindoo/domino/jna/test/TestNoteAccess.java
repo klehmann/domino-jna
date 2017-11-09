@@ -88,7 +88,7 @@ public class TestNoteAccess extends BaseJNATestClass {
 					dbLegacyAPI = session.getDatabase("", "fakenames.nsf");
 				}
 				
-				NotesDatabase dbData = new NotesDatabase(getSession(), "", "fakenames.nsf", userNameReadOnly);
+				NotesDatabase dbData = new NotesDatabase("", "fakenames.nsf", userNameReadOnly);
 
 				View peopleView = dbLegacyAPI.getView("People");
 				peopleView.refresh();

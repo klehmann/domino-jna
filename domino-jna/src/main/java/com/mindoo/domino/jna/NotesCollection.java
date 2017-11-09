@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Vector;
 
 import com.mindoo.domino.jna.CollectionDataCache.CacheState;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
@@ -52,9 +51,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
-import lotus.domino.Database;
 import lotus.domino.View;
-import lotus.domino.ViewColumn;
 
 /**
  * A collection represents a list of Notes, comparable to the {@link View} object
@@ -2846,79 +2843,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 			scanColumnsNew();
 		}
 		return Collections.unmodifiableList(m_viewFormat.getColumns());
-	}
-	
-	/**
-	 * Old (unused) method to read information about view columns and sortings using the legacy API
-	 */
-	private void scanColumnsOld() {
-		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
-		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
-		m_columnNamesByIndex = new TreeMap<Integer, String>();
-		m_columnIsCategoryByIndex = new TreeMap<Integer, Boolean>();
-		m_columnTitlesLCByIndex = new TreeMap<Integer, String>();
-		m_columnTitlesByIndex = new TreeMap<Integer, String>();
-		
-		try {
-			//TODO implement this in pure JNA code
-			Database db = m_parentDb.getSession().getDatabase(m_parentDb.getServer(), m_parentDb.getRelativeFilePath());
-			View view = db.getView(getName());
-			if (view==null) {
-				throw new NotesError(0, "View "+getName()+" not found using legacy API");
-			}
-
-			CollationInfo collationInfo = new CollationInfo();
-
-			Vector<?> columns = view.getColumns();
-			try {
-				short collation = 1;
-				for (int i=0; i<columns.size(); i++) {
-					ViewColumn currCol = (ViewColumn) columns.get(i);
-					
-					String currItemName = currCol.getItemName();
-					String currItemNameLC = currItemName.toLowerCase();
-					
-					String currTitle = currCol.getTitle();
-					String currTitleLC = currTitle.toLowerCase();
-					
-					int currColumnValuesIndex = currCol.getColumnValuesIndex();
-					m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
-					m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
-					
-					if (currColumnValuesIndex != ViewColumn.VC_NOT_PRESENT) {
-						m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
-						m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
-						m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
-						
-						boolean isCategory = currCol.isCategory();
-						m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
-					}
-					
-					boolean isResortAscending = currCol.isResortAscending();
-					boolean isResortDescending = currCol.isResortDescending();
-					
-					if (isResortAscending || isResortDescending) {
-
-						if (isResortAscending) {
-							collationInfo.addCollation(collation, currItemName, Direction.Ascending);
-							collation++;
-						}
-						if (isResortDescending) {
-							collationInfo.addCollation(collation, currItemName, Direction.Descending);
-							collation++;
-						}
-					}
-				}
-
-				m_collationInfo = collationInfo;
-			}
-			finally {
-				view.recycle(columns);
-			}
-		}
-		catch (Throwable t) {
-			throw new NotesError(0, "Could not read collation information for view "+getName(), t);
-		}
 	}
 	
 	/**

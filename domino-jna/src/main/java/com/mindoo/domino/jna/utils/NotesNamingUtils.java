@@ -146,6 +146,64 @@ public class NotesNamingUtils {
 	}
 
 	/**
+	 * Extracts the common name part of an abbreviated or canonical name
+	 * 
+	 * @param name abbreviated or canonical name
+	 * @return common name
+	 */
+	public static String toCommonName(String name) {
+		int iPos = name.indexOf('/');
+		String firstPart = iPos==-1 ? name : name.substring(0, iPos);
+		if (StringUtil.startsWithIgnoreCase(firstPart, "cn=")) {
+			return firstPart.substring(3);
+		}
+		else {
+			return firstPart;
+		}
+	}
+	
+	/**
+	 * Checks whether a Notes name matches a wildcard string, e.g. "Karsten Lehmann / Mindoo" would match
+	 * "* / Mindoo".
+	 * 
+	 * @param name notes name (abbreviated or canonical)
+	 * @param wildcard (abbreviated or canonical)
+	 * @return true if match
+	 */
+	public static boolean nameMatchesWildcard(String name, String wildcard) {
+		if ("*".equals(wildcard))
+			return true;
+		
+		String nameAbbr = toAbbreviatedName(name);
+		String wildcardAbbr = toAbbreviatedName(wildcard);
+		
+		ReverseStringTokenizer nameSt = new ReverseStringTokenizer(nameAbbr, "/");
+		ReverseStringTokenizer wildcardSt = new ReverseStringTokenizer(wildcardAbbr, "/");
+		
+		while (nameSt.hasMoreTokens()) {
+			String currNameToken = nameSt.nextToken();
+			
+			if (!wildcardSt.hasMoreTokens()) {
+				return false;
+			}
+			else {
+				String currWildcardToken = wildcardSt.nextToken();
+				if ("*".equals(currWildcardToken)) {
+					if (wildcardSt.hasMoreTokens())
+						throw new IllegalArgumentException("The wildcard * can only be the leftmost part of the wildcard pattern");
+					
+					return true;
+				}
+				else if (!currNameToken.equalsIgnoreCase(currWildcardToken)) {
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * This function converts a distinguished name in canonical format to abbreviated format.
 	 * A fully distinguished name is in canonical format - it contains all possible naming components.
 	 * The abbreviated format of a distinguished name removes the labels from the naming components.

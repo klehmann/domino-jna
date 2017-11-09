@@ -85,7 +85,7 @@ public class TestNamesListCreation extends BaseJNATestClass {
 				docTmp.recycle();
 				sessionAsUser.recycle();
 				
-				NotesDatabase dbData = new NotesDatabase(getSession(), "", "fakenames.nsf", fakesUserNamesList);
+				NotesDatabase dbData = new NotesDatabase("", "fakenames.nsf", fakesUserNamesList);
 				
 				Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
 				

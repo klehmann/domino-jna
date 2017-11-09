@@ -72,7 +72,6 @@ import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 import lotus.domino.Database;
-import lotus.domino.Name;
 import lotus.domino.NotesException;
 import lotus.domino.Session;
 
@@ -88,9 +87,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String m_asUserCanonical;
 	private String m_server;
 	private String[] m_paths;
-	private Session m_session;
 	private String m_replicaID;
-	private boolean m_isOnServer;
 	private boolean m_authenticateUser;
 	private boolean m_loginAsIdOwner;
 	NotesNamesList m_namesList;
@@ -99,24 +96,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
+	 * @param session session to extract the effective username to be used to open the database
 	 * @param server database server
 	 * @param filePath database filepath
 	 */
 	public NotesDatabase(Session session, String server, String filePath) {
-		this(session, server, filePath, getEffectiveUserName(session));
+		this(server, filePath, getEffectiveUserName(session));
 	}
 
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
+	 * @param session session to extract the effective username to be used to open the database
 	 * @param server database server
 	 * @param filePath database filepath
 	 * @param openFlags flags to specify how to open the database
 	 */
 	public NotesDatabase(Session session, String server, String filePath, EnumSet<OpenDatabase> openFlags) {
-		this(session, server, filePath, (List<String>) null, getEffectiveUserName(session), openFlags);
+		this(server, filePath, (List<String>) null, getEffectiveUserName(session), openFlags);
 	}
 
 	/**
@@ -129,99 +126,90 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		try {
 			return session.getEffectiveUserName();
 		} catch (NotesException e) {
-			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
+			throw new NotesError(e.id, e.getLocalizedMessage());
 		}
 	}
 
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
-	 * @param asUserCanonical user context to open database or null to run as server
+	 * @param asUserCanonical user context to open database or null/empty string to open as ID owner (e.g. server when running on the server); will be ignored if code is run locally in the Notes Client
 	 */
-	public NotesDatabase(Session session, String server, String filePath, String asUserCanonical) {
-		this(session, server, filePath, (List<String>) null, asUserCanonical);
+	public NotesDatabase(String server, String filePath, String asUserCanonical) {
+		this(server, filePath, (List<String>) null, asUserCanonical);
 	}
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
 	 * @param namesForNamesList optional names list for the user to open the database; same content as @Usernameslist, but can be any combination of names, groups or roles (does not have to exist in the directory)
 	 */
-	public NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList) {
-		this(session, server, filePath, namesForNamesList, null);
+	public NotesDatabase(String server, String filePath, List<String> namesForNamesList) {
+		this(server, filePath, namesForNamesList, null);
 	}
 
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
 	 * @param namesForNamesList optional names list
-	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
+	 * @param asUserCanonical user context to open database or null/empty string to open as ID owner (e.g. server when running on the server); will be ignored if code is run locally in the Notes Client
 	 */
-	private NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList, String asUserCanonical) {
-		this(session, server, filePath, namesForNamesList, asUserCanonical, (EnumSet<OpenDatabase>) null);
+	private NotesDatabase(String server, String filePath, List<String> namesForNamesList, String asUserCanonical) {
+		this(server, filePath, namesForNamesList, asUserCanonical, (EnumSet<OpenDatabase>) null);
 	}
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
-	 * @param session session to read the name of the server the API is running on
 	 * @param server database server
 	 * @param filePath database filepath
 	 * @param namesForNamesList optional names list
-	 * @param asUserCanonical user context to open database or null to run as server; will be ignored if code is run locally in the Notes Client
+	 * @param asUserCanonical user context to open database or null/empty string to open as ID owner (e.g. server when running on the server); will be ignored if code is run locally in the Notes Client
 	 * @param openFlags flags to specify how to open the database
 	 */
-	private NotesDatabase(Session session, String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
-		m_session = session;
+	private NotesDatabase(String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
+		//make sure server and username are in canonical format
+		m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
 		
-		try {
-			//make sure server and username are in canonical format
-			m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
-			//TODO fix this
-			m_isOnServer = session.isOnServer();
-			
-			if (server==null)
-				server = "";
-			if (filePath==null)
-				throw new NullPointerException("filePath is null");
+		if (server==null)
+			server = "";
+		if (filePath==null)
+			throw new NullPointerException("filePath is null");
 
-			server = NotesNamingUtils.toCanonicalName(server);
-			if (!"".equals(server)) {
-				if (session.isOnServer()) {
-					Name nameServer = session.createName(server);
-					Name nameCurrServer = session.createName(session.getServerName());
-					if (nameServer.getCommon().equalsIgnoreCase(nameCurrServer.getCommon())) {
-						//switch to "" as servername if server points to the server the API is running on
-						server = "";
-					}
+		server = NotesNamingUtils.toCanonicalName(server);
+		
+		String idUserName = IDUtils.getCurrentUsername();
+		boolean isOnServer = IDUtils.isOnServer();
+		
+		if (!"".equals(server)) {
+			if (isOnServer) {
+				String serverCN = NotesNamingUtils.toCommonName(server);
+				String currServerCN = NotesNamingUtils.toCommonName(idUserName);
+				if (serverCN.equalsIgnoreCase(currServerCN)) {
+					//switch to "" as servername if server points to the server the API is running on
+					server = "";
 				}
 			}
-			
-			if (namesForNamesList==null && asUserCanonical!=null && NotesNamingUtils.equalNames(asUserCanonical, session.getUserName())) {
-				m_loginAsIdOwner = true;
-			}
-			else {
-				m_loginAsIdOwner = false;
-			}
-			
-			if ("".equals(server)) {
-				m_authenticateUser = true;
-			}
-			else if (session.isOnServer() && (namesForNamesList!=null || !StringUtil.isEmpty(asUserCanonical))) {
-				m_authenticateUser = true;
-			}
 		}
-		catch (NotesException e) {
-			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
+		
+		if (namesForNamesList==null && ("".equals(asUserCanonical) || (asUserCanonical!=null && NotesNamingUtils.equalNames(asUserCanonical, idUserName)))) {
+			m_loginAsIdOwner = true;
+		}
+		else {
+			m_loginAsIdOwner = false;
+		}
+		
+		if ("".equals(server)) {
+			m_authenticateUser = true;
+		}
+		else if (isOnServer && (namesForNamesList!=null || !StringUtil.isEmpty(asUserCanonical))) {
+			m_authenticateUser = true;
 		}
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -396,11 +384,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesGC.__objectCreated(NotesDatabase.class, this);
 			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
-			try {
-				m_session = legacyDB.getParent();
-			} catch (NotesException e) {
-				throw new NotesError(e.id, e.getLocalizedMessage());
-			}
 
 			//compute usernames list used
 			NotesNote note = createNote();
@@ -454,17 +437,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		short result = notesAPI.NSFDbCreateExtended(fullPathMem, dbClass, forceCreation, options, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
-	}
-	
-	/**
-	 * Internal method to read the session used to create the database
-	 * 
-	 * @return session
-	 * @deprecated will be removed if {@link NotesCollection} can decode the collation info without falling back to the legacy API
-	 */
-	@Deprecated
-	Session getSession() {
-		return m_session;
 	}
 	
 	/**
@@ -1302,12 +1274,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		//TODO improve performance by checking first if the current signer has already signed the documents (like in the legacy API)
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		String signer;
-		try {
-			signer = m_session.getUserName();
-		} catch (NotesException e) {
-			throw new NotesError(e.id, NotesErrorUtils.errToString((short) e.id));
-		}
+		String signer = IDUtils.getCurrentUsername();
 		
 		NotesCollection col = openDesignCollection();
 		try {
@@ -1359,7 +1326,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								}
 								else {
 									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
-									if (signer.equalsIgnoreCase(currNoteSigner)) {
+									if (NotesNamingUtils.equalNames(signer, currNoteSigner)) {
 										//already signed by current user
 										continue;
 									}
