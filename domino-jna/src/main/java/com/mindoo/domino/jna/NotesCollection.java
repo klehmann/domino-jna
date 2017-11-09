@@ -44,6 +44,7 @@ import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.StringTokenizerExt;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -64,6 +65,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private int m_hCollection32;
 	private long m_hCollection64;
 	private String m_name;
+	private List<String> m_aliases;
 	private NotesIDTable m_collapsedList;
 	private NotesIDTable m_selectedList;
 	private String m_viewUNID;
@@ -90,7 +92,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param parentDb parent database
 	 * @param hCollection collection handle
-	 * @param name collection name
 	 * @param viewNoteId view note id
 	 * @param viewUNID view UNID
 	 * @param collapsedList id table for the collapsed list
@@ -98,7 +99,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, int hCollection, String name, int viewNoteId, String viewUNID,
+	public NotesCollection(NotesDatabase parentDb, int hCollection, int viewNoteId, String viewUNID,
 			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
@@ -106,7 +107,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_parentDb = parentDb;
 		m_hDB32 = parentDb.getHandle32();
 		m_hCollection32 = hCollection;
-		m_name = name;
 		m_viewNoteId = viewNoteId;
 		m_viewUNID = viewUNID;
 		m_collapsedList = collapsedList;
@@ -121,7 +121,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param parentDb parent database
 	 * @param hCollection collection handle
-	 * @param name collection name
 	 * @param viewNoteId view note id
 	 * @param viewUNID view UNID
 	 * @param collapsedList id table for the collapsed list
@@ -129,7 +128,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, long hCollection, String name, int viewNoteId, String viewUNID,
+	public NotesCollection(NotesDatabase parentDb, long hCollection, int viewNoteId, String viewUNID,
 			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (!NotesJNAContext.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
@@ -137,7 +136,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_parentDb = parentDb;
 		m_hDB64 = parentDb.getHandle64();
 		m_hCollection64 = hCollection;
-		m_name = name;
 		m_viewNoteId = viewNoteId;
 		m_viewUNID = viewUNID;
 		m_collapsedList = collapsedList;
@@ -153,7 +151,41 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return name
 	 */
 	public String getName() {
+		if (m_name==null) {
+			decodeNameAndAliases();
+		}
 		return m_name;
+	}
+	
+	/**
+	 * Returns the alias names of the collection
+	 * 
+	 * @return alias names or empty list
+	 */
+	public List<String> getAliases() {
+		if (m_aliases==null) {
+			decodeNameAndAliases();
+		}
+		return m_aliases;
+	}
+	
+	public void decodeNameAndAliases() {
+		NotesNote viewNote = getViewNote();
+		
+		List<String> aliases = new ArrayList<String>();
+		String name = "";
+		
+		String title = viewNote.getItemValueString("$TITLE");
+		StringTokenizerExt st = new StringTokenizerExt(title, "|");
+		if (st.hasMoreTokens()) {
+			name = st.nextToken();
+			
+			while (st.hasMoreTokens()) {
+				aliases.add(st.nextToken());
+			}
+		}
+		m_name = name;
+		m_aliases = Collections.unmodifiableList(aliases);
 	}
 	
 	/**
@@ -2758,6 +2790,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		scanColumnsNew();
 	}
 
+	private NotesNote getViewNote() {
+		if (m_viewNote==null) {
+			m_viewNote = m_parentDb.openNoteByUnid(m_viewUNID);
+		}
+		return m_viewNote;
+	}
+	
 	/**
 	 * New method to read information about view columns and sortings using C methods
 	 */
@@ -2769,7 +2808,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_columnTitlesLCByIndex = new TreeMap<Integer, String>();
 		m_columnTitlesByIndex = new TreeMap<Integer, String>();
 
-		m_viewNote = m_parentDb.openNoteByUnid(m_viewUNID);
+		NotesNote viewNote = getViewNote();
 		
 		//read collations
 		CollationInfo collationInfo = new CollationInfo();
@@ -2777,8 +2816,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		int colNo = 0;
 		boolean readCollations = false;
 		
-		while (m_viewNote.hasItem("$Collation"+(colNo==0 ? "" : colNo))) {
-			List<Object> collationInfoList = m_viewNote.getItemValue("$Collation"+(colNo==0 ? "" : colNo));
+		while (viewNote.hasItem("$Collation"+(colNo==0 ? "" : colNo))) {
+			List<Object> collationInfoList = viewNote.getItemValue("$Collation"+(colNo==0 ? "" : colNo));
 			if (collationInfoList!=null && !collationInfoList.isEmpty()) {
 				readCollations = true;
 				
@@ -2802,7 +2841,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		
 		//read view columns
-		List<Object> viewFormatList = m_viewNote.getItemValue("$VIEWFORMAT");
+		List<Object> viewFormatList = viewNote.getItemValue("$VIEWFORMAT");
 		if (!(viewFormatList!=null && !viewFormatList.isEmpty()))
 			throw new AssertionError("View note with UNID "+m_viewUNID+" has item $VIEWFORMAT");
 		

@@ -862,7 +862,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		else {
 			IntByReference hCollection = new IntByReference();
@@ -897,7 +897,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			String sViewUNID = toUNID(viewUNID);
-			newCol = new NotesCollection(this, hCollection.getValue(), name, viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
+			newCol = new NotesCollection(this, hCollection.getValue(), viewNoteId, sViewUNID, new NotesIDTable(collapsedList.getValue(), true), new NotesIDTable(selectedList.getValue(), true), unreadTable, m_asUserCanonical);
 		}
 		
 		NotesGC.__objectCreated(NotesCollection.class, newCol);

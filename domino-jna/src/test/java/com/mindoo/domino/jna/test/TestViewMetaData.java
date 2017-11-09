@@ -28,7 +28,29 @@ import lotus.domino.ViewColumn;
  */
 public class TestViewMetaData extends BaseJNATestClass {
 
-//	@Test
+	@Test
+	public void testViewMetaData_nameAndAlias() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				Database dbDataLegacy = getFakeNamesDbLegacy();
+
+				NotesCollection colFromDbData = dbData.openCollectionByName("CompaniesHierarchical");
+
+				View viewCompanies = dbDataLegacy.getView("CompaniesHierarchical");
+
+				Assert.assertEquals("Name correct", viewCompanies.getName(), colFromDbData.getName());
+				Assert.assertEquals("Aliases correct", viewCompanies.getAliases(), colFromDbData.getAliases());
+
+				return null;
+			}
+		});
+
+	}
+
+	//	@Test
 	public void testViewMetaData_columnTitleLookup() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -36,61 +58,61 @@ public class TestViewMetaData extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
 				Database dbDataLegacy = getFakeNamesDbLegacy();
-				
+
 				NotesCollection colFromDbData = dbData.openCollectionByName("People");
 				colFromDbData.update();
 
 				View viewPeople = dbDataLegacy.getView("People");
 				int topLevelEntriesLegacy = viewPeople.getTopLevelEntryCount();
-				
+
 				int topLevelEntries = colFromDbData.getTopLevelEntries();
 				System.out.println("Top level entries: "+topLevelEntries);
-				
+
 				Assert.assertEquals("Top level entries of JNA call is equal to legacy call", topLevelEntriesLegacy, topLevelEntries);
-				
+
 				return null;
 			}
 		});
 	}
 
-//	@Test
+	//	@Test
 	public void testViewMetaData_collations() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
-				
+
 				NotesCollection colFromDbData = dbData.openCollectionByName("People");
 				colFromDbData.update();
 
 				NotesNote viewNote = dbData.openNoteByUnid(colFromDbData.getUNID());
 				List<Object> colInfo0List = viewNote.getItemValue("$Collation");
 				NotesCollationInfo colInfo0 = (NotesCollationInfo) (colInfo0List==null || colInfo0List.isEmpty() ? null : colInfo0List.get(0));
-				
+
 				List<Object> colInfo1List = viewNote.getItemValue("$Collation1");
 				NotesCollationInfo colInfo1 = (NotesCollationInfo) (colInfo1List==null || colInfo1List.isEmpty() ? null : colInfo1List.get(0));
-				
+
 				List<Object> colInfo2List = viewNote.getItemValue("$Collation2");
 				NotesCollationInfo colInfo2 = (NotesCollationInfo) (colInfo2List==null || colInfo2List.isEmpty() ? null : colInfo2List.get(0));
-				
+
 				List<Object> colInfo3List = viewNote.getItemValue("$Collation3");
 				NotesCollationInfo colInfo3 = (NotesCollationInfo) (colInfo3List==null || colInfo3List.isEmpty() ? null : colInfo3List.get(0));
-				
+
 				return null;
 			}
 		});
 	}
 
-//	@Test
+	//	@Test
 	public void testViewMetaData_columns() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
-				
-//				NotesCollection colFromDbData = dbData.openCollectionByName("People");
+
+				//				NotesCollection colFromDbData = dbData.openCollectionByName("People");
 				NotesCollection colFromDbData = dbData.openCollectionByName("PeopleWithHideWhen");
 				colFromDbData.update();
 
@@ -103,7 +125,7 @@ public class TestViewMetaData extends BaseJNATestClass {
 					String currItemName = currCol.getItemName();
 					String currTitle = currCol.getTitle();
 					String formula = currCol.getFormula();
-					
+
 					System.out.println("Column #"+i);
 					System.out.println("Item name: "+currItemName);
 					System.out.println("Title: "+currTitle);
@@ -115,7 +137,7 @@ public class TestViewMetaData extends BaseJNATestClass {
 			}
 		});
 	}
-	
+
 	@Test
 	public void testViewMetaData_catView() {
 		runWithSession(new IDominoCallable<Object>() {
@@ -124,7 +146,7 @@ public class TestViewMetaData extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
 				Database dbDataLegacy = getFakeNamesDbLegacy();
-				
+
 				NotesCollection colFromDbData = dbData.openCollectionByName("ViewDesignTest");
 				colFromDbData.update();
 
@@ -132,12 +154,12 @@ public class TestViewMetaData extends BaseJNATestClass {
 				System.out.println(colValues);
 
 				List<NotesViewColumn> columns = colFromDbData.getColumns();
-				
+
 				View viewDesignTest = dbDataLegacy.getView("ViewDesignTest");
 				Vector<ViewColumn> columnsLegacy = viewDesignTest.getColumns();
-				
+
 				Assert.assertEquals("No of view column correct",  columnsLegacy.size(), columnsLegacy.size());
-				
+
 				for (int i=0; i<columns.size(); i++) {
 					NotesViewColumn currCol = columns.get(i);
 					int pos = currCol.getPosition();
@@ -149,15 +171,15 @@ public class TestViewMetaData extends BaseJNATestClass {
 					System.out.println("isCategory = "+isCategory);
 
 					ViewColumn currColLegacy = columnsLegacy.get(i);
-					
+
 					Assert.assertEquals("Position correct", currCol.getPosition(), currColLegacy.getPosition());
 					Assert.assertEquals("Column values index correct", currCol.getColumnValuesIndex(), currColLegacy.getColumnValuesIndex());
 					Assert.assertEquals("Item name correct", currCol.getItemName(), currColLegacy.getItemName());
 					Assert.assertEquals("Title correct", currCol.getTitle(), currColLegacy.getTitle());
 					Assert.assertEquals("Formula correct", currCol.getFormula(), currColLegacy.getFormula());
-					
+
 				}
-				
+
 				return null;
 			}
 		});
