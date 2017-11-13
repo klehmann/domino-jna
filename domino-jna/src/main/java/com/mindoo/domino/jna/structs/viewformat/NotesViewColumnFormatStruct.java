@@ -7,7 +7,6 @@ import java.util.List;
 import com.mindoo.domino.jna.structs.BaseStructure;
 import com.mindoo.domino.jna.structs.NotesNFMTStruct;
 import com.mindoo.domino.jna.structs.NotesTFMTStruct;
-import com.mindoo.domino.jna.structs.collation.NotesCollateDescriptorStruct;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 /**
