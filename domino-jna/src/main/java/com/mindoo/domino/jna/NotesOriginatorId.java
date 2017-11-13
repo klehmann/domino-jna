@@ -61,14 +61,6 @@ public class NotesOriginatorId implements IAdaptable {
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
 	
-	private NotesOriginatorId(NotesOriginatorIdStruct struct) {
-		m_struct = struct;
-	}
-	
-	private NotesOriginatorId(Pointer p) {
-		this(NotesOriginatorIdStruct.newInstance(p));
-	}
-	
 	public NotesTimeDate getFile() {
 		return m_struct.File==null ? null : new NotesTimeDate(m_struct.File);
 	}

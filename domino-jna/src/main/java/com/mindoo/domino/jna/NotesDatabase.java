@@ -18,6 +18,9 @@ import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
+import com.mindoo.domino.jna.constants.CreateDatabase;
+import com.mindoo.domino.jna.constants.DBClass;
+import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.FileType;
@@ -406,13 +409,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param session current session
 	 * @param serverName server name, either canonical, abbreviated or common name
 	 * @param filePath filepath to database
-	 * @param dbClass specifies the class of the database created. See DB_CLASS for classes that may be specified.
+	 * @param dbClass specifies the class of the database created. See {@link DBClass} for classes that may be specified.
 	 * @param forceCreation controls whether the call will overwrite an existing database of the same name. Set to TRUE to overwrite, set to FALSE not to overwrite.
 	 * @param options database creation option flags.  See DBCREATE_xxx
 	 * @param encryption encryption strength
 	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, DBCLASS_BY_EXTENSION and use the option, DBCREATE_MAX_SPECIFIED.
 	 */
-	public static void createDatabase(Session session, String serverName, String filePath, short dbClass, boolean forceCreation, short options, Encryption encryption, long maxFileSize) {
+	public static void createDatabase(Session session, String serverName, String filePath, DBClass dbClass, boolean forceCreation, EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
 		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath, true);
@@ -435,7 +438,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				encryptStrengthByte = NotesCAPI.DBCREATE_ENCRYPT_NONE;
 		}
 		
-		short result = notesAPI.NSFDbCreateExtended(fullPathMem, dbClass, forceCreation, options, encryptStrengthByte, maxFileSize);
+		short dbClassShort = dbClass.getValue();
+		short optionsShort = CreateDatabase.toBitMask(options);
+		short result = notesAPI.NSFDbCreateExtended(fullPathMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -2407,10 +2412,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Gets the value of a database option
 	 * 
-	 * @param optionBit see DBOPTBIT_XXX constants in {@link NotesCAPI}
+	 * @param option set {@link DatabaseOption}
 	 * @return true if the option is enabled, false if the option is disabled
 	 */
-	public boolean getOption(int optionBit) {
+	public boolean getOption(DatabaseOption option) {
 		checkHandle();
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -2426,6 +2431,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		byte[] dbOptionsArr = retDbOptions.getByteArray(0, 4 * 4);
 
+		int optionBit = option.getValue();
 		int byteOffsetWithBit = optionBit / 8;
 		byte byteValueWithBit = dbOptionsArr[byteOffsetWithBit];
 		int bitToCheck = (int) Math.pow(2, optionBit % 8);
@@ -2437,14 +2443,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Sets the value of a database option
 	 * 
-	 * @param optionBit see DBOPTBIT_XXX constants in {@link NotesCAPI}
+	 * @param option see {@link DatabaseOption}
 	 * @param flag true to set the option
 	 */
-	public void setOption(int optionBit, boolean flag) {
+	public void setOption(DatabaseOption option, boolean flag) {
 		checkHandle();
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
+		int optionBit = option.getValue();
 		int byteOffsetWithBit = optionBit / 8;
 		int bitToCheck = (int) Math.pow(2, optionBit % 8);
 
@@ -3084,6 +3091,16 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+	
+	/**
+	 * Convenience method that calls {@link #generateOID()} and returns the UNID part
+	 * of the generated {@link NotesOriginatorId}
+	 * 
+	 * @return new UNID
+	 */
+	public String generateUNID() {
+		return generateOID().getUNIDAsString();
 	}
 	
 	/**

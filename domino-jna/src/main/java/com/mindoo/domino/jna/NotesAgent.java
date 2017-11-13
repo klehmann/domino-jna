@@ -241,7 +241,6 @@ public class NotesAgent implements IRecyclableNotesObject {
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethContext = new LongByReference();
-//			short result = notesAPI.b64_AgentCreateRunContext(m_hAgentB64, null, ctxFlags, rethContext);
 			short result = notesAPI.b64_AgentCreateRunContextExt(m_hAgentB64, null, 0, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
@@ -317,7 +316,6 @@ public class NotesAgent implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethContext = new IntByReference();
-//			short result = notesAPI.b32_AgentCreateRunContext(m_hAgentB32, null, ctxFlags, rethContext);
 			short result = notesAPI.b32_AgentCreateRunContextExt(m_hAgentB32, null, 0, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 

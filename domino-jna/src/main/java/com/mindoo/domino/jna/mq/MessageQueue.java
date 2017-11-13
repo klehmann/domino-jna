@@ -290,6 +290,9 @@ public class MessageQueue implements IRecyclableNotesObject {
 	public void put(byte[] buffer, int priority, int offset, int length) {
 		checkHandle();
 
+		if (priority<0 || priority>65535)
+			throw new IllegalArgumentException("Priority must be between 0 and 65535 (WORD datatype in C API)");
+			
 		if (length > NotesCAPI.MQ_MAX_MSGSIZE) {
 			throw new IllegalArgumentException("Max size for the buffer is "+NotesCAPI.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
 		}

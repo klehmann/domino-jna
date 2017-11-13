@@ -1,9 +1,11 @@
 package com.mindoo.domino.jna.constants;
 
+import com.mindoo.domino.jna.NotesCollateDescriptor;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 
 /**
- * Access Control Level symbols used to qualify user or server access to a given Domino database.
+ * These are the possible values for the  keytype member of the {@link NotesCollateDescriptor} data structure.<br>
+ * The keytype structure member specifies the type of sorting that is done in the specified column in a view.
  * 
  * @author Karsten Lehmann
  */

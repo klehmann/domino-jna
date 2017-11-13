@@ -181,7 +181,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return m_aliases;
 	}
 	
-	public void decodeNameAndAliases() {
+	private void decodeNameAndAliases() {
 		NotesNote viewNote = getViewNote();
 		
 		List<String> aliases = new ArrayList<String>();
@@ -762,8 +762,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param filterIDTable optional ID table to refine the search
 	 * @return search result
 	 */
-	public SearchResult ftSearch(String query, short limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
+	public SearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
 		clearSearch();
+		
+		if (limit<0 || limit>65535)
+			throw new IllegalArgumentException("Limit must be between 0 and 65535 (WORD datatype in C API)");
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
@@ -789,6 +792,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		optionsWithView.add(FTSearch.SET_COLL);
 		int optionsWithViewBitMask = FTSearch.toBitMask(optionsWithView);
 		
+		short limitShort = (short) (limit & 0xffff);
+		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethResults = new LongByReference();
 			result = notesAPI.b64_FTSearch(
@@ -797,7 +802,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_hCollection64,
 					queryLMBCS,
 					optionsWithViewBitMask,
-					limit,
+					limitShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle64(),
 					retNumDocs,
 					new Memory(Pointer.SIZE), // Reserved field
@@ -828,7 +833,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					m_hCollection32,
 					queryLMBCS,
 					optionsWithViewBitMask,
-					limit,
+					limitShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle32(),
 					retNumDocs,
 					new Memory(Pointer.SIZE), // Reserved field
@@ -969,7 +974,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Method to check whether an optimized  view lookup method can be used for
+	 * Method to check whether an optimized view lookup method can be used for
 	 * a set of find/return flags and the current Domino version
 	 * 
 	 * @param findFlags find flags
@@ -2040,10 +2045,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (keys==null || keys.length==0)
 			throw new IllegalArgumentException("No search keys specified");
 		
-//		if (!canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys)) {
-//			throw new UnsupportedOperationException("This method cannot be used for the specified arguments (only noteids) or the current platform (only R9 and above)");
-//		}
-		
 		IntByReference retNumMatches = new IntByReference();
 		NotesCollectionPositionStruct retIndexPos = NotesCollectionPositionStruct.newInstance();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
@@ -3032,6 +3033,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 		boolean isInView = retIsInView.getValue()==1;
 		return isInView;
+	}
+	
+	/**
+	 * Method to check if a note is visible in a view for the current user
+	 * 
+	 * @param note note
+	 * @return true if visible
+	 */
+	public boolean isNoteInView(NotesNote note) {
+		return isNoteInView(note.getNoteId());
 	}
 	
 	/**

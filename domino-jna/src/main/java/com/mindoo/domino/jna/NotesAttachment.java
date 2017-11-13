@@ -152,16 +152,6 @@ public class NotesAttachment {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		if (NotesJNAContext.is64Bit()) {
-//			IntByReference retSize = new IntByReference();
-//			ShortByReference retClass = new ShortByReference();
-//			ShortByReference retPrivileges = new ShortByReference();
-
-//			short result = notesAPI.b64_NSFDbGetObjectSize(m_parentNote.getParent().getHandle64(), this.m_rrv,
-//					NotesCAPI.OBJECT_FILE, retSize, retClass, retPrivileges);
-//			NotesErrorUtils.checkResult(result);
-//
-//			int objSize = retSize.getValue();
-			
 			while (true) {
 				int bytesToRead;
 				if ((currOffset+bufferSize) < m_fileSize) {
@@ -197,16 +187,6 @@ public class NotesAttachment {
 			}
 		}
 		else {
-//			IntByReference retSize = new IntByReference();
-//			ShortByReference retClass = new ShortByReference();
-//			ShortByReference retPrivileges = new ShortByReference();
-
-//			short result = notesAPI.b32_NSFDbGetObjectSize(m_parentNote.getParent().getHandle32(), this.m_rrv,
-//					NotesCAPI.OBJECT_FILE, retSize, retClass, retPrivileges);
-//			NotesErrorUtils.checkResult(result);
-
-//			int objSize = retSize.getValue();
-
 			while (true) {
 				int bytesToRead;
 				if ((offset+bufferSize) < m_fileSize) {

@@ -4297,6 +4297,73 @@ This allows an Editor to assume some Designer-level access */
 	
 	public static byte COLLATE_DESCRIPTOR_SIGNATURE = 0x66;
 
+	// flags1 values of VIEW_TABLE_FORMAT
+	/** Default to fully collapsed */
+	public static short VIEW_TABLE_FLAG_COLLAPSED = 0x0001;
+	/** Do not index hierarchically. If FALSE, MUST have NSFFormulaSummaryItem($REF) as LAST item! */
+	public static short VIEW_TABLE_FLAG_FLATINDEX = 0x0002;
+	/** Display unread flags in margin at ALL levels */
+	public static short VIEW_TABLE_FLAG_DISP_ALLUNREAD = 0x0004;
+	/** Display replication conflicts. If TRUE, MUST have NSFFormulaSummaryItem($Conflict) as SECOND-TO-LAST item! */
+	public static short VIEW_TABLE_FLAG_CONFLICT = 0x0008;
+	/** Display unread flags in margin for documents only */
+	public static short VIEW_TABLE_FLAG_DISP_UNREADDOCS = 0x0010;
+	/** Position to top when view is opened. */
+	public static short VIEW_TABLE_GOTO_TOP_ON_OPEN = 0x0020;	
+	/** Position to bottom when view is opened. */
+	public static short VIEW_TABLE_GOTO_BOTTOM_ON_OPEN = 0x0040;
+	/** Color alternate rows. */
+	public static short VIEW_TABLE_ALTERNATE_ROW_COLORING	 = 0x0080;
+	/** Hide headings. */
+	public static short VIEW_TABLE_HIDE_HEADINGS = 0x0100;
+	/** Hide left margin. */
+	public static short VIEW_TABLE_HIDE_LEFT_MARGIN = 0x0200;	
+	/** Show simple (background color) headings. */
+	public static short VIEW_TABLE_SIMPLE_HEADINGS = 0x0400;
+	/** TRUE if LineCount is variable (can be reduced as needed). */
+	public static short VIEW_TABLE_VARIABLE_LINE_COUNT = 0x0800;
+	/*	Refresh flags.
+	 * 
+	 * When both flags are clear, automatic refresh of display on update notification is disabled.
+	 * In this case, the refresh indicator will be displayed.
+	 *
+	 * When VIEW_TABLE_GOTO_TOP_ON_REFRESH is set, the view will fe refreshed from the top row of
+	 * the collection (as if the user pressed F9 and Ctrl-Home).
+	 *
+	 * When VIEW_TABLE_GOTO_BOTTOM_ON_REFRESH is set, the view will be refreshed so the bottom row of
+	 * the collection is visible (as if the user pressed F9 and Ctrl-End).
+	 *
+	 * When BOTH flags are set (done to avoid using another bit in the flags), the view will be
+	 * refreshed from the current top row (as if the user pressed F9). */
+
+	/** Position to top when view is refreshed. */
+	public static short VIEW_TABLE_GOTO_TOP_ON_REFRESH = 0x1000;
+	/** Position to bottom when view is refreshed. */
+	public static short VIEW_TABLE_GOTO_BOTTOM_ON_REFRESH = 0x2000;
+
+	/** TRUE if last column should be extended to fit the window width. */
+	public static short VIEW_TABLE_EXTEND_LAST_COLUMN = 0x4000;
+	/** TRUE if the View indexing should work from the Right most column */
+	public static short VIEW_TABLE_RTLVIEW = (short) (0x8000 & 0xffff);
+
+	// flags2 values of VIEW_TABLE_FORMAT
+	
+	/** TRUE if we should display no-borders at all on the header */
+	public static short VIEW_TABLE_FLAT_HEADINGS = 0x0001	;
+	/** TRUE if the icons displayed inthe view should be colorized */
+	public static short VIEW_TABLE_COLORIZE_ICONS = 0x0002;
+	/** TRUE if we should not display a search bar for this view */
+	public static short VIEW_TABLE_HIDE_SB = 0x0004;
+	/** TRUE if we should hide the calendar header */
+	public static short VIEW_TABLE_HIDE_CAL_HEADER = 0x0008;
+	/** TRUE if view has not been customized (i.e. not saved by Designer) */
+	public static short VIEW_TABLE_NOT_CUSTOMIZED = 0x0010;
+	/** TRUE if view supports display of partial thread hierarchy (Hannover v8)*/
+	public static short VIEW_TABLE_SHOW_PARITAL_THREADS = 0x0020;
+	/** show partial index hierarchically, if TRUE */
+	public static short VIEW_TABLE_FLAG_PARTIAL_FLATINDEX = 0x0020;
+	
+	
 	/** Value for the wSig member of the VIEW_TABLE_FORMAT2 structure. */
 	public static short VALID_VIEW_FORMAT_SIG = 0x2BAD;
 

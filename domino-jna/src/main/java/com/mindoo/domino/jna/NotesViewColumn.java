@@ -16,6 +16,11 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
+/**
+ * Container for all attributes that we extract from the view/collection design for a single column
+ * 
+ * @author Karsten Lehmann
+ */
 public class NotesViewColumn {
 	private NotesViewFormat m_parentFormat;
 	private String m_itemName;

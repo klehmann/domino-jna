@@ -3898,6 +3898,17 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * Method to convert the whole note to HTML
 	 * 
 	 * @param options conversion options
+	 * @return conversion result
+	 */
+	public IHtmlConversionResult convertNoteToHtml(EnumSet<HtmlConvertOption> options) {
+		return convertNoteToHtml(options, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
+	}
+
+	/**
+	 * Method to convert the whole note to HTML with additional filters for the
+	 * data returned in the conversion result
+	 * 
+	 * @param options conversion options
 	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
 	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
 	 * @return conversion result
@@ -3910,6 +3921,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	
 	/**
 	 * Method to convert a single item of this note to HTML
+	 * 
+	 * @param itemName item name
+	 * @param options conversion options
+	 * @return conversion result
+	 */
+	public IHtmlConversionResult convertItemToHtml(String itemName, EnumSet<HtmlConvertOption> options) {
+		return convertItemToHtml(itemName, options, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
+	}
+	
+	/**
+	 * Method to convert a single item of this note to HTML with additional filters for the
+	 * data returned in the conversion result
 	 * 
 	 * @param itemName item name
 	 * @param options conversion options

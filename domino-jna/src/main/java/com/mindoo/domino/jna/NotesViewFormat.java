@@ -7,8 +7,16 @@ import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat4Struct;
 import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat5Struct;
 import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormatStruct;
 
+/**
+ * Container for all attributes that we extract from the view/collection design
+ * (item "$VIEWFORMAT" of type {@link NotesItem#TYPE_VIEW_FORMAT} in the view note)
+ * 
+ * @author Karsten Lehmann
+ */
 public class NotesViewFormat {
 	private List<NotesViewColumn> m_columns;
+	private short m_flagsV1;
+	private short m_flags2V1;
 	
 	public NotesViewFormat(IAdaptable data, List<NotesViewColumn> columns) {
 		m_columns = columns;
@@ -41,9 +49,16 @@ public class NotesViewFormat {
 	}
 
 	private void importData(NotesViewTableFormatStruct format) {
+		m_flagsV1 = format.Flags;
+		m_flags2V1 = format.Flags2;
 	}
 
 	public List<NotesViewColumn> getColumns() {
 		return m_columns;
 	}
+	
+	public int getColumnCount() {
+		return m_columns.size();
+	}
+	
 }

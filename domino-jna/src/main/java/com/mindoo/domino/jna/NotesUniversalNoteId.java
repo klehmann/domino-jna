@@ -25,14 +25,6 @@ public class NotesUniversalNoteId implements IAdaptable {
 		m_struct = NotesUniversalNoteIdStruct.fromString(unidStr);
 	}
 	
-	private NotesUniversalNoteId(NotesUniversalNoteIdStruct struct) {
-		m_struct = struct;
-	}
-	
-	private NotesUniversalNoteId(Pointer p) {
-		this(NotesUniversalNoteIdStruct.newInstance(p));
-	}
-	
 	public NotesTimeDate getFile() {
 		return m_struct.File==null ? null : new NotesTimeDate(m_struct.File);
 	}
