@@ -741,7 +741,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
-		return openCollection(viewName, viewNoteId, openFlagSet);
+		return openCollection(viewNoteId, openFlagSet);
 	}
 
 	/**
@@ -773,19 +773,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
-		return openCollectionWithExternalData(dbData, viewName, viewNoteId, openFlagSet);
+		return openCollectionWithExternalData(dbData, viewNoteId, openFlagSet);
 	}
 
 	/**
 	 * Opens a collection by its view note id
 	 * 
-	 * @param name view/collection name
 	 * @param viewNoteId view/collection note id
 	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	NotesCollection openCollection(String name, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
-		return openCollectionWithExternalData(this, name, viewNoteId, openFlagSet);
+	NotesCollection openCollection(int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
+		return openCollectionWithExternalData(this, viewNoteId, openFlagSet);
 	}
 
 	/**
@@ -811,12 +810,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * to let one Domino server index data of another one.
 	 * 
 	 * @param dataDb database containing the data to populate the collection
-	 * @param name view/collection name
 	 * @param viewNoteId view/collection note id
 	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, String name, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
+	NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
 		checkHandle();
 		
 		Memory viewUNID = new Memory(16);
@@ -1138,8 +1136,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesIDTable modifiedNoteTable;
-		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
 			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, sinceStruct, retUntilStruct, rethTable);
@@ -1166,8 +1162,130 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return design collection
 	 */
 	public NotesCollection openDesignCollection() {
-		NotesCollection col = openCollection("DESIGN", NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN, null);
+		NotesCollection col = openCollection(NotesCAPI.NOTE_ID_SPECIAL | NotesCAPI.NOTE_CLASS_DESIGN, null);
 		return col;
+	}
+	
+	/**
+	 * Opens the default collection for the database
+	 * 
+	 * @return default collection
+	 */
+	public NotesCollection openDefaultCollection() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		short result;
+		IntByReference retNoteID = new IntByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbGetSpecialNoteID(m_hDB64, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_VIEW) & 0xffff), retNoteID);
+		}
+		else {
+			result = notesAPI.b32_NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_VIEW) & 0xffff), retNoteID);
+		}
+		NotesErrorUtils.checkResult(result);
+		int noteId = retNoteID.getValue();
+		
+		NotesCollection col = openCollection(noteId, null);
+		return col;
+	}
+	
+	/**
+	 * Returns the icon note
+	 * 
+	 * @return icon note
+	 */
+	public NotesNote openIconNote() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		short result;
+		IntByReference retNoteID = new IntByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbGetSpecialNoteID(m_hDB64, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_ICON) & 0xffff), retNoteID);
+		}
+		else {
+			result = notesAPI.b32_NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_ICON) & 0xffff), retNoteID);
+		}
+		NotesErrorUtils.checkResult(result);
+		int noteId = retNoteID.getValue();
+		return openNoteById(noteId);
+	}
+	
+	/**
+	 * Returns the note of the default form
+	 * 
+	 * @return default form note
+	 */
+	public NotesNote openDefaultFormNote() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		short result;
+		IntByReference retNoteID = new IntByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbGetSpecialNoteID(m_hDB64, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_FORM) & 0xffff), retNoteID);
+		}
+		else {
+			result = notesAPI.b32_NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_FORM) & 0xffff), retNoteID);
+		}
+		NotesErrorUtils.checkResult(result);
+		int noteId = retNoteID.getValue();
+		return openNoteById(noteId);
+	}
+	
+	/**
+	 * Returns the database info note
+	 * 
+	 * @return info note
+	 */
+	public NotesNote openDatabaseInfoNote() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		short result;
+		IntByReference retNoteID = new IntByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbGetSpecialNoteID(m_hDB64, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_INFO) & 0xffff), retNoteID);
+		}
+		else {
+			result = notesAPI.b32_NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_INFO) & 0xffff), retNoteID);
+		}
+		NotesErrorUtils.checkResult(result);
+		int noteId = retNoteID.getValue();
+		return openNoteById(noteId);
+	}
+	
+	/**
+	 * Returns the database help note
+	 * 
+	 * @return help note
+	 */
+	public NotesNote openDatabaseHelpNote() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		short result;
+		IntByReference retNoteID = new IntByReference();
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbGetSpecialNoteID(m_hDB64, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_HELP) & 0xffff), retNoteID);
+		}
+		else {
+			result = notesAPI.b32_NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesCAPI.SPECIAL_ID_NOTE | NotesCAPI.NOTE_CLASS_HELP) & 0xffff), retNoteID);
+		}
+		NotesErrorUtils.checkResult(result);
+		int noteId = retNoteID.getValue();
+		return openNoteById(noteId);
 	}
 	
 	/**
@@ -1209,7 +1327,65 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Opens an agent in the databaser
+	 * Looks up a design note by its name
+	 * 
+	 * @param name name
+	 * @param noteType type of design note
+	 * @return note, null if not found
+	 */
+	public NotesNote findDesignNote(String name, NoteClass noteType) {
+		try {
+			int noteId = findDesignNoteId(name, noteType);
+			return openNoteById(noteId);
+		}
+		catch (NotesError e) {
+			if (e.getId() == 1028)
+				return null;
+			else
+				throw e;
+		}
+	}
+	
+	/**
+	 * Looks up a design note by its name and returns the note id
+	 * 
+	 * @param name name
+	 * @param noteType type of design note
+	 * @return note id
+	 * @throws NotesError with id 1028 if note cannot be found
+	 */
+	public int findDesignNoteId(String name, NoteClass noteType) {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntBuffer retNoteID = IntBuffer.allocate(1);
+		retNoteID.clear();
+		
+		Memory nameMem = NotesStringUtils.toLMBCS(name, true);
+		short noteTypeShort = (short) (noteType.getValue() & 0xffff);
+		
+		Memory flagsPatternMem = null;
+		if (noteType == NoteClass.VIEW) {
+			flagsPatternMem = NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_VIEWS_AND_FOLDERS, true);
+		}
+		else if (noteType == NoteClass.FILTER) {
+			flagsPatternMem = NotesStringUtils.toLMBCS(NotesCAPI.DFLAGPAT_TOOLSRUNMACRO, true);
+		}
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NIFFindDesignNoteExt(m_hDB64, nameMem, noteTypeShort, flagsPatternMem, retNoteID, 0);
+		}
+		else {
+			result = notesAPI.b32_NIFFindDesignNoteExt(m_hDB32, nameMem, noteTypeShort, flagsPatternMem, retNoteID, 0);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		int noteId = retNoteID.get(0);
+		return noteId;
+	}
+	
+	/**
+	 * Opens an agent in the database
 	 * 
 	 * @param agentName agent name
 	 * @return agent or null if not found

@@ -1,8 +1,15 @@
 package com.mindoo.domino.jna;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.List;
 
+import com.mindoo.domino.jna.NotesNote.ICDRecordCallback;
+import com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action;
+import com.mindoo.domino.jna.constants.CDRecord;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -239,7 +246,7 @@ public class NotesItem {
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockIdStruct.ByValue valueBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		valueBlockIdByVal.pool = m_valueBlockId.pool;
 		valueBlockIdByVal.block = m_valueBlockId.block;
 
@@ -291,7 +298,7 @@ public class NotesItem {
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
 		
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
@@ -489,7 +496,7 @@ public class NotesItem {
 		
 		loadItemNameAndFlags();
 
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
@@ -579,7 +586,7 @@ public class NotesItem {
 		
 		NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 		
-		NotesBlockIdStruct.ByValue itemIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemIdByVal.pool = m_itemBlockId.pool;
 		itemIdByVal.block = m_itemBlockId.block;
 		
@@ -615,7 +622,7 @@ public class NotesItem {
 				targetNote.removeItem(itemName);
 			}
 		}
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
@@ -636,7 +643,7 @@ public class NotesItem {
 	public void remove() {
 		m_parentNote.checkHandle();
 		
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
@@ -649,5 +656,217 @@ public class NotesItem {
 			short result = notesAPI.b32_NSFItemDeleteByBLOCKID(m_parentNote.getHandle32(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+
+	/**
+	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
+	 * 
+	 * @param callback callback is called for each CD record in this item
+	 * @throws UnsupportedOperationException if item has the wrong type
+	 */
+	public void enumerateRichTextCDRecords(final ICDRecordCallback callback) {
+		enumerateCDRecords(callback, null);
+	}
+	
+	/**
+	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
+	 * Internal method with direct pointer access for less copy operations.
+	 * 
+	 * @param callback callback is called for each CD record in this item
+	 * @throws UnsupportedOperationException if item has the wrong type
+	 */
+	void enumerateCDRecords(final ICompositeCallbackDirect callback) {
+		enumerateCDRecords(null, callback);
+	}
+	
+	/**
+	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
+	 * 
+	 * @param callback callback with read-only memory access
+	 * @param callback2 callback with direct memory access via pointer
+	 * @throws UnsupportedOperationException if item has the wrong type
+	 */
+	private void enumerateCDRecords(final ICDRecordCallback callback, final ICompositeCallbackDirect callback2) {
+		if (getType() != TYPE_COMPOSITE)
+			throw new UnsupportedOperationException("Item is not of type TYPE_COMPOSITE (type found: "+getType());
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+		Pointer poolPtr;
+		if (NotesJNAContext.is64Bit()) {
+			poolPtr = notesAPI.b64_OSLockObject((long) m_valueBlockId.pool);
+		}
+		else {
+			poolPtr = notesAPI.b32_OSLockObject(m_valueBlockId.pool);
+		}
+		
+		int block = (m_valueBlockId.block & 0xffff);
+		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
+		Pointer valuePtr = new Pointer(poolPtrLong);
+		
+		try {
+			int fixedSize;
+			
+			int dwFileSize = getValueLength();
+			int dwFileOffset = 0;
+			
+			while (dwFileSize>0) {
+				Pointer cdRecordPtr = valuePtr.share(2 + dwFileOffset); //2 -> skip data type WORD
+				
+				//read signature WORD
+				short recordType = cdRecordPtr.getShort(0);
+				
+				int dwLength;
+
+				/* structures used to define and read the signatures 
+
+					 0		   1
+				+---------+---------+
+				|   Sig   |  Length	|						Byte signature
+				+---------+---------+
+	
+					 0		   1        2         3
+				+---------+---------+---------+---------+
+				|   Sig   |   ff    |		Length	   |		Word signature
+				+---------+---------+---------+---------+
+	
+					 0		   1        2         3          4         5
+				+---------+---------+---------+---------+---------+---------+
+				|   Sig   |   00	    |                 Length		           | DWord signature
+				+---------+---------+---------+---------+---------+---------+
+
+				 */
+		
+				short highOrderByte = (short) (recordType & 0xFF00);
+				
+				switch (highOrderByte) {
+				case NotesCAPI.LONGRECORDLENGTH:      /* LSIG */
+					dwLength = cdRecordPtr.share(2).getInt(0);
+
+					fixedSize = 6; //sizeof(LSIG);
+
+					break;
+
+				case NotesCAPI.WORDRECORDLENGTH:      /* WSIG */
+					dwLength = (int) (cdRecordPtr.share(2).getShort(0) & 0xffff);
+
+					fixedSize = 4; //sizeof(WSIG);
+
+					break;
+
+				default:                    /* BSIG */
+					dwLength = (int) ((recordType >> 8) & 0x00ff);
+					recordType &= 0x00FF; /* Length not part of signature */
+					fixedSize = 2; //sizeof(BSIG);
+				}
+				CDRecord currType = CDRecord.getRecordForConstant(recordType);
+				
+				//give callback access to the memory, but only read-only and with limit check
+				if (callback!=null) {
+					ByteBuffer dataBuf = cdRecordPtr.share(fixedSize).getByteBuffer(0, Math.max(0, dwLength-fixedSize)).asReadOnlyBuffer();
+					if (callback.recordVisited(dataBuf, currType, recordType, Math.max(0, dwLength-fixedSize)) == Action.Stop) {
+						break;
+					}
+				}
+				//give direct pointer access (internal only)
+				if (callback2!=null) {
+					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize) == Action.Stop) {
+						break;
+					}
+				}
+				
+				if (dwLength>0) {
+		            dwFileSize -= dwLength;
+		            dwFileOffset += dwLength;
+		        }
+		        else {
+		            dwFileSize -= fixedSize;
+		            dwFileOffset += fixedSize;
+		        }
+				
+				/* If we are at an odd file offset, ignore the filler byte */
+
+		        if ((dwFileOffset & 1L)==1 && (dwFileSize > 0) ) {
+		            dwFileSize -= 1;            
+		            dwFileOffset += 1;
+		        }
+			}
+		}
+		finally {
+			if (NotesJNAContext.is64Bit()) {
+				notesAPI.b64_OSUnlockObject((long) m_valueBlockId.pool);
+			}
+			else {
+				notesAPI.b32_OSUnlockObject(m_valueBlockId.pool);
+			}
+		}
+	}
+	
+	/**
+	 * Extracts all text from the item
+	 * 
+	 * @return text
+	 */
+	String getAllCompositeTextContent() {
+		StringWriter sWriter = new StringWriter();
+		getAllCompositeTextContent(sWriter);
+		return sWriter.toString();
+	}
+	
+	/**
+	 * Extracts all text from the item
+	 * 
+	 * @param writer writer is used to write extracted text
+	 */
+	void getAllCompositeTextContent(final Writer writer) {
+		enumerateCDRecords(new ICompositeCallbackDirect() {
+
+			@Override
+			public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength) {
+				if (signature==NotesCAPI.SIG_CD_TEXT) {
+					Pointer txtPtr = dataPtr.share(4);
+					int txtMemLength = dataLength-4;
+					if (txtMemLength>0) {
+						String txt = NotesStringUtils.fromLMBCS(txtPtr, txtMemLength);
+						if (txt.length()>0) {
+							try {
+								writer.write(txt);
+								writer.flush();
+							} catch (IOException e) {
+								throw new RuntimeException("Error writing composite text", e);
+							}
+						}
+					}
+				}
+				else if (signature==NotesCAPI.SIG_CD_PARAGRAPH) {
+					try {
+						writer.write("\n");
+					} catch (IOException e) {
+						throw new RuntimeException("Error writing composite text", e);
+					}
+				}
+				return Action.Continue;
+			}
+		});
+	}
+		
+	/**
+	 * Internal interface for direct access to memory structures
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	static interface ICompositeCallbackDirect {
+
+		/**
+		 * Method is called for all CD records in this item
+		 * 
+		 * @param dataPtr pointer to access data
+		 * @param parsedSignature enum with converted signature WORD
+		 * @param signature signature WORD for the record type
+		 * @param dataLength length of data to read
+		 * @return action value to continue or stop
+		 */
+		public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength);
+
 	}
 }

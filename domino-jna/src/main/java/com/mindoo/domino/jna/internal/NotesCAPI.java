@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
+import com.mindoo.domino.jna.NotesUniversalNoteId;
 import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NIFFindByKeyContextStruct;
@@ -39,6 +40,7 @@ import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.collation.NotesCollateDescriptorStruct;
 import com.mindoo.domino.jna.structs.collation.NotesCollationStruct;
+import com.mindoo.domino.jna.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.structs.html.HtmlApi_UrlArgStruct;
 import com.mindoo.domino.jna.structs.html.HtmlApi_UrlComponentStruct;
 import com.mindoo.domino.jna.structs.html.HtmlApi_UrlTargetComponentStruct;
@@ -2060,6 +2062,31 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
 
+	/*	Define NSF Special Note ID Indices.  The first 16 of these are reserved
+	for "default notes" in each of the 16 note classes.  In order to access
+	these, use SPECIAL_ID_NOTE+NOTE_CLASS_XXX.  This is generally used
+	when calling NSFDbGetSpecialNoteID. NOTE: NSFNoteOpen, NSFDbReadObject
+	and NSFDbWriteObject support reading special notes or objects directly
+	(without calling NSFDbGetSpecialNoteID).  They use a DIFFERENT flag
+	with a similar name: NOTE_ID_SPECIAL (see nsfnote.h).  Remember this
+	rule:
+
+	SPECIAL_ID_NOTE is a 16 bit mask and is used as a NoteClass argument.
+	NOTE_ID_SPECIAL is a 32 bit mask and is used as a NoteID or RRV argument.
+*/
+
+	public short SPECIAL_ID_NOTE	= (short) (0x8000 & 0xffff); /* use in combination w/NOTE_CLASS when calling NSFDbGetSpecialNoteID */
+
+	public short b64_NSFDbGetSpecialNoteID(
+			long hDB,
+			short Index,
+			IntByReference retNoteID);
+	
+	public short b32_NSFDbGetSpecialNoteID(
+			int hDB,
+			short Index,
+			IntByReference retNoteID);
+	
 	public short NotesInitExtended(int  argc, StringArray argvPtr);
 	public void NotesTerm();
 
@@ -4488,5 +4515,524 @@ This allows an Editor to assume some Designer-level access */
 
 	public short REGIDGetIntlPrivateKey = 11;
 	/* Data structure returned is char xx[xx] */
+
+	public Pointer OSGetLMBCSCLS();
+	
+	public short b64_CompoundTextAddCDRecords(
+			long hCompound,
+			Pointer pvRecord,
+			int dwRecordLength);
+
+	public short b32_CompoundTextAddCDRecords(
+			int hCompound,
+			Pointer pvRecord,
+			int dwRecordLength);
+
+	public short b64_CompoundTextAddDocLink(
+			long hCompound,
+			NotesTimeDateStruct.ByValue DBReplicaID,
+			NotesUniversalNoteIdStruct.ByValue ViewUNID,
+			NotesUniversalNoteIdStruct.ByValue NoteUNID,
+			Memory pszComment,
+			int dwFlags);
+
+	public short b32_CompoundTextAddDocLink(
+			int hCompound,
+			NotesTimeDateStruct.ByValue DBReplicaID,
+			NotesUniversalNoteIdStruct.ByValue ViewUNID,
+			NotesUniversalNoteIdStruct.ByValue NoteUNID,
+			Memory pszComment,
+			int dwFlags);
+
+	public short b64_CompoundTextAddParagraphExt(
+			long hCompound,
+			int dwStyleID,
+			int FontID,
+			Memory pchText,
+			int dwTextLen,
+			Pointer pInfo);
+
+	public short b32_CompoundTextAddParagraphExt(
+			int hCompound,
+			int dwStyleID,
+			int FontID,
+			Memory pchText,
+			int dwTextLen,
+			Pointer pInfo);
+
+	public short b64_CompoundTextAddRenderedNote(
+			long hCompound,
+			long hNote,
+			long hFormNote,
+			int dwFlags);
+
+	public short b32_CompoundTextAddRenderedNote(
+			int hCompound,
+			int hNote,
+			int hFormNote,
+			int dwFlags);
+
+	public short b64_CompoundTextAddTextExt(
+			long hCompound,
+			int dwStyleID,
+			int FontID,
+			Memory pchText,
+			int dwTextLen,
+			Memory pszLineDelim,
+			int dwFlags,
+			Pointer pInfo);
+
+	public short b32_CompoundTextAddTextExt(
+			int hCompound,
+			int dwStyleID,
+			int FontID,
+			Memory pchText,
+			int dwTextLen,
+			Memory pszLineDelim,
+			int dwFlags,
+			Pointer pInfo);
+	
+	public short b64_CompoundTextAssimilateFile(
+			long hCompound,
+			Memory pszFileName,
+			int dwFlags);
+
+	public short b32_CompoundTextAssimilateFile(
+			int hCompound,
+			Memory pszFileName,
+			int dwFlags);
+
+	public short b64_CompoundTextAssimilateItem(
+			long hCompound,
+			long hNote,
+			Memory pszItemName,
+			int dwFlags);
+
+	public short b32_CompoundTextAssimilateItem(
+			int hCompound,
+			int hNote,
+			Memory pszItemName,
+			int dwFlags);
+
+	public short b64_CompoundTextClose(
+			long hCompound,
+			LongByReference phReturnBuffer,
+			IntByReference pdwReturnBufferSize,
+			Memory pchReturnFile,
+			short wReturnFileNameSize);
+
+	public short b32_CompoundTextClose(
+			int hCompound,
+			IntByReference phReturnBuffer,
+			IntByReference pdwReturnBufferSize,
+			Memory pchReturnFile,
+			short wReturnFileNameSize);
+
+	public short b64_CompoundTextCreate(
+			long hNote,
+			Memory pszItemName,
+			LongByReference phCompound);
+
+	public short b32_CompoundTextCreate(
+			int hNote,
+			Memory pszItemName,
+			IntByReference phCompound);
+
+	public short b64_CompoundTextDefineStyle(
+			long hCompound,
+			Memory pszStyleName,
+			NotesCompoundStyleStruct pDefinition,
+			IntByReference pdwStyleID);
+
+	public short b32_CompoundTextDefineStyle(
+			int hCompound,
+			Memory pszStyleName,
+			NotesCompoundStyleStruct pDefinition,
+			IntByReference pdwStyleID);
+	
+	public void b64_CompoundTextDiscard(
+			long hCompound);
+
+	public void b32_CompoundTextDiscard(
+			int hCompound);
+
+	public void CompoundTextInitStyle(NotesCompoundStyleStruct style);
+	
+	/** CompoundText is derived from a file */
+	public int COMP_FROM_FILE = 0x00000001;
+	/** Insert a line break (0) for each line delimiter found in the input text buffer. This preserves input line breaks. */
+	public int COMP_PRESERVE_LINES = 0x00000002;
+	/** Create a new paragraph for each line delimiter found in the input text buffer. */
+	public int COMP_PARA_LINE = 0x00000004;
+	/** Create a new paragraph for each blank line found in the input text buffer.
+	 * A blank line is defined as a line containing just a line delimiter (specified by the
+	 * pszLineDelim parameter to CompoundTextAddTextExt). */
+	public int COMP_PARA_BLANK_LINE = 0x00000008;
+	/** A "hint" follows the comment for a document link. If this flag is set,
+	 * the pszComment argument points to the comment string, the terminating NUL ('\0'),
+	 * the hint string, and the terminating NUL. */
+	public int COMP_SERVER_HINT_FOLLOWS = 0x00000010;
+
+	/** (e.g. Times Roman family) */
+	public byte FONT_FACE_ROMAN = 0;
+	/** (e.g. Helv family) */
+	public byte FONT_FACE_SWISS = 1;
+	/** (e.g. Monotype Sans WT) */
+	public byte FONT_FACE_UNICODE = 2;
+	/** (e.g. Arial */
+	public byte FONT_FACE_USERINTERFACE = 3;
+	/** (e.g. Courier family) */
+	public byte FONT_FACE_TYPEWRITER = 4;
+
+	/**	Use this style ID in CompoundTextAddText to continue using the
+	same paragraph style as the previous paragraph. */
+	public int STYLE_ID_SAMEASPREV = 0xFFFFFFFF;
+
+	/*	Standard colors -- so useful they're available by name. */
+
+	public byte MAX_NOTES_SOLIDCOLORS = 16;
+
+	public byte NOTES_COLOR_BLACK = 0;
+	public byte NOTES_COLOR_WHITE = 1;
+	public byte NOTES_COLOR_RED = 2;
+	public byte NOTES_COLOR_GREEN = 3;
+	public byte NOTES_COLOR_BLUE = 4;
+	public byte NOTES_COLOR_MAGENTA = 5;
+	public byte NOTES_COLOR_YELLOW = 6;
+	public byte NOTES_COLOR_CYAN = 7;
+	public byte NOTES_COLOR_DKRED = 8;
+	public byte NOTES_COLOR_DKGREEN = 9;
+	public byte NOTES_COLOR_DKBLUE = 10;
+	public byte NOTES_COLOR_DKMAGENTA = 11;
+	public byte NOTES_COLOR_DKYELLOW = 12;
+	public byte NOTES_COLOR_DKCYAN = 13;
+	public byte NOTES_COLOR_GRAY = 14;
+	public byte NOTES_COLOR_LTGRAY = 15;
+
+	public byte ISBOLD = 0x01;
+	public byte ISITALIC = 0x02;
+	public byte	ISUNDERLINE = 0x04;
+	public byte ISSTRIKEOUT = 0x08;
+	public byte ISSUPER = 0x10;
+	public byte ISSUB = 0x20;
+	public byte ISEFFECT = (byte) (0x80 & 0xff);		/* Used for implementation of special effect styles */
+	public byte ISSHADOW = (byte) (0x80 & 0xff);		/* Used for implementation of special effect styles */
+	public byte ISEMBOSS = (byte) (0x90 & 0xff);		/* Used for implementation of special effect styles */
+	public byte ISEXTRUDE = (byte) (0xa0 & 0xff);		/* Used for implementation of special effect styles */
+
+	/*	Paragraph justification type codes */
+
+	/** flush left, ragged right */
+	public short JUSTIFY_LEFT = 0;
+	/** flush right, ragged left */
+	public short JUSTIFY_RIGHT = 1;
+	/** full block justification */
+	public short JUSTIFY_BLOCK = 2;
+	/** centered */
+	public short JUSTIFY_CENTER = 3;
+	/** no line wrapping AT ALL (except hard CRs) */
+	public short JUSTIFY_NONE = 4;
+
+	/*	One Inch */
+
+	public int ONEINCH = (20*72);			/* One inch worth of TWIPS */
+
+	/*	Paragraph Flags */
+
+	/** start new page with this par */
+	public short PABFLAG_PAGINATE_BEFORE = 0x0001;
+	/** don't separate this and next par */
+	public short PABFLAG_KEEP_WITH_NEXT = 0x0002;
+	/** don't split lines in paragraph */
+	public short PABFLAG_KEEP_TOGETHER = 0x0004;
+	/** propagate even PAGINATE_BEFORE and KEEP_WITH_NEXT */
+	public short PABFLAG_PROPAGATE = 0x0008;
+	/** hide paragraph in R/O mode */
+	public short PABFLAG_HIDE_RO = 0x0010;
+	/** hide paragraph in R/W mode */
+	public short PABFLAG_HIDE_RW = 0x0020;
+	/** hide paragraph when printing */
+	public short PABFLAG_HIDE_PR = 0x0040;
+	/** in V4 and below, set if PAB.RightMargin (when nonzero)
+	is to have meaning.  Turns out, is set iff para is in
+	a table.  Anyway, V5+ no longer use this bit but it
+	matters to V4 and below.  V5+ runs with this bit
+	zeroed throughout runtime but, for backward
+	compatibility, outputs it to disk at Save() time
+	per whether paragraph is in a table.  */
+	public short PABFLAG_DISPLAY_RM = 0x0080;
+	
+	/* the pab was saved in V4.	*/
+	
+	/**	set this bit or the Notes client will assume the pab
+		was saved pre-V4 and will thus "link" these bit
+		definitions (assign the right one to the left one)
+		since preview did not exist pre-V4:
+			PABFLAG_HIDE_PV = PABFLAG_HIDE_RO
+			PABFLAG_HIDE_PVE = PABFLAG_HIDE_RW */
+	public short PABFLAG_HIDE_UNLINK = 0x0100;
+	/** hide paragraph when copying/forwarding */
+	public short PABFLAG_HIDE_CO = 0x0200;
+	/** display paragraph with bullet */
+	public short PABFLAG_BULLET = 0x0400;
+	/**  use the hide when formula
+	   even if there is one.		*/
+	public short PABFLAG_HIDE_IF = 0x0800;
+	/** display paragraph with number */
+	public short PABFLAG_NUMBEREDLIST = 0x1000;
+	/** hide paragraph when previewing*/
+	public short PABFLAG_HIDE_PV = 0x2000;
+	/** hide paragraph when editing in the preview pane.		*/
+	public short PABFLAG_HIDE_PVE = 0x4000;
+	/** hide paragraph from Notes clients */
+	public short PABFLAG_HIDE_NOTES = (short) (0x8000	 & 0xffff);
+
+	public short PABFLAG_HIDEBITS = (short) ((PABFLAG_HIDE_RO | PABFLAG_HIDE_RW | PABFLAG_HIDE_CO | PABFLAG_HIDE_PR | PABFLAG_HIDE_PV | PABFLAG_HIDE_PVE | PABFLAG_HIDE_IF | PABFLAG_HIDE_NOTES) & 0xffff);
+
+	public short TABLE_PABFLAGS = (short) (( PABFLAG_KEEP_TOGETHER | PABFLAG_KEEP_WITH_NEXT) & 0xffff);
+
+	public short EnumCompositeBuffer(
+			NotesBlockIdStruct.ByValue ItemValue,
+			int ItemValueLength,
+			ActionRoutinePtr  ActionRoutine,
+			Pointer vContext);
+
+	public interface ActionRoutinePtr extends Callback { /* StdCallCallback if using __stdcall__ */
+		short invoke(Pointer dataPtr, short signature, int dataLength, Pointer vContext); 
+	};
+
+	public short	 LONGRECORDLENGTH = 0x0000;
+	public short	 WORDRECORDLENGTH = (short) (0xff00 & 0xffff);
+	public short	 BYTERECORDLENGTH = 0;		/* High byte contains record length */
+
+	/* Signatures for Composite Records in items of data type COMPOSITE */
+
+	public short SIG_CD_PDEF_MAIN = (83 | WORDRECORDLENGTH ) /* Signatures for items used in Property Broker definitions. LI 3925.04 */;
+	public short SIG_CD_PDEF_TYPE = (84 | WORDRECORDLENGTH );
+	public short SIG_CD_PDEF_PROPERTY = (85 | WORDRECORDLENGTH );
+	public short SIG_CD_PDEF_ACTION = (86 | WORDRECORDLENGTH );
+	public short SIG_CD_TABLECELL_DATAFLAGS = (87 | BYTERECORDLENGTH);
+	public short SIG_CD_EMBEDDEDCONTACTLIST = (88 | WORDRECORDLENGTH);
+	public short SIG_CD_IGNORE = (89 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLECELL_HREF2 = (90 | WORDRECORDLENGTH);
+	public short SIG_CD_HREFBORDER = (91 | WORDRECORDLENGTH);
+	public short SIG_CD_TABLEDATAEXTENSION = (92 | WORDRECORDLENGTH);
+	public short SIG_CD_EMBEDDEDCALCTL = (93 | WORDRECORDLENGTH);
+	public short SIG_CD_ACTIONEXT = (94 | WORDRECORDLENGTH);
+	public short SIG_CD_EVENT_LANGUAGE_ENTRY = (95 | WORDRECORDLENGTH);
+	public short SIG_CD_FILESEGMENT = (96 | LONGRECORDLENGTH);
+	public short SIG_CD_FILEHEADER = (97 | LONGRECORDLENGTH);
+	public short SIG_CD_DATAFLAGS = (98 | BYTERECORDLENGTH);
+
+	public short SIG_CD_BACKGROUNDPROPERTIES = (99 | BYTERECORDLENGTH);
+
+	public short SIG_CD_EMBEDEXTRA_INFO = (100 | WORDRECORDLENGTH);
+	public short SIG_CD_CLIENT_BLOBPART = (101 | WORDRECORDLENGTH);
+	public short SIG_CD_CLIENT_EVENT = (102 | WORDRECORDLENGTH);
+	public short SIG_CD_BORDERINFO_HS = (103 | WORDRECORDLENGTH);
+	public short SIG_CD_LARGE_PARAGRAPH = (104 | WORDRECORDLENGTH);
+	public short SIG_CD_EXT_EMBEDDEDSCHED = (105 | WORDRECORDLENGTH);
+	public short SIG_CD_BOXSIZE = (106 | BYTERECORDLENGTH);
+	public short SIG_CD_POSITIONING = (107 | BYTERECORDLENGTH);
+	public short SIG_CD_LAYER = (108 | BYTERECORDLENGTH);
+	public short SIG_CD_DECSFIELD = (109 | WORDRECORDLENGTH);
+	public short SIG_CD_SPAN_END = (110 | BYTERECORDLENGTH)	/* Span End */;
+	public short SIG_CD_SPAN_BEGIN = (111 | BYTERECORDLENGTH)	/* Span Begin */;
+	public short SIG_CD_TEXTPROPERTIESTABLE = (112 | WORDRECORDLENGTH)	/* Text Properties Table */;
+									  
+	public short SIG_CD_HREF2 = (113 | WORDRECORDLENGTH);
+	public short SIG_CD_BACKGROUNDCOLOR = (114 | BYTERECORDLENGTH);
+	public short SIG_CD_INLINE = (115 | WORDRECORDLENGTH);
+	public short SIG_CD_V6HOTSPOTBEGIN_CONTINUATION = (116 | WORDRECORDLENGTH);
+	public short SIG_CD_TARGET_DBLCLK = (117 | WORDRECORDLENGTH);
+	public short SIG_CD_CAPTION = (118 | WORDRECORDLENGTH);
+	public short SIG_CD_LINKCOLORS = (119 | WORDRECORDLENGTH);
+	public short SIG_CD_TABLECELL_HREF = (120 | WORDRECORDLENGTH);
+	public short SIG_CD_ACTIONBAREXT = (121 | WORDRECORDLENGTH);
+	public short SIG_CD_IDNAME = (122 | WORDRECORDLENGTH);
+	public short SIG_CD_TABLECELL_IDNAME = (123 | WORDRECORDLENGTH);
+	public short SIG_CD_IMAGESEGMENT = (124 | LONGRECORDLENGTH);
+	public short SIG_CD_IMAGEHEADER = (125 | LONGRECORDLENGTH);
+	public short SIG_CD_V5HOTSPOTBEGIN = (126 | WORDRECORDLENGTH);
+	public short SIG_CD_V5HOTSPOTEND = (127 | BYTERECORDLENGTH);
+	public short SIG_CD_TEXTPROPERTY = (128 | WORDRECORDLENGTH);
+	public short SIG_CD_PARAGRAPH = (129 | BYTERECORDLENGTH);
+	public short SIG_CD_PABDEFINITION = (130 | WORDRECORDLENGTH);
+	public short SIG_CD_PABREFERENCE = (131 | BYTERECORDLENGTH);
+	public short SIG_CD_TEXT = (133 | WORDRECORDLENGTH);
+	public short SIG_CD_HEADER = (142 | WORDRECORDLENGTH);
+	public short SIG_CD_LINKEXPORT2 = (146 | WORDRECORDLENGTH);
+	public short SIG_CD_BITMAPHEADER = (149 | LONGRECORDLENGTH);
+	public short SIG_CD_BITMAPSEGMENT = (150 | LONGRECORDLENGTH);
+	public short SIG_CD_COLORTABLE = (151 | LONGRECORDLENGTH);
+	public short SIG_CD_GRAPHIC = (153 | LONGRECORDLENGTH);
+	public short SIG_CD_PMMETASEG = (154 | LONGRECORDLENGTH);
+	public short SIG_CD_WINMETASEG = (155 | LONGRECORDLENGTH);
+	public short SIG_CD_MACMETASEG = (156 | LONGRECORDLENGTH);
+	public short SIG_CD_CGMMETA = (157 | LONGRECORDLENGTH);
+	public short SIG_CD_PMMETAHEADER = (158 | LONGRECORDLENGTH);
+	public short SIG_CD_WINMETAHEADER = (159 | LONGRECORDLENGTH);
+	public short SIG_CD_MACMETAHEADER = (160 | LONGRECORDLENGTH);
+	public short SIG_CD_TABLEBEGIN = (163 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLECELL = (164 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLEEND = (165 | BYTERECORDLENGTH);
+	public short SIG_CD_STYLENAME = (166 | BYTERECORDLENGTH);
+	public short SIG_CD_STORAGELINK = (196 | WORDRECORDLENGTH);
+	public short SIG_CD_TRANSPARENTTABLE = (197 | LONGRECORDLENGTH);
+	public short SIG_CD_HORIZONTALRULE = (201 | WORDRECORDLENGTH);
+	public short SIG_CD_ALTTEXT = (202 | WORDRECORDLENGTH);
+	public short SIG_CD_ANCHOR = (203 | WORDRECORDLENGTH);
+	public short SIG_CD_HTMLBEGIN = (204 | WORDRECORDLENGTH);
+	public short SIG_CD_HTMLEND = (205 | WORDRECORDLENGTH);
+	public short SIG_CD_HTMLFORMULA = (206 | WORDRECORDLENGTH);
+	public short SIG_CD_NESTEDTABLEBEGIN = (207 | BYTERECORDLENGTH);
+	public short SIG_CD_NESTEDTABLECELL = (208 | BYTERECORDLENGTH);
+	public short SIG_CD_NESTEDTABLEEND = (209 | BYTERECORDLENGTH);
+	public short SIG_CD_COLOR = (210 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLECELL_COLOR = (211 | BYTERECORDLENGTH);
+
+	/* 212 thru 219 reserved for BSIG'S - don't use until we hit 255 */
+
+	public short SIG_CD_BLOBPART = (220 | WORDRECORDLENGTH);
+	public short SIG_CD_BEGIN = (221 | BYTERECORDLENGTH);
+	public short SIG_CD_END = (222 | BYTERECORDLENGTH);
+	public short SIG_CD_VERTICALALIGN = (223 | BYTERECORDLENGTH);
+	public short SIG_CD_FLOATPOSITION = (224 | BYTERECORDLENGTH);
+
+	public short SIG_CD_TIMERINFO = (225 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLEROWHEIGHT = (226 | BYTERECORDLENGTH);
+	public short SIG_CD_TABLELABEL = (227 | WORDRECORDLENGTH);
+	public short SIG_CD_BIDI_TEXT = (228 | WORDRECORDLENGTH);
+	public short SIG_CD_BIDI_TEXTEFFECT = (229 | WORDRECORDLENGTH);
+	public short SIG_CD_REGIONBEGIN = (230 | WORDRECORDLENGTH);
+	public short SIG_CD_REGIONEND = (231 | WORDRECORDLENGTH);
+	public short SIG_CD_TRANSITION = (232 | WORDRECORDLENGTH);
+	public short SIG_CD_FIELDHINT = (233 | WORDRECORDLENGTH);
+	public short SIG_CD_PLACEHOLDER = (234 | WORDRECORDLENGTH);
+	public short SIG_CD_EMBEDDEDOUTLINE = (236 | WORDRECORDLENGTH);
+	public short SIG_CD_EMBEDDEDVIEW = (237 | WORDRECORDLENGTH);
+	public short SIG_CD_CELLBACKGROUNDDATA = (238 | WORDRECORDLENGTH);
+
+	/* Signatures for Frameset CD records */
+	public short SIG_CD_FRAMESETHEADER = (239 | WORDRECORDLENGTH);
+	public short SIG_CD_FRAMESET = (240 | WORDRECORDLENGTH);
+	public short SIG_CD_FRAME = (241 | WORDRECORDLENGTH);
+	/* Signature for Target Frame info on a link	*/
+	public short SIG_CD_TARGET = (242 | WORDRECORDLENGTH);
+
+	public short SIG_CD_MAPELEMENT = (244 | WORDRECORDLENGTH);
+	public short SIG_CD_AREAELEMENT = (245 | WORDRECORDLENGTH);
+	public short SIG_CD_HREF = (246 | WORDRECORDLENGTH);
+	public short SIG_CD_EMBEDDEDCTL = (247 | WORDRECORDLENGTH);
+	public short SIG_CD_HTML_ALTTEXT = (248 | WORDRECORDLENGTH);
+	public short SIG_CD_EVENT = (249 | WORDRECORDLENGTH);
+	public short SIG_CD_PRETABLEBEGIN = (251 | WORDRECORDLENGTH);
+	public short SIG_CD_BORDERINFO = (252 | WORDRECORDLENGTH);
+	public short SIG_CD_EMBEDDEDSCHEDCTL = (253 | WORDRECORDLENGTH);
+
+	public short SIG_CD_EXT2_FIELD = (254 | WORDRECORDLENGTH)	/* Currency, numeric, and data/time extensions */;
+	public short SIG_CD_EMBEDDEDEDITCTL = (255 | WORDRECORDLENGTH);
+
+	/* Can not go beyond 255.  However, there may be room at the beginning of 
+		the list.  Check there.   */
+
+	/* Signatures for Composite Records that are reserved internal records, */
+	/* whose format may change between releases. */
+
+	public short SIG_CD_DOCUMENT_PRE_26 = (128 | BYTERECORDLENGTH);
+	public short SIG_CD_FIELD_PRE_36 = (132 | WORDRECORDLENGTH);
+	public short SIG_CD_FIELD = (138 | WORDRECORDLENGTH);
+	public short SIG_CD_DOCUMENT = (134 | BYTERECORDLENGTH);
+	public short SIG_CD_METAFILE = (135 | WORDRECORDLENGTH);
+	public short SIG_CD_BITMAP = (136 | WORDRECORDLENGTH);
+	public short SIG_CD_FONTTABLE = (139 | WORDRECORDLENGTH);
+	public short SIG_CD_LINK = (140 | BYTERECORDLENGTH);
+	public short SIG_CD_LINKEXPORT = (141 | BYTERECORDLENGTH);
+	public short SIG_CD_KEYWORD = (143 | WORDRECORDLENGTH);
+	public short SIG_CD_LINK2 = (145 | WORDRECORDLENGTH);
+	public short SIG_CD_CGM = (147 | WORDRECORDLENGTH);
+	public short SIG_CD_TIFF = (148 | LONGRECORDLENGTH);
+	public short SIG_CD_PATTERNTABLE = (152 | LONGRECORDLENGTH);
+	public short SIG_CD_DDEBEGIN = (161 | WORDRECORDLENGTH);
+	public short SIG_CD_DDEEND = (162 | WORDRECORDLENGTH);
+	public short SIG_CD_OLEBEGIN = (167 | WORDRECORDLENGTH);
+	public short SIG_CD_OLEEND = (168 | WORDRECORDLENGTH);
+	public short SIG_CD_HOTSPOTBEGIN = (169 | WORDRECORDLENGTH);
+	public short SIG_CD_HOTSPOTEND = (170 | BYTERECORDLENGTH);
+	public short SIG_CD_BUTTON = (171 | WORDRECORDLENGTH);
+	public short SIG_CD_BAR = (172 | WORDRECORDLENGTH);
+	public short SIG_CD_V4HOTSPOTBEGIN = (173 | WORDRECORDLENGTH);
+	public short SIG_CD_V4HOTSPOTEND = (174 | BYTERECORDLENGTH);
+	public short SIG_CD_EXT_FIELD = (176 | WORDRECORDLENGTH);
+	public short SIG_CD_LSOBJECT = (177 | WORDRECORDLENGTH)/* Compiled LS code*/;
+	public short SIG_CD_HTMLHEADER = (178 | WORDRECORDLENGTH) /* Raw HTML */;
+	public short SIG_CD_HTMLSEGMENT = (179 | WORDRECORDLENGTH);
+	public short SIG_CD_LAYOUT = (183 | BYTERECORDLENGTH);
+	public short SIG_CD_LAYOUTTEXT = (184 | BYTERECORDLENGTH);
+	public short SIG_CD_LAYOUTEND = (185 | BYTERECORDLENGTH);
+	public short SIG_CD_LAYOUTFIELD = (186 | BYTERECORDLENGTH);
+	public short SIG_CD_PABHIDE = (187 | WORDRECORDLENGTH);
+	public short SIG_CD_PABFORMREF = (188 | BYTERECORDLENGTH);
+	public short SIG_CD_ACTIONBAR = (189 | BYTERECORDLENGTH);
+	public short SIG_CD_ACTION = (190 | WORDRECORDLENGTH);
+
+	public short SIG_CD_DOCAUTOLAUNCH = (191 | WORDRECORDLENGTH);
+	public short SIG_CD_LAYOUTGRAPHIC = (192 | BYTERECORDLENGTH);
+	public short SIG_CD_OLEOBJINFO = (193 | WORDRECORDLENGTH);
+	public short SIG_CD_LAYOUTBUTTON = (194 | BYTERECORDLENGTH);
+	public short SIG_CD_TEXTEFFECT = (195 | WORDRECORDLENGTH);
+
+
+	public short SIG_ACTION_HEADER = (129 | BYTERECORDLENGTH);
+	public short SIG_ACTION_MODIFYFIELD = (130 | WORDRECORDLENGTH);
+	public short SIG_ACTION_REPLY = (131 | WORDRECORDLENGTH);
+	public short SIG_ACTION_FORMULA = (132 | WORDRECORDLENGTH);
+	public short SIG_ACTION_LOTUSSCRIPT = (133 | WORDRECORDLENGTH);
+	public short SIG_ACTION_SENDMAIL = (134 | WORDRECORDLENGTH);
+	public short SIG_ACTION_DBCOPY = (135 | WORDRECORDLENGTH);
+	public short SIG_ACTION_DELETE = (136 | BYTERECORDLENGTH);
+	public short SIG_ACTION_BYFORM = (137 | WORDRECORDLENGTH);
+	public short SIG_ACTION_MARKREAD = (138 | BYTERECORDLENGTH);
+	public short SIG_ACTION_MARKUNREAD = (139 | BYTERECORDLENGTH);
+	public short SIG_ACTION_MOVETOFOLDER = (140 | WORDRECORDLENGTH);
+	public short SIG_ACTION_COPYTOFOLDER = (141 | WORDRECORDLENGTH);
+	public short SIG_ACTION_REMOVEFROMFOLDER = (142 | WORDRECORDLENGTH);
+	public short SIG_ACTION_NEWSLETTER = (143 | WORDRECORDLENGTH);
+	public short SIG_ACTION_RUNAGENT = (144 | WORDRECORDLENGTH);
+	public short SIG_ACTION_SENDDOCUMENT = (145 | BYTERECORDLENGTH);
+	public short SIG_ACTION_FORMULAONLY = (146 | WORDRECORDLENGTH);
+	public short SIG_ACTION_JAVAAGENT = (147 | WORDRECORDLENGTH);
+	public short SIG_ACTION_JAVA = (148 | WORDRECORDLENGTH);
+
+
+	/* Signatures for items of type TYPE_VIEWMAP_DATASET */
+
+	public short SIG_VIEWMAP_DATASET = (87 | WORDRECORDLENGTH);
+
+	/* Signatures for items of type TYPE_VIEWMAP */
+
+	public short SIG_CD_VMHEADER = (175 | BYTERECORDLENGTH);
+	public short SIG_CD_VMBITMAP = (176 | BYTERECORDLENGTH);
+	public short SIG_CD_VMRECT = (177 | BYTERECORDLENGTH);
+	public short SIG_CD_VMPOLYGON_BYTE = (178 | BYTERECORDLENGTH);
+	public short SIG_CD_VMPOLYLINE_BYTE = (179 | BYTERECORDLENGTH);
+	public short SIG_CD_VMREGION = (180 | BYTERECORDLENGTH);
+	public short SIG_CD_VMACTION = (181 | BYTERECORDLENGTH);
+	public short SIG_CD_VMELLIPSE = (182 | BYTERECORDLENGTH);
+	public short SIG_CD_VMRNDRECT = (184 | BYTERECORDLENGTH);
+	public short SIG_CD_VMBUTTON = (185 | BYTERECORDLENGTH);
+	public short SIG_CD_VMACTION_2 = (186 | WORDRECORDLENGTH);
+	public short SIG_CD_VMTEXTBOX = (187 | WORDRECORDLENGTH);
+	public short SIG_CD_VMPOLYGON = (188 | WORDRECORDLENGTH);
+	public short SIG_CD_VMPOLYLINE = (189 | WORDRECORDLENGTH);
+	public short SIG_CD_VMPOLYRGN = (190 | WORDRECORDLENGTH);
+	public short SIG_CD_VMCIRCLE = (191 | BYTERECORDLENGTH);
+	public short SIG_CD_VMPOLYRGN_BYTE = (192 | BYTERECORDLENGTH);
+
+	/* Signatures for alternate CD sequences*/
+	public short SIG_CD_ALTERNATEBEGIN = (198 | WORDRECORDLENGTH);
+	public short SIG_CD_ALTERNATEEND = (199 | BYTERECORDLENGTH);
+
+	public short SIG_CD_OLERTMARKER = (200 | WORDRECORDLENGTH);
 
 }

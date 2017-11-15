@@ -83,5 +83,8 @@ public interface WinNotesCAPI extends NotesCAPI, StdCallLibrary {
 	
 	public interface OSSIGREPLPROCWin extends OSSIGREPLPROC, StdCallCallback {
 	}
-	
+
+	public interface ActionRoutinePtrWin extends ActionRoutinePtr {
+	};
+
 }

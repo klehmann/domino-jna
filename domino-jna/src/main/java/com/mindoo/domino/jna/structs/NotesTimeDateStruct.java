@@ -118,6 +118,15 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 	public static class ByValue extends NotesTimeDateStruct implements Structure.ByValue {
 		private static final long serialVersionUID = -4346454795599331918L;
 		
+		public static NotesTimeDateStruct.ByValue newInstance() {
+			return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct.ByValue>() {
+
+				@Override
+				public NotesTimeDateStruct.ByValue run() {
+					return new NotesTimeDateStruct.ByValue();
+				}
+			});
+		}
 	};
 	
 	/**

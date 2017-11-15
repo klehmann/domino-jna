@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringWriter;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -15,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
+import com.mindoo.domino.jna.compoundtext.RichTextBuilder;
+import com.mindoo.domino.jna.constants.CDRecord;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.NoteClass;
@@ -1644,8 +1648,8 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		Memory itemNameMem = StringUtil.isEmpty(searchForItemName) ? null : NotesStringUtils.toLMBCS(searchForItemName, false);
 		
-		NotesBlockIdStruct.ByReference itemBlockId = new NotesBlockIdStruct.ByReference();
-		NotesBlockIdStruct.ByReference valueBlockId = new NotesBlockIdStruct.ByReference();
+		NotesBlockIdStruct.ByReference itemBlockId = NotesBlockIdStruct.ByReference.newInstance();
+		NotesBlockIdStruct.ByReference valueBlockId = NotesBlockIdStruct.ByReference.newInstance();
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
 		
@@ -1690,7 +1694,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		while (true) {
 			IntByReference retNextValueLen = new IntByReference();
 			
-			NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+			NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 			itemBlockIdByVal.pool = itemBlockId.pool;
 			itemBlockIdByVal.block = itemBlockId.block;
 			
@@ -1733,6 +1737,76 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Method to enumerate all CD records of a richtext item with the specified name.
+	 * If Domino splits the richtext data into multiple items (because it does not fit into 64K),
+	 * the method will process all available items.
+	 * 
+	 * @param richTextItemName richtext item name
+	 * @param callback callback to call for each record
+	 */
+	public void enumerateRichTextCDRecords(String richTextItemName, final ICDRecordCallback callback) {
+		final boolean[] aborted = new boolean[1];
+		
+		getItems(richTextItemName, new IItemCallback() {
+
+			@Override
+			public void itemNotFound() {
+			}
+
+			@Override
+			public Action itemFound(NotesItem item) {
+				if (item.getType()==NotesItem.TYPE_COMPOSITE) {
+					item.enumerateRichTextCDRecords(new ICDRecordCallback() {
+
+						@Override
+						public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature,
+								int dataLength) {
+							Action action = callback.recordVisited(data, parsedSignature, signature, dataLength);
+							if (action==Action.Stop) {
+								aborted[0] = true;
+							}
+							return action;
+						}
+					});
+					if (aborted[0]) {
+						return Action.Stop;
+					}
+				}
+				return Action.Continue;
+			}
+		});
+	}
+	
+	/**
+	 * Extracts all text from a richtext item
+	 * 
+	 * @param itemName item name
+	 * @return text content
+	 */
+	public String getRichtextContentAsText(String itemName) {
+		final StringWriter sWriter = new StringWriter();
+		
+		//find all items with this name in case the content got to big to fit into one item alone
+		getItems(itemName, new IItemCallback() {
+
+			@Override
+			public void itemNotFound() {
+			}
+
+			@Override
+			public Action itemFound(NotesItem item) {
+				if (item.getType()==NotesItem.TYPE_COMPOSITE) {
+					item.getAllCompositeTextContent(sWriter);
+				}
+				return Action.Continue;
+			}
+		});
+		
+		return sWriter.toString();
+	}
+	
+	
 	/**
 	 * Returns the first item with the specified name from the note
 	 * 
@@ -3473,7 +3547,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short flagsShort = ItemType.toBitMask(flags);
 		
-		NotesBlockIdStruct.ByValue valueBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		valueBlockIdByVal.pool = hItemValue;
 		valueBlockIdByVal.block = 0;
 		valueBlockIdByVal.write();
@@ -4434,5 +4508,65 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.HTMLDestroyConverter(hHTML);
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+	
+	/**
+	 * This function can be used to create basic richtext content. It uses C API methods to create
+	 * "CompoundText", which provide some high-level methods for richtext creation, e.g.
+	 * to add text, doclinks, render notes as richtext or append other richtext items.<br>
+	 * <br>
+	 * <b>After calling the available methods in the returned {@link RichTextBuilder}, you must
+	 * call {@link RichTextBuilder#close()} to write your changes into the note. Otherwise
+	 * it is discarded.</b>
+	 * 
+	 * @param itemName item name
+	 * @return richtext builder
+	 */
+	public RichTextBuilder createRichTextItem(String itemName) {
+		checkHandle();
+
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference rethCompound = new LongByReference();
+			result = notesAPI.b64_CompoundTextCreate(m_hNote64, itemNameMem, rethCompound);
+			NotesErrorUtils.checkResult(result);
+			long hCompound = rethCompound.getValue();
+			RichTextBuilder ct = new RichTextBuilder(this, hCompound);
+			NotesGC.__objectCreated(RichTextBuilder.class, ct);
+			return ct;
+		}
+		else {
+			IntByReference rethCompound = new IntByReference();
+			result = notesAPI.b32_CompoundTextCreate(m_hNote32, itemNameMem, rethCompound);
+			NotesErrorUtils.checkResult(result);
+			int hCompound = rethCompound.getValue();
+			RichTextBuilder ct = new RichTextBuilder(this, hCompound);
+			NotesGC.__objectCreated(RichTextBuilder.class, ct);
+			return ct;
+		}
+	}
+	
+	/**
+	 * Callback interface to read CD record data
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface ICDRecordCallback {
+		public enum Action {Continue, Stop}
+		
+		/**
+		 * Method is called for all CD records in this item
+		 * 
+		 * @param data read-only bytebuffer to access data
+		 * @param parsedSignature enum with converted signature WORD
+		 * @param signature signature WORD for the record type
+		 * @param dataLength length of data to read
+		 * @return action value to continue or stop
+		 */
+		public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature, int dataLength);
+		
 	}
 }

@@ -234,7 +234,7 @@ public class NotesAttachment {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
@@ -323,7 +323,7 @@ public class NotesAttachment {
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = new NotesBlockIdStruct.ByValue();
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 

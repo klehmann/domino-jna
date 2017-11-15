@@ -13,7 +13,6 @@ import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesViewColumn;
 import com.mindoo.domino.jna.NotesViewFormat;
-import com.mindoo.domino.jna.NotesCollection.Direction;
 
 import junit.framework.Assert;
 import lotus.domino.Database;
@@ -28,6 +27,36 @@ import lotus.domino.ViewColumn;
  */
 public class TestViewMetaData extends BaseJNATestClass {
 
+	@Test
+	public void testViewMetaData_defaultCollection() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection defaultConn = dbData.openDefaultCollection();
+				System.out.println("Default collection name: " +defaultConn.getName());
+				return null;
+			}
+		});
+
+	}
+	
+	@Test
+	public void testViewMetaData_designCollection() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection designConn = dbData.openDesignCollection();
+				System.out.println("Design collection name: " +designConn.getName());
+				return null;
+			}
+		});
+
+	}
+	
 	@Test
 	public void testViewMetaData_nameAndAlias() {
 		runWithSession(new IDominoCallable<Object>() {
@@ -52,7 +81,7 @@ public class TestViewMetaData extends BaseJNATestClass {
 
 	}
 
-	//	@Test
+	@Test
 	public void testViewMetaData_columnTitleLookup() {
 		runWithSession(new IDominoCallable<Object>() {
 

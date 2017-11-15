@@ -92,9 +92,25 @@ public class NotesBlockIdStruct extends BaseStructure {
 	}
 	
 	public static class ByReference extends NotesBlockIdStruct implements Structure.ByReference {
-		
+		public static NotesBlockIdStruct.ByReference newInstance() {
+			return AccessController.doPrivileged(new PrivilegedAction<NotesBlockIdStruct.ByReference>() {
+
+				@Override
+				public NotesBlockIdStruct.ByReference run() {
+					return new NotesBlockIdStruct.ByReference();
+				}
+			});
+		}
 	};
 	public static class ByValue extends NotesBlockIdStruct implements Structure.ByValue {
-		
+		public static NotesBlockIdStruct.ByValue newInstance() {
+			return AccessController.doPrivileged(new PrivilegedAction<NotesBlockIdStruct.ByValue>() {
+
+				@Override
+				public NotesBlockIdStruct.ByValue run() {
+					return new NotesBlockIdStruct.ByValue();
+				}
+			});
+		}
 	};
 }
