@@ -1,5 +1,10 @@
 package com.mindoo.domino.jna.compoundtext;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -318,6 +323,331 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 	}
 
+	public enum ImageType {GIF, JPEG, BMP}
+	
+	/**
+	 * Adds an image to the richtext item
+	 * 
+	 * @param imgWidth image width
+	 * @param imgHeight image height
+	 * @param f image file
+	 * @throws IOException
+	 */
+	public void addImage(int imgWidth, int imgHeight, final File f) throws IOException {
+		addImage(imgWidth, imgHeight, -1, -1, f);
+	}
+	
+	/**
+	 * Adds an image to the richtext item. We support GIF, JPEG and BMP files.
+	 * 
+	 * @param imgWidth image width
+	 * @param imgHeight image height
+	 * @param resizeToWidth if not -1, resize the image to this width
+	 * @param resizeToHeight if not -1, resize the image to this width
+	 * @param f image file
+	 * @throws IOException
+	 */
+	public void addImage(int imgWidth, int imgHeight, int resizeToWidth, int resizeToHeight, File f) throws IOException {
+		String fileName = f.getName();
+		int iPos = fileName.lastIndexOf('.');
+		if (iPos==-1)
+			throw new IllegalArgumentException("Missing file extension for image filename. Cannot detect image type this way: "+f.getAbsolutePath());
+		
+		String ext = iPos==-1 ? "" : fileName.substring(iPos+1);
+		ImageType imgType;
+		if ("gif".equalsIgnoreCase(ext)) {
+			imgType = ImageType.GIF;
+		}
+		else if ("jpg".equalsIgnoreCase(ext) || "jpeg".equalsIgnoreCase(ext)) {
+			imgType = ImageType.JPEG;
+		}
+		else if ("bmp".equalsIgnoreCase(ext)) {
+			imgType = ImageType.BMP;
+		}
+		else
+			throw new IllegalArgumentException("Unsupported image type found. Only .gif, .jpg/.jpeg, .bmp are supported. "+f.getAbsolutePath());
+		
+		FileInputStream fIn = new FileInputStream(f);
+		try {
+			addImage(imgWidth, imgHeight, resizeToWidth, resizeToHeight, imgType, (int) f.length(), fIn);
+		}
+		finally {
+			fIn.close();
+		}
+	}
+	
+	/**
+	 * Adds an image to the richtext item
+	 * 
+	 * @param imgWidth image width
+	 * @param imgHeight image height
+	 * @param resizeToWidth if not -1, resize the image to this width
+	 * @param resizeToHeight if not -1, resize the image to this width
+	 * @param imgType type of image data
+	 * @param fileSize total size of image data
+	 * @param imageData image data as bytestream
+	 * @throws IOException
+	 */
+	public void addImage(int imgWidth, int imgHeight, int resizeToWidth, int resizeToHeight, final ImageType imgType, int fileSize, InputStream imageData) throws IOException {
+		checkHandle();
+		
+		if (imgWidth<=0 || imgHeight<=0) {
+			throw new IllegalArgumentException("Width/Height must be specified");
+		}
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		short result;
+		
+		//write graphic header
+//		typedef struct {
+//			   LSIG     Header;     /* Signature and Length */
+//			   RECTSIZE DestSize;   /* Destination Display size in TWIPS
+//			                           (1/1440 inch) */
+//			   RECTSIZE CropSize;   /* Reserved */
+//			   CROPRECT CropOffset; /* Reserved */
+//			   WORD     fResize;    /* True if user resized object */
+//			   BYTE     Version;    /* CDGRAPHIC_VERSIONxxx */
+//			   BYTE     bFlags;     /* Ignored before CDGRAPHIC_VERSION3 */
+//			      WORD     wReserved;
+//			} CDGRAPHIC;
+		
+//		Read record GRAPHIC (153) with 22 data bytes, cdrecord length: 28
+//		Data:
+//		[00 00 00 00 00 00 00 00]   [........]
+//		[00 00 00 00 00 00 00 00]   [........]
+//		[00 00 01 00 00 00      ]
+				
+		Memory graphicMem = new Memory(
+				6 +				//LSIG
+				2 + 2 +			// RECTSIZE
+				2 + 2 +			// RECTSIZE
+				2 + 2 + 2 + 2 + // CROPRECT
+				2 +				// fResize
+				1 + 				// Verson
+				1 + 				// Flags
+				2 				// Reserved
+				);
+		graphicMem.setShort(0, NotesCAPI.SIG_CD_GRAPHIC);
+		graphicMem.share(2).setInt(0, (int) graphicMem.size());
+		
+		boolean isResized = resizeToWidth!=-1 && resizeToWidth!=-1;
+		
+		// DestSize : RECTSIZE (Word/Word)
+		if (isResized) {
+			graphicMem.share(6).setShort(0, (short) (resizeToWidth & 0xffff));
+			graphicMem.share(6 + 2).setShort(0, (short) (resizeToWidth & 0xffff));
+		}
+		else {
+			graphicMem.share(6).setShort(0, (short) 0);
+			graphicMem.share(6 + 2).setShort(0, (short) 0);
+		}
+		
+		// CropSize : RECTSIZE (Word/Word)
+		graphicMem.share(6 + 4).setShort(0, (short) 0);
+		graphicMem.share(6 + 6).setShort(0, (short) 0);
+		// CropOffset : CROPRECT
+		graphicMem.share(6 + 8).setShort(0, (short) 0);
+		graphicMem.share(6 + 10).setShort(0, (short) 0);
+		graphicMem.share(6 + 12).setShort(0, (short) 0);
+		graphicMem.share(6 + 14).setShort(0, (short) 0);
+		// fResize : WORD
+		if (isResized) {
+			graphicMem.share(6 + 16).setShort(0, (short) 1);
+		}
+		else {
+			graphicMem.share(6 + 16).setShort(0, (short) 0);
+		}
+		//Version: BYTE
+		graphicMem.share(6 + 18).setByte(0, NotesCAPI.CDGRAPHIC_VERSION3);
+		
+		//Flags:
+		graphicMem.share(6 + 19).setByte(0, (byte) NotesCAPI.CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS);
+		//Reserved:
+		graphicMem.share(6 + 20).setShort(0, (short) 0);
+		
+		
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, graphicMem, (int) graphicMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, graphicMem, (int) graphicMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+
+		//write image header
+//		typedef struct {
+//		   LSIG  Header;        /* Signature and Length */
+//		   WORD  ImageType;     /* Type of image (e.g., GIF, JPEG) */
+//		   WORD  Width;         /* Width of the image (in pixels) */
+//		   WORD  Height;        /* Height of the image (in pixels) */
+//		   DWORD ImageDataSize; /* Size (in bytes) of the image data */
+//		   DWORD SegCount;      /* Number of CDIMAGESEGMENT records
+//		                           expected to follow */
+//		   DWORD Flags;         /* Flags (currently unused) */
+//		   DWORD Reserved;      /* Reserved for future use */
+//		} CDIMAGEHEADER;
+
+//		[01 00 6e 01 2c 01 1f 41]   [..n.,..A]
+//		[00 00 02 00 00 00 00 00]   [........]
+//		[00 00 00 00 00 00      ]   [......  ]
+						
+		Memory imageHeaderMem = new Memory(
+				2+4 + //LSIG
+				2 + //ImageType
+				2 + //Width
+				2 + //Height
+				4 + //ImageDataSize
+				4 + //SegCount
+				4 + //Flags
+				4  //Reserved
+				);
+		imageHeaderMem.setShort(0, NotesCAPI.SIG_CD_IMAGEHEADER);
+		imageHeaderMem.share(2).setInt(0, (int) imageHeaderMem.size());
+		short imageTypeShort;
+		switch (imgType) {
+		case GIF:
+			imageTypeShort = NotesCAPI.CDIMAGETYPE_GIF;
+			break;
+		case JPEG:
+			imageTypeShort = NotesCAPI.CDIMAGETYPE_JPEG;
+			break;
+		case BMP:
+			imageTypeShort = NotesCAPI.CDIMAGETYPE_BMP;
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown image type: "+imgType);
+		}
+		
+		final int MAX_SEGMENT_SIZE = 10240;
+		
+		imageHeaderMem.share(6).setShort(0, imageTypeShort);
+		short imgWidthShort = (short) (imgWidth & 0xffff);
+		imageHeaderMem.share(8).setShort(0, imgWidthShort);
+		short imgHeightShort = (short) (imgHeight & 0xffff);
+		imageHeaderMem.share(10).setShort(0, imgHeightShort);
+		
+		imageHeaderMem.share(12).setInt(0, fileSize);
+		
+		int fullSegments = (int) (fileSize / MAX_SEGMENT_SIZE);
+		int segments = fullSegments;
+		int dataBytesInLastSegment = fileSize - fullSegments * MAX_SEGMENT_SIZE;
+		if (dataBytesInLastSegment>0) {
+			segments++;
+		}
+		
+		imageHeaderMem.share(16).setInt(0, segments & 0xffff);
+		
+		imageHeaderMem.share(20).setInt(0, 0); //flags
+		imageHeaderMem.share(24).setInt(0, 0); //reserved
+
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, imageHeaderMem, (int) imageHeaderMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, imageHeaderMem, (int) imageHeaderMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		
+		byte[] buf = new byte[MAX_SEGMENT_SIZE];
+		int len;
+		int bytesRead = 0;
+		
+		for (int i=0; i<segments; i++) {
+			Arrays.fill(buf, (byte) 0);
+			
+			len = imageData.read(buf);
+			if (i<(segments-1)) {
+				if (len<MAX_SEGMENT_SIZE)
+					throw new IllegalStateException("The InputStream returned "+(bytesRead+len)+" instead of "+fileSize);
+			}
+			else {
+				//last segment
+				if (len < 0) {
+					throw new IllegalStateException("The InputStream returned "+bytesRead+" instead of "+fileSize);
+				}
+			}
+			bytesRead += len;
+			
+			//write image segment
+//			typedef struct {
+//			   LSIG Header;   /* Signature and Length */
+//			   WORD DataSize; /* Actual Size of image bits in bytes, ignoring
+//			                     any filler */
+//			   WORD SegSize;  /* Size of segment, is equal to or larger than
+//			                     DataSize if filler byte added to maintain word
+//			                     boundary */
+//			} CDIMAGESEGMENT;
+			
+//			Read record IMAGESEGMENT (124) with 10244 data bytes, cdrecord length: 10250
+//			Data:
+//			[00 28 00 28 47 49 46 38]   [.(.(GIF8]
+//			[39 61 6e 01 2c 01 f7 00]   [9an.,...]
+//			[00 06 06 06 2b 2b 2b 4a]   [....+++J]
+//			[4a 4a 6b 6b 6b 8c 8c 8c]   [JJkkk...]
+//			[ac ac ac cb cb cb ff ff]   [........]
+//			[ff 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+//			[00 00 00 00 00 00 00 00]   [........]
+					
+			int segSize = len;
+			if ((segSize & 1L)==1) {
+				segSize++;
+			}
+			
+			Memory imageSegMem = new Memory(
+					6 + //LSIG
+					2 + //DataSize
+					2 + //SegSize
+					segSize
+					);
+			
+			imageSegMem.setShort(0, NotesCAPI.SIG_CD_IMAGESEGMENT); // LSIG
+			imageSegMem.share(2).setInt(0, (int) imageSegMem.size()); // LSIG
+			imageSegMem.share(6).setShort(0, (short) (len & 0xffff)); // DataSize
+			imageSegMem.share(8).setShort(0, (short) (segSize & 0xffff)); // SegSize
+			imageSegMem.share(10).write(0, buf, 0, len); // Data
+			
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, imageSegMem, (int) imageSegMem.size());
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, imageSegMem, (int) imageSegMem.size());
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+//		Read record TEXT (-123) with 4 data bytes, cdrecord length: 8
+//		Data:
+//		[01 00 00 0a            ]   [....    ]
+		
+//		Memory dummyTxtMem = new Memory(
+//				4 + //WSIG
+//				4 //FONTID
+//				);
+//		dummyTxtMem.setShort(0, NotesCAPI.SIG_CD_TEXT);
+//		dummyTxtMem.share(2).setShort(0, (short) (dummyTxtMem.size() & 0xffff));
+//		dummyTxtMem.share(4).setByte(0, (byte) 1);
+//		dummyTxtMem.share(4).setByte(1, (byte) 0);
+//		dummyTxtMem.share(4).setByte(2, (byte) 0);
+//		dummyTxtMem.share(4).setByte(3, (byte) 10);
+//		
+//		if (NotesJNAContext.is64Bit()) {
+//			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, dummyTxtMem, (int) dummyTxtMem.size());
+//			NotesErrorUtils.checkResult(result);
+//		}
+//		else {
+//			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, dummyTxtMem, (int) dummyTxtMem.size());
+//			NotesErrorUtils.checkResult(result);
+//		}
+	}
+	
 	/**
 	 * This routine closes the build process. Use {@link NotesNote#update()} 
 	 * after {@link #close()} to update and save the document.

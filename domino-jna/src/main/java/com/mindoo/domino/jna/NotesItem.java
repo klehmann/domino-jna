@@ -707,8 +707,10 @@ public class NotesItem {
 		try {
 			int fixedSize;
 			
-			int dwFileSize = getValueLength();
+			int dwFileSize = getValueLength() - 2; //2 -> subtract data type WORD
 			int dwFileOffset = 0;
+			
+			boolean aborted = false;
 			
 			while (dwFileSize>0) {
 				Pointer cdRecordPtr = valuePtr.share(2 + dwFileOffset); //2 -> skip data type WORD
@@ -759,18 +761,21 @@ public class NotesItem {
 					recordType &= 0x00FF; /* Length not part of signature */
 					fixedSize = 2; //sizeof(BSIG);
 				}
+				
 				CDRecord currType = CDRecord.getRecordForConstant(recordType);
 				
 				//give callback access to the memory, but only read-only and with limit check
 				if (callback!=null) {
 					ByteBuffer dataBuf = cdRecordPtr.share(fixedSize).getByteBuffer(0, Math.max(0, dwLength-fixedSize)).asReadOnlyBuffer();
-					if (callback.recordVisited(dataBuf, currType, recordType, Math.max(0, dwLength-fixedSize)) == Action.Stop) {
+					if (callback.recordVisited(dataBuf, currType, recordType, Math.max(0, dwLength-fixedSize), dwLength) == Action.Stop) {
+						aborted = true;
 						break;
 					}
 				}
 				//give direct pointer access (internal only)
 				if (callback2!=null) {
-					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize) == Action.Stop) {
+					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, dwLength) == Action.Stop) {
+						aborted=true;
 						break;
 					}
 				}
@@ -790,6 +795,11 @@ public class NotesItem {
 		            dwFileSize -= 1;            
 		            dwFileOffset += 1;
 		        }
+			}
+			
+			if (!aborted && dwFileSize>0) {
+				//should not happen :-)
+				System.out.println("WARNING: Remaining "+dwFileSize+" bytes found at the end of the CD record item "+getName()+" of document with UNID "+m_parentNote.getUNID());
 			}
 		}
 		finally {
@@ -822,7 +832,7 @@ public class NotesItem {
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
-			public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength) {
+			public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength) {
 				if (signature==NotesCAPI.SIG_CD_TEXT) {
 					Pointer txtPtr = dataPtr.share(4);
 					int txtMemLength = dataLength-4;
@@ -864,9 +874,10 @@ public class NotesItem {
 		 * @param parsedSignature enum with converted signature WORD
 		 * @param signature signature WORD for the record type
 		 * @param dataLength length of data to read
+		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
 		 * @return action value to continue or stop
 		 */
-		public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength);
+		public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength);
 
 	}
 }

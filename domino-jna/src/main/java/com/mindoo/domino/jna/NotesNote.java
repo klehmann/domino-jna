@@ -1761,8 +1761,8 @@ public class NotesNote implements IRecyclableNotesObject {
 
 						@Override
 						public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature,
-								int dataLength) {
-							Action action = callback.recordVisited(data, parsedSignature, signature, dataLength);
+								int dataLength, int cdRecordLength) {
+							Action action = callback.recordVisited(data, parsedSignature, signature, dataLength, cdRecordLength);
 							if (action==Action.Stop) {
 								aborted[0] = true;
 							}
@@ -4564,9 +4564,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		 * @param parsedSignature enum with converted signature WORD
 		 * @param signature signature WORD for the record type
 		 * @param dataLength length of data to read
+		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
 		 * @return action value to continue or stop
 		 */
-		public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature, int dataLength);
+		public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength);
 		
 	}
 }

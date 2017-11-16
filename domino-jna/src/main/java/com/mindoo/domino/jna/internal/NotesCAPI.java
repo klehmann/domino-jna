@@ -5035,4 +5035,19 @@ This allows an Editor to assume some Designer-level access */
 
 	public short SIG_CD_OLERTMARKER = (200 | WORDRECORDLENGTH);
 
+	public short CDIMAGETYPE_GIF = 1;
+	public short CDIMAGETYPE_JPEG = 2;
+	public short CDIMAGETYPE_BMP = 3;
+
+	/* Version control of graphic header */
+	public byte CDGRAPHIC_VERSION1 = 0;		/* Created by Notes version 2 */
+	public byte CDGRAPHIC_VERSION2 = 1;		/* Created by Notes version 3 */
+	public byte CDGRAPHIC_VERSION3 = 2;		/* Created by Notes version 4.5 */
+
+	/*	The following flag indicates that the DestSize field contains
+	pixel values instead of twips. */
+
+	public byte CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS = 0x01;
+	public byte CDGRAPHIC_FLAG_SPANSLINES = 0x02;
+
 }
