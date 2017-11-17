@@ -1,13 +1,24 @@
 package com.mindoo.domino.jna.compoundtext;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.drew.imaging.FileType;
+import com.drew.imaging.FileTypeDetector;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.MetadataException;
+import com.drew.metadata.bmp.BmpHeaderDirectory;
+import com.drew.metadata.gif.GifHeaderDirectory;
+import com.drew.metadata.jpeg.JpegDirectory;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
@@ -328,48 +339,25 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	/**
 	 * Adds an image to the richtext item
 	 * 
-	 * @param imgWidth image width
-	 * @param imgHeight image height
 	 * @param f image file
 	 * @throws IOException
 	 */
-	public void addImage(int imgWidth, int imgHeight, final File f) throws IOException {
-		addImage(imgWidth, imgHeight, -1, -1, f);
+	public void addImage(File f) throws IOException {
+		addImage(-1, -1, f);
 	}
 	
 	/**
 	 * Adds an image to the richtext item. We support GIF, JPEG and BMP files.
 	 * 
-	 * @param imgWidth image width
-	 * @param imgHeight image height
 	 * @param resizeToWidth if not -1, resize the image to this width
 	 * @param resizeToHeight if not -1, resize the image to this width
 	 * @param f image file
 	 * @throws IOException
 	 */
-	public void addImage(int imgWidth, int imgHeight, int resizeToWidth, int resizeToHeight, File f) throws IOException {
-		String fileName = f.getName();
-		int iPos = fileName.lastIndexOf('.');
-		if (iPos==-1)
-			throw new IllegalArgumentException("Missing file extension for image filename. Cannot detect image type this way: "+f.getAbsolutePath());
-		
-		String ext = iPos==-1 ? "" : fileName.substring(iPos+1);
-		ImageType imgType;
-		if ("gif".equalsIgnoreCase(ext)) {
-			imgType = ImageType.GIF;
-		}
-		else if ("jpg".equalsIgnoreCase(ext) || "jpeg".equalsIgnoreCase(ext)) {
-			imgType = ImageType.JPEG;
-		}
-		else if ("bmp".equalsIgnoreCase(ext)) {
-			imgType = ImageType.BMP;
-		}
-		else
-			throw new IllegalArgumentException("Unsupported image type found. Only .gif, .jpg/.jpeg, .bmp are supported. "+f.getAbsolutePath());
-		
+	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
 		FileInputStream fIn = new FileInputStream(f);
 		try {
-			addImage(imgWidth, imgHeight, resizeToWidth, resizeToHeight, imgType, (int) f.length(), fIn);
+			addImage(resizeToWidth, resizeToHeight, (int) f.length(), fIn);
 		}
 		finally {
 			fIn.close();
@@ -379,17 +367,95 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	/**
 	 * Adds an image to the richtext item
 	 * 
-	 * @param imgWidth image width
-	 * @param imgHeight image height
-	 * @param resizeToWidth if not -1, resize the image to this width
-	 * @param resizeToHeight if not -1, resize the image to this width
-	 * @param imgType type of image data
 	 * @param fileSize total size of image data
 	 * @param imageData image data as bytestream
 	 * @throws IOException
 	 */
-	public void addImage(int imgWidth, int imgHeight, int resizeToWidth, int resizeToHeight, final ImageType imgType, int fileSize, InputStream imageData) throws IOException {
+	public void addImage(int fileSize, InputStream imageData) throws IOException {
+		addImage(-1, -1, fileSize, imageData);
+	}
+	
+	/**
+	 * Adds an image to the richtext item
+	 * 
+	 * @param resizeToWidth if not -1, resize the image to this width
+	 * @param resizeToHeight if not -1, resize the image to this width
+	 * @param fileSize total size of image data
+	 * @param imageData image data as bytestream
+	 * @throws IOException
+	 */
+	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		checkHandle();
+		
+		BufferedInputStream innerBufIn = new BufferedInputStream(imageData, 3000);
+		innerBufIn.mark(3000);
+		BufferedInputStream outerBufIn = new BufferedInputStream(innerBufIn, 3000);
+		
+		FileType fileType = FileTypeDetector.detectFileType(outerBufIn);
+		if (fileType == FileType.Unknown)
+			throw new NotesError(0, "Unable to detect filetype of image");
+		innerBufIn.reset();
+		
+		boolean isSupported = false;
+		if (fileType == FileType.Gif || fileType == FileType.Jpeg || fileType == FileType.Bmp) {
+			isSupported = true;
+		}
+		
+		if (!isSupported)
+			throw new NotesError(0, "Unsupported filetype "+fileType+". Only GIF, JPEG and BMP are supported");
+		
+		outerBufIn.mark(3000);
+		Metadata metadata;
+		try {
+			metadata = ImageMetadataReader.readMetadata(outerBufIn);
+		} catch (ImageProcessingException e) {
+			throw new NotesError(0, "Unable to read image metadata", e);
+		}
+		innerBufIn.reset();
+
+		int imgWidth = -1;
+		int imgHeight = -1;
+		
+		switch (fileType) {
+		case Gif:
+			Collection<GifHeaderDirectory> gifHeaderDirs = metadata.getDirectoriesOfType(GifHeaderDirectory.class);
+			if (gifHeaderDirs!=null && !gifHeaderDirs.isEmpty()) {
+				GifHeaderDirectory header = gifHeaderDirs.iterator().next();
+				try {
+					imgWidth = header.getInt(GifHeaderDirectory.TAG_IMAGE_WIDTH);
+					imgHeight = header.getInt(GifHeaderDirectory.TAG_IMAGE_HEIGHT);
+				} catch (MetadataException e) {
+					throw new NotesError(0, "Error reading GIF image size", e);
+				}
+			}
+			break;
+		case Jpeg:
+			Collection<JpegDirectory> jpegHeaderDirs = metadata.getDirectoriesOfType(JpegDirectory.class);
+			if (jpegHeaderDirs!=null && !jpegHeaderDirs.isEmpty()) {
+				JpegDirectory jpegDir = jpegHeaderDirs.iterator().next();
+				try {
+					imgWidth = jpegDir.getImageWidth();
+					imgHeight = jpegDir.getImageHeight();
+				} catch (MetadataException e) {
+					throw new NotesError(0, "Error reading JPEG image size", e);
+				}
+			}
+			break;
+		case Bmp:
+			Collection<BmpHeaderDirectory> bmpHeaderDirs = metadata.getDirectoriesOfType(BmpHeaderDirectory.class);
+			if (bmpHeaderDirs!=null && !bmpHeaderDirs.isEmpty()) {
+				BmpHeaderDirectory bmpHeader = bmpHeaderDirs.iterator().next();
+				try {
+					imgWidth = bmpHeader.getInt(bmpHeader.TAG_IMAGE_WIDTH);
+					imgHeight = bmpHeader.getInt(bmpHeader.TAG_IMAGE_HEIGHT);
+				} catch (MetadataException e) {
+					throw new NotesError(0, "Error reading BMP image size", e);
+				}
+			}
+			break;
+		default:
+			//
+		}
 		
 		if (imgWidth<=0 || imgHeight<=0) {
 			throw new IllegalArgumentException("Width/Height must be specified");
@@ -505,18 +571,18 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 		imageHeaderMem.setShort(0, NotesCAPI.SIG_CD_IMAGEHEADER);
 		imageHeaderMem.share(2).setInt(0, (int) imageHeaderMem.size());
 		short imageTypeShort;
-		switch (imgType) {
-		case GIF:
+		switch (fileType) {
+		case Gif:
 			imageTypeShort = NotesCAPI.CDIMAGETYPE_GIF;
 			break;
-		case JPEG:
+		case Jpeg:
 			imageTypeShort = NotesCAPI.CDIMAGETYPE_JPEG;
 			break;
-		case BMP:
+		case Bmp:
 			imageTypeShort = NotesCAPI.CDIMAGETYPE_BMP;
 			break;
 		default:
-			throw new IllegalArgumentException("Unknown image type: "+imgType);
+			throw new IllegalArgumentException("Unknown image type: "+fileType);
 		}
 		
 		final int MAX_SEGMENT_SIZE = 10240;
@@ -557,7 +623,7 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 		for (int i=0; i<segments; i++) {
 			Arrays.fill(buf, (byte) 0);
 			
-			len = imageData.read(buf);
+			len = innerBufIn.read(buf);
 			if (i<(segments-1)) {
 				if (len<MAX_SEGMENT_SIZE)
 					throw new IllegalStateException("The InputStream returned "+(bytesRead+len)+" instead of "+fileSize);
@@ -622,30 +688,6 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 			}
 		}
-
-//		Read record TEXT (-123) with 4 data bytes, cdrecord length: 8
-//		Data:
-//		[01 00 00 0a            ]   [....    ]
-		
-//		Memory dummyTxtMem = new Memory(
-//				4 + //WSIG
-//				4 //FONTID
-//				);
-//		dummyTxtMem.setShort(0, NotesCAPI.SIG_CD_TEXT);
-//		dummyTxtMem.share(2).setShort(0, (short) (dummyTxtMem.size() & 0xffff));
-//		dummyTxtMem.share(4).setByte(0, (byte) 1);
-//		dummyTxtMem.share(4).setByte(1, (byte) 0);
-//		dummyTxtMem.share(4).setByte(2, (byte) 0);
-//		dummyTxtMem.share(4).setByte(3, (byte) 10);
-//		
-//		if (NotesJNAContext.is64Bit()) {
-//			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, dummyTxtMem, (int) dummyTxtMem.size());
-//			NotesErrorUtils.checkResult(result);
-//		}
-//		else {
-//			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, dummyTxtMem, (int) dummyTxtMem.size());
-//			NotesErrorUtils.checkResult(result);
-//		}
 	}
 	
 	/**
