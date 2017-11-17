@@ -16,7 +16,9 @@ The project provides functionality that is not available in the classic Java API
 * support for view resorting (changing the collation in C API terms)
 * **direct attachment streaming** (IBM's Java API extracts files to temp disk space first to read attachment data)
 * basic APIs to read note (document) item values like String/Double/Calendar single and multiple values
-* a few APIs to write values (needs more work)
+* several APIs to write item values and attachments (needs more work)
+* richtext item reading: convenience method to extract text content, advanced API to read all CD records
+* richtext item writing: create richtext items with text, images, doclinks, by rendering other notes and appending other richtet items
 * **quick check if a document is editable** by a specified user (without the need to scan through author items)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
@@ -266,4 +268,14 @@ Here are some of the things that we plan to do:
 The code is available under Apache 2.0 license.
 
 Copyright by [Mindoo GmbH](http://www.mindoo.com)
+
+## Dependencies
+The code uses the following open source projects:
+
+[metadata-extractor|https://github.com/drewnoakes/metadata-extractor]
+available under Apache 2.0 license
+
+[Apache Commons Collections 4|https://commons.apache.org/proper/commons-collections/]
+available under Apache 2.0 license
+
 
