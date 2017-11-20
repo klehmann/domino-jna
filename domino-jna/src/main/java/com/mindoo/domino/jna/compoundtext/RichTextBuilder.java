@@ -340,7 +340,7 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	 * Adds an image to the richtext item
 	 * 
 	 * @param f image file
-	 * @throws IOException
+	 * @throws IOException if data cannot be read
 	 */
 	public void addImage(File f) throws IOException {
 		addImage(-1, -1, f);
@@ -352,7 +352,7 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	 * @param resizeToWidth if not -1, resize the image to this width
 	 * @param resizeToHeight if not -1, resize the image to this width
 	 * @param f image file
-	 * @throws IOException
+	 * @throws IOException if data cannot be read
 	 */
 	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
 		FileInputStream fIn = new FileInputStream(f);
@@ -369,7 +369,7 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	 * 
 	 * @param fileSize total size of image data
 	 * @param imageData image data as bytestream
-	 * @throws IOException
+	 * @throws IOException if data cannot be read
 	 */
 	public void addImage(int fileSize, InputStream imageData) throws IOException {
 		addImage(-1, -1, fileSize, imageData);
@@ -382,7 +382,7 @@ public class RichTextBuilder implements IRecyclableNotesObject {
 	 * @param resizeToHeight if not -1, resize the image to this width
 	 * @param fileSize total size of image data
 	 * @param imageData image data as bytestream
-	 * @throws IOException
+	 * @throws IOException if data cannot be read
 	 */
 	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		checkHandle();
