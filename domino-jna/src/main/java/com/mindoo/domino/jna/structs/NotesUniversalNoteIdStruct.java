@@ -144,8 +144,8 @@ public class NotesUniversalNoteIdStruct extends BaseStructure implements IAdapta
 		
 		Formatter formatter = new Formatter();
 		ByteBuffer data = oidPtr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
+		formatter.format("%016x", data.getLong());
+		formatter.format("%016x", data.getLong());
 		String unidStr = formatter.toString().toUpperCase();
 		formatter.close();
 		return unidStr;

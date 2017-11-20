@@ -796,8 +796,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private static String toUNID(Memory buf) {
 		Formatter formatter = new Formatter();
 		ByteBuffer data = buf.getByteBuffer(0, buf.size()).order(ByteOrder.LITTLE_ENDIAN);
-		formatter.format("%16x", data.getLong());
-		formatter.format("%16x", data.getLong());
+		formatter.format("%016x", data.getLong());
+		formatter.format("%016x", data.getLong());
 		String unid = formatter.toString().toUpperCase();
 		formatter.close();
 		return unid;
