@@ -625,7 +625,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * the on-disk database.<br>
 	 * <br>
 	 * You should also consider updating the collections associated with other Views in a database
-	 * via the function {@link NotesDatabase#openCollection(String, int, EnumSet)}
+	 * via the function
 	 * {@link NotesCollection#update()}, if you have added and/or deleted a substantial number of documents.<br>
 	 * If the Server's Indexer Task does not rebuild the collections associated with
 	 * the database's Views, the first user to access a View in the modified database
