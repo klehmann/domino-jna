@@ -57,7 +57,7 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 
 					@Override
 					public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature,
-							int dataLength) {
+							int dataLength, int cdRecordLength) {
 						
 						if (parsedSignature == CDRecord.TEXT) {
 							int txtLen = dataLength-4;
