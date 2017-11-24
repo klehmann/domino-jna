@@ -2694,6 +2694,19 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Method to check whether a column in the view design can be programmatically
+	 * sorted in the specified direction
+	 * 
+	 * @param progColumnName programmatic column name
+	 * @param direction sort direction
+	 * @return true if sortable
+	 */
+	public boolean isColumnResortable(String progColumnName, Direction direction) {
+		short collation = findCollation(progColumnName, direction);
+		return collation!=-1;
+	}
+
+	/**
 	 * Changes the collation to sort the collection by the specified column and direction
 	 * 
 	 * @param progColumnName programmatic column name
