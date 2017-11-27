@@ -1132,13 +1132,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retUntil = new NotesTimeDate();
 		
 		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct.ByValue sinceStructByVal = NotesTimeDateStruct.ByValue.newInstance();
+		sinceStructByVal.Innards[0] = sinceStruct.Innards[0];
+		sinceStructByVal.Innards[1] = sinceStruct.Innards[1];
+		sinceStructByVal.write();
 		NotesTimeDateStruct retUntilStruct = retUntil.getAdapter(NotesTimeDateStruct.class);
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
-			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, sinceStruct, retUntilStruct, rethTable);
+			short result = notesAPI.b64_NSFDbGetModifiedNoteTable(m_hDB64, noteClassMask, sinceStructByVal, retUntilStruct, rethTable);
 			if (result == INotesErrorConstants.ERR_NO_MODIFIED_NOTES) {
 				return new NotesIDTable();
 			}
@@ -1147,7 +1151,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethTable = new IntByReference();
-			short result = notesAPI.b32_NSFDbGetModifiedNoteTable(m_hDB32, noteClassMask, sinceStruct, retUntilStruct, rethTable);
+			short result = notesAPI.b32_NSFDbGetModifiedNoteTable(m_hDB32, noteClassMask, sinceStructByVal, retUntilStruct, rethTable);
 			if (result == INotesErrorConstants.ERR_NO_MODIFIED_NOTES) {
 				return new NotesIDTable();
 			}

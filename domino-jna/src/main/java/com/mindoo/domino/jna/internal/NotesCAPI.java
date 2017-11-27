@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 
-import com.mindoo.domino.jna.NotesUniversalNoteId;
 import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.structs.NIFFindByKeyContextStruct;
@@ -418,8 +417,8 @@ public interface NotesCAPI extends Library {
     /** Mark all unread */
     public static short FILTER_MARK_UNREAD_ALL = 0x0100;
     
-	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
-	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDateStruct Since, NotesTimeDateStruct retUntil, LongByReference rethTable);
+	short b32_NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
+	short b64_NSFDbGetModifiedNoteTable(long hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, LongByReference rethTable);
 
 	//callbacks for NSFDbGetNotes
 	
@@ -1754,6 +1753,11 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			int value_len,
 			NotesBlockIdStruct item_bid_ptr);
 	
+	public short NSFItemRealloc(
+			NotesBlockIdStruct.ByValue item_blockid,
+			NotesBlockIdStruct value_blockid_ptr,
+			int value_len);
+
 	public short b32_NSFDbGetMultNoteInfo(
 			int  hDb,
 			short  Count,
@@ -5049,5 +5053,71 @@ This allows an Editor to assume some Designer-level access */
 
 	public byte CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS = 0x01;
 	public byte CDGRAPHIC_FLAG_SPANSLINES = 0x02;
+
+	/*	HOTSPOT_RUN Types */
+
+	public short HOTSPOTREC_TYPE_POPUP = 1;
+	public short HOTSPOTREC_TYPE_HOTREGION = 2;
+	public short HOTSPOTREC_TYPE_BUTTON = 3;
+	public short HOTSPOTREC_TYPE_FILE = 4;
+	public short HOTSPOTREC_TYPE_SECTION = 7;
+	public short HOTSPOTREC_TYPE_ANY = 8;
+	public short HOTSPOTREC_TYPE_HOTLINK = 11;
+	public short HOTSPOTREC_TYPE_BUNDLE = 12;
+	public short HOTSPOTREC_TYPE_V4_SECTION = 13;
+	public short HOTSPOTREC_TYPE_SUBFORM = 14;
+	public short HOTSPOTREC_TYPE_ACTIVEOBJECT = 15;
+	public short HOTSPOTREC_TYPE_OLERICHTEXT = 18;
+	public short HOTSPOTREC_TYPE_EMBEDDEDVIEW = 19;	/* embedded view */
+	public short HOTSPOTREC_TYPE_EMBEDDEDFPANE = 20;	/* embedded folder pane */
+	public short HOTSPOTREC_TYPE_EMBEDDEDNAV = 21;	/* embedded navigator */
+	public short HOTSPOTREC_TYPE_MOUSEOVER = 22;
+	public short HOTSPOTREC_TYPE_FILEUPLOAD = 24;	/* file upload placeholder */
+	public short HOTSPOTREC_TYPE_EMBEDDEDOUTLINE = 27; 	/* embedded outline */
+	public short HOTSPOTREC_TYPE_EMBEDDEDCTL = 28;	/* embedded control window */
+	public short HOTSPOTREC_TYPE_EMBEDDEDCALENDARCTL = 30;	/* embedded calendar control (date picker) */
+	public short HOTSPOTREC_TYPE_EMBEDDEDSCHEDCTL = 31;	/* embedded scheduling control */
+	public short HOTSPOTREC_TYPE_RCLINK = 32;	/* Not a new type, but renamed for V5 terms*/
+	public short HOTSPOTREC_TYPE_EMBEDDEDEDITCTL = 34;	/* embedded editor control */
+	public short HOTSPOTREC_TYPE_CONTACTLISTCTL = 36;	/* Embeddeble buddy list */
+
+	public int HOTSPOTREC_RUNFLAG_BEGIN = 0x00000001;
+	public int HOTSPOTREC_RUNFLAG_END = 0x00000002;
+	public int HOTSPOTREC_RUNFLAG_BOX = 0x00000004;
+	public int HOTSPOTREC_RUNFLAG_NOBORDER = 0x00000008;
+	public int HOTSPOTREC_RUNFLAG_FORMULA = 0x00000010;	/*	Popup is a formula, not text. */
+	public int HOTSPOTREC_RUNFLAG_MOVIE = 0x00000020; /*	File is a QuickTime movie. */
+	public int HOTSPOTREC_RUNFLAG_IGNORE = 0x00000040; /*	Run is for backward compatibility
+															(i.e. ignore the run)
+														*/
+	public int HOTSPOTREC_RUNFLAG_ACTION = 0x00000080;	/*	Hot region executes a canned action	*/
+	public int HOTSPOTREC_RUNFLAG_SCRIPT = 0x00000100;	/*	Hot region executes a script.	*/
+	public int HOTSPOTREC_RUNFLAG_INOTES = 0x00001000;
+	public int HOTSPOTREC_RUNFLAG_ISMAP = 0x00002000;
+	public int HOTSPOTREC_RUNFLAG_INOTES_AUTO = 0x00004000;
+	public int HOTSPOTREC_RUNFLAG_ISMAP_INPUT = 0x00008000;
+
+	public int HOTSPOTREC_RUNFLAG_SIGNED = 0x00010000;
+	public int HOTSPOTREC_RUNFLAG_ANCHOR = 0x00020000;
+	public int HOTSPOTREC_RUNFLAG_COMPUTED = 0x00040000;	/*	Used in conjunction
+															with computed hotspots.
+														*/
+	public int HOTSPOTREC_RUNFLAG_TEMPLATE = 0x00080000;	/*	used in conjunction
+															with embedded navigator
+															panes.
+														*/
+	public int HOTSPOTREC_RUNFLAG_HIGHLIGHT = 0x00100000;
+	public int HOTSPOTREC_RUNFLAG_EXTACTION = 0x00200000; /*  Hot region executes an extended action */
+	public int HOTSPOTREC_RUNFLAG_NAMEDELEM = 0x00400000;	/*	Hot link to a named element */
+
+	/*	Allow R6 dual action type buttons, e.g. client LotusScript, web JS */
+	public int HOTSPOTREC_RUNFLAG_WEBJAVASCRIPT = 0x00800000;
+
+	public int HOTSPOTREC_RUNFLAG_ODSMASK = 0x00FFFFFC;	/*	Mask for bits stored on disk*/
+
+	/*	CDCAPTION - Text to display with an object (e.g., a graphic) */
+
+	public byte CAPTION_POSITION_BELOW_CENTER = 0;	/*	Centered below object */
+	public byte CAPTION_POSITION_MIDDLE_CENTER = 1;	/*	Centered on object */
 
 }
