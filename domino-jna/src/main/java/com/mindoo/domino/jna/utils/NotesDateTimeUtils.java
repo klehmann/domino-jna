@@ -345,7 +345,7 @@ public class NotesDateTimeUtils {
 		
 		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
 		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MINIMUM, struct);
-//		timeDate.read();
+		struct.read();
 	}
 	
 	/**
@@ -358,7 +358,7 @@ public class NotesDateTimeUtils {
 		
 		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
 		notesAPI.TimeConstant(NotesCAPI.TIMEDATE_MAXIMUM, struct);
-//		timeDate.read();
+		struct.read();
 	}
 	
 	/**
@@ -385,8 +385,12 @@ public class NotesDateTimeUtils {
 		if (struct==null)
 			throw new IllegalArgumentException("Missing native data object");
 		
-		if (struct.Innards==null || struct.Innards.length<2 || (struct.Innards.length>=2 && struct.Innards[0]==0 && struct.Innards[1]==0))
-			return null;
+		if (struct.Innards==null || struct.Innards.length<2)
+			return "";
+		if (struct.Innards[0]==0 && struct.Innards[1]==0)
+			return "MINIMUM";
+		if (struct.Innards[0]==0 && struct.Innards[1]==0xffffff)
+			return "MAXIMUM";
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory retTextBuffer = new Memory(100);
