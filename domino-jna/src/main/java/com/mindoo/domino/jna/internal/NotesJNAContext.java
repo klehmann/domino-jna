@@ -85,7 +85,6 @@ public class NotesJNAContext {
 
 										String osName = System.getProperty("os.name");
 										
-										Native.setProtected(true);
 										@SuppressWarnings("rawtypes")
 										Map options = new HashMap();
 										options.put(Library.OPTION_FUNCTION_MAPPER, new FunctionMapper() {
