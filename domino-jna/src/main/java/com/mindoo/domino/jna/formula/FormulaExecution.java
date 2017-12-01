@@ -150,6 +150,29 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Convenience method to execute a formula on a single note and return the result as a string.<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * If the same formula should be run
+	 * on multiple notes, you should consider to create a shared instance of {@link FormulaExecution}
+	 * and run its {@link #evaluate(NotesNote)} method. Then the formula is parsed and compiled only
+	 * once, which results in better performance and optimized memory usage.</b>
+	 * 
+	 * @param formula formula
+	 * @param note note
+	 * @return computation result as string; if the formula returns a list, we pick the first value
+	 * @throws FormulaCompilationError if formula has wrong syntax
+	 */
+	public static String evaluateAsString(String formula, NotesNote note) throws FormulaCompilationError {
+		List<Object> result = evaluate(formula, note);
+		if (result.isEmpty())
+			return "";
+		else {
+			return result.get(0).toString();
+		}
+	}
+	
+	/**
 	 * Convenience method to execute a formula on a single note.<br>
 	 * <br>
 	 * <b>Please note:<br>
