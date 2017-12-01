@@ -167,8 +167,8 @@ public class NotesUniversalNoteIdStruct extends BaseStructure implements IAdapta
 		int noteInnards1 = (int) (Long.parseLong(unidStr.substring(16,24), 16) & 0xffffffff);
 		int noteInnards0 = (int) (Long.parseLong(unidStr.substring(24,32), 16) & 0xffffffff);
 
-		NotesTimeDateStruct file = new NotesTimeDateStruct(new int[] {fileInnards0, fileInnards1});
-		NotesTimeDateStruct note = new NotesTimeDateStruct(new int[] {noteInnards0, noteInnards1});
+		NotesTimeDateStruct file = NotesTimeDateStruct.newInstance(new int[] {fileInnards0, fileInnards1});
+		NotesTimeDateStruct note = NotesTimeDateStruct.newInstance(new int[] {noteInnards0, noteInnards1});
 
 		this.File = file;
 		this.Note = note;
