@@ -766,7 +766,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
 		}
 		else {
-			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
+			result = notesAPI.b32_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
 		}
 		NotesErrorUtils.checkResult(result);
 	}
