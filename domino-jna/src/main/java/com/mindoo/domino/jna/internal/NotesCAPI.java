@@ -1757,7 +1757,14 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			NotesBlockIdStruct.ByValue item_blockid,
 			NotesBlockIdStruct value_blockid_ptr,
 			int value_len);
-
+	
+	//valuePtr value without datatype WORD
+	public short b64_NSFItemModifyValue (long hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
+			Pointer valuePtr, int valueLength);
+	
+	public short b32_NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
+			Pointer valuePtr, int valueLength);
+	
 	public short b32_NSFDbGetMultNoteInfo(
 			int  hDb,
 			short  Count,
