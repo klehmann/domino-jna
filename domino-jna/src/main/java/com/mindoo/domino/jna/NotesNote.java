@@ -1671,12 +1671,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		NotesErrorUtils.checkResult(result);
 		
-		NotesBlockIdStruct itemBlockIdClone = new NotesBlockIdStruct();
+		NotesBlockIdStruct itemBlockIdClone = NotesBlockIdStruct.newInstance();
 		itemBlockIdClone.pool = itemBlockId.pool;
 		itemBlockIdClone.block = itemBlockId.block;
 		itemBlockIdClone.write();
 		
-		NotesBlockIdStruct valueBlockIdClone = new NotesBlockIdStruct();
+		NotesBlockIdStruct valueBlockIdClone = NotesBlockIdStruct.newInstance();
 		valueBlockIdClone.pool = valueBlockId.pool;
 		valueBlockIdClone.block = valueBlockId.block;
 		valueBlockIdClone.write();
@@ -1715,12 +1715,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 			NotesErrorUtils.checkResult(result);
 
-			itemBlockIdClone = new NotesBlockIdStruct();
+			itemBlockIdClone = NotesBlockIdStruct.newInstance();
 			itemBlockIdClone.pool = itemBlockId.pool;
 			itemBlockIdClone.block = itemBlockId.block;
 			itemBlockIdClone.write();
 			
-			valueBlockIdClone = new NotesBlockIdStruct();
+			valueBlockIdClone = NotesBlockIdStruct.newInstance();
 			valueBlockIdClone.pool = valueBlockId.pool;
 			valueBlockIdClone.block = valueBlockId.block;
 			valueBlockIdClone.write();
@@ -3573,35 +3573,6 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesItem item = new NotesItem(this, retItemBlockId, itemType, valueBlockIdByVal);
 		return item;
 	}
-	
-	/**
-	 * Internal method that calls the C API method to write the item
-	 * 
-	 * @param itemName item name
-	 * @param flags item flags
-	 * @param itemType item type
-	 * @param itemValue binary item value
-	 * @param valueLength length of binary item value (without data type short)
-	 */
-//	private void appendItemx(String itemName, EnumSet<ItemType> flags, int itemType, Pointer itemValue, int valueLength) {
-//		checkHandle();
-//
-//		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
-//		
-//		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-//		short flagsShort = ItemType.toBitMask(flags);
-//		
-//		short result;
-//		if (NotesJNAContext.is64Bit()) {
-//			result = notesAPI.b64_NSFItemAppend(m_hNote64, flagsShort, itemNameMem, (short) 
-//					(itemNameMem==null ? 0 : itemNameMem.size()), (short) (itemType & 0xffff), itemValue, valueLength);
-//		}
-//		else {
-//			result = notesAPI.b32_NSFItemAppend(m_hNote32, flagsShort, itemNameMem, (short) 
-//					(itemNameMem==null ? 0 : itemNameMem.size()), (short) (itemType & 0xffff), itemValue, valueLength);
-//		}
-//		NotesErrorUtils.checkResult(result);
-//	}
 	
 	/**
 	 * This function signs a document by creating a unique electronic signature and appending this
