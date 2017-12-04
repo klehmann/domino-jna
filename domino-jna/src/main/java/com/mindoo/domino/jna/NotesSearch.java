@@ -227,8 +227,13 @@ public class NotesSearch {
 			throw new NotesError(0, "Database already recycled");
 		}
 
+		if (searchFilter instanceof NotesIDTable && since==null) {
+			//since must have any value to make this work in NSFSearchExtended3, so we use 1.1.1900
+			since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
+		}
+
 		NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
-		
+
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
@@ -236,10 +241,6 @@ public class NotesSearch {
 
 		int searchFlagsBitMask = Search.toBitMaskInt(searchFlags);
 		
-		if (searchFilter instanceof NotesIDTable && since==null) {
-			//since must have any value to make this work in NSFSearchExtended3, so we use 1.1.1900
-			since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
-		}
 		
 		if (NotesJNAContext.is64Bit()) {
 			b64_NsfSearchProc apiCallback;
