@@ -7,11 +7,11 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesNote.ICDRecordCallback;
-import com.mindoo.domino.jna.compoundtext.FontStyle;
-import com.mindoo.domino.jna.compoundtext.RichTextBuilder;
-import com.mindoo.domino.jna.compoundtext.TextStyle;
-import com.mindoo.domino.jna.compoundtext.TextStyle.Justify;
-import com.mindoo.domino.jna.constants.CDRecord;
+import com.mindoo.domino.jna.constants.CDRecordType;
+import com.mindoo.domino.jna.richtext.FontStyle;
+import com.mindoo.domino.jna.richtext.RichTextBuilder;
+import com.mindoo.domino.jna.richtext.TextStyle;
+import com.mindoo.domino.jna.richtext.TextStyle.Justify;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 
@@ -56,10 +56,10 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 				note.enumerateRichTextCDRecords("Body", new ICDRecordCallback() {
 
 					@Override
-					public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature,
+					public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature,
 							int dataLength, int cdRecordLength) {
 						
-						if (parsedSignature == CDRecord.TEXT) {
+						if (parsedSignature == CDRecordType.TEXT) {
 							int txtLen = dataLength-4;
 							if (txtLen>0) {
 								Memory txtMem = new Memory(txtLen);
@@ -71,7 +71,7 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 								sb.append(txt);
 							}
 						}
-						else if (parsedSignature == CDRecord.PARAGRAPH) {
+						else if (parsedSignature == CDRecordType.PARAGRAPH) {
 							sb.append("\n");
 						}
 						return Action.Continue;
