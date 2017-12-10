@@ -4624,7 +4624,10 @@ This allows an Editor to assume some Designer-level access */
 			int hNote,
 			Memory pszItemName,
 			int dwFlags);
-
+	
+	public short b64_CompoundTextAssimilateBuffer(long hBuffer, int bufferLength, int flags);
+	public short b32_CompoundTextAssimilateBuffer(int hBuffer, int bufferLength, int flags);
+	
 	public short b64_CompoundTextClose(
 			long hCompound,
 			LongByReference phReturnBuffer,

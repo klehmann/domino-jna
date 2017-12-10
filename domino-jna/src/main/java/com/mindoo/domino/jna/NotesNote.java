@@ -13,12 +13,13 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
-import com.mindoo.domino.jna.compoundtext.RichTextBuilder;
-import com.mindoo.domino.jna.constants.CDRecord;
+import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.NoteClass;
@@ -28,6 +29,7 @@ import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.html.CommandId;
@@ -38,13 +40,21 @@ import com.mindoo.domino.jna.html.IHtmlImageRef;
 import com.mindoo.domino.jna.html.ReferenceType;
 import com.mindoo.domino.jna.html.TargetType;
 import com.mindoo.domino.jna.internal.CollationDecoder;
+import com.mindoo.domino.jna.internal.CompoundTextWriter;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.b32_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesCAPI.b64_CWFErrorProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.richtext.ICompoundText;
+import com.mindoo.domino.jna.richtext.IRichTextNavigator;
+import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
+import com.mindoo.domino.jna.richtext.RichTextBuilder;
+import com.mindoo.domino.jna.richtext.StandaloneRichText;
+import com.mindoo.domino.jna.richtext.conversion.IRichTextConversion;
 import com.mindoo.domino.jna.structs.NoteIdStruct;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
@@ -1442,27 +1452,49 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * the File Attachment API NSFNoteDetachFile must be used exclusively to access these items.
 	 * 
 	 * @param filePathOnDisk fully qualified file path specification for file being attached
-	 * @param fileNameInNote filename that will be stored internally with the attachment, displayed with the attachment icon when the document is viewed in the Notes user interface, and subsequently used when selecting which attachment to Extract or Detach and what path to create for an Extracted file.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible.  If attaching mulitiple files that have the same filename but different content to a single document, make sure this variable is unique in each call to NSFNoteAttachFile().
+	 * @param uniqueFileNameInNote filename that will be stored internally with the attachment, displayed when the attachment is not part of any richtext item (called "V2 attachment" in the Domino help), and subsequently used when selecting which attachment to extract or detach.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible. This function will be sure that the filename is really unique by appending _2, _3 etc. to the base filename, followed by the extension; use the returned NotesAttachment to get the filename we picked
 	 * @param compression compression to use
+	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
 	 */
-	public void attachFile(String filePathOnDisk, String fileNameInNote, Compression compression) {
+	public NotesAttachment attachFile(String filePathOnDisk, String uniqueFileNameInNote, Compression compression) {
 		checkHandle();
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
+		//make sure that the unique filename is really unique, since it will be used to return the NotesAttachment object
+		List<Object> existingFileItems = FormulaExecution.evaluate("@AttachmentNames", this);
+		String reallyUniqueFileName = uniqueFileNameInNote;
+		if (existingFileItems.contains(reallyUniqueFileName)) {
+			String newFileName=reallyUniqueFileName;
+			int idx = 1;
+			while (existingFileItems.contains(reallyUniqueFileName)) {
+				idx++;
+				
+				int iPos = reallyUniqueFileName.lastIndexOf('.');
+				if (iPos==-1) {
+					newFileName = reallyUniqueFileName+"_"+idx;
+				}
+				else {
+					newFileName = reallyUniqueFileName.substring(0, iPos)+"_"+idx+reallyUniqueFileName.substring(iPos);
+				}
+				reallyUniqueFileName = newFileName;
+			}
+		}
+		
 		Memory $fileItemName = NotesStringUtils.toLMBCS("$FILE", true);
 		Memory filePathOnDiskMem = NotesStringUtils.toLMBCS(filePathOnDisk, true);
-		Memory fileNameInNoteMem = NotesStringUtils.toLMBCS(fileNameInNote, true);
+		Memory uniqueFileNameInNoteMem = NotesStringUtils.toLMBCS(reallyUniqueFileName, true);
 		short compressionAsShort = (short) (compression.getValue() & 0xffff);
 		
 		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteAttachFile(m_hNote64, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, fileNameInNoteMem, compressionAsShort);
+			short result = notesAPI.b64_NSFNoteAttachFile(m_hNote64, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFNoteAttachFile(m_hNote32, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, fileNameInNoteMem, compressionAsShort);
+			short result = notesAPI.b32_NSFNoteAttachFile(m_hNote32, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
+		return getAttachment(reallyUniqueFileName);
 	}
 	
 	/**
@@ -1746,6 +1778,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param callback callback to call for each record
 	 */
 	public void enumerateRichTextCDRecords(String richTextItemName, final ICDRecordCallback callback) {
+		checkHandle();
+		
 		final boolean[] aborted = new boolean[1];
 		
 		getItems(richTextItemName, new IItemCallback() {
@@ -1760,7 +1794,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					item.enumerateRichTextCDRecords(new ICDRecordCallback() {
 
 						@Override
-						public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature,
+						public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature,
 								int dataLength, int cdRecordLength) {
 							Action action = callback.recordVisited(data, parsedSignature, signature, dataLength, cdRecordLength);
 							if (action==Action.Stop) {
@@ -1776,6 +1810,17 @@ public class NotesNote implements IRecyclableNotesObject {
 				return Action.Continue;
 			}
 		});
+	}
+
+	/**
+	 * Returns a {@link IRichTextNavigator} to traverse the CD record structure of a richtext item
+	 * back and forth
+	 * 
+	 * @param richTextItemName richtext item name
+	 * @return navigator with position already set to the first CD record
+	 */
+	public IRichTextNavigator getRichtextNavigator(String richTextItemName) {
+		return new MultiItemRichTextNavigator(richTextItemName);
 	}
 	
 	/**
@@ -4480,6 +4525,50 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
+
+	/**
+	 * Applies one of multiple conversions to a richtext item
+	 * 
+	 * @param itemName richtext item name
+	 * @param conversions conversions, processed from left to right
+	 */
+	public void convertRichTextItem(String itemName, IRichTextConversion... conversions) {
+		convertRichTextItem(itemName, this, itemName, conversions);
+	}
+	
+	/**
+	 * Applies one of multiple conversions to a richtext item
+	 * 
+	 * @param itemName richtext item name
+	 * @param targetNote note to copy to conversion result to
+	 * @param targetItemName item name in target note where we should save the conversion result
+	 * @param conversions conversions, processed from left to right
+	 */
+	public void convertRichTextItem(String itemName, NotesNote targetNote, String targetItemName, IRichTextConversion... conversions) {
+		checkHandle();
+		
+		if (conversions==null || conversions.length==0)
+			return;
+		
+		IRichTextNavigator navFromNote = getRichtextNavigator(itemName);
+		IRichTextNavigator currNav = navFromNote;
+		
+		StandaloneRichText tmpRichText = null;
+		for (int i=0; i<conversions.length; i++) {
+			IRichTextConversion currConversion = conversions[i];
+			if (currConversion.isMatch(currNav)) {
+				tmpRichText = new StandaloneRichText();
+				currConversion.convert(currNav, tmpRichText);
+				
+				IRichTextNavigator nextNav = tmpRichText.closeAndGetRichTextNavigator();
+				currNav = nextNav;
+			}
+		}
+		
+		if (tmpRichText!=null) {
+			tmpRichText.closeAndCopyToNote(targetNote, targetItemName);
+		}
+	}
 	
 	/**
 	 * This function can be used to create basic richtext content. It uses C API methods to create
@@ -4505,18 +4594,20 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = notesAPI.b64_CompoundTextCreate(m_hNote64, itemNameMem, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			long hCompound = rethCompound.getValue();
-			RichTextBuilder ct = new RichTextBuilder(this, hCompound);
-			NotesGC.__objectCreated(RichTextBuilder.class, ct);
-			return ct;
+			CompoundTextWriter ct = new CompoundTextWriter(hCompound, false);
+			NotesGC.__objectCreated(CompoundTextWriter.class, ct);
+			RichTextBuilder rt = new RichTextBuilder(this, ct);
+			return rt;
 		}
 		else {
 			IntByReference rethCompound = new IntByReference();
 			result = notesAPI.b32_CompoundTextCreate(m_hNote32, itemNameMem, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			int hCompound = rethCompound.getValue();
-			RichTextBuilder ct = new RichTextBuilder(this, hCompound);
-			NotesGC.__objectCreated(RichTextBuilder.class, ct);
-			return ct;
+			CompoundTextWriter ct = new CompoundTextWriter(hCompound, false);
+			NotesGC.__objectCreated(CompoundTextWriter.class, ct);
+			RichTextBuilder rt = new RichTextBuilder(this, ct);
+			return rt;
 		}
 	}
 	
@@ -4538,7 +4629,539 @@ public class NotesNote implements IRecyclableNotesObject {
 		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
 		 * @return action value to continue or stop
 		 */
-		public Action recordVisited(ByteBuffer data, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength);
+		public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature, int dataLength, int cdRecordLength);
+	}
+	
+	private class RichTextNavPositionImpl implements RichTextNavPosition {
+		private MultiItemRichTextNavigator m_parentNav;
+		private int m_itemIndex;
+		private int m_recordIndex;
+		
+		public RichTextNavPositionImpl(MultiItemRichTextNavigator parentNav, int itemIndex, int recordIndex) {
+			m_parentNav = parentNav;
+			m_itemIndex = itemIndex;
+			m_recordIndex = recordIndex;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + m_itemIndex;
+			result = prime * result + ((m_parentNav == null) ? 0 : m_parentNav.hashCode());
+			result = prime * result + m_recordIndex;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			RichTextNavPositionImpl other = (RichTextNavPositionImpl) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (m_itemIndex != other.m_itemIndex)
+				return false;
+			if (m_parentNav == null) {
+				if (other.m_parentNav != null)
+					return false;
+			} else if (!m_parentNav.equals(other.m_parentNav))
+				return false;
+			if (m_recordIndex != other.m_recordIndex)
+				return false;
+			return true;
+		}
+
+		private NotesNote getOuterType() {
+			return NotesNote.this;
+		}
 		
 	}
+	
+	/**
+	 * Implementation of {@link IRichTextNavigator} to traverse the CD record structure
+	 * of a richtext item stored in a {@link NotesNote} and split up into multiple
+	 * items of type {@link NotesItem#TYPE_COMPOSITE}.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	private class MultiItemRichTextNavigator implements IRichTextNavigator {
+		private String m_richTextItemName;
+		
+		private LinkedList<NotesItem> m_items;
+		private int m_currentItemIndex = -1;
+		
+		private LinkedList<CDRecordMemory> m_currentItemRecords;
+		private int m_currentItemRecordsIndex = -1;
+		
+		/**
+		 * Creates a new navigator and moves to the first CD record
+		 * 
+		 * @param richTextItemName richtext item name
+		 */
+		public MultiItemRichTextNavigator(String richTextItemName) {
+			m_richTextItemName = richTextItemName;
+			//read items
+			m_items = new LinkedList<NotesItem>();
+			
+			getItems(richTextItemName, new IItemCallback() {
+
+				@Override
+				public void itemNotFound() {
+				}
+
+				@Override
+				public Action itemFound(NotesItem item) {
+					if (item.getType()==NotesItem.TYPE_COMPOSITE) {
+						m_items.add(item);
+					}
+					return Action.Continue;
+				}
+			});
+		}
+		
+		@Override
+		public RichTextNavPosition getCurrentRecordPosition() {
+			RichTextNavPositionImpl posImpl = new RichTextNavPositionImpl(this, m_currentItemIndex, m_currentItemRecordsIndex);
+			return posImpl;
+		}
+		
+		@Override
+		public void restoreCurrentRecordPosition(RichTextNavPosition pos) {
+			checkHandle();
+			if (!(pos instanceof RichTextNavPositionImpl))
+				throw new IllegalArgumentException("Invalid position, not generated by this navigator");
+
+			RichTextNavPositionImpl posImpl = (RichTextNavPositionImpl) pos;
+			if (posImpl.m_parentNav!=this)
+				throw new IllegalArgumentException("Invalid position, not generated by this navigator");
+			
+			int oldItemIndex = m_currentItemIndex;
+			m_currentItemIndex = posImpl.m_itemIndex;
+			m_currentItemRecordsIndex = posImpl.m_recordIndex;
+			if (oldItemIndex!=posImpl.m_itemIndex) {
+				//current item changed, so we need to reload the records
+				NotesItem currItem = m_items.get(m_currentItemIndex);
+				m_currentItemRecords = readCDRecords(currItem);
+			}
+		}
+		
+		@Override
+		public boolean isEmpty() {
+			checkHandle();
+			if (m_items.isEmpty()) {
+				return true;
+			}
+			else {
+				boolean hasRecords = hasCDRecords(m_items.getFirst());
+				return !hasRecords;
+			}
+		}
+		
+		@Override
+		public boolean gotoFirst() {
+			checkHandle();
+			
+			if (isEmpty()) {
+				m_currentItemIndex = -1;
+				m_currentItemRecords = null;
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else if (m_currentItemRecords==null || m_currentItemIndex!=0) {
+				//move to first item
+				NotesItem firstItem = m_items.getFirst();
+				m_currentItemRecords = readCDRecords(firstItem);
+				m_currentItemIndex = 0;
+			}
+			
+			//move to first record
+			if (m_currentItemRecords.isEmpty()) {
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else {
+				m_currentItemRecordsIndex = 0;
+				return true;
+			}
+		}
+		
+		private boolean hasCDRecords(NotesItem item) {
+			final boolean[] hasRecords = new boolean[1];
+			
+			item.enumerateCDRecords(new ICompositeCallbackDirect() {
+				
+				@Override
+				public com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action recordVisited(Pointer dataPtr,
+						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
+					hasRecords[0] = true;
+					return com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action.Stop;
+				}
+			});
+		
+			return hasRecords[0];
+		}
+		
+		/**
+		 * Copies all CD records from the specified item
+		 * 
+		 * @param item item
+		 * @return list with CD record data
+		 */
+		private LinkedList<CDRecordMemory> readCDRecords(NotesItem item) {
+			final LinkedList<CDRecordMemory> itemRecords = new LinkedList<CDRecordMemory>();
+
+			item.enumerateCDRecords(new ICompositeCallbackDirect() {
+				
+				@Override
+				public com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action recordVisited(Pointer dataPtr,
+						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
+					
+					byte[] cdRecordDataArr = cdRecordPtr.getByteArray(0, cdRecordLength);
+					Memory cdRecordDataCopied = new Memory(cdRecordLength);
+					cdRecordDataCopied.write(0, cdRecordDataArr, 0, cdRecordLength);
+					
+					CDRecordMemory cdRecordMem = new CDRecordMemory(cdRecordDataCopied, parsedSignature, signature,
+							dataLength, cdRecordLength);
+					itemRecords.add(cdRecordMem);
+					return com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action.Continue;
+				}
+			});
+		
+			return itemRecords;
+		}
+		
+		@Override
+		public boolean gotoLast() {
+			checkHandle();
+			
+			if (isEmpty()) {
+				m_currentItemIndex = -1;
+				m_currentItemRecords = null;
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else if (m_currentItemIndex!=(m_items.size()-1)) {
+				//move to last item
+				NotesItem lastItem = m_items.getLast();
+				m_currentItemRecords = readCDRecords(lastItem);
+				m_currentItemIndex = m_items.size()-1;
+			}
+			
+			//move to last record
+			if (m_currentItemRecords.isEmpty()) {
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else {
+				m_currentItemRecordsIndex = m_currentItemRecords.size()-1;
+				return true;
+			}
+		}
+		
+		@Override
+		public boolean gotoNext() {
+			checkHandle();
+			
+			if (isEmpty()) {
+				m_currentItemIndex = -1;
+				m_currentItemRecords = null;
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else {
+				if (m_currentItemRecordsIndex==-1) {
+					//offroad?
+					return false;
+				}
+				else if (m_currentItemRecordsIndex<(m_currentItemRecords.size()-1)) {
+					//more records available for current item
+					m_currentItemRecordsIndex++;
+					return true;
+				}
+				else {
+					//move to next item
+					
+					if (m_currentItemIndex==-1) {
+						//offroad?
+						return false;
+					}
+					else if (m_currentItemIndex<(m_items.size()-1)) {
+						//move items available
+						m_currentItemIndex++;
+						NotesItem currItem = m_items.get(m_currentItemIndex);
+						m_currentItemRecords = readCDRecords(currItem);
+						if (m_currentItemRecords.isEmpty()) {
+							m_currentItemRecordsIndex = -1;
+							return false;
+						}
+						else {
+							//more to first record of that item
+							m_currentItemRecordsIndex = 0;
+							return true;
+						}
+					}
+					else {
+						//no more items available
+						return false;
+					}
+				}
+			}
+		}
+		
+		@Override
+		public boolean gotoPrev() {
+			checkHandle();
+			
+			if (isEmpty()) {
+				m_currentItemIndex = -1;
+				m_currentItemRecords = null;
+				m_currentItemRecordsIndex = -1;
+				return false;
+			}
+			else {
+				if (m_currentItemRecordsIndex==-1) {
+					//offroad?
+					return false;
+				}
+				else if (m_currentItemRecordsIndex>0) {
+					//more records available for current item
+					m_currentItemRecordsIndex--;
+					return true;
+				}
+				else {
+					//move to prev item
+					
+					if (m_currentItemIndex==-1) {
+						//offroad?
+						return false;
+					}
+					else if (m_currentItemIndex>0) {
+						//move items available
+						m_currentItemIndex--;
+						NotesItem currItem = m_items.get(m_currentItemIndex);
+						m_currentItemRecords = readCDRecords(currItem);
+						if (m_currentItemRecords.isEmpty()) {
+							m_currentItemRecordsIndex = -1;
+							return false;
+						}
+						else {
+							//more to last record of that item
+							m_currentItemRecordsIndex = m_currentItemRecords.size()-1;
+							return true;
+						}
+					}
+					else {
+						//no more items available
+						return false;
+					}
+				}
+			}
+		}
+		
+		@Override
+		public boolean hasNext() {
+			checkHandle();
+			
+			if (m_items.isEmpty()) {
+				return false;
+			}
+			else {
+				if (m_currentItemRecordsIndex==-1) {
+					//offroad?
+					return false;
+				}
+				else if (m_currentItemRecordsIndex<(m_currentItemRecords.size()-1)) {
+					//more records available for current item
+					return true;
+				}
+				else {
+					if (m_currentItemIndex==-1) {
+						//offroad?
+						return false;
+					}
+					else if (m_currentItemIndex<(m_items.size()-1)) {
+						//more items available
+						NotesItem currItem = m_items.get(m_currentItemIndex+1);
+						boolean hasRecords = hasCDRecords(currItem);
+						return hasRecords;
+					}
+					else {
+						//no more items available
+						return false;
+					}
+				}
+			}
+		}
+		
+		@Override
+		public boolean hasPrev() {
+			checkHandle();
+			
+			if (m_items.isEmpty()) {
+				return false;
+			}
+			else {
+				if (m_currentItemRecordsIndex==-1) {
+					//offroad?
+					return false;
+				}
+				else if (m_currentItemRecordsIndex>0) {
+					//more records available for current item
+					return true;
+				}
+				else {
+					//move to prev item
+					
+					if (m_currentItemIndex==-1) {
+						//offroad?
+						return false;
+					}
+					else if (m_currentItemIndex>0) {
+						//move items available
+						NotesItem currItem = m_items.get(m_currentItemIndex-1);
+						boolean hasRecords = hasCDRecords(currItem);
+						return hasRecords;
+					}
+					else {
+						//no more items available
+						return false;
+					}
+				}
+			}
+		}
+		
+		private CDRecordMemory getCurrentRecord() {
+			if (m_currentItemRecordsIndex==-1) {
+				return null;
+			}
+			else {
+				CDRecordMemory record = m_currentItemRecords.get(m_currentItemRecordsIndex);
+				return record;
+			}
+		}
+		
+		@Override
+		public CDRecordType getCurrentRecordType() {
+			CDRecordMemory record = getCurrentRecord();
+			return record==null ? null : record.getType();
+		}
+		
+//		Memory getCurrentRecordDataAsPointer() {
+//			CDRecordMemory record = getCurrentRecord();
+//			if (record==null) {
+//				return null;
+//			}
+//			else {
+//				Pointer dataPtr = record.getRecordDataWithoutHeader();
+//				return dataPtr;
+//			}
+//		}
+		
+		@Override
+		public Memory getCurrentRecordData() {
+			CDRecordMemory record = getCurrentRecord();
+			if (record==null) {
+				return null;
+			}
+			else {
+				return record.getRecordDataWithoutHeader();
+			}
+		}
+		
+		@Override
+		public short getCurrentRecordTypeAsShort() {
+			CDRecordMemory record = getCurrentRecord();
+			return record==null ? 0 : record.getTypeAsShort();
+		}
+		
+		@Override
+		public int getCurrentRecordDataSize() {
+			CDRecordMemory record = getCurrentRecord();
+			return record==null ? 0 : record.getDataSize();
+		}
+		
+		@Override
+		public int getCurrentRecordTotalLength() {
+			CDRecordMemory record = getCurrentRecord();
+			return record==null ? 0 : record.getCDRecordLength();
+		}
+		
+		@Override
+		public void copyCurrentRecordTo(ICompoundText ct) {
+			if (ct.isRecycled())
+				throw new NotesError(0, "ICompoundText already recycled");
+			
+			CompoundTextWriter writer = ct.getAdapter(CompoundTextWriter.class);
+			if (writer==null)
+				throw new NotesError(0, "Unable to get CompoundTextWriter from RichTextBuilder");
+
+			addCurrentRecordToCompoundTextWriter(writer);	
+		}
+		
+		private void addCurrentRecordToCompoundTextWriter(CompoundTextWriter writer) {
+			CDRecordMemory record = getCurrentRecord();
+			if (record==null)
+				throw new IllegalStateException("Current record is null");
+
+			Pointer recordPtr = record.getRecordDataWithHeader();
+			int recordLength = record.getCDRecordLength();
+			
+			if (recordPtr==null || recordLength<=0) {
+				throw new NotesError(0, "The current record does not contain any data");
+			}
+			writer.addCDRecords(recordPtr, recordLength);
+		}
+			
+		/**
+		 * Data container for a single CD record
+		 * 
+		 * @author Karsten Lehmann
+		 */
+		private class CDRecordMemory {
+			private Memory m_cdRecordMemory;
+			private CDRecordType m_type;
+			private short m_typeAsShort;
+			private int m_dataSize;
+			private int m_cdRecordLength;
+			
+			public CDRecordMemory(Memory cdRecordMem, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
+				m_cdRecordMemory = cdRecordMem;
+				m_type = type;
+				m_typeAsShort = typeAsShort;
+				m_dataSize = dataSize;
+				m_cdRecordLength = cdRecordLength;
+			}
+			
+			public Memory getRecordDataWithHeader() {
+				return new ReadOnlyMemory(m_cdRecordMemory);
+			}
+			
+			public Memory getRecordDataWithoutHeader() {
+				return new ReadOnlyMemory(m_cdRecordMemory, m_cdRecordLength - m_dataSize);
+			}
+			
+			public CDRecordType getType() {
+				return m_type;
+			}
+			
+			public short getTypeAsShort() {
+				return m_typeAsShort;
+			}
+			
+			public int getDataSize() {
+				return m_dataSize;
+			}
+			
+			public int getCDRecordLength() {
+				return m_cdRecordLength;
+			}
+		}
+	}
+
 }

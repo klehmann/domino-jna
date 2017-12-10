@@ -10,7 +10,7 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
  * 
  * @author Karsten Lehmann
  */
-public enum CDRecord {
+public enum CDRecordType {
 	PDEF_MAIN(NotesCAPI.SIG_CD_PDEF_MAIN),
 	PDEF_TYPE(NotesCAPI.SIG_CD_PDEF_TYPE),
 	PDEF_PROPERTY(NotesCAPI.SIG_CD_PDEF_PROPERTY),
@@ -197,16 +197,16 @@ public enum CDRecord {
 	ALTERNATEEND(NotesCAPI.SIG_CD_ALTERNATEEND),
 	OLERTMARKER(NotesCAPI.SIG_CD_OLERTMARKER);
 	
-	private static Map<Short,CDRecord> m_recordsByConstant;
+	private static Map<Short,CDRecordType> m_recordsByConstant;
 	static {
-		m_recordsByConstant = new HashMap<Short, CDRecord>();
-		for (CDRecord currType : values()) {
+		m_recordsByConstant = new HashMap<Short, CDRecordType>();
+		for (CDRecordType currType : values()) {
 			m_recordsByConstant.put(currType.getConstant(), currType);
 		}
 	}
 	private short m_val;
 	
-	CDRecord(short val) {
+	CDRecordType(short val) {
 		m_val = val;
 	}
 	
@@ -214,7 +214,7 @@ public enum CDRecord {
 		return m_val;
 	}
 	
-	public static CDRecord getRecordForConstant(short constant) {
+	public static CDRecordType getRecordForConstant(short constant) {
 		return m_recordsByConstant.get(constant);
 	}
 }

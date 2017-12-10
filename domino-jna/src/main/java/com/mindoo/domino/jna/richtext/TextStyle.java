@@ -1,7 +1,8 @@
-package com.mindoo.domino.jna.compoundtext;
+package com.mindoo.domino.jna.richtext;
 
 import java.util.Arrays;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.structs.compoundtext.NotesCompoundStyleStruct;
@@ -11,7 +12,7 @@ import com.mindoo.domino.jna.structs.compoundtext.NotesCompoundStyleStruct;
  * 
  * @author Karsten Lehmann
  */
-public class TextStyle {
+public class TextStyle implements IAdaptable {
 	String m_styleName;
 	
 	/** paragraph justification type */
@@ -420,5 +421,29 @@ public class TextStyle {
 		public short getConstant() {
 			return m_constant;
 		}
+	}
+
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz==NotesCompoundStyleStruct.class) {
+			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+			NotesCompoundStyleStruct styleStruct = NotesCompoundStyleStruct.newInstance();
+			notesAPI.CompoundTextInitStyle(styleStruct);
+			styleStruct.read();
+			styleStruct.JustifyMode = m_justifyMode;
+			styleStruct.LineSpacing = m_lineSpacing;
+			styleStruct.ParagraphSpacingBefore = m_paragraphSpacingBefore;
+			styleStruct.ParagraphSpacingAfter = m_paragraphSpacingAfter;
+			styleStruct.LeftMargin = m_leftMargin;
+			styleStruct.RightMargin = m_rightMargin;
+			styleStruct.FirstLineLeftMargin = m_firstLineLeftMargin;
+			styleStruct.Tabs = m_tabs;
+			styleStruct.Tab = m_tab==null ? null : m_tab.clone();
+			styleStruct.Flags = m_flags;
+			styleStruct.write();
+			return (T) styleStruct;
+		}
+		else
+			return null;
 	}
 }

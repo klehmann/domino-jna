@@ -1,5 +1,7 @@
-package com.mindoo.domino.jna.compoundtext;
+package com.mindoo.domino.jna.richtext;
 
+import com.mindoo.domino.jna.IAdaptable;
+import com.mindoo.domino.jna.internal.FontId;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.compoundtext.NotesFontIDFieldsStruct;
 
@@ -8,7 +10,7 @@ import com.mindoo.domino.jna.structs.compoundtext.NotesFontIDFieldsStruct;
  * 
  * @author Karsten Lehmann
  */
-public class FontStyle {
+public class FontStyle implements IAdaptable {
 	/** Font face (FONT_FACE_xxx) */
 	private byte m_face;
 	/** Attributes (ISBOLD,etc) */
@@ -312,6 +314,17 @@ public class FontStyle {
 
 	public boolean isExtrude() {
 		return (m_attrib & NotesCAPI.ISEXTRUDE) == NotesCAPI.ISEXTRUDE;
+	}
+
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz==FontId.class) {
+			FontId fontId = new FontId();
+			fontId.setFontId(getFontId());
+			return (T) fontId;
+		}
+		else
+			return null;
 	}
 
 }

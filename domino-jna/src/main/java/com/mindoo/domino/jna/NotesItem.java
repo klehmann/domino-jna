@@ -9,7 +9,7 @@ import java.util.List;
 
 import com.mindoo.domino.jna.NotesNote.ICDRecordCallback;
 import com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action;
-import com.mindoo.domino.jna.constants.CDRecord;
+import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -762,7 +762,7 @@ public class NotesItem {
 					fixedSize = 2; //sizeof(BSIG);
 				}
 				
-				CDRecord currType = CDRecord.getRecordForConstant(recordType);
+				CDRecordType currType = CDRecordType.getRecordForConstant(recordType);
 				
 				//give callback access to the memory, but only read-only and with limit check
 				if (callback!=null) {
@@ -774,7 +774,7 @@ public class NotesItem {
 				}
 				//give direct pointer access (internal only)
 				if (callback2!=null) {
-					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, dwLength) == Action.Stop) {
+					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, cdRecordPtr, dwLength) == Action.Stop) {
 						aborted=true;
 						break;
 					}
@@ -832,7 +832,7 @@ public class NotesItem {
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
-			public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength) {
+			public Action recordVisited(Pointer dataPtr, CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 				if (signature==NotesCAPI.SIG_CD_TEXT) {
 					Pointer txtPtr = dataPtr.share(4);
 					int txtMemLength = dataLength-4;
@@ -874,10 +874,11 @@ public class NotesItem {
 		 * @param parsedSignature enum with converted signature WORD
 		 * @param signature signature WORD for the record type
 		 * @param dataLength length of data to read
+		 * @param cdRecordPtr pointer to CD record (header + data)
 		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
 		 * @return action value to continue or stop
 		 */
-		public Action recordVisited(Pointer dataPtr, CDRecord parsedSignature, short signature, int dataLength, int cdRecordLength);
+		public Action recordVisited(Pointer dataPtr, CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength);
 
 	}
 }
