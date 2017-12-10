@@ -161,7 +161,7 @@ public class TestStringUtils extends BaseJNATestClass {
 					Assert.assertEquals("Method StringUtil.stringLengthInUTF8 computes a correct result", randomStrLengthUTF8, testRandomStrLengthUTF8Converted);
 					
 					Memory randomStrLMBCS = NotesStringUtils.toLMBCS(randomStr, false);
-					String randomStrLMBCSAsStr1 = NotesStringUtils.fromLMBCS(randomStrLMBCS, randomStrLMBCS.size());
+					String randomStrLMBCSAsStr1 = NotesStringUtils.fromLMBCS(randomStrLMBCS, (int) randomStrLMBCS.size());
 					
 //					if (randomStr.length() < randomStrLMBCSAsStr1.length()) {
 //						if (randomStrLMBCSAsStr1.substring(0, randomStr.length()).equals(randomStr)) {
@@ -176,7 +176,7 @@ public class TestStringUtils extends BaseJNATestClass {
 					Assert.assertEquals("UTF8-LMBCS-UTF8 conversion produces strings with same length (used Memory object for LMBCS)", randomStr.length(), randomStrLMBCSAsStr1.length());
 					Assert.assertTrue("UTF8-LMBCS-UTF8 conversion does not change the text (used Memory object for LMBCS)", randomStr.equals(randomStrLMBCSAsStr1));
 
-					String randomStrLMBCSAsStr2 = NotesStringUtils.fromLMBCS(randomStrLMBCS, randomStrLMBCS.size());
+					String randomStrLMBCSAsStr2 = NotesStringUtils.fromLMBCS(randomStrLMBCS, (int) randomStrLMBCS.size());
 					
 					Assert.assertEquals("UTF8-LMBCS-UTF8 conversion produces strings with same length (used Pointer for LMBCS)", randomStr.length(), randomStrLMBCSAsStr2.length());
 					Assert.assertTrue("UTF8-LMBCS-UTF8 conversion does not change the text (used Pointer for LMBCS)", randomStr.equals(randomStrLMBCSAsStr2));
