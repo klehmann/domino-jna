@@ -101,8 +101,6 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 				int version = beginDataBuf.getShort(0);
 				int signature = beginDataBuf.share(2).getShort(0);
 				
-				System.out.println("Checking BEGIN:\n"+DumpUtil.dumpAsAscii(beginDataBuf, 50));
-				
 				if (signature == NotesCAPI.SIG_CD_V4HOTSPOTBEGIN) {
 					RichTextNavPosition savedPos = nav.getCurrentRecordPosition();
 					if (nav.gotoNext()) {
@@ -118,7 +116,6 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 //							} CDHOTSPOTBEGIN;
 
 							Memory hotspotRecordDataBuf = nav.getCurrentRecordData();
-							System.out.println("Checking HOTSPOTBEGIN:\n"+DumpUtil.dumpAsAscii(hotspotRecordDataBuf, 50));
 							
 							short type = hotspotRecordDataBuf.getShort(0);
 							if (type == NotesCAPI.HOTSPOTREC_TYPE_FILE) {
