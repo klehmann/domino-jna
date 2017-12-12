@@ -60,13 +60,23 @@ public interface ICompoundText extends IAdaptable {
 	public void addText(String txt);
 	
 	/**
-	 * Adds text with the specified text and font style
+	 * Adds text with the specified text and font style. Creates a paragraph for each linebreak found in the text
 	 * 
 	 * @param txt text to add
 	 * @param textStyle text style
 	 * @param fontStyle font style
 	 */
 	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle);
+	
+	/**
+	 * Adds text with the specified text and font style
+	 * 
+	 * @param txt text to add
+	 * @param textStyle text style
+	 * @param fontStyle font style
+	 * @param createParagraphForLinebreak true to create a paragraph for each linebreak found in the text
+	 */
+	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphForLinebreak);
 	
 	/**
 	 * This routine assimilates the contents of one or more named richtext items (type TYPE_COMPOSITE) from a document

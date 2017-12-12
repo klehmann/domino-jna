@@ -89,6 +89,12 @@ public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText, I
 	}
 
 	@Override
+	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
+		checkHandle();
+		m_compoundText.addText(txt, textStyle, fontStyle, createParagraphOnLinebreak);
+	}
+	
+	@Override
 	public void addRichTextItem(NotesNote otherNote, String itemName) {
 		checkHandle();
 		m_compoundText.addRichTextItem(otherNote, itemName);

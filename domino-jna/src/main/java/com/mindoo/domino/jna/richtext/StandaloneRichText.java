@@ -106,6 +106,11 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 	}
 
 	@Override
+	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
+		m_compoundText.addText(txt, textStyle, fontStyle, createParagraphOnLinebreak);
+	}
+
+	@Override
 	public void addRichTextItem(NotesNote otherNote, String itemName) {
 		m_compoundText.addRichTextItem(otherNote, itemName);
 	}

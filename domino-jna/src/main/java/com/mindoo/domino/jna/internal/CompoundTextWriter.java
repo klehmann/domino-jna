@@ -269,6 +269,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 
 	@Override
 	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
+		addText(txt, textStyle, fontStyle, true);
+	}
+	
+	@Override
+	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -296,7 +301,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 
 		Pointer nlsInfoPtr = notesAPI.OSGetLMBCSCLS();
 		short result;
-		int dwFlags = NotesCAPI.COMP_PRESERVE_LINES | NotesCAPI.COMP_PARA_LINE | NotesCAPI.COMP_PARA_BLANK_LINE;
+		int dwFlags = NotesCAPI.COMP_PRESERVE_LINES | NotesCAPI.COMP_PARA_BLANK_LINE;
+		if (createParagraphOnLinebreak) {
+			dwFlags = dwFlags | NotesCAPI.COMP_PARA_LINE;
+		}
 		if (NotesJNAContext.is64Bit()) {
 			result = notesAPI.b64_CompoundTextAddTextExt(m_handle64, dwStyleID, fontId, txtMem, (int) txtMem.size(),
 					lineDelimMem, dwFlags, nlsInfoPtr);
