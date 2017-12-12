@@ -1212,18 +1212,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				//register buffer instance to auto-gc it
 				NotesGC.__memoryAllocated(buf);
 				
-				CloseResult closeResult = new CloseResult();
-				closeResult.setType(CloseResultType.Buffer);
-				closeResult.setBuffer(buf);
-				return closeResult;
+				m_closeResult = new CloseResult();
+				m_closeResult.setType(CloseResultType.Buffer);
+				m_closeResult.setBuffer(buf);
+				return m_closeResult;
 			}
 			else {
 				//content had to be written to a temp file
 				String fileName = NotesStringUtils.fromLMBCS(returnFileMem, -1);
-				CloseResult closeResult = new CloseResult();
-				closeResult.setType(CloseResultType.File);
-				closeResult.setFilePath(fileName);
-				return closeResult;
+				m_closeResult = new CloseResult();
+				m_closeResult.setType(CloseResultType.File);
+				m_closeResult.setFilePath(fileName);
+				return m_closeResult;
 			}
 		}
 	}
