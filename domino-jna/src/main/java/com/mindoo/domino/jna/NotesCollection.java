@@ -313,11 +313,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * This function adds the document(s) specified in an ID Table to a folder.
+	 * This function adds the document(s) specified in an ID Table to this folder.
+	 * Throws an error if {@link #isFolder()} is <code>false</code>.
 	 * 
 	 * @param idTable id table
+	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
 	 */
-	public void addToFolder(NotesIDTable idTable) {
+	public void addToThisFolder(NotesIDTable idTable) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
@@ -331,15 +333,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * This function adds the document(s) specified as note id set to a folder
+	 * This function adds the document(s) specified as note id set to this folder.
+	 * Throws an error if {@link #isFolder()} is <code>false</code>.
 	 * 
 	 * @param noteIds ids of notes to add
+	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
 	 */
-	public void addToFolder(Set<Integer> noteIds) {
+	public void addToThisFolder(Collection<Integer> noteIds) {
 		NotesIDTable idTable = new NotesIDTable();
 		try {
 			idTable.addNotes(noteIds);
-			addToFolder(idTable);
+			addToThisFolder(idTable);
 		}
 		finally {
 			idTable.recycle();
@@ -754,7 +758,23 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Performs a fulltext search in the collection
+	 * Performs a fulltext search in the collection, storing the search result in the collection,
+	 * which means that navigating via {@link Navigate#NEXT_HIT} jumps from one search hit to the next
+	 * (setting {@link FTSearch#SET_COLL} option manually is not required).
+	 * 
+	 * @param query fulltext query
+	 * @param limit max entries to return or 0 to get all
+	 * @param options FTSearch flags
+	 * @return search result
+	 */
+	public SearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options) {
+		return ftSearch(query, limit, options, null);
+	}
+	
+	/**
+	 * Performs a fulltext search in the collection, storing the search result in the collection,
+	 * which means that navigating via {@link Navigate#NEXT_HIT} jumps from one search hit to the next
+	 * (setting {@link FTSearch#SET_COLL} option manually is not required).
 	 * 
 	 * @param query fulltext query
 	 * @param limit max entries to return or 0 to get all
@@ -771,18 +791,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		if (NotesJNAContext.is64Bit()) {
-			LongByReference rethSearch = new LongByReference();
-			result = notesAPI.b64_FTOpenSearch(rethSearch);
+			m_activeFTSearchHandle64 = new LongByReference();
+			m_activeFTSearchHandle64.setValue(0);
+			result = notesAPI.b64_FTOpenSearch(m_activeFTSearchHandle64);
 			NotesErrorUtils.checkResult(result);
-			m_activeFTSearchHandle64 = rethSearch;
 		}
 		else {
-			IntByReference rethSearch = new IntByReference();
-			result = notesAPI.b32_FTOpenSearch(rethSearch);
+			m_activeFTSearchHandle32 = new IntByReference();
+			m_activeFTSearchHandle32.setValue(0);
+			result = notesAPI.b32_FTOpenSearch(m_activeFTSearchHandle32);
 			NotesErrorUtils.checkResult(result);
-			m_activeFTSearchHandle32 = rethSearch;
 		}
-		
 		
 		Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 		IntByReference retNumDocs = new IntByReference();
@@ -790,6 +809,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 		//always filter view data
 		EnumSet<FTSearch> optionsWithView = options.clone();
 		optionsWithView.add(FTSearch.SET_COLL);
+		if (filterIDTable!=null) {
+			//automatically set refine option if id table is not null
+			optionsWithView.add(FTSearch.REFINE);
+		}
 		int optionsWithViewBitMask = FTSearch.toBitMask(optionsWithView);
 		
 		short limitShort = (short) (limit & 0xffff);
@@ -887,19 +910,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Resets an active filtering cause by a FT search
 	 */
 	public void clearSearch() {
+		checkHandle();
+		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		if (NotesJNAContext.is64Bit()) {
 			if (m_activeFTSearchHandle64!=null) {
-				short result = notesAPI.b64_FTCloseSearch(m_activeFTSearchHandle64.getValue());
-				NotesErrorUtils.checkResult(result);
+				long handle = m_activeFTSearchHandle64.getValue();
+				if (handle!=0) {
+					short result = notesAPI.b64_FTCloseSearch(handle);
+					NotesErrorUtils.checkResult(result);
+				}
 				m_activeFTSearchHandle64=null;
 			}
 		}
 		else {
 			if (m_activeFTSearchHandle32!=null) {
-				short result = notesAPI.b32_FTCloseSearch(m_activeFTSearchHandle32.getValue());
-				NotesErrorUtils.checkResult(result);
+				int handle = m_activeFTSearchHandle32.getValue();
+				if (handle!=0) {
+					short result = notesAPI.b32_FTCloseSearch(handle);
+					NotesErrorUtils.checkResult(result);
+				}
 				m_activeFTSearchHandle32=null;
 			}
 		}
@@ -3190,6 +3221,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public void clearSelection() {
 		m_selectedList.clear();
+		//push selection changes to remote servers
+		updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
 	}
 	
 	/**
