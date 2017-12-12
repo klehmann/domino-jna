@@ -19,7 +19,7 @@ The project provides functionality that is not available in the classic Java API
 * several APIs to write item values and attachments (needs more work)
 * **richtext item reading**: convenience method to extract text content, advanced API to read all CD records (IRichTextNavigator)
 * **richtext item writing**: create richtext items with text, images, doclinks, by rendering other notes and appending other richtet items
-* **richtext item conversion**: multi-level conversion of existing richtext items, e.g. to **add/remove file hotspots (file icons with custom image that open file on click) independent from the actual file attachment ** or do mail merge with richtext
+* **richtext item conversion**: multi-level conversion of existing richtext items, e.g. to **add/remove file hotspots (file icons with custom image that open file on click) independent from the actual file attachment** or do mail merge with richtext
 * **quick check if a document is editable** by a specified user (without the need to scan through author items)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
