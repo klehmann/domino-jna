@@ -9,6 +9,7 @@ import java.util.Formatter;
 import java.util.List;
 
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
@@ -21,7 +22,34 @@ import com.sun.jna.Pointer;
  * @author Karsten Lehmann
  */
 public class NotesStringUtils {
+	private static final String PREF_USEOSLINEBREAK = "NotesStringUtils.useOSLineDelimiter";
 
+	/**
+	 * Method to control the LMBCS / Java String conversion for newline characters. By default
+	 * we insert \r\n on Windows and \n on other platforms like IBM does.<br>
+	 * This setting is only valid for the current {@link NotesGC#runWithAutoGC(java.util.concurrent.Callable)}
+	 * call.
+	 * 
+	 * @param b true to use \r\n as newline on Windows, false to use \n everywhere
+	 */
+	public static void setUseOSLineDelimiter(boolean b) {
+		NotesGC.setCustomValue(PREF_USEOSLINEBREAK, Boolean.valueOf(b));
+	}
+	
+	/**
+	 * Returns whether an OS specific newline is used when converting between LMBCS and Java String.
+	 * By default we insert \r\n on Windows and \n on other platforms like IBM does.
+	 * 
+	 * @return true to use \r\n as newline on Windows, false to use \n everywhere
+	 */
+	public static boolean isUseOSLineDelimiter() {
+		Boolean b = (Boolean) NotesGC.getCustomValue(PREF_USEOSLINEBREAK);
+		if (b==null)
+			return Boolean.TRUE;
+		else
+			return b.booleanValue();
+	}
+	
 	/**
 	 * Scans the Memory object for null values
 	 * 
@@ -303,6 +331,7 @@ public class NotesStringUtils {
 		}
 	
 		Pointer pText = inPtr;
+		boolean useOSLineBreak = isUseOSLineDelimiter();
 		
 		Memory pBuf_utf8 = null;
 		
@@ -325,7 +354,7 @@ public class NotesStringUtils {
 				currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
 				if (currConvertedStr.contains("\0")) {
 					//Notes uses \0 for multiline strings
-					if (notesAPI instanceof WinNotesCAPI) {
+					if (notesAPI instanceof WinNotesCAPI && useOSLineBreak) {
 						currConvertedStr = currConvertedStr.replace("\0", "\r\n");
 					}
 					else {

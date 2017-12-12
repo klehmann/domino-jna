@@ -12,6 +12,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -797,6 +798,9 @@ public class NotesItem {
 	 * @param writer writer is used to write extracted text
 	 */
 	void getAllCompositeTextContent(final Writer writer) {
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final boolean useOSLineBreaks = NotesStringUtils.isUseOSLineDelimiter();
+		
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
@@ -818,7 +822,12 @@ public class NotesItem {
 				}
 				else if (signature==NotesCAPI.SIG_CD_PARAGRAPH) {
 					try {
-						writer.write("\n");
+						if (notesAPI instanceof WinNotesCAPI && useOSLineBreaks) {
+							writer.write("\r\n");
+						}
+						else {
+							writer.write("\n");
+						}
 					} catch (IOException e) {
 						throw new RuntimeException("Error writing composite text", e);
 					}
