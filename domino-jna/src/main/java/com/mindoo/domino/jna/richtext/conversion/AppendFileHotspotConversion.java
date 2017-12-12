@@ -6,8 +6,6 @@ import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 
 /**
  * Richtext conversion class that copies the whole richtext content and appends a file hotspot at the end.<br>
- * <br>
- * TODO provide another method to append file hotspots with less copy operations, e.g. by modifying the last item value of the last TYPE_COMPOSITE item or add another item if the hotspot would exceed the segment size
  * 
  * @author Karsten Lehmann
  */
@@ -28,6 +26,7 @@ public class AppendFileHotspotConversion implements IRichTextConversion {
 
 	@Override
 	public void convert(IRichTextNavigator source, ICompoundText target) {
+		//TODO provide another method to append file hotspots with less copy operations, e.g. by modifying the last item value of the last TYPE_COMPOSITE item or add another item if the hotspot would exceed the segment size
 		if (source.gotoFirst()) {
 			do {
 				source.copyCurrentRecordTo(target);
