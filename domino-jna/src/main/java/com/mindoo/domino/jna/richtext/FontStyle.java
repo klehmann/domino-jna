@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.richtext;
 
 import com.mindoo.domino.jna.IAdaptable;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.FontId;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.structs.compoundtext.NotesFontIDFieldsStruct;
@@ -25,6 +26,18 @@ public class FontStyle implements IAdaptable {
 		m_attrib = 0;
 		m_color = 0;
 		m_pointSize = 10;
+	}
+	
+	public FontStyle(IAdaptable adaptable) {
+		byte[] values = adaptable.getAdapter(byte[].class);
+		if (values!=null && values.length==4) {
+			m_face = values[0];
+			m_attrib = values[1];
+			m_color = values[2];
+			m_pointSize = values[3];
+		}
+		else
+			throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 	
 	public FontStyle setPointSize(int size) {
