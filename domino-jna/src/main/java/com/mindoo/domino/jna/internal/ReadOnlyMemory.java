@@ -11,9 +11,15 @@ import com.sun.jna.WString;
  * @author Karsten Lehmann
  */
 public class ReadOnlyMemory extends Memory {
+	//keep reference to prevent garbage collection of this wrapped memory until we get garbage collected
 	private Memory m_wrappedMemory;
 	private boolean m_sealed;
 	
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param wrappedMemory writable Memory that we want to wrap to prevent data changes
+	 */
 	public ReadOnlyMemory(Memory wrappedMemory) {
 		super();
 		this.peer = Memory.nativeValue(wrappedMemory);
@@ -22,14 +28,30 @@ public class ReadOnlyMemory extends Memory {
 		m_sealed = true;
 	}
 	
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param wrappedMemory writable Memory that we want to wrap to prevent data changes
+	 * @param offset offset in <code>wrappedMemory</code> to start
+	 */
 	public ReadOnlyMemory(Memory wrappedMemory, int offset) {
 		this(wrappedMemory, offset, (int) wrappedMemory.size() - offset);
 	}
 
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param wrappedMemory writable Memory that we want to wrap to prevent data changes
+	 * @param offset offset in <code>wrappedMemory</code> to start
+	 * @param size new size of this Memory object
+	 */
 	public ReadOnlyMemory(Memory wrappedMemory, int offset, int size) {
 		super();
 		this.peer = Memory.nativeValue(wrappedMemory) + offset;
 		this.size = size;
+		if ((offset+size)>wrappedMemory.size())
+			throw new IllegalArgumentException("Exceeded size of wrapped memory, offset="+offset+", size="+size+" while size of wrapped memory is "+wrappedMemory.size());
+		
 		//keep reference on original memory to prevent GC
 		m_wrappedMemory = wrappedMemory;
 		m_sealed = true;
