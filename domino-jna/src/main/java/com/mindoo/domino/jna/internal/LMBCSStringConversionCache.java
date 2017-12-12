@@ -3,7 +3,6 @@ package com.mindoo.domino.jna.internal;
 import java.nio.charset.Charset;
 
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;

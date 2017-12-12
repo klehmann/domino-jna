@@ -1,6 +1,5 @@
 package com.mindoo.domino.jna.internal;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,8 +12,6 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
-import com.mindoo.domino.jna.richtext.StandaloneRichText;
-import com.mindoo.domino.jna.utils.DumpUtil;
 import com.sun.jna.Memory;
 
 /**
