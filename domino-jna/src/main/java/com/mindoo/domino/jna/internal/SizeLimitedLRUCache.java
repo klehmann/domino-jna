@@ -1,4 +1,4 @@
-package com.mindoo.domino.jna.utils;
+package com.mindoo.domino.jna.internal;
 
 import java.util.Map;
 

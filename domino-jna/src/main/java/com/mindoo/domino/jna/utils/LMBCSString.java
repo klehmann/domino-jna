@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.utils;
 
 import java.util.Arrays;
 
+import com.mindoo.domino.jna.internal.LMBCSStringConversionCache;
+
 /**
  * Utility class that lazily converts a string from LMBCS format to Java String
  * 

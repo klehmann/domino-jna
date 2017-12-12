@@ -1,8 +1,11 @@
-package com.mindoo.domino.jna.utils;
+package com.mindoo.domino.jna.internal;
 
 import java.nio.charset.Charset;
 
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry;
+import com.mindoo.domino.jna.utils.LMBCSString;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 
 /**
@@ -101,13 +104,13 @@ public class LMBCSStringConversionCache {
 
 		@Override
 		protected void entryAdded(
-				com.mindoo.domino.jna.utils.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
+				com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
 
 //			System.out.println("Added to cache: "+entry.getValue());
 		}
 		
 		@Override
-		protected void entryRemoved(com.mindoo.domino.jna.utils.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
+		protected void entryRemoved(com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
 //			System.out.println("Removed from cache: "+entry.getValue());
 		}
 		
