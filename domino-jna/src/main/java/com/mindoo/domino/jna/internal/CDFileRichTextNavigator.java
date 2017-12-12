@@ -124,12 +124,9 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		
 		CDRecordType type = CDRecordType.getRecordForConstant(typeAsShort);
 		
-		int cdRecordTotalLength = dwLength;
-		if (cdRecordTotalLength<=0) {
-			System.out.println("Empty record");
-		}
 		//file channel position points to the start of data, so reset it to the CD record start
 		m_fileChannel.position(m_position);
+		int cdRecordTotalLength = dwLength;
 		Memory cdRecordMem = new Memory(cdRecordTotalLength);
 		int bytesRead = m_fileChannel.read(cdRecordMem.getByteBuffer(0, cdRecordMem.size()));
 		if (bytesRead != cdRecordTotalLength) {
