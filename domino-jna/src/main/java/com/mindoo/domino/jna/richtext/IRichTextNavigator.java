@@ -67,9 +67,10 @@ public interface IRichTextNavigator {
 	public CDRecordType getCurrentRecordType();
 	
 	/**
-	 * Returns a read-only buffer to access the CD record data
+	 * Returns a read-only buffer to access the CD record data (CD record header BSIG/WSIG/LSIG is not part of
+	 * the returned data)
 	 * 
-	 * @return data buffer
+	 * @return data buffer with length {@link #getCurrentRecordDataLength()}
 	 */
 	public Memory getCurrentRecordData();
 	
@@ -85,10 +86,11 @@ public interface IRichTextNavigator {
 	 * 
 	 * @return length without header
 	 */
-	public int getCurrentRecordDataSize();
+	public int getCurrentRecordDataLength();
 	
 	/**
-	 * Returns the length of the current CD record including header
+	 * Returns the length of the current CD record including BSIG/WSIG/LSIG header that contains the record
+	 * type and data length
 	 * 
 	 * @return length with header
 	 */

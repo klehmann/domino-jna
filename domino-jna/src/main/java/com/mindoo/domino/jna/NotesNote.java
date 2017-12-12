@@ -5,7 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1767,49 +1766,6 @@ public class NotesNote implements IRecyclableNotesObject {
 				return;
 			}
 		}
-	}
-
-	/**
-	 * Method to enumerate all CD records of a richtext item with the specified name.
-	 * If Domino splits the richtext data into multiple items (because it does not fit into 64K),
-	 * the method will process all available items.
-	 * 
-	 * @param richTextItemName richtext item name
-	 * @param callback callback to call for each record
-	 */
-	public void enumerateRichTextCDRecords(String richTextItemName, final ICDRecordCallback callback) {
-		checkHandle();
-		
-		final boolean[] aborted = new boolean[1];
-		
-		getItems(richTextItemName, new IItemCallback() {
-
-			@Override
-			public void itemNotFound() {
-			}
-
-			@Override
-			public Action itemFound(NotesItem item) {
-				if (item.getType()==NotesItem.TYPE_COMPOSITE) {
-					item.enumerateRichTextCDRecords(new ICDRecordCallback() {
-
-						@Override
-						public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature,
-								int dataLength, int cdRecordLength) {
-							Action action = callback.recordVisited(data, parsedSignature, signature, dataLength, cdRecordLength);
-							if (action==Action.Stop) {
-								aborted[0] = true;
-							}
-							return action;
-						}
-					});
-					if (aborted[0]) {
-						return Action.Stop;
-					}
-				}
-				return Action.Continue;
-			}
-		});
 	}
 
 	/**
@@ -4611,27 +4567,6 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 	
-	/**
-	 * Callback interface to read CD record data
-	 * 
-	 * @author Karsten Lehmann
-	 */
-	public static interface ICDRecordCallback {
-		public enum Action {Continue, Stop}
-		
-		/**
-		 * Method is called for all CD records in this item
-		 * 
-		 * @param data read-only bytebuffer to access data
-		 * @param parsedSignature enum with converted signature WORD
-		 * @param signature signature WORD for the record type
-		 * @param dataLength length of data to read
-		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
-		 * @return action value to continue or stop
-		 */
-		public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature, int dataLength, int cdRecordLength);
-	}
-	
 	private class RichTextNavPositionImpl implements RichTextNavPosition {
 		private MultiItemRichTextNavigator m_parentNav;
 		private int m_itemIndex;
@@ -4797,10 +4732,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			item.enumerateCDRecords(new ICompositeCallbackDirect() {
 				
 				@Override
-				public com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action recordVisited(Pointer dataPtr,
+				public ICompositeCallbackDirect.Action recordVisited(Pointer dataPtr,
 						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 					hasRecords[0] = true;
-					return com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action.Stop;
+					return ICompositeCallbackDirect.Action.Stop;
 				}
 			});
 		
@@ -4819,7 +4754,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			item.enumerateCDRecords(new ICompositeCallbackDirect() {
 				
 				@Override
-				public com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action recordVisited(Pointer dataPtr,
+				public ICompositeCallbackDirect.Action recordVisited(Pointer dataPtr,
 						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 					
 					byte[] cdRecordDataArr = cdRecordPtr.getByteArray(0, cdRecordLength);
@@ -4829,7 +4764,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					CDRecordMemory cdRecordMem = new CDRecordMemory(cdRecordDataCopied, parsedSignature, signature,
 							dataLength, cdRecordLength);
 					itemRecords.add(cdRecordMem);
-					return com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action.Continue;
+					return ICompositeCallbackDirect.Action.Continue;
 				}
 			});
 		
@@ -5081,7 +5016,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		@Override
-		public int getCurrentRecordDataSize() {
+		public int getCurrentRecordDataLength() {
 			CDRecordMemory record = getCurrentRecord();
 			return record==null ? 0 : record.getDataSize();
 		}

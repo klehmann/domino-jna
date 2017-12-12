@@ -3,12 +3,10 @@ package com.mindoo.domino.jna;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.List;
 
-import com.mindoo.domino.jna.NotesNote.ICDRecordCallback;
-import com.mindoo.domino.jna.NotesNote.ICDRecordCallback.Action;
+import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -657,36 +655,14 @@ public class NotesItem {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
-
-	/**
-	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
-	 * 
-	 * @param callback callback is called for each CD record in this item
-	 * @throws UnsupportedOperationException if item has the wrong type
-	 */
-	public void enumerateRichTextCDRecords(final ICDRecordCallback callback) {
-		enumerateCDRecords(callback, null);
-	}
 	
 	/**
 	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
-	 * Internal method with direct pointer access for less copy operations.
 	 * 
-	 * @param callback callback is called for each CD record in this item
+	 * @param callback callback with direct memory access via pointer
 	 * @throws UnsupportedOperationException if item has the wrong type
 	 */
 	void enumerateCDRecords(final ICompositeCallbackDirect callback) {
-		enumerateCDRecords(null, callback);
-	}
-	
-	/**
-	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
-	 * 
-	 * @param callback callback with read-only memory access
-	 * @param callback2 callback with direct memory access via pointer
-	 * @throws UnsupportedOperationException if item has the wrong type
-	 */
-	private void enumerateCDRecords(final ICDRecordCallback callback, final ICompositeCallbackDirect callback2) {
 		if (getType() != TYPE_COMPOSITE)
 			throw new UnsupportedOperationException("Item is not of type TYPE_COMPOSITE (type found: "+getType());
 
@@ -764,17 +740,9 @@ public class NotesItem {
 				
 				CDRecordType currType = CDRecordType.getRecordForConstant(recordType);
 				
-				//give callback access to the memory, but only read-only and with limit check
-				if (callback!=null) {
-					ByteBuffer dataBuf = cdRecordPtr.share(fixedSize).getByteBuffer(0, Math.max(0, dwLength-fixedSize)).asReadOnlyBuffer();
-					if (callback.recordVisited(dataBuf, currType, recordType, Math.max(0, dwLength-fixedSize), dwLength) == Action.Stop) {
-						aborted = true;
-						break;
-					}
-				}
 				//give direct pointer access (internal only)
-				if (callback2!=null) {
-					if (callback2.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, cdRecordPtr, dwLength) == Action.Stop) {
+				if (callback!=null) {
+					if (callback.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, cdRecordPtr, dwLength) == Action.Stop) {
 						aborted=true;
 						break;
 					}
@@ -866,7 +834,8 @@ public class NotesItem {
 	 * @author Karsten Lehmann
 	 */
 	static interface ICompositeCallbackDirect {
-
+		public enum Action {Continue, Stop}
+		
 		/**
 		 * Method is called for all CD records in this item
 		 * 

@@ -1,19 +1,16 @@
 package com.mindoo.domino.jna.test;
 
-import java.nio.ByteBuffer;
-
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
-import com.mindoo.domino.jna.NotesNote.ICDRecordCallback;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.richtext.FontStyle;
+import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.TextStyle;
 import com.mindoo.domino.jna.richtext.TextStyle.Justify;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
-import com.sun.jna.Memory;
 
 import junit.framework.Assert;
 import lotus.domino.Session;
@@ -52,32 +49,22 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 				Assert.assertTrue("Text is not empty", allTxt.length()>0);
 				
 				final StringBuilder sb = new StringBuilder();
-				
-				note.enumerateRichTextCDRecords("Body", new ICDRecordCallback() {
-
-					@Override
-					public Action recordVisited(ByteBuffer data, CDRecordType parsedSignature, short signature,
-							int dataLength, int cdRecordLength) {
-						
-						if (parsedSignature == CDRecordType.TEXT) {
-							int txtLen = dataLength-4;
+				IRichTextNavigator rtNav = note.getRichtextNavigator("Body");
+				if (rtNav.gotoFirst()) {
+					do {
+						if (rtNav.getCurrentRecordType() == CDRecordType.TEXT) {
+							int txtLen = rtNav.getCurrentRecordDataLength() - 4;
 							if (txtLen>0) {
-								Memory txtMem = new Memory(txtLen);
-								for (int i=0; i<txtLen; i++) {
-									txtMem.setByte(i, data.get(4+i));
-								}
-								
-								String txt = NotesStringUtils.fromLMBCS(txtMem, txtLen);
+								String txt = NotesStringUtils.fromLMBCS(rtNav.getCurrentRecordData().share(4), txtLen);
 								sb.append(txt);
 							}
 						}
-						else if (parsedSignature == CDRecordType.PARAGRAPH) {
+						else if (rtNav.getCurrentRecordType() == CDRecordType.PARAGRAPH) {
 							sb.append("\n");
 						}
-						return Action.Continue;
 					}
-					
-				});
+					while (rtNav.gotoNext());
+				}
 
 				Assert.assertEquals("Text content matches", allTxt, sb.toString());
 				

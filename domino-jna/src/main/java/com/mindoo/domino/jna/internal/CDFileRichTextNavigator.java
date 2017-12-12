@@ -272,7 +272,7 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	}
 
 	@Override
-	public int getCurrentRecordDataSize() {
+	public int getCurrentRecordDataLength() {
 		if (m_currentCDRecord==null)
 			return 0;
 		return m_currentCDRecord.getDataSize();
