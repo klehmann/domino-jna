@@ -101,11 +101,15 @@ public interface IRichTextNavigator {
 	 * to change the position to a stored value. Can be used to search for complex structures in the CD record
 	 * stream (like file hotspots for a specific file, which consist of multiple CD records) and jump back if
 	 * the structure could not be found.
+	 * 
+	 * @return position
 	 */
 	public RichTextNavPosition getCurrentRecordPosition();
 	
 	/**
 	 * Resets the position to a stored one. Use {@link #getCurrentRecordPosition()} first to read a position
+	 * 
+	 * @param pos position
 	 */
 	public void restoreCurrentRecordPosition(RichTextNavPosition pos);
 	
