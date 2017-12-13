@@ -13,11 +13,11 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesSSOTokenStruct32 extends Structure {
+public class NotesSSOTokenStruct32 extends BaseStructure {
 	public int mhName;
 	public int mhDomainList;
 	public short wNumDomains;
-	public boolean bSecureOnly;
+	public int bSecureOnly;
 	public int mhData;
 	
 	/**
@@ -25,7 +25,6 @@ public class NotesSSOTokenStruct32 extends Structure {
 	 */
 	public NotesSSOTokenStruct32() {
 		super();
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static NotesSSOTokenStruct32 newInstance() {
@@ -53,17 +52,16 @@ public class NotesSSOTokenStruct32 extends Structure {
 	 * @param mhData MEMHANDLE to a the null-terminated token data.
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
-	public NotesSSOTokenStruct32(int mhName, int mhDomainList, short wNumDomains, boolean bSecureOnly, int mhData) {
+	public NotesSSOTokenStruct32(int mhName, int mhDomainList, short wNumDomains, int bSecureOnly, int mhData) {
 		super();
 		this.mhName = mhName;
 		this.mhDomainList = mhDomainList;
 		this.wNumDomains = wNumDomains;
 		this.bSecureOnly = bSecureOnly;
 		this.mhData = mhData;
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
-	public static NotesSSOTokenStruct32 newInstance(final int mhName, final int mhDomainList, final short wNumDomains, final boolean bSecureOnly, final int mhData) {
+	public static NotesSSOTokenStruct32 newInstance(final int mhName, final int mhDomainList, final short wNumDomains, final int bSecureOnly, final int mhData) {
 		return AccessController.doPrivileged(new PrivilegedAction<NotesSSOTokenStruct32>() {
 
 			@Override
@@ -80,7 +78,6 @@ public class NotesSSOTokenStruct32 extends Structure {
 	 */
 	public NotesSSOTokenStruct32(Pointer peer) {
 		super(peer);
-		setAlignType(ALIGN_DEFAULT);
 	}
 	
 	public static NotesSSOTokenStruct32 newInstance(final Pointer p) {
@@ -94,7 +91,7 @@ public class NotesSSOTokenStruct32 extends Structure {
 	}
 
 	public boolean isSecureOnly() {
-		return bSecureOnly;
+		return bSecureOnly!=0;
 	}
 
 	public static class ByReference extends NotesSSOTokenStruct32 implements Structure.ByReference {
