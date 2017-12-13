@@ -1,6 +1,15 @@
 package com.mindoo.domino.jna.utils;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -12,6 +21,58 @@ import com.sun.jna.Pointer;
  */
 public class DumpUtil {
 
+	/**
+	 * Creates a log file in the temp directory and ensures its content is
+	 * written to disk when the method is done (e.g. to write something to disk before
+	 * a crash).
+	 * 
+	 * @param suffix filename will be "domino-jnalog-" + suffix + uniquenr + ".txt"
+	 * @param content file content
+	 * @return created temp file or null in case of errors
+	 */
+	public static File writeLogFile(final String suffix, final String content) {
+		return AccessController.doPrivileged(new PrivilegedAction<File>() {
+
+			@Override
+			public File run() {
+				FileOutputStream fOut = null;
+				Writer fWriter = null;
+				try {
+					File tmpDir = new File(System.getProperty("java.io.tmpdir"));
+					File dmpFile = File.createTempFile("domino-jnalog-"+suffix+"-", ".txt", tmpDir);
+					
+					fOut = new FileOutputStream(dmpFile);
+					fWriter = new OutputStreamWriter(fOut, Charset.forName("UTF-8"));
+					fWriter.write(content);
+					fWriter.flush();
+					FileChannel channel = fOut.getChannel();
+					channel.force(true);
+					return dmpFile;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				finally {
+					if (fWriter!=null) {
+						try {
+							fWriter.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					if (fOut!=null) {
+						try {
+							fOut.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				
+				return null;
+			}
+		});
+	}
+	
 	/**
 	 * Reads memory content at the specified pointer and produces a String with hex codes and
 	 * character data in case the memory contains bytes in ascii range. Calls {@link #dumpAsAscii(Pointer, int, int)}
