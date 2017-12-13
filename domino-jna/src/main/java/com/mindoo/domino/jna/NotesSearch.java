@@ -291,7 +291,7 @@ public class NotesSearch {
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 				};
@@ -337,7 +337,7 @@ public class NotesSearch {
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 
@@ -510,7 +510,7 @@ public class NotesSearch {
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 
@@ -557,7 +557,7 @@ public class NotesSearch {
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 
@@ -607,7 +607,7 @@ public class NotesSearch {
 				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
 
 				int hFilter=0;
-				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;;
+				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;
 				
 				if (searchFilter instanceof NotesIDTable) {
 					//NSFSearchExtended3 required that the high order bit for each ID in the table

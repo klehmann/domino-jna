@@ -868,7 +868,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				public short invoke(Pointer parameter, int noteId) {
 					Action result = callback.noteVisited(noteId);
 					if (result==Action.Stop) {
-						return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						return INotesErrorConstants.ERR_CANCEL;
 					}
 					return 0;
 				}
@@ -882,40 +882,26 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				public short invoke(Pointer parameter, int noteId) {
 					Action result = callback.noteVisited(noteId);
 					if (result==Action.Stop) {
-						return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						return INotesErrorConstants.ERR_CANCEL;
 					}
 					return 0;
 				}
 				
 			};
 		}
-		AccessControlContext ctx = AccessController.getContext();
 		
-		Permission accessMembersPerm = new RuntimePermission("accessDeclaredMembers");
-		Permission getClassLoaderPerm = new RuntimePermission("getClassLoader");
-		Permission packageAccessPerm1 = new RuntimePermission("accessClassInPackage.com.mindoo.domino.jna");
-		List<Permission> permissions = Arrays.asList(accessMembersPerm, getClassLoaderPerm, packageAccessPerm1);
-		Permission[] permissionArr = permissions.toArray(new Permission[permissions.size()]);
-		
-		AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-			@Override
-			public Object run() {
-				if (NotesJNAContext.is64Bit()) {
-					short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
-					if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
-						NotesErrorUtils.checkResult(result);
-					}
-				}
-				else {
-					short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
-					if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
-						NotesErrorUtils.checkResult(result);
-					}
-				}
-				return null;
+		if (NotesJNAContext.is64Bit()) {
+			short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
+			if (result!=INotesErrorConstants.ERR_CANCEL) {
+				NotesErrorUtils.checkResult(result);
 			}
-		}, ctx, permissionArr);
+		}
+		else {
+			short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
+			if (result!=INotesErrorConstants.ERR_CANCEL) {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
 	}
 	
 	/**
