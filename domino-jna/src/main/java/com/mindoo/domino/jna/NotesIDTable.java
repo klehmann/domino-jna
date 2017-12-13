@@ -1,6 +1,10 @@
 package com.mindoo.domino.jna;
 
 import java.nio.ByteBuffer;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -24,8 +28,8 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.IdEnumerateProc;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -854,9 +858,9 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void enumerate(final IEnumerateCallback callback) {
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		IdEnumerateProc proc;
+		final IdEnumerateProc proc;
 		if (notesAPI instanceof WinNotesCAPI) {
 			proc = new WinNotesCAPI.IdEnumerateProcWin() {
 
@@ -885,19 +889,33 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				
 			};
 		}
+		AccessControlContext ctx = AccessController.getContext();
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
-			if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
-				NotesErrorUtils.checkResult(result);
+		Permission accessMembersPerm = new RuntimePermission("accessDeclaredMembers");
+		Permission getClassLoaderPerm = new RuntimePermission("getClassLoader");
+		Permission packageAccessPerm1 = new RuntimePermission("accessClassInPackage.com.mindoo.domino.jna");
+		List<Permission> permissions = Arrays.asList(accessMembersPerm, getClassLoaderPerm, packageAccessPerm1);
+		Permission[] permissionArr = permissions.toArray(new Permission[permissions.size()]);
+		
+		AccessController.doPrivileged(new PrivilegedAction<Object>() {
+
+			@Override
+			public Object run() {
+				if (NotesJNAContext.is64Bit()) {
+					short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
+					if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				else {
+					short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
+					if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				return null;
 			}
-		}
-		else {
-			short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
-			if (result!=INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT) {
-				NotesErrorUtils.checkResult(result);
-			}
-		}
+		}, ctx, permissionArr);
 	}
 	
 	/**
@@ -1215,21 +1233,28 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param formula selection formula, e.g. SELECT Form="Person"
 	 * @return new ID table with filter result
 	 */
-	public NotesIDTable filter(NotesDatabase db, String formula) {
-		final Set<Integer> retIds = new TreeSet<Integer>();
-		
-		NotesSearch.search(db, this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
-				EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+	public NotesIDTable filter(final NotesDatabase db, final String formula) {
+		return AccessController.doPrivileged(new PrivilegedAction<NotesIDTable>() {
 
 			@Override
-			public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
-					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
-				retIds.add(noteId);
+			public NotesIDTable run() {
+				final Set<Integer> retIds = new TreeSet<Integer>();
+				
+				NotesSearch.search(db, this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
+						EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+
+					@Override
+					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+						retIds.add(noteId);
+						return Action.Continue;
+					}
+				});
+				
+				NotesIDTable retIDTable = new NotesIDTable(retIds);
+				return retIDTable;
 			}
 		});
-		
-		NotesIDTable retIDTable = new NotesIDTable(retIds);
-		return retIDTable;
 	}
 	
 	/**
@@ -1241,23 +1266,30 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * @param db database to load the notes
 	 * @param formula selection formula, e.g. SELECT Form="Person"
 	 */
-	public void filterInPlace(NotesDatabase db, String formula) {
+	public void filterInPlace(final NotesDatabase db, final String formula) {
 		if (formula==null)
 			return;
 		
 		final Set<Integer> retIds = new TreeSet<Integer>();
 
-		NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+		AccessController.doPrivileged(new PrivilegedAction<Object>() {
 
 			@Override
-			public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
-					NotesTimeDate noteModified, ItemTableData summaryBufferData) {
-				retIds.add(noteId);
+			public Object run() {
+				NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+
+					@Override
+					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+						retIds.add(noteId);
+						return Action.Continue;
+					}
+				});
+				return null;
 			}
 		});
 		
 		clear();
-		
 		addNotes(retIds, true);
 	}
 	

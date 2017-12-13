@@ -7,10 +7,14 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
+import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.FileType;
+import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
@@ -29,6 +33,80 @@ import lotus.domino.Session;
 public class TestDbSearch extends BaseJNATestClass {
 
 	@Test
+	public void testDbSearch_searchSelectedNoteIds() {
+
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				final Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
+
+				NotesCollection col = dbData.openCollectionByName("People");
+				NotesIDTable idsToSearch = new NotesIDTable();
+				col.getAllIds(Navigate.NEXT_NONCATEGORY, true, idsToSearch);
+				
+				Assert.assertTrue("We could read note ids from the view", !idsToSearch.isEmpty());
+				
+				//example prefix string to read some data
+				final String searchPrefix = "Tyso";
+				//example view title returned by @ViewTitle when formula is evaluated
+				final String viewTitle = col.getName();
+				
+				//use DEFAULT statements to add our own field values to the summary buffer data
+				//to be returned in the search callback
+				String formula = "DEFAULT _docLength := @DocLength;\n" + 
+				"DEFAULT _viewTitle := @ViewTitle;\n" +
+				"SELECT Form=\"Person\" & @Begins(Lastname;\""+searchPrefix+"\")";
+				
+				EnumSet<Search> searchFlags = EnumSet.of(Search.NOABSTRACTS,
+						Search.SESSION_USERNAME, Search.SUMMARY);
+				
+				long t0=System.currentTimeMillis();
+				System.out.println("Running search on view documents with formula: "+formula);
+				final int[] cnt = new int[1];
+
+				//since = null to search in all documents
+				NotesTimeDate since = null;
+				NotesTimeDate endTimeDate = NotesSearch.search(dbData, idsToSearch, formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new ISearchCallback() {
+
+					@Override
+					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+						cnt[0]++;
+						Map<String,Object> summaryData = summaryBufferData.asMap();
+						Assert.assertTrue("Default value computed", summaryData.containsKey("_docLength"));
+						Assert.assertTrue("@ViewTitle returns correct value", viewTitle.equals(summaryData.get("_viewTitle")));
+						
+						System.out.println("#"+cnt[0]+"\tnoteid="+noteId+", noteclass="+noteClass+", dbCreated="+dbCreated+", noteModified="+noteModified+", summary buffer="+summaryData);
+						
+						try {
+							//load document from the database to verify that it really matches our formula
+							Document doc = dbLegacyAPI.getDocumentByID(Integer.toString(noteId, 16));
+							String lastName = doc.getItemValueString("Lastname");
+							doc.recycle();
+							Assert.assertTrue("Lastname "+lastName+" starts with 'Tyso'", lastName!=null && lastName.startsWith(searchPrefix));
+						} catch (NotesException e) {
+							e.printStackTrace();
+						}
+						return Action.Continue;
+					}
+				});
+				Assert.assertNotNull("Returned end timedate is not null", endTimeDate);
+				
+				System.out.println("Returned end timedate: "+endTimeDate);
+				
+				long t1=System.currentTimeMillis();
+				System.out.println("Formula search in view done after "+(t1-t0)+"ms. "+cnt[0]+" documents found and processed");
+				
+				return null;
+			}
+		});
+	
+	}
+	
+//	@Test
 	public void testDbSearch_search() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -61,7 +139,7 @@ public class TestDbSearch extends BaseJNATestClass {
 				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new ISearchCallback() {
 
 					@Override
-					public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 						
 						cnt[0]++;
@@ -80,6 +158,7 @@ public class TestDbSearch extends BaseJNATestClass {
 						} catch (NotesException e) {
 							e.printStackTrace();
 						}
+						return Action.Continue;
 					}
 				});
 				Assert.assertNotNull("Returned end timedate is not null", endTimeDate);

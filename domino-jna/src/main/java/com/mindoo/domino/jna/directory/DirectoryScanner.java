@@ -49,7 +49,7 @@ public abstract class DirectoryScanner {
 			dir.searchFiles(null, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.ISearchCallback() {
 
 				@Override
-				public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate created,
+				public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate created,
 						NotesTimeDate modified, ItemTableData summaryBufferData) {
 
 					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);
@@ -64,7 +64,6 @@ public abstract class DirectoryScanner {
 								folderName = (String) folderNameObj;
 							}
 							
-							
 							String folderPath = null;
 							Object folderPathObj = dataAsMap.get("$path");
 							if (folderPathObj instanceof String) {
@@ -77,7 +76,7 @@ public abstract class DirectoryScanner {
 							folderData.setFolderPath(folderPath);
 							
 							entryRead(folderData);
-							return;
+							return Action.Continue;
 						}
 						else if ("$NOTEFILE".equals(typeStr)) {
 							String dbTitle = null;
@@ -123,7 +122,7 @@ public abstract class DirectoryScanner {
 							dbData.setFilePath(filePath);
 							
 							entryRead(dbData);
-							return;
+							return Action.Continue;
 						}
 					}
 					
@@ -131,6 +130,7 @@ public abstract class DirectoryScanner {
 					SearchResultData unknownData = new SearchResultData();
 					unknownData.setRawData(dataAsMap);
 					entryRead(unknownData);
+					return Action.Continue;
 				}
 			});
 		}

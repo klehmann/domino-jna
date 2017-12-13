@@ -3265,9 +3265,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 						
 						@Override
-						public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+						public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
 								NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 							retIds.add(noteId);
+							return Action.Continue;
 						}
 					});
 			

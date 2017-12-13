@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.Date;
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.NotesSearch.ISearchCallback.Action;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
@@ -280,8 +281,13 @@ public class NotesSearch {
 							
 							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
 
-							callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
-							return 0;
+							Action action = callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							if (action==Action.Stop) {
+								return INotesErrorConstants.ERR_CANCEL;
+							}
+							else {
+								return 0;
+							}
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
@@ -321,8 +327,13 @@ public class NotesSearch {
 
 							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
 
-							callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
-							return 0;
+							Action action = callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							if (action==Action.Stop) {
+								return INotesErrorConstants.ERR_CANCEL;
+							}
+							else {
+								return 0;
+							}
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
@@ -434,7 +445,10 @@ public class NotesSearch {
 					}
 					throw new NotesError(0, "Error searching database", invocationEx[0]);
 				}
-				NotesErrorUtils.checkResult(result);
+				
+				if (result!=INotesErrorConstants.ERR_CANCEL) {
+					NotesErrorUtils.checkResult(result);
+				}
 
 				NotesTimeDate retUntilWrap = retUntil==null ? null : new  NotesTimeDate(retUntil);
 				return retUntilWrap;
@@ -486,8 +500,13 @@ public class NotesSearch {
 
 							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
 
-							callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
-							return 0;
+							Action action = callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							if (action==Action.Stop) {
+								return INotesErrorConstants.ERR_CANCEL;
+							}
+							else {
+								return 0;
+							}
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
@@ -528,8 +547,13 @@ public class NotesSearch {
 
 							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
 							
-							callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
-							return 0;
+							Action action = callback.noteFound(db, noteId, noteClassesEnum, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							if (action==Action.Stop) {
+								return INotesErrorConstants.ERR_CANCEL;
+							}
+							else {
+								return 0;
+							}
 						}
 						catch (Throwable t) {
 							invocationEx[0] = t;
@@ -639,7 +663,10 @@ public class NotesSearch {
 					}
 					throw new NotesError(0, "Error searching database", invocationEx[0]);
 				}
-				NotesErrorUtils.checkResult(result);
+				
+				if (result!=INotesErrorConstants.ERR_CANCEL) {
+					NotesErrorUtils.checkResult(result);
+				}
 
 				NotesTimeDate retUntilWrap = retUntil==null ? null : new NotesTimeDate(retUntil);
 				return retUntilWrap;
@@ -663,6 +690,7 @@ public class NotesSearch {
 	 * @author Karsten Lehmann
 	 */
 	public static interface ISearchCallback {
+		public enum Action {Continue, Stop}
 		
 		/**
 		 * Implement this method to receive search results
@@ -673,8 +701,8 @@ public class NotesSearch {
 		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
 		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesCAPI#_NOTE_MODIFIED}
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
+		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public void noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData);
-		
+		public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData);
 	}
 }
