@@ -1,9 +1,7 @@
 package com.mindoo.domino.jna;
 
 import java.nio.ByteBuffer;
-import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.Permission;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
