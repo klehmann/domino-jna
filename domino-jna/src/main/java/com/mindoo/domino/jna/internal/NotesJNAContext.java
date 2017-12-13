@@ -1,12 +1,25 @@
 package com.mindoo.domino.jna.internal;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.sun.jna.FunctionMapper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -21,6 +34,7 @@ import com.sun.jna.Structure;
 public class NotesJNAContext {
 	private static volatile boolean m_initialized;
 	private static volatile NotesCAPI m_api;
+	private static volatile NotesCAPI m_apiWithCrashStackLogging;
 	private static volatile Boolean m_is64Bit;
 	private static volatile Integer m_platformAlignment;
 	
@@ -53,12 +67,137 @@ public class NotesJNAContext {
 	 * @return API
 	 */
 	public static NotesCAPI getNotesAPI()  {
-		if (m_api==null) {
-			initAPI();
+		if (NotesGC.isLogCrashingThreadStacktrace()) {
+			if (m_apiWithCrashStackLogging==null) {
+				initAPI();
+				m_apiWithCrashStackLogging = wrapWithCrashStackLogging(m_api);
+			}
+			return m_apiWithCrashStackLogging;
+
 		}
-		return m_api;
+		else {
+			if (m_api==null) {
+				initAPI();
+			}
+			return m_api;
+		}
 	}
 	
+	/**
+	 * Wraps the specified API object to dump caller stacktraces right before invoking
+	 * native methods
+	 * 
+	 * @param api API
+	 * @return wrapped API
+	 */
+	private static NotesCAPI wrapWithCrashStackLogging(final NotesCAPI api) {
+		final Class<?>[] interfaces;
+		if (api instanceof WinNotesCAPI) {
+			interfaces = new Class[] {NotesCAPI.class, WinNotesCAPI.class};
+		}
+		else if (api instanceof MacNotesCAPI) {
+			interfaces = new Class[] {NotesCAPI.class, MacNotesCAPI.class};
+		}
+		else {
+			interfaces = new Class[] {NotesCAPI.class};
+		}
+		
+		try {
+			return AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCAPI>() {
+
+				@Override
+				public NotesCAPI run() throws Exception {
+					return (NotesCAPI) Proxy.newProxyInstance(api.getClass().getClassLoader(), interfaces, new InvocationHandler() {
+						
+						@Override
+						public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+							Exception e = new Exception();
+							e.fillInStackTrace();
+							
+							File stFile = createStackTraceFile(e);
+							try {
+								return method.invoke(api, args);
+							}
+							finally {
+								if (stFile!=null)
+									deleteStackTraceFile(stFile);
+							}
+						}
+
+						private void deleteStackTraceFile(final File stFile) {
+							AccessController.doPrivileged(new PrivilegedAction<Object>() {
+
+								@Override
+								public Object run() {
+									if (stFile.exists() && !stFile.delete()) {
+										stFile.deleteOnExit();
+									}
+									return null;
+								}
+							});
+						}
+
+						private File createStackTraceFile(final Exception e) {
+							return AccessController.doPrivileged(new PrivilegedAction<File>() {
+
+								@Override
+								public File run() {
+									String tmpDirPath = System.getProperty("java.io.tmpdir");
+									File tmpDir = new File(tmpDirPath);
+									File stFile = new File(tmpDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
+									if (stFile.exists()) {
+										if (!stFile.delete()) {
+											stFile.deleteOnExit();
+											return null;
+										}
+									}
+									FileOutputStream fOut=null;
+									Writer fWriter=null;
+									PrintWriter pWriter=null;
+									try {
+										fOut = new FileOutputStream(stFile);
+										fWriter = new OutputStreamWriter(fOut, Charset.forName("UTF-8"));
+										pWriter = new PrintWriter(fWriter);
+										e.printStackTrace(pWriter);
+										pWriter.flush();
+										FileChannel channel = fOut.getChannel();
+										channel.force(true);
+										return stFile;
+									} catch (IOException e1) {
+										e.printStackTrace();
+										return null;
+									}
+									finally {
+										if (fOut!=null) {
+											try {
+												fOut.close();
+											} catch (IOException e) {
+												e.printStackTrace();
+											}
+										}
+										if (pWriter!=null) {
+											pWriter.close();
+										}
+										if (fWriter!=null) {
+											try {
+												fWriter.close();
+											} catch (IOException e) {
+												e.printStackTrace();
+											}
+										}
+									}
+								}
+							});
+						}
+					});
+				}
+			});
+		} catch (PrivilegedActionException e) {
+			e.printStackTrace();
+			return api;
+		}
+	}
+
 	/**
 	 * Returns the {@link NotesCAPI} singleton instance to call C methods
 	 * 

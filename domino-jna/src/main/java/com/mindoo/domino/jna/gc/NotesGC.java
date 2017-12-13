@@ -31,6 +31,11 @@ public class NotesGC {
 			return Boolean.FALSE;
 		};
 	};
+	private static ThreadLocal<Boolean> m_logCrashingThreadStackTrace = new ThreadLocal<Boolean>() {
+		protected Boolean initialValue() {
+			return Boolean.FALSE;
+		};
+	};
 	
 	/**
 	 * Method to enable GC debug logging for the current {@link #runWithAutoGC(Callable)} call
@@ -39,6 +44,30 @@ public class NotesGC {
 	 */
 	public static void setDebugLoggingEnabled(boolean enabled) {
 		m_writeDebugMessages.set(Boolean.valueOf(enabled));
+	}
+	
+	/**
+	 * Method to write a stacktrace to disk right before each native method invocation. Consumes
+	 * much performance and is therefore disabled by default and just here to track down
+	 * handle panics.<br>
+	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.
+	 * 
+	 * @param log true to log
+	 */
+	public static void setLogCrashingThreadStacktrace(boolean log) {
+		m_logCrashingThreadStackTrace.set(Boolean.valueOf(log));
+	}
+	
+	/**
+	 * Checks whether stacktraces for each native method invocation should be written to disk. Consumes
+	 * much performance and is therefore disabled by default and just here to track down
+	 * handle panics.<br>
+	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.
+	 * 
+	 * @return true to log
+	 */
+	public static boolean isLogCrashingThreadStacktrace() {
+		return Boolean.TRUE.equals(m_logCrashingThreadStackTrace.get());
 	}
 	
 	/**
