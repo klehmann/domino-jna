@@ -507,15 +507,20 @@ public interface NotesCAPI extends Library {
 
 	public short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
 	
-	public int OSMemoryGetSize(int handle);
+	public int b64_OSMemoryGetSize(long handle);
+	public int b32_OSMemoryGetSize(int handle);
 	
-	public void OSMemoryFree(int handle);
+	public void b64_OSMemoryFree(long handle);
+	public void b32_OSMemoryFree(int handle);
 	
-	public short OSMemoryReallocate(int handle, int size);
+	public short b64_OSMemoryReallocate(long handle, int size);
+	public short b32_OSMemoryReallocate(int handle, int size);
 	
-	public Pointer OSMemoryLock(int handle);
+	public Pointer b64_OSMemoryLock(long handle);
+	public Pointer b32_OSMemoryLock(int handle);
 	
-	public boolean OSMemoryUnlock(int handle);
+	public boolean b64_OSMemoryUnlock(long handle);
+	public boolean b32_OSMemoryUnlock(int handle);
 	
 	public void ODSWriteMemory(
 			Pointer ppDest,
@@ -3413,7 +3418,18 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			short Flags,
 			IntByReference rethPubKey);
 	
-	public short SECTokenGenerate(
+	public short b64_SECTokenGenerate(
+			Memory ServerName,
+			Memory OrgName,
+			Memory ConfigName,
+			Memory UserName,
+			NotesTimeDateStruct Creation,
+			NotesTimeDateStruct Expiration,
+			LongByReference retmhToken,
+			int dwReserved,
+			Pointer vpReserved);
+
+	public short b32_SECTokenGenerate(
 			Memory ServerName,
 			Memory OrgName,
 			Memory ConfigName,
@@ -3424,7 +3440,8 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 			int dwReserved,
 			Pointer vpReserved);
 
-	public void SECTokenFree(IntByReference mhToken);
+	public void b64_SECTokenFree(LongByReference mhToken);
+	public void b32_SECTokenFree(IntByReference mhToken);
 	
 	
 	public short SECTokenValidate(
@@ -3960,15 +3977,17 @@ This allows an Editor to assume some Designer-level access */
 	/**	None				*/
 	public short REPL_SIGNAL_ABORT = 10;
 
-	public short HTMLCreateConverter(IntByReference phHTML);
+	public short b64_HTMLCreateConverter(LongByReference phHTML);
+	public short b32_HTMLCreateConverter(IntByReference phHTML);
 	
-	public short HTMLDestroyConverter(int hHTML);
+	public short b64_HTMLDestroyConverter(long hHTML);
+	public short b32_HTMLDestroyConverter(int hHTML);
 	
-	public short HTMLSetHTMLOptions(int hHTML, StringArray optionList);
-	
+	public short b64_HTMLSetHTMLOptions(long hHTML, StringArray optionList);
+	public short b32_HTMLSetHTMLOptions(int hHTML, StringArray optionList);
 	
 	public short b64_HTMLConvertItem(
-			int hHTML,
+			long hHTML,
 			long hDB,
 			long hNote,
 			Memory pszItemName);
@@ -3980,7 +3999,7 @@ This allows an Editor to assume some Designer-level access */
 			Memory pszItemName);
 	
 	public short b64_HTMLConvertNote(
-			int hHTML,
+			long hHTML,
 			long hDB,
 			long hNote,
 			int NumArgs,
@@ -4240,7 +4259,7 @@ This allows an Editor to assume some Designer-level access */
 	int HTMLAPI_REF_CID = 9;
 	
 	public short b64_HTMLGetProperty(
-			int hHTML,
+			long hHTML,
 			long PropertyType,
 			Pointer pProperty);
 
@@ -4259,23 +4278,38 @@ This allows an Editor to assume some Designer-level access */
 			int PropertyType,
 			Memory pProperty);
 
-	public short HTMLGetText(
+	public short b64_HTMLGetText(
+			long hHTML,
+			int startingOffset,
+			IntByReference pTextLength,
+			Memory pText);
+
+	public short b32_HTMLGetText(
 			int hHTML,
 			int StartingOffset,
 			IntByReference pTextLength,
 			Memory pText);
-	
-	public short HTMLGetReference(
+
+	public short b64_HTMLGetReference(
+			long hHTML,
+			int Index,
+			LongByReference phRef);
+
+	public short b32_HTMLGetReference(
 			int hHTML,
 			int Index,
 			IntByReference phRef);
-	
-	public short HTMLLockAndFixupReference(
+
+	public short b64_HTMLLockAndFixupReference(
+			long hRef,
+			Memory ppRef);
+
+	public short b32_HTMLLockAndFixupReference(
 			int hRef,
 			Memory ppRef);
 
 	public short b64_HTMLConvertElement(
-			int hHTML,
+			long hHTML,
 			long hDB,
 			long hNote,
 			Memory pszItemName,

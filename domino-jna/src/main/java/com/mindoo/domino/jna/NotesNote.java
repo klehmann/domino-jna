@@ -3873,15 +3873,30 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		IntByReference phHTML = new IntByReference();
-		short result = notesAPI.HTMLCreateConverter(phHTML);
+		
+		LongByReference phHTML64 = new LongByReference();
+		IntByReference phHTML32 = new IntByReference();
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_HTMLCreateConverter(phHTML64);
+		}
+		else {
+			result = notesAPI.b32_HTMLCreateConverter(phHTML32);
+		}
 		NotesErrorUtils.checkResult(result);
 		
-		int hHTML = phHTML.getValue();
+		long hHTML64 = phHTML64.getValue();
+		int hHTML32 = phHTML32.getValue();
 		
 		try {
 			if (!options.isEmpty()) {
-				result = notesAPI.HTMLSetHTMLOptions(hHTML, new StringArray(HtmlConvertOption.toStringArray(options)));
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
+				}
+				else {
+					result = notesAPI.b32_HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
+				}
 				NotesErrorUtils.checkResult(result);
 			}
 
@@ -3892,21 +3907,21 @@ public class NotesNote implements IRecyclableNotesObject {
 			int skip;
 			
 			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_HTMLConvertElement(hHTML, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
+				result = notesAPI.b64_HTMLConvertElement(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
 				NotesErrorUtils.checkResult(result);
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b64_HTMLGetProperty(hHTML, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = notesAPI.b64_HTMLGetProperty(hHTML64, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 				skip = callback.setSize(totalLen);
 			}
 			else {
-				result = notesAPI.b32_HTMLConvertElement(hHTML, getParent().getHandle32(), m_hNote32, itemNameMem, itemIndex, itemOffset);
+				result = notesAPI.b32_HTMLConvertElement(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem, itemIndex, itemOffset);
 				NotesErrorUtils.checkResult(result);
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b32_HTMLGetProperty(hHTML, (int) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = notesAPI.b32_HTMLGetProperty(hHTML32, (int) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 				skip = callback.setSize(totalLen);
@@ -3923,7 +3938,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
 				len.setValue(NotesCAPI.MAXPATH);
 				
-				result = notesAPI.HTMLGetText(hHTML, startOffset, len, bufMem);
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLGetText(hHTML64, startOffset, len, bufMem);
+				}
+				else {
+					result = notesAPI.b32_HTMLGetText(hHTML32, startOffset, len, bufMem);
+				}
 				NotesErrorUtils.checkResult(result);
 				
 				byte[] data = bufMem.getByteArray(0, len.getValue());
@@ -3935,7 +3955,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		}
 		finally {
-			result = notesAPI.HTMLDestroyConverter(hHTML);
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_HTMLDestroyConverter(hHTML64);
+			}
+			else {
+				result = notesAPI.b32_HTMLDestroyConverter(hHTML32);
+			}
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -4277,15 +4302,32 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		IntByReference phHTML = new IntByReference();
-		short result = notesAPI.HTMLCreateConverter(phHTML);
+		
+		LongByReference phHTML64 = new LongByReference();
+		phHTML64.setValue(0);
+		IntByReference phHTML32 = new IntByReference();
+		phHTML32.setValue(0);
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_HTMLCreateConverter(phHTML64);
+		}
+		else {
+			result = notesAPI.b32_HTMLCreateConverter(phHTML32);
+		}
 		NotesErrorUtils.checkResult(result);
 		
-		int hHTML = phHTML.getValue();
+		long hHTML64 = phHTML64.getValue();
+		int hHTML32 = phHTML32.getValue();
 		
 		try {
 			if (!options.isEmpty()) {
-				result = notesAPI.HTMLSetHTMLOptions(hHTML, new StringArray(HtmlConvertOption.toStringArray(options)));
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
+				}
+				else {
+					result = notesAPI.b32_HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
+				}
 				NotesErrorUtils.checkResult(result);
 			}
 
@@ -4295,32 +4337,32 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (NotesJNAContext.is64Bit()) {
 				if (itemName==null) {
-					result = notesAPI.b64_HTMLConvertNote(hHTML, getParent().getHandle64(), m_hNote64, 0, null);
+					result = notesAPI.b64_HTMLConvertNote(hHTML64, getParent().getHandle64(), m_hNote64, 0, null);
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
-					result = notesAPI.b64_HTMLConvertItem(hHTML, getParent().getHandle64(), m_hNote64, itemNameMem);
+					result = notesAPI.b64_HTMLConvertItem(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem);
 					NotesErrorUtils.checkResult(result);
 				}
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b64_HTMLGetProperty(hHTML, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = notesAPI.b64_HTMLGetProperty(hHTML64, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 			}
 			else {
 				if (itemName==null) {
-					result = notesAPI.b32_HTMLConvertNote(hHTML, getParent().getHandle32(), m_hNote32, 0, null);
+					result = notesAPI.b32_HTMLConvertNote(hHTML32, getParent().getHandle32(), m_hNote32, 0, null);
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
-					result = notesAPI.b32_HTMLConvertItem(hHTML, getParent().getHandle32(), m_hNote32, itemNameMem);
+					result = notesAPI.b32_HTMLConvertItem(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem);
 					NotesErrorUtils.checkResult(result);
 					
 				}
 
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b32_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = notesAPI.b32_HTMLGetProperty(hHTML32, NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 
@@ -4337,7 +4379,12 @@ public class NotesNote implements IRecyclableNotesObject {
 				len.setValue(NotesCAPI.MAXPATH);
 				textMem.setByte(0, (byte) 0);
 				
-				result = notesAPI.HTMLGetText(hHTML, startOffset, len, textMem);
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLGetText(hHTML64, startOffset, len, textMem);
+				}
+				else {
+					result = notesAPI.b32_HTMLGetText(hHTML32, startOffset, len, textMem);
+				}
 				NotesErrorUtils.checkResult(result);
 				
 				if (result == 0) {
@@ -4353,10 +4400,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			Memory refCount = new Memory(4);
 			
 			if (NotesJNAContext.is64Bit()) {
-				result=notesAPI.b64_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+				result=notesAPI.b64_HTMLGetProperty(hHTML64, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
 			}
 			else {
-				result=notesAPI.b32_HTMLGetProperty(hHTML, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+				result=notesAPI.b32_HTMLGetProperty(hHTML32, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
 			}
 			NotesErrorUtils.checkResult(result);
 			
@@ -4365,15 +4412,30 @@ public class NotesNote implements IRecyclableNotesObject {
 			List<IHtmlApiReference> references = new ArrayList<IHtmlApiReference>();
 			
 			for (int i=0; i<iRefCount; i++) {
-				IntByReference phRef = new IntByReference();
+				LongByReference phRef64 = new LongByReference();
+				phRef64.setValue(0);
+				IntByReference phRef32 = new IntByReference();
+				phRef32.setValue(0);
 				
-				result = notesAPI.HTMLGetReference(hHTML, i, phRef);
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLGetReference(hHTML64, i, phRef64);
+				}
+				else {
+					result = notesAPI.b32_HTMLGetReference(hHTML32, i, phRef32);
+				}
 				NotesErrorUtils.checkResult(result);
 				
 				Memory ppRef = new Memory(Pointer.SIZE);
-				int hRef = phRef.getValue();
 				
-				result = notesAPI.HTMLLockAndFixupReference(hRef, ppRef);
+				long hRef64 = phRef64.getValue();
+				int hRef32 = phRef32.getValue();
+				
+				if (NotesJNAContext.is64Bit()) {
+					result = notesAPI.b64_HTMLLockAndFixupReference(hRef64, ppRef);
+				}
+				else {
+					result = notesAPI.b32_HTMLLockAndFixupReference(hRef32, ppRef);
+				}
 				NotesErrorUtils.checkResult(result);
 				try {
 					int iRefType;
@@ -4467,9 +4529,17 @@ public class NotesNote implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					if (hRef!=0) {
-						notesAPI.OSMemoryUnlock(hRef);
-						notesAPI.OSMemoryFree(hRef);
+					if (NotesJNAContext.is64Bit()) {
+						if (hRef64!=0) {
+							notesAPI.b64_OSMemoryUnlock(hRef64);
+							notesAPI.b64_OSMemoryFree(hRef64);
+						}
+					}
+					else {
+						if (hRef32!=0) {
+							notesAPI.b32_OSMemoryUnlock(hRef32);
+							notesAPI.b32_OSMemoryFree(hRef32);
+						}
 					}
 				}
 			}
@@ -4477,7 +4547,17 @@ public class NotesNote implements IRecyclableNotesObject {
 			return new HtmlConversionResult(htmlText.toString(), references, options);
 		}
 		finally {
-			result = notesAPI.HTMLDestroyConverter(hHTML);
+			if (NotesJNAContext.is64Bit()) {
+				if (hHTML64!=0) {
+					result = notesAPI.b64_HTMLDestroyConverter(hHTML64);
+				}
+				
+			}
+			else {
+				if (hHTML32!=0) {
+					result = notesAPI.b64_HTMLDestroyConverter(hHTML32);
+				}
+			}
 			NotesErrorUtils.checkResult(result);
 		}
 	}
