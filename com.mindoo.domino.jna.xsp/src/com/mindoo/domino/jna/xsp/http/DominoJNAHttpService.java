@@ -102,6 +102,9 @@ public class DominoJNAHttpService extends HttpService {
 			if (exception[0] instanceof RuntimeException) {
 				throw (RuntimeException) exception[0];
 			}
+			else if (exception[0] instanceof Error) {
+				throw (Error) exception[0];
+			}
 			else {
 				throw new ServletException(exception[0]);
 			}
