@@ -1241,7 +1241,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			public NotesIDTable run() {
 				final Set<Integer> retIds = new TreeSet<Integer>();
 				
-				NotesSearch.search(db, this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
+				NotesSearch.search(db, NotesIDTable.this, formula, "-", EnumSet.of(Search.SESSION_USERNAME),
 						EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 
 					@Override
@@ -1277,7 +1277,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 
 			@Override
 			public Object run() {
-				NotesSearch.search(db, this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+				NotesSearch.search(db, NotesIDTable.this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
 
 					@Override
 					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,

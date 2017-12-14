@@ -100,7 +100,7 @@ public class NotesSearch {
 	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, ISearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, viewTitle, searchFlags, NoteClass.toBitMaskInt(noteClasses), since, callback);
 	}
 	
