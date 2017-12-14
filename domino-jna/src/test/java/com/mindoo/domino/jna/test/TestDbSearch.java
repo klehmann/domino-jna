@@ -24,7 +24,6 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.Database;
