@@ -4567,9 +4567,10 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * 
 	 * @param itemName richtext item name
 	 * @param conversions conversions, processed from left to right
+	 * @return true if richtext has been updated, false if all conversion classes returned {@link IRichTextConversion#isMatch(IRichTextNavigator)} as false
 	 */
-	public void convertRichTextItem(String itemName, IRichTextConversion... conversions) {
-		convertRichTextItem(itemName, this, itemName, conversions);
+	public boolean convertRichTextItem(String itemName, IRichTextConversion... conversions) {
+		return convertRichTextItem(itemName, this, itemName, conversions);
 	}
 	
 	/**
@@ -4579,12 +4580,13 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param targetNote note to copy to conversion result to
 	 * @param targetItemName item name in target note where we should save the conversion result
 	 * @param conversions conversions, processed from left to right
+	 * @return true if richtext has been updated, false if all conversion classes returned {@link IRichTextConversion#isMatch(IRichTextNavigator)} as false
 	 */
-	public void convertRichTextItem(String itemName, NotesNote targetNote, String targetItemName, IRichTextConversion... conversions) {
+	public boolean convertRichTextItem(String itemName, NotesNote targetNote, String targetItemName, IRichTextConversion... conversions) {
 		checkHandle();
 		
 		if (conversions==null || conversions.length==0)
-			return;
+			return false;
 		
 		IRichTextNavigator navFromNote = getRichtextNavigator(itemName);
 		IRichTextNavigator currNav = navFromNote;
@@ -4603,6 +4605,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		if (tmpRichText!=null) {
 			tmpRichText.closeAndCopyToNote(targetNote, targetItemName);
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
 	
