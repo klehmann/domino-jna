@@ -3,6 +3,8 @@ package com.mindoo.domino.jna;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -888,17 +890,32 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			};
 		}
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
-			if (result!=INotesErrorConstants.ERR_CANCEL) {
-				NotesErrorUtils.checkResult(result);
-			}
-		}
-		else {
-			short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
-			if (result!=INotesErrorConstants.ERR_CANCEL) {
-				NotesErrorUtils.checkResult(result);
-			}
+		try {
+			//AccessController call required to prevent SecurityException when running in XPages
+			AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
+
+				@Override
+				public Object run() throws Exception {
+					if (NotesJNAContext.is64Bit()) {
+						short result = notesAPI.b64_IDEnumerate(m_idTableHandle64, proc, null);
+						if (result!=INotesErrorConstants.ERR_CANCEL) {
+							NotesErrorUtils.checkResult(result);
+						}
+					}
+					else {
+						short result = notesAPI.b32_IDEnumerate(m_idTableHandle32, proc, null);
+						if (result!=INotesErrorConstants.ERR_CANCEL) {
+							NotesErrorUtils.checkResult(result);
+						}
+					}
+					return null;
+				}
+			});
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error enumerating ID table", e);
 		}
 	}
 	

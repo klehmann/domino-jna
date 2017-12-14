@@ -1,9 +1,13 @@
 package com.mindoo.domino.jna.utils;
 
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesCAPI.OSSIGBREAKPROC;
 import com.mindoo.domino.jna.internal.NotesCAPI.OSSIGPROGRESSPROC;
@@ -79,13 +83,27 @@ public class SignalHandlerUtil {
 	
 	public static synchronized void installGlobalBreakHandler() {
 		if (!m_breakHandlerInstalled) {
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+			final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-			if (notesAPI instanceof WinNotesCAPI) {
-				prevBreakProc = (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProcWin);
-			}
-			else {
-				prevBreakProc = (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProc);
+			try {
+				//AccessController call required to prevent SecurityException when running in XPages
+				prevBreakProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGBREAKPROC>() {
+
+					@Override
+					public OSSIGBREAKPROC run() throws Exception {
+						if (notesAPI instanceof WinNotesCAPI) {
+							return (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProcWin);
+						}
+						else {
+							return (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProc);
+						}
+					}
+				});
+			} catch (PrivilegedActionException e) {
+				if (e.getCause() instanceof RuntimeException) 
+					throw (RuntimeException) e.getCause();
+				else
+					throw new NotesError(0, "Error installing break handler", e);
 			}
 			m_breakHandlerInstalled = true;
 		}
@@ -119,112 +137,6 @@ public class SignalHandlerUtil {
 	}
 	
 	/**
-	 * The method registers a break signal handler for the execution time of the specified
-	 * {@link Callable}. The break signal handler can be used to send a break signal to Domino
-	 * so that the current (probably long running) operation, e.g. a fulltext on a remote
-	 * database, can be interrupted.
-	 * 
-	 * @param callable callable to execute
-	 * @param breakHandler break handler to interrupt the current operation
-	 * @return optional result
-	 * @throws Exception of callable throws an error
-	 * 
-	 * @param <T> result type
-	 */
-	public static <T> T old_runInterruptable(Callable<T> callable, final IBreakHandler breakHandler) throws Exception {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		OSSIGBREAKPROC breakProc;
-		final Thread callThread = Thread.currentThread();
-
-		//store a previously registered signal handler for this thread:
-		final OSSIGBREAKPROC[] prevProc = new OSSIGBREAKPROC[1];
-
-		if (notesAPI instanceof WinNotesCAPI) {
-			breakProc = new WinNotesCAPI.OSSIGBREAKPROCWin() {
-
-				@Override
-				public short invoke() {
-					//check if handler got called in the right thread
-					if (Thread.currentThread()==callThread) {
-						if (breakHandler.shouldInterrupt()) {
-							//send break signal
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-						else {
-							if (prevProc[0]!=null) {
-								//ask previously registered break handler
-								return prevProc[0].invoke();
-							}
-							else {
-								return 0;
-							}
-						}
-					}
-					else {
-						if (prevProc[0]!=null) {
-							//ask previously registered break handler
-							return prevProc[0].invoke();
-						}
-						else {
-							return 0;
-						}
-					}
-				}
-			};
-		}
-		else {
-			breakProc = new OSSIGBREAKPROC() {
-
-				@Override
-				public short invoke() {
-					//check if handler got called in the right thread
-					if (Thread.currentThread()==callThread) {
-						if (breakHandler.shouldInterrupt()) {
-							//send break signal
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-						else {
-							if (prevProc[0]!=null) {
-								//ask previously registered break handler
-								return prevProc[0].invoke();
-							}
-							else {
-								return 0;
-							}
-						}
-					}
-					else {
-						if (prevProc[0]!=null) {
-							//ask previously registered break handler
-							return prevProc[0].invoke();
-						}
-						else {
-							return 0;
-						}
-					}
-				}
-			};
-		}
-
-		try {
-			//register our signal handler and store the previous one if there is any;
-			//the signal handler is thread specific so we do not get race conditions
-			//between setting the new handler and restoring the old one
-			prevProc[0] = (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProc);
-			T result = callable.call();
-			return result;
-		}
-		finally {
-			//restore original signal handler if we are still the active signal handler (should always be the case,
-			//since the signal handlers are thread specific)
-			OSSIGBREAKPROC currProc = (OSSIGBREAKPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK);
-			if (breakProc.equals(currProc)) {
-				notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, prevProc[0]);
-			}
-		}
-	}
-
-	/**
 	 * Implement this method to send break signals to long running operations
 	 * 
 	 * @author Karsten Lehmann
@@ -255,8 +167,8 @@ public class SignalHandlerUtil {
 	 * @param <T> result type
 	 */
 	public static <T> T runWithProgress(Callable<T> callable, final IProgressListener progressHandler) throws Exception {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		OSSIGPROGRESSPROC progressProc;
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final OSSIGPROGRESSPROC progressProc;
 		final Thread callThread = Thread.currentThread();
 
 		//store a previously registered signal handler for this thread:
@@ -367,14 +279,31 @@ public class SignalHandlerUtil {
 			//register our signal handler and store the previous one if there is any;
 			//the signal handler is thread specific so we do not get race conditions
 			//between setting the new handler and restoring the old one
-			prevProc[0] = (OSSIGPROGRESSPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS, progressProc);
+			
+			//AccessController call required to prevent SecurityException when running in XPages
+			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGPROGRESSPROC>() {
+
+				@Override
+				public OSSIGPROGRESSPROC run() throws Exception {
+					return (OSSIGPROGRESSPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS, progressProc);
+				}
+			});
+			
 			T result = callable.call();
 			return result;
 		}
 		finally {
 			//restore original signal handler if we are still the active signal handler (should always be the case,
 			//since the signal handlers are thread specific)
-			OSSIGPROGRESSPROC currProc = (OSSIGPROGRESSPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS);
+			
+			//AccessController call required to prevent SecurityException when running in XPages
+			OSSIGPROGRESSPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGPROGRESSPROC>() {
+
+				@Override
+				public OSSIGPROGRESSPROC run() throws Exception {
+					return (OSSIGPROGRESSPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS);
+				}
+			});
 			if (progressProc.equals(currProc)) {
 				notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS, prevProc[0]);
 			}
@@ -429,8 +358,8 @@ public class SignalHandlerUtil {
 	 */
 	public static <T> T runWithReplicationStateTracking(Callable<T> callable,
 			final IReplicationStateListener replStateHandler) throws Exception {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		OSSIGREPLPROC replProc;
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final OSSIGREPLPROC replProc;
 		final Thread callThread = Thread.currentThread();
 
 		//store a previously registered signal handler for this thread:
@@ -569,14 +498,30 @@ public class SignalHandlerUtil {
 			//register our signal handler and store the previous one if there is any;
 			//the signal handler is thread specific so we do not get race conditions
 			//between setting the new handler and restoring the old one
-			prevProc[0] = (OSSIGREPLPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_REPL, replProc);
+			
+			//AccessController call required to prevent SecurityException when running in XPages
+			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGREPLPROC>() {
+
+				@Override
+				public OSSIGREPLPROC run() throws Exception {
+					return (OSSIGREPLPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_REPL, replProc);
+				}
+			});
 			T result = callable.call();
 			return result;
 		}
 		finally {
 			//restore original signal handler if we are still the active signal handler (should always be the case,
 			//since the signal handlers are thread specific)
-			OSSIGREPLPROC currProc = (OSSIGREPLPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_REPL);
+			
+			//AccessController call required to prevent SecurityException when running in XPages
+			OSSIGREPLPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGREPLPROC>() {
+
+				@Override
+				public OSSIGREPLPROC run() throws Exception {
+					return (OSSIGREPLPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_REPL);
+				}
+			});
 			if (replProc.equals(currProc)) {
 				notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_REPL, prevProc[0]);
 			}

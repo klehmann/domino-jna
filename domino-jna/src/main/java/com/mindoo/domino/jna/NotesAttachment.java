@@ -1,5 +1,8 @@
 package com.mindoo.domino.jna;
 
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Calendar;
 
 import com.mindoo.domino.jna.NotesAttachment.IDataCallback.Action;
@@ -232,16 +235,16 @@ public class NotesAttachment {
 	public void readData(final IDataCallback callback) {
 		m_parentNote.checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		final NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
-		int extractFlags = 0;
-		int hDecryptionCipher = 0;
+		final int extractFlags = 0;
+		final int hDecryptionCipher = 0;
 		
-		NoteExtractCallback extractCallback;
+		final NoteExtractCallback extractCallback;
 		final Throwable[] extractError = new Throwable[1];
 		
 		if (notesAPI instanceof WinNotesCAPI) {
@@ -296,15 +299,29 @@ public class NotesAttachment {
 		}
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle64(), 
-					itemBlockIdByVal, extractFlags, hDecryptionCipher, 
-					extractCallback, null, 0, null);
-		}
-		else {
-			result = notesAPI.b32_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle32(), 
-					itemBlockIdByVal, extractFlags, hDecryptionCipher, 
-					extractCallback, null, 0, null);
+		try {
+			//AccessController call required to prevent SecurityException when running in XPages
+			result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+				@Override
+				public Short run() throws Exception {
+					if (NotesJNAContext.is64Bit()) {
+						return notesAPI.b64_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle64(), 
+								itemBlockIdByVal, extractFlags, hDecryptionCipher, 
+								extractCallback, null, 0, null);
+					}
+					else {
+						return notesAPI.b32_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle32(), 
+								itemBlockIdByVal, extractFlags, hDecryptionCipher, 
+								extractCallback, null, 0, null);
+					}
+				}
+			});
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error extracting attachment", e);
 		}
 		
 		if (extractError[0] != null) {

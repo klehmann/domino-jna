@@ -1,6 +1,9 @@
 package com.mindoo.domino.jna.mq;
 
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -187,7 +190,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @param callback callback to be called for each message; if null, we dequeue the a message and return it in the specified buffer
 	 * @return The number of bytes written to the buffer (important if <code>callback</code> has been set to null)
 	 */
-	public int scan(byte[] buffer, int offset, int length, final IMQCallback callback) {
+	public int scan(final byte[] buffer, int offset, int length, final IMQCallback callback) {
 		checkHandle();
 		if (buffer!=null && length==0) {
 			throw new IllegalArgumentException("Buffer cannot be empty");
@@ -196,11 +199,11 @@ public class MessageQueue implements IRecyclableNotesObject {
 			throw new IllegalArgumentException("Max size for the buffer is "+NotesCAPI.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
 		}
 
-		ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, offset, length);
+		final ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, offset, length);
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
-		NotesCAPI.MQScanCallback cCallback;
+		final NotesCAPI.MQScanCallback cCallback;
 		if (notesAPI instanceof WinNotesCAPI) {
 			cCallback = new WinNotesCAPI.MQScanCallbackWin() {
 
@@ -256,8 +259,23 @@ public class MessageQueue implements IRecyclableNotesObject {
 			};
 		}
 
-		ShortByReference retMsgLength = new ShortByReference();
-		short result = notesAPI.MQScan(m_queue, byteBuffer, (short) (buffer.length & 0xffff), 0, cCallback, null, retMsgLength);
+		final ShortByReference retMsgLength = new ShortByReference();
+		short result;
+		try {
+			//AccessController call required to prevent SecurityException when running in XPages
+			result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+				@Override
+				public Short run() throws Exception {
+					return notesAPI.MQScan(m_queue, byteBuffer, (short) (buffer.length & 0xffff), 0, cCallback, null, retMsgLength);
+				}
+			});
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error scanning message queue", e);
+		}
 		NotesErrorUtils.checkResult(result);
 
 		return retMsgLength.getValue() & 0xffff;

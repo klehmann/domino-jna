@@ -6,6 +6,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
@@ -2766,15 +2769,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param folderSinceTime {@link NotesTimeDate} containing a time/date value specifying the earliest time to retrieve notes from the folder. If {@link GetNotes#GET_FOLDER_ADDS} is specified this is the time folder operations should be retrieved from
 	 * @param folderAddCallback If {@link GetNotes#GET_FOLDER_ADDS} is specified but {@link GetNotes#APPLY_FOLDER_ADDS} is not, this function is called for each note after the {@link INoteOpenCallback} function is called
 	 */
-	public void getNotes(int[] noteIds, EnumSet<OpenNote>[] noteOpenFlags, int[] sinceSeqNum,
-			EnumSet<GetNotes> controlFlags, NotesDatabase objectDb,
+	public void getNotes(final int[] noteIds, EnumSet<OpenNote>[] noteOpenFlags, int[] sinceSeqNum,
+			final EnumSet<GetNotes> controlFlags, final NotesDatabase objectDb,
 			final IGetNotesCallback getNotesCallback, final INoteOpenCallback noteOpenCallback,
 			final IObjectAllocCallback objectAllocCallback, final IObjectWriteCallback objectWriteCallback,
 			NotesTimeDate folderSinceTime, final IFolderAddCallback folderAddCallback) {
 		
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		if (noteIds.length==0)
 			return;
@@ -2786,23 +2789,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NotesError(0, "Size of sinceSeqNum array does not match note ids array ("+sinceSeqNum.length+"!="+noteIds.length+")");
 		}
 		
-		NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : folderSinceTime.getAdapter(NotesTimeDateStruct.class);
+		final NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : folderSinceTime.getAdapter(NotesTimeDateStruct.class);
 		
-		Memory arrNoteIdsMem = new Memory(4 * noteIds.length);
+		final Memory arrNoteIdsMem = new Memory(4 * noteIds.length);
 		for (int i=0; i<noteIds.length; i++) {
 			arrNoteIdsMem.setInt(4*i, noteIds[i]);
 		}
-		Memory arrNoteOpenFlagsMem = new Memory(4 * noteOpenFlags.length);
+		final Memory arrNoteOpenFlagsMem = new Memory(4 * noteOpenFlags.length);
 		for (int i=0; i<noteOpenFlags.length; i++) {
 			arrNoteOpenFlagsMem.setInt(4*i, OpenNote.toBitMaskForOpenExt(noteOpenFlags[i]));
 		}
-		Memory arrSinceSeqNumMem = new Memory(4 * sinceSeqNum.length);
+		final Memory arrSinceSeqNumMem = new Memory(4 * sinceSeqNum.length);
 		for (int i=0; i<sinceSeqNum.length; i++) {
 			arrSinceSeqNumMem.setInt(4*i, sinceSeqNum[i]);
 		}
 		
 		final Throwable[] exception = new Throwable[1];
-		NSFGetNotesCallback cGetNotesCallback = null;
+		final NSFGetNotesCallback cGetNotesCallback;
 		
 		if (getNotesCallback!=null) {
 			if (notesAPI instanceof WinNotesCAPI) {
@@ -2814,9 +2817,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							getNotesCallback.gettingNotes(totalSizeLow, totalSizeHigh);
 							return 0;
 						}
-						catch (Exception e) {
+						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						}
+						catch (Throwable t) {
+							exception[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}};
 			}
@@ -2829,15 +2836,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							getNotesCallback.gettingNotes(totalSizeLow, totalSizeHigh);
 							return 0;
 						}
-						catch (Exception e) {
+						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						}
+						catch (Throwable t) {
+							exception[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}};
 			}
 		}
+		else {
+			cGetNotesCallback=null;
+		}
 		
-		NSFFolderAddCallback cFolderAddCallback = null;
+		final NSFFolderAddCallback cFolderAddCallback;
 		
 		if (folderAddCallback!=null) {
 			if (notesAPI instanceof WinNotesCAPI) {
@@ -2849,9 +2863,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							folderAddCallback.addedToFolder(noteUNID==null ? null : noteUNID.toString());
 							return 0;
 						}
-						catch (Exception e) {
+						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						}
+						catch (Throwable t) {
+							exception[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 				};
@@ -2865,19 +2883,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							folderAddCallback.addedToFolder(noteUNID==null ? null : noteUNID.toString());
 							return 0;
 						}
-						catch (Exception e) {
+						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+						}
+						catch (Throwable t) {
+							exception[0] = t;
+							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 						}
 					}
 				};
 			}
 		}
+		else {
+			cFolderAddCallback=null;
+		}
 		
 		if (NotesJNAContext.is64Bit()) {
-			b64_NSFNoteOpenCallback cNoteOpenCallback = null;
-			b64_NSFObjectAllocCallback cObjectAllocCallback = null;
-			b64_NSFObjectWriteCallback cObjectWriteCallback = null;
+			final b64_NSFNoteOpenCallback cNoteOpenCallback;
+			final b64_NSFObjectAllocCallback cObjectAllocCallback;
+			final b64_NSFObjectWriteCallback cObjectWriteCallback;
 			
 			if (noteOpenCallback!=null) {
 				if (notesAPI instanceof WinNotesCAPI) {
@@ -2893,9 +2918,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								noteOpenCallback.noteOpened(note, noteId, status);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2916,9 +2945,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								noteOpenCallback.noteOpened(note, noteId, status);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2927,6 +2960,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						
 					};					
 				}
+			}
+			else {
+				cNoteOpenCallback=null;
 			}
 			
 			if (objectAllocCallback!=null) {
@@ -2943,9 +2979,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2966,9 +3006,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2976,6 +3020,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 					};
 				}
+			}
+			else {
+				cObjectAllocCallback=null;
 			}
 			
 			if (objectWriteCallback!=null) {
@@ -2995,9 +3042,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3022,9 +3073,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3034,17 +3089,39 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					};
 				}
 			}
+			else {
+				cObjectWriteCallback=null;
+			}
 			
-			short result = notesAPI.b64_NSFDbGetNotes(m_hDB64, noteIds.length, arrNoteIdsMem, arrNoteOpenFlagsMem, arrSinceSeqNumMem, GetNotes.toBitMask(controlFlags), objectDb==null ? 0 : objectDb.getHandle64(), null, cGetNotesCallback, cNoteOpenCallback, cObjectAllocCallback, cObjectWriteCallback, folderSinceTimeStruct, cFolderAddCallback);
+			short result;
+			try {
+				//AccessController call required to prevent SecurityException when running in XPages
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return notesAPI.b64_NSFDbGetNotes(m_hDB64, noteIds.length, arrNoteIdsMem, arrNoteOpenFlagsMem,
+								arrSinceSeqNumMem, GetNotes.toBitMask(controlFlags), objectDb==null ? 0 : objectDb.getHandle64(),
+										null, cGetNotesCallback, cNoteOpenCallback, cObjectAllocCallback, cObjectWriteCallback,
+										folderSinceTimeStruct, cFolderAddCallback);
+					}
+				});
+			} catch (PrivilegedActionException e) {
+				if (e.getCause() instanceof RuntimeException) 
+					throw (RuntimeException) e.getCause();
+				else
+					throw new NotesError(0, "Error getting notes from database", e);
+			}
+			
 			if (exception[0]!=null) {
 				throw new NotesError(0, "Error reading notes", exception[0]);
 			}
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			b32_NSFNoteOpenCallback cNoteOpenCallback = null;
-			b32_NSFObjectAllocCallback cObjectAllocCallback = null;
-			b32_NSFObjectWriteCallback cObjectWriteCallback = null;
+			final b32_NSFNoteOpenCallback cNoteOpenCallback;
+			final b32_NSFObjectAllocCallback cObjectAllocCallback;
+			final b32_NSFObjectWriteCallback cObjectWriteCallback;
 			
 			if (noteOpenCallback!=null) {
 				if (notesAPI instanceof WinNotesCAPI) {
@@ -3060,9 +3137,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								noteOpenCallback.noteOpened(note, noteId, status);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3084,9 +3165,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								noteOpenCallback.noteOpened(note, noteId, status);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3095,6 +3180,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						
 					};
 				}
+			}
+			else {
+				cNoteOpenCallback=null;
 			}
 			
 			if (objectAllocCallback!=null) {
@@ -3111,9 +3199,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3134,9 +3226,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3144,6 +3240,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 					};
 				}
+			}
+			else {
+				cObjectAllocCallback=null;
 			}
 			
 			if (objectWriteCallback!=null) {
@@ -3163,9 +3262,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3189,9 +3292,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
 								return 0;
 							}
+							catch (RuntimeException e) {
+								exception[0] = e;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
+								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3200,8 +3307,29 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					};
 				}
 			}
+			else {
+				cObjectWriteCallback=null;
+			}
 			
-			short result = notesAPI.b32_NSFDbGetNotes(m_hDB32, noteIds.length, arrNoteIdsMem, arrNoteOpenFlagsMem, arrSinceSeqNumMem, GetNotes.toBitMask(controlFlags), objectDb==null ? 0 : objectDb.getHandle32(), null, cGetNotesCallback, cNoteOpenCallback, cObjectAllocCallback, cObjectWriteCallback, folderSinceTimeStruct, cFolderAddCallback);
+			short result;
+			try {
+				//AccessController call required to prevent SecurityException when running in XPages
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return notesAPI.b32_NSFDbGetNotes(m_hDB32, noteIds.length, arrNoteIdsMem, arrNoteOpenFlagsMem,
+								arrSinceSeqNumMem, GetNotes.toBitMask(controlFlags), objectDb==null ? 0 : objectDb.getHandle32(),
+										null, cGetNotesCallback, cNoteOpenCallback, cObjectAllocCallback, cObjectWriteCallback,
+										folderSinceTimeStruct, cFolderAddCallback);
+					}
+				});
+			} catch (PrivilegedActionException e) {
+				if (e.getCause() instanceof RuntimeException) 
+					throw (RuntimeException) e.getCause();
+				else
+					throw new NotesError(0, "Error getting notes from database", e);
+			}
 			if (exception[0]!=null) {
 				throw new NotesError(0, "Error reading notes", exception[0]);
 			}

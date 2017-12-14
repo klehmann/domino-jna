@@ -1,5 +1,8 @@
 package com.mindoo.domino.jna;
 
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Date;
 import java.util.EnumSet;
 
@@ -233,9 +236,9 @@ public class NotesSearch {
 			since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
 		}
 
-		NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
+		final NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 		final boolean isDST = NotesDateTimeUtils.isDaylightTime();
@@ -244,7 +247,7 @@ public class NotesSearch {
 		
 		
 		if (NotesJNAContext.is64Bit()) {
-			b64_NsfSearchProc apiCallback;
+			final b64_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
 			//not sure if this is necessary, but we had to use a special library extending StdCallLibrary
@@ -382,9 +385,9 @@ public class NotesSearch {
 			boolean tableWithHighOrderBitCanBeRecycled = false;
 			
 			try {
-				NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
+				final NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
 
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
+				final Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
 
 				int hFilter=0;
 				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;
@@ -431,12 +434,38 @@ public class NotesSearch {
 				int searchFlags3 = 0;
 				int searchFlags4 = 0;
 
+				final long hFormulaFinal = hFormula;
+				final int hFilterFinal = hFilter;
+				final int filterFlagsFinal = filterFlags;
+				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
+				final int searchFlags1Final = searchFlags1;
+				final int searchFlags2Final = searchFlags2;
+				final int searchFlags3Final = searchFlags3;
+				final int searchFlags4Final = searchFlags4;
+				final int noteClassMaskFinal = noteClassMask;
+
 				short result;
-				result = notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormula,
-						hFilter, filterFlags,
-						viewTitleBuf, searchFlagsBitMask, searchFlags1, searchFlags2, searchFlags3, searchFlags4,
-						(short) (noteClassMask & 0xffff), sinceStruct, apiCallback, null, retUntil,
-						db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
+				try {
+					//AccessController call required to prevent SecurityException when running in XPages
+					result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+						@Override
+						public Short run() throws Exception {
+							return notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormulaFinal,
+									hFilterFinal, filterFlagsFinal,
+									viewTitleBuf, searchFlagsBitMaskFinal, searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
+									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
+									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
+
+						}
+					});
+				} catch (PrivilegedActionException e) {
+					if (e.getCause() instanceof RuntimeException) 
+						throw (RuntimeException) e.getCause();
+					else
+						throw new NotesError(0, "Error searching database", e);
+				}
+
 
 				if (invocationEx[0]!=null) {
 					//special case for JUnit testcases
@@ -465,7 +494,7 @@ public class NotesSearch {
 
 		}
 		else {
-			b32_NsfSearchProc apiCallback;
+			final b32_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
 			if (notesAPI instanceof WinNotesCAPI) {
@@ -602,9 +631,9 @@ public class NotesSearch {
 			NotesIDTable tableWithHighOrderBit = null;
 			boolean tableWithHighOrderBitCanBeRecycled = false;
 			try {
-				NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
+				final NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
 
-				Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
+				final Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
 
 				int hFilter=0;
 				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;
@@ -651,10 +680,34 @@ public class NotesSearch {
 				int searchFlags3 = 0;
 				int searchFlags4 = 0;
 				
+				final int hFormulaFinal = hFormula;
+				final int hFilterFinal = hFilter;
+				final int filterFlagsFinal = filterFlags;
+				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
+				final int searchFlags1Final = searchFlags1;
+				final int searchFlags2Final = searchFlags2;
+				final int searchFlags3Final = searchFlags3;
+				final int searchFlags4Final = searchFlags4;
+				final int noteClassMaskFinal = noteClassMask;
+				
 				short result;
-				result = notesAPI.b32_NSFSearchExtended3(db.getHandle32(), hFormula, hFilter, filterFlags,
-						viewTitleBuf, (int) (searchFlagsBitMask & 0xffff), searchFlags1, searchFlags2, searchFlags3, searchFlags4,
-						(short) (noteClassMask & 0xffff), sinceStruct, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
+				try {
+					//AccessController call required to prevent SecurityException when running in XPages
+					result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+						@Override
+						public Short run() throws Exception {
+							return notesAPI.b32_NSFSearchExtended3(db.getHandle32(), hFormulaFinal, hFilterFinal, filterFlagsFinal,
+									viewTitleBuf, (int) (searchFlagsBitMaskFinal & 0xffff), searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
+									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
+						}
+					});
+				} catch (PrivilegedActionException e) {
+					if (e.getCause() instanceof RuntimeException) 
+						throw (RuntimeException) e.getCause();
+					else
+						throw new NotesError(0, "Error searching database", e);
+				}
 
 				if (invocationEx[0]!=null) {
 					//special case for JUnit testcases
