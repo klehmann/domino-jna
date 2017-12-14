@@ -2819,11 +2819,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 						catch (Throwable t) {
 							exception[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}};
 			}
@@ -2838,11 +2838,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 						catch (Throwable t) {
 							exception[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}};
 			}
@@ -2865,11 +2865,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 						catch (Throwable t) {
 							exception[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 				};
@@ -2885,11 +2885,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 						catch (RuntimeException e) {
 							exception[0] = e;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 						catch (Throwable t) {
 							exception[0] = t;
-							return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
 					}
 				};
@@ -2920,11 +2920,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2947,11 +2947,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -2981,11 +2981,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3008,11 +3008,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3044,11 +3044,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3075,11 +3075,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3139,11 +3139,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3167,11 +3167,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3201,11 +3201,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3228,11 +3228,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3264,11 +3264,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
@@ -3294,11 +3294,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							}
 							catch (RuntimeException e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							catch (Exception e) {
 								exception[0] = e;
-								return INotesErrorConstants.ERR_NSF_COMPUTE_ECL_ABORT;
+								return INotesErrorConstants.ERR_CANCEL;
 							}
 							finally {
 								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
