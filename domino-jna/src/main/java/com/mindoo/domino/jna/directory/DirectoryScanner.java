@@ -38,7 +38,7 @@ public abstract class DirectoryScanner {
 		m_directory = directory==null ? "" : directory;
 		m_fileTypes = fileTypes;
 	}
-
+	
 	/**
 	 * Starts the directory scan. During the scan, we call {@link #entryRead(SearchResultData)} with
 	 * every entry we found
@@ -53,7 +53,7 @@ public abstract class DirectoryScanner {
 						NotesTimeDate modified, ItemTableData summaryBufferData) {
 
 					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);
-					
+
 					Object typeObj = dataAsMap.get("$type");
 					if (typeObj instanceof String) {
 						String typeStr = (String) typeObj;
@@ -63,7 +63,7 @@ public abstract class DirectoryScanner {
 							if (folderNameObj instanceof String) {
 								folderName = (String) folderNameObj;
 							}
-							
+
 							String folderPath = null;
 							Object folderPathObj = dataAsMap.get("$path");
 							if (folderPathObj instanceof String) {
@@ -74,13 +74,13 @@ public abstract class DirectoryScanner {
 							folderData.setRawData(dataAsMap);
 							folderData.setFolderName(folderName);
 							folderData.setFolderPath(folderPath);
-							
-							entryRead(folderData);
-							return Action.Continue;
+
+							DirectoryScanner.Action action = entryRead(folderData);
+							return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
 						}
 						else if ("$NOTEFILE".equals(typeStr)) {
 							String dbTitle = null;
-							
+
 							Object infoObj = dataAsMap.get("$Info");
 							if (infoObj instanceof String) {
 								//the database title is the first line of the $Info value
@@ -88,31 +88,31 @@ public abstract class DirectoryScanner {
 								int iPos = infoStr.indexOf('\n');
 								dbTitle = iPos==-1 ? infoStr : infoStr.substring(0, iPos);
 							}
-							
+
 							Calendar dbCreated = null;
 							Object createdObj = dataAsMap.get("$DBCREATED");
 							if (createdObj instanceof Calendar) {
 								dbCreated = (Calendar) createdObj;
 							}
-							
+
 							Calendar dbModified = null;
 							Object modifiedObj = dataAsMap.get("$Modified");
 							if (modifiedObj instanceof Calendar) {
 								dbModified = (Calendar) modifiedObj;
 							}
-							
+
 							String fileName = null;
 							Object fileNameObj = dataAsMap.get("$TITLE");
 							if (fileNameObj instanceof String) {
 								fileName = (String) fileNameObj;
 							}
-							
+
 							String filePath = null;
 							Object filePathObj = dataAsMap.get("$path");
 							if (filePathObj instanceof String) {
 								filePath = (String) filePathObj;
 							}
-							
+
 							DatabaseData dbData = new DatabaseData();
 							dbData.setRawData(dataAsMap);
 							dbData.setTitle(dbTitle);
@@ -120,32 +120,34 @@ public abstract class DirectoryScanner {
 							dbData.setModified(dbModified);
 							dbData.setFileName(fileName);
 							dbData.setFilePath(filePath);
-							
-							entryRead(dbData);
-							return Action.Continue;
+
+							DirectoryScanner.Action action = entryRead(dbData);
+							return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
 						}
 					}
-					
+
 					//report default data object if we cannot detect the type
 					SearchResultData unknownData = new SearchResultData();
 					unknownData.setRawData(dataAsMap);
-					entryRead(unknownData);
-					return Action.Continue;
+					DirectoryScanner.Action action = entryRead(unknownData);
+					return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
 				}
 			});
 		}
 		finally {
 			dir.recycle();
 		}
-
 	}
 
+	public enum Action {Continue, Stop}
+	
 	/**
-	 * Implement this method to get notified about each directory entry found
+	 * Implement this method to get notified about each directory entry found.
 	 * 
 	 * @param data either {@link SearchResultData} or for known types one of its subclasses {@link FolderData} or {@link DatabaseData}
+	 * @return action to continue scanning or stop
 	 */
-	protected abstract void entryRead(SearchResultData data);
+	protected abstract Action entryRead(SearchResultData data);
 
 	/**
 	 * Base class for directory scan search results
