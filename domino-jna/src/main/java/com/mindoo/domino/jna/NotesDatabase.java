@@ -1146,6 +1146,34 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * This function obtains the time/date of the last modified data and non-data notes in the specified database.
+	 * 
+	 * @return array with last modified date/time for data and non-date
+	 */
+	public NotesTimeDate[] getLastModifiedTimes() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		NotesTimeDateStruct retDataModifiedStruct = NotesTimeDateStruct.newInstance();
+		NotesTimeDateStruct retNonDataModifiedStruct = NotesTimeDateStruct.newInstance();
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbModifiedTime(m_hDB64, retDataModifiedStruct, retNonDataModifiedStruct);
+		}
+		else {
+			result = notesAPI.b32_NSFDbModifiedTime(m_hDB32, retDataModifiedStruct, retNonDataModifiedStruct);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return new NotesTimeDate[] {
+				new NotesTimeDate(retDataModifiedStruct),
+				new NotesTimeDate(retNonDataModifiedStruct)
+		};
+	}
+	
+	/**
 	 * This function returns an ID Table of Note IDs of notes which have been modified in some way
 	 * from the given starting time until "now".  The ending time/date is returned, so that this
 	 * function can be performed incrementally.<br>

@@ -198,6 +198,16 @@ public interface NotesCAPI extends Library {
 					Memory retPathName,
 					short PathMaxLen);
 	
+	public short b64_NSFDbModifiedTime(
+			long hDB,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+	
+	public short b32_NSFDbModifiedTime(
+			int hDB,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+	
 	/*  Replication flags
 
 	NOTE:  Please note the distinction between REPLFLG_DISABLE and
