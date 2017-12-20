@@ -186,6 +186,18 @@ public interface NotesCAPI extends Library {
 	public short b64_NSFDbReopen(long hDB, LongByReference rethDB);
 	public short b32_NSFDbReopen(int hDB, IntByReference rethDB);
 	
+	public short b64_NSFDbLocateByReplicaID(
+			long hDB,
+			NotesTimeDateStruct ReplicaID,
+			Memory retPathName,
+			short PathMaxLen);
+	
+	public short b32_NSFDbLocateByReplicaID(
+					int  hDB,
+					NotesTimeDateStruct ReplicaID,
+					Memory retPathName,
+					short PathMaxLen);
+	
 	/*  Replication flags
 
 	NOTE:  Please note the distinction between REPLFLG_DISABLE and

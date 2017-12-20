@@ -213,7 +213,7 @@ public class TestDbSearch extends BaseJNATestClass {
 			}
 		});
 	}
-
+	
 	/**
 	 * Tests the {@link DirectoryScanner} class which internally also uses the database
 	 * search function (NSFSearch) to read directory data
@@ -242,7 +242,7 @@ public class TestDbSearch extends BaseJNATestClass {
 					}
 					
 					@Override
-					protected void entryRead(SearchResultData data) {
+					protected Action entryRead(SearchResultData data) {
 						if (data instanceof DatabaseData) {
 							DatabaseData dbData = (DatabaseData) data;
 							
@@ -264,8 +264,8 @@ public class TestDbSearch extends BaseJNATestClass {
 						else {
 							System.out.println("Unknown type found: data="+data.getRawData());
 						}
+						return Action.Continue;
 					}
-					
 				};
 				scanner.scan();
 				System.out.println("Done scanning top level of local directory");
@@ -275,5 +275,29 @@ public class TestDbSearch extends BaseJNATestClass {
 			}
 		});
 	
+	}
+	
+	@Test
+	public void testDbSearch_dbByReplicaId() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				String replicaId = dbData.getReplicaID();
+				
+				String server = "";
+
+				String dbPathForReplicaId = NotesDatabase.findDatabaseByReplicaId(server, replicaId);
+				Assert.assertTrue("Database could be found by replica id in base dir", dbData.getRelativeFilePath().equalsIgnoreCase(dbPathForReplicaId));
+
+				String otherReplicaId = "AAAABBBBCCCCDDDD";
+				
+				String dbPathForFakeReplicaId = NotesDatabase.findDatabaseByReplicaId(server, otherReplicaId);
+				Assert.assertEquals("Database could be found by replica id in base dir", null, dbPathForFakeReplicaId);
+				return null;
+			}
+		});
 	}
 }

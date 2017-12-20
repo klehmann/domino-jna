@@ -421,6 +421,48 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NotesError(0, "Unsupported adaptable parameter");
 		}
 	}
+
+	/**
+	 * Searches for a database by its replica id in the data directory (and subdirectories) specified by this
+	 * scanner instance. The method only uses the server specified for this scanner instance, not the directory.
+	 * It always searches the whole directory.
+	 * 
+	 * @param replicaId replica id to search for
+	 * @return path to database matching this id or null if not found
+	 */
+	public static String findDatabaseByReplicaId(String server, String replicaId) {
+		NotesDatabase dir = new NotesDatabase(server, "", "");
+		try {
+			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+
+			int[] innards = NotesStringUtils.replicaIdToInnards(replicaId);
+			NotesTimeDateStruct replicaIdStruct = NotesTimeDateStruct.newInstance(innards);
+
+			Memory retPathNameMem = new Memory(NotesCAPI.MAXPATH);
+			short result;
+			if (NotesJNAContext.is64Bit()) {
+				result = notesAPI.b64_NSFDbLocateByReplicaID(dir.getHandle64(), replicaIdStruct, retPathNameMem, (short) (NotesCAPI.MAXPATH & 0xffff));
+			}
+			else {
+				result = notesAPI.b32_NSFDbLocateByReplicaID(dir.getHandle32(), replicaIdStruct, retPathNameMem, (short) (NotesCAPI.MAXPATH & 0xffff));
+			}
+			if (result == 259) // File does not exist
+				return null;
+			
+			NotesErrorUtils.checkResult(result);
+
+			String retPathName = NotesStringUtils.fromLMBCS(retPathNameMem, -1);
+			if (retPathName==null || retPathName.length()==0) {
+				return null;
+			}
+			else {
+				return retPathName;
+			}
+		}
+		finally {
+			dir.recycle();
+		}
+	}
 	
 	/** Available encryption strengths for database creation */
 	public static enum Encryption {None, Simple, Medium, Strong};
