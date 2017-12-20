@@ -180,6 +180,12 @@ public interface NotesCAPI extends Library {
 	public short b64_NSFDbGenerateOID(long hDB, NotesOriginatorIdStruct retOID);
 	public short b32_NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
 	
+	public int b64_NSFDbGetOpenDatabaseID(long hDBU);
+	public int b32_NSFDbGetOpenDatabaseID(int hDBU);
+	
+	public short b64_NSFDbReopen(long hDB, LongByReference rethDB);
+	public short b32_NSFDbReopen(int hDB, IntByReference rethDB);
+	
 	/*  Replication flags
 
 	NOTE:  Please note the distinction between REPLFLG_DISABLE and

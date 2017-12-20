@@ -98,6 +98,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private boolean m_loginAsIdOwner;
 	NotesNamesList m_namesList;
 	private Database m_legacyDbRef;
+	private Integer m_openDatabaseId;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -170,6 +171,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		this(server, filePath, namesForNamesList, asUserCanonical, (EnumSet<OpenDatabase>) null);
 	}
 	
+	private NotesDatabase(long handle, String asUserCanonical, NotesNamesList namesList) {
+		if (!NotesJNAContext.is64Bit())
+			throw new IllegalStateException("Constructor is 64bit only");
+		
+		m_hDB64 = handle;
+		m_asUserCanonical = asUserCanonical;
+		m_namesList = namesList;
+	}
+
+	private NotesDatabase(int handle, String asUserCanonical, NotesNamesList namesList) {
+		if (NotesJNAContext.is64Bit())
+			throw new IllegalStateException("Constructor is 32bit only");
+		
+		m_hDB32 = handle;
+		m_asUserCanonical = asUserCanonical;
+		m_namesList = namesList;
+	}
+
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
@@ -3528,5 +3547,98 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		retStatsStruct.read();
 		NotesReplicationStats retStats = new NotesReplicationStats(retStatsStruct);
 		return retStats;
+	}
+
+	/**
+	 * This function reopens this database again, return a database that exists in the caller's address space.<br>
+	 * <br>
+	 * This function allows a task (for instance, an API program that is an OLE server) to access a database that
+	 * was opened by another task (for instance, Notes working as an OLE client).<br>
+	 * <br>
+	 * Also, this function allows one thread of a multithreaded API program to access a database that was
+	 * already opened by a different thread.<br>
+	 * <br>
+	 * To avoid memory errors, programs should not use database handles from outside the program's address
+	 * space for database I/O.
+	 * 
+	 * @return reopened database
+	 */
+	public NotesDatabase reopenDatabase() {
+		checkHandle();
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		NotesNamesList namesList = null;
+		if (m_namesList!=null) {
+			List<String> namesListEntries = m_namesList.getNames();
+			namesList = NotesNamingUtils.writeNewNamesList(namesListEntries);
+		}
+
+		NotesDatabase dbNew;
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retDbHandle = new LongByReference();
+			result = notesAPI.b64_NSFDbReopen(m_hDB64, retDbHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			long newDbHandle = retDbHandle.getValue();
+			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesList);
+		}
+		else {
+			IntByReference retDbHandle = new IntByReference();
+			result = notesAPI.b32_NSFDbReopen(m_hDB32, retDbHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			int newDbHandle = retDbHandle.getValue();
+			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesList);
+		}
+		NotesGC.__objectCreated(NotesDatabase.class, dbNew);
+		return dbNew;
+	}
+	
+	/**
+	 * Returns a unique 32-bit identifier for a database that is valid as long as any handle
+	 * to the database remains open.<br>
+	 * The same identifier will be returned for all handles that refer to the same database.<br>
+	 * In particular, if {@link #reopenDatabase()} is called, a new handle will be created for the database,
+	 * but this identifer will remain the same, providing a simple and efficient way to
+	 * determine whether or not two database handles refer to the same database.<br>
+	 * <br>
+	 * After all handles to the database have been closed and the database is opened,
+	 * this function may or may not return a different database identifier.
+	 * 
+	 * @return id
+	 */
+	public int getOpenDatabaseId() {
+		if (m_openDatabaseId==null) {
+			checkHandle();
+			
+			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+			if (NotesJNAContext.is64Bit()) {
+				m_openDatabaseId = notesAPI.b64_NSFDbGetOpenDatabaseID(m_hDB64);
+			}
+			else {
+				m_openDatabaseId = notesAPI.b32_NSFDbGetOpenDatabaseID(m_hDB32);
+			}
+		}
+		return m_openDatabaseId;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (isRecycled()) {
+			return super.equals(obj);
+		}
+		if (obj instanceof NotesDatabase) {
+			NotesDatabase otherDb = (NotesDatabase) obj;
+
+			if (otherDb.isRecycled()) {
+				return super.equals(obj);
+			}
+			return getOpenDatabaseId() == otherDb.getOpenDatabaseId();
+		}
+		else {
+			return false;
+		}
 	}
 }
