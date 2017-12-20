@@ -2998,6 +2998,10 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 
 	public short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 	
+	public short NSFDbMarkInService(Memory dbPath);
+	
+	public short NSFDbMarkOutOfService(Memory dbPath);
+
 	public void OSGetExecutableDirectory(Memory retPathName);
 
 	public void OSGetDataDirectory(Memory retPathName);

@@ -238,30 +238,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server, true);
-		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath, true);
-		Memory retFullNetPath = new Memory(NotesCAPI.MAXPATH);
 
-		short result = notesAPI.OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retFullNetPath);
-		NotesErrorUtils.checkResult(result);
-		
-		{
-			//reduce length of retDbPathName
-			int newLength = 0;
-			for (int i=0; i<retFullNetPath.size(); i++) {
-				byte b = retFullNetPath.getByte(i);
-				if (b==0) {
-					newLength = i;
-					break;
-				}
-			}
-			Memory newMem = new Memory(newLength+1);
-			for (int i=0; i<newLength; i++) {
-				newMem.setByte(i, retFullNetPath.getByte(i));
-			}
-			newMem.setByte(newLength, (byte) 0);
-			retFullNetPath = newMem;
-		}
+		Memory retFullNetPath = constructNetPath(server, filePath);
+		short result;
 		
 		short openOptions = openFlags==null ? 0 : OpenDatabase.toBitMaskForOpen(openFlags);
 		if (openOptions!=0) {
@@ -3664,6 +3643,116 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 		}
 		return m_openDatabaseId;
+	}
+
+	/**
+	 * Constructs a network path of a database (server!!path with proper encoding)
+	 * 
+	 * @param server server or null
+	 * @param filePath filepath
+	 * @return LMBCS encoded path
+	 */
+	private static Memory constructNetPath(String server, String filePath) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (server==null)
+			server = "";
+		if (filePath==null)
+			throw new NullPointerException("filePath is null");
+
+		server = NotesNamingUtils.toCanonicalName(server);
+		
+		String idUserName = IDUtils.getCurrentUsername();
+		boolean isOnServer = IDUtils.isOnServer();
+		
+		if (!"".equals(server)) {
+			if (isOnServer) {
+				String serverCN = NotesNamingUtils.toCommonName(server);
+				String currServerCN = NotesNamingUtils.toCommonName(idUserName);
+				if (serverCN.equalsIgnoreCase(currServerCN)) {
+					//switch to "" as servername if server points to the server the API is running on
+					server = "";
+				}
+			}
+		}
+		
+		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server, true);
+		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath, true);
+		Memory retFullNetPath = new Memory(NotesCAPI.MAXPATH);
+
+		short result = notesAPI.OSPathNetConstruct(null, dbServerLMBCS, dbFilePathLMBCS, retFullNetPath);
+		NotesErrorUtils.checkResult(result);
+
+		//reduce length of retDbPathName
+		int newLength = 0;
+		for (int i=0; i<retFullNetPath.size(); i++) {
+			byte b = retFullNetPath.getByte(i);
+			if (b==0) {
+				newLength = i;
+				break;
+			}
+		}
+		byte[] retFullNetPathArr = retFullNetPath.getByteArray(0, newLength);
+		
+		Memory reducedFullNetPathMem = new Memory(newLength+1);
+		reducedFullNetPathMem.write(0, retFullNetPathArr, 0, retFullNetPathArr.length);
+		reducedFullNetPathMem.setByte(newLength, (byte) 0);
+		return reducedFullNetPathMem;
+	}
+	
+	/**
+	 * This function marks a cluster database in service by clearing the database option flag
+	 * {@link DatabaseOption#OUT_OF_SERVICE}, if set.<br>
+	 * <br>
+	 * When a call to {@link #markInService(String, String) is successful, the Cluster Manager enables
+	 * users to access the database again by removing the "out of service" access restriction.<br>
+	 * <br>
+	 * Traditional Domino database access control list (ACL) privileges apply under all circumstances.
+	 * In order to use {@link #markInService(String, String)} on a database in a cluster, the remote Notes
+	 * user must have at least designer access privileges for the specified database.
+	 * If a user does not have the proper privileges, a database access error is returned.<br>
+	 * <br>
+	 * The {@link #markInService(String, String)} function only affects databases within a Lotus Domino Server cluster.<br<
+	 * <br>
+	 * For more information, see the Domino  Administration Help database.
+
+	 * @param server db server
+	 * @param filePath db filepath
+	 */
+	public static void markInService(String server, String filePath) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory dbPathMem = constructNetPath(server, filePath);
+		short result = notesAPI.NSFDbMarkInService(dbPathMem);
+		NotesErrorUtils.checkResult(result);
+	}
+
+	/**
+	 * This function marks a cluster database out of service for remote user sessions by modifying
+	 * the database option flags to include {@link DatabaseOption#OUT_OF_SERVICE}.<br>
+	 * <br>
+	 * When this operation is successful, the Cluster Manager denies any new user sessions for this database.<br>
+	 * This restriction is in addition to any restrictions set forth in the database access control list (ACL).<br>
+	 * The purpose of this function is allow the system administrator to perform maintenance on a database
+	 * without requiring a server shutdown or having to use the database ACL to restrict access.<br>
+	 * <br>
+	 * In order to use {@link #markOutOfService(String)} with a database on a clustered server, the remote
+	 * Notes user must have at least designer access privileges.<br>
+	 * <br>
+	 * If a user's privilege level is insufficient, a database access error is returned.<br>
+	 * The {@link #markOutOfService(String, String)} function affects only databases that reside on
+	 * Domino clusters.<br>
+	 * You can mark a database back in service by calling the {@link #markInService(String)} function.<br>
+	 * <br>
+	 * For more information, see the Domino Administration Help database.
+	 * 
+	 * @param server db server
+	 * @param filePath db filepath
+	 */
+	public static void markOutOfService(String server, String filePath) {
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory dbPathMem = constructNetPath(server, filePath);
+		short result = notesAPI.NSFDbMarkOutOfService(dbPathMem);
+		NotesErrorUtils.checkResult(result);
 	}
 
 	@Override
