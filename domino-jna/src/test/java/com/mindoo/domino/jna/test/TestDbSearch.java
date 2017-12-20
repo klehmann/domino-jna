@@ -24,6 +24,8 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
+import com.mindoo.domino.jna.directory.DirectoryScanner.DatabaseData;
+import com.mindoo.domino.jna.directory.DirectoryScanner.SearchResultData;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.Database;
@@ -209,6 +211,38 @@ public class TestDbSearch extends BaseJNATestClass {
 				long t1=System.currentTimeMillis();
 				System.out.println("Database search done after "+(t1-t0)+"ms. "+cnt[0]+" documents found and processed");
 				
+				return null;
+			}
+		});
+	}
+	
+	@Test
+	public void testDbSearch_directoryScanWithFormula() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				String server = "";
+				String directory = "";
+				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
+				EnumSet<FileType> fileTypes = EnumSet.of(FileType.DBANY, FileType.DIRS);
+				
+				System.out.println("Searching for fakenames database in local directory");
+				
+				DirectoryScanner scanner = new DirectoryScanner(server, directory, fileTypes);
+				
+				String formula = "@LowerCase($path)=\"fakenames.nsf\"";
+				List<SearchResultData> lookupResults = scanner.scan(formula);
+				Assert.assertEquals("Search found one entry", 1, lookupResults.size());
+				
+				SearchResultData firstResult = lookupResults.get(0);
+				Assert.assertTrue("Search found one database", firstResult instanceof DatabaseData);
+				
+				DatabaseData dbDataResult = (DatabaseData) firstResult;
+				Assert.assertTrue("Search result is fakenames.nsf", "fakenames.nsf".equalsIgnoreCase(dbDataResult.getFileName()));
+				
+				System.out.println("Done searching for fakenames database in local directory");
 				return null;
 			}
 		});

@@ -1,7 +1,9 @@
 package com.mindoo.domino.jna.directory;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -21,7 +23,7 @@ import lotus.domino.DbDirectory;
  * 
  * @author Karsten Lehmann
  */
-public abstract class DirectoryScanner {
+public class DirectoryScanner {
 	private String m_serverName;
 	private String m_directory;
 	private EnumSet<FileType> m_fileTypes;
@@ -44,9 +46,22 @@ public abstract class DirectoryScanner {
 	 * every entry we found
 	 */
 	public void scan() {
+		
+	}
+	
+	/**
+	 * Starts the directory scan. During the scan, we call {@link #entryRead(SearchResultData)} with
+	 * every entry we found
+	 * 
+	 * @param formula optional search formula to filter the returned entries, see {@link SearchResultData#getRawData()} for available fields, e.g. $path="mydb.nsf"
+	 * @return search result; override {@link #isAccepted(SearchResultData)} to apply your own filtering or {@link #entryRead(SearchResultData)} to read results while scanning
+	 */
+	public List<SearchResultData> scan(String formula) {
+		final List<SearchResultData> lookupResult = new ArrayList<DirectoryScanner.SearchResultData>();
+		
 		NotesDatabase dir = new NotesDatabase(m_serverName, m_directory, "");
 		try {
-			dir.searchFiles(null, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.ISearchCallback() {
+			dir.searchFiles(formula, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.ISearchCallback() {
 
 				@Override
 				public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate created,
@@ -75,6 +90,10 @@ public abstract class DirectoryScanner {
 							folderData.setFolderName(folderName);
 							folderData.setFolderPath(folderPath);
 
+							if (isAccepted(folderData)) {
+								lookupResult.add(folderData);
+							}
+							
 							DirectoryScanner.Action action = entryRead(folderData);
 							return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
 						}
@@ -101,6 +120,24 @@ public abstract class DirectoryScanner {
 								dbModified = (Calendar) modifiedObj;
 							}
 
+							Calendar lastFixup = null;
+							Object lastFixupObj = dataAsMap.get("$lastfixup");
+							if (lastFixupObj instanceof Calendar) {
+								lastFixup = (Calendar) lastFixupObj;
+							}
+							
+							Calendar lastCompact = null;
+							Object lastCompactObj = dataAsMap.get("$lastcompact");
+							if (lastCompactObj instanceof Calendar) {
+								lastCompact = (Calendar) lastCompactObj;
+							}
+							
+							Calendar nonDataMod  = null;
+							Object nonDataModObj = dataAsMap.get("$nondatamod");
+							if (nonDataModObj instanceof Calendar) {
+								nonDataMod = (Calendar) nonDataModObj;
+							}
+
 							String fileName = null;
 							Object fileNameObj = dataAsMap.get("$TITLE");
 							if (fileNameObj instanceof String) {
@@ -118,8 +155,15 @@ public abstract class DirectoryScanner {
 							dbData.setTitle(dbTitle);
 							dbData.setCreated(dbCreated);
 							dbData.setModified(dbModified);
+							dbData.setLastFixup(lastFixup);
+							dbData.setLastCompact(lastCompact);
+							dbData.setDesignModifiedDate(nonDataMod);
 							dbData.setFileName(fileName);
 							dbData.setFilePath(filePath);
+
+							if (isAccepted(dbData)) {
+								lookupResult.add(dbData);
+							}
 
 							DirectoryScanner.Action action = entryRead(dbData);
 							return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
@@ -137,17 +181,31 @@ public abstract class DirectoryScanner {
 		finally {
 			dir.recycle();
 		}
+		return lookupResult;
+	}
+
+	/**
+	 * Override this method to filter the scan result. The default implementation always returns true.
+	 * 
+	 * @param data either {@link SearchResultData} or for known types one of its subclasses {@link FolderData} or {@link DatabaseData}
+	 * @return true if accepted
+	 */
+	protected boolean isAccepted(SearchResultData data) {
+		return true;
 	}
 
 	public enum Action {Continue, Stop}
 	
 	/**
-	 * Implement this method to get notified about each directory entry found.
+	 * Implement this method to get notified about each directory entry found and be
+	 * able to cancel the scan process. The default implementation just returns {@link Action#Continue}.
 	 * 
 	 * @param data either {@link SearchResultData} or for known types one of its subclasses {@link FolderData} or {@link DatabaseData}
 	 * @return action to continue scanning or stop
 	 */
-	protected abstract Action entryRead(SearchResultData data);
+	protected Action entryRead(SearchResultData data) {
+		return Action.Continue;
+	}
 
 	/**
 	 * Base class for directory scan search results
@@ -238,7 +296,10 @@ public abstract class DirectoryScanner {
 		private String m_filePath;
 		private Calendar m_created;
 		private Calendar m_modified;
-
+		private Calendar m_lastFixup;
+		private Calendar m_lastCompact;
+		private Calendar m_nonDataMod;
+		
 		/**
 		 * Returns the database title
 		 * 
@@ -329,5 +390,58 @@ public abstract class DirectoryScanner {
 			this.m_modified = modified;
 		}
 		
+		/**
+		 * Returns the date of the last fixup
+		 * 
+		 * @return last fixup
+		 */
+		public Calendar getLastFixup() {
+			return this.m_lastFixup;
+		}
+		
+		/**
+		 * Sets the date of the last db fixup
+		 * 
+		 * @param lastFixup last fixup
+		 */
+		public void setLastFixup(Calendar lastFixup) {
+			this.m_lastFixup = lastFixup;
+		}
+		
+		/**
+		 * Returns the date of the last compact
+		 * 
+		 * @return last compact
+		 */
+		public Calendar getLastCompact() {
+			return this.m_lastCompact;
+		}
+		
+		/**
+		 * Sets the date of the last db compact
+		 * 
+		 * @param lastCompact last compact
+		 */
+		public void setLastCompact(Calendar lastCompact) {
+			this.m_lastCompact = lastCompact;
+		}
+		
+		/**
+		 * Returns the date of the last design change
+		 * 
+		 * @return design modified date
+		 */
+		public Calendar getDesignModifiedDate() {
+			return this.m_nonDataMod;
+		}
+		
+		/**
+		 * Sets the date of the last design change
+		 * 
+		 * @param nonDataMod design modified date
+		 */
+		public void setDesignModifiedDate(Calendar nonDataMod) {
+			this.m_nonDataMod = nonDataMod;
+		}
 	}
 }
