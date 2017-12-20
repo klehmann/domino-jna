@@ -46,7 +46,7 @@ public class DirectoryScanner {
 	 * every entry we found
 	 */
 	public void scan() {
-		
+		scan(null);
 	}
 	
 	/**
