@@ -2,6 +2,7 @@ package com.mindoo.domino.jna;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.mindoo.domino.jna.errors.NotesError;
@@ -168,7 +169,7 @@ public class NotesNamesList implements IAllocatedMemory {
 			if (notesAPI instanceof WinNotesCAPI) {
 				WinNotesNamesListHeader64Struct namesList = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
-
+				
 				names = new ArrayList<String>(namesList.NumNames);
 
 				offset = namesList.size();
@@ -182,7 +183,6 @@ public class NotesNamesList implements IAllocatedMemory {
 
 				offset = namesList.size();
 				numNames = (int) (namesList.NumNames & 0xffff);
-
 			}
 			else {
 				LinuxNotesNamesListHeader64Struct namesList = LinuxNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
@@ -216,6 +216,8 @@ public class NotesNamesList implements IAllocatedMemory {
 			}
 		}
 		
+		if (numNames==0)
+			return Collections.emptyList();
 
 		while (names.size() < numNames) {
 			byte b = namesListBufferPtr.getByte(offset);
