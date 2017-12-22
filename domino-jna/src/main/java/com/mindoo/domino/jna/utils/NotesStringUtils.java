@@ -7,11 +7,14 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -23,7 +26,20 @@ import com.sun.jna.Pointer;
  */
 public class NotesStringUtils {
 	private static final String PREF_USEOSLINEBREAK = "NotesStringUtils.useOSLineDelimiter";
-
+	
+	//use simple cache for string-lmbcs conversion of short string
+	private static final boolean USE_STRING2LMBCS_CACHE = true;
+	//max number of entries in the string-lmbcs cache
+	private static final int MAX_STRING2LMBCS_ENTRIES = 1000;
+	//max length of each string-limbcs cache entry
+	private static final int MAX_STRING2LMBCS_KEY_LENGTH = 500;
+	
+	private static ConcurrentHashMap<String,Memory> m_string2LMBCSCache_withoutnull = new ConcurrentHashMap<String,Memory>();
+	private static ConcurrentLinkedQueue<String> m_string2LMBCSLastKeys_withoutnull = new ConcurrentLinkedQueue<String>();
+	
+	private static ConcurrentHashMap<String,Memory> m_string2LMBCSCache_withnull = new ConcurrentHashMap<String,Memory>();
+	private static ConcurrentLinkedQueue<String> m_string2LMBCSLastKeys_withnull = new ConcurrentLinkedQueue<String>();
+	
 	/**
 	 * Method to control the LMBCS / Java String conversion for newline characters. By default
 	 * we insert \r\n on Windows and \n on other platforms like IBM does.<br>
@@ -33,7 +49,14 @@ public class NotesStringUtils {
 	 * @param b true to use \r\n as newline on Windows, false to use \n everywhere
 	 */
 	public static void setUseOSLineDelimiter(boolean b) {
-		NotesGC.setCustomValue(PREF_USEOSLINEBREAK, Boolean.valueOf(b));
+		if (isUseOSLineDelimiter() != b) {
+			NotesGC.setCustomValue(PREF_USEOSLINEBREAK, Boolean.valueOf(b));
+			
+			m_string2LMBCSCache_withoutnull.clear();
+			m_string2LMBCSLastKeys_withoutnull.clear();
+			m_string2LMBCSCache_withnull.clear();
+			m_string2LMBCSLastKeys_withnull.clear();
+		}
 	}
 	
 	/**
@@ -387,7 +410,7 @@ public class NotesStringUtils {
 	 * 
 	 * @param inStr string
 	 * @param addNull tre to terminate the string with a null byte
-	 * @return encoded string in memory
+	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
 	 */
 	public static Memory toLMBCS(String inStr, boolean addNull) {
 		if (inStr==null)
@@ -401,6 +424,13 @@ public class NotesStringUtils {
 			}
 			else {
 				return null;
+			}
+		}
+		
+		if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+			Memory cachedMem = addNull ? m_string2LMBCSCache_withnull.get(inStr) : m_string2LMBCSCache_withoutnull.get(inStr);
+			if (cachedMem!=null) {
+				return cachedMem;
 			}
 		}
 		
@@ -422,11 +452,41 @@ public class NotesStringUtils {
 				Memory m = new Memory(asciiBytes.length + 1);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
 				m.setByte(asciiBytes.length, (byte) 0);
+				
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					m = new ReadOnlyMemory(m);
+					
+					m_string2LMBCSCache_withnull.put(inStr, m);
+					m_string2LMBCSLastKeys_withnull.add(inStr);
+					
+					//compress cache
+					while (m_string2LMBCSLastKeys_withnull.size()>MAX_STRING2LMBCS_ENTRIES) {
+						String currStr = m_string2LMBCSLastKeys_withnull.poll();
+						if (currStr==null)
+							break;
+						m_string2LMBCSCache_withnull.remove(currStr);
+					}
+				}
 				return m;
 			}
 			else {
 				Memory m = new Memory(asciiBytes.length);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
+				
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					m = new ReadOnlyMemory(m);
+					
+					m_string2LMBCSCache_withoutnull.put(inStr, m);
+					m_string2LMBCSLastKeys_withoutnull.add(inStr);
+					
+					//compress cache
+					while (m_string2LMBCSLastKeys_withoutnull.size()>MAX_STRING2LMBCS_ENTRIES) {
+						String currStr = m_string2LMBCSLastKeys_withoutnull.poll();
+						if (currStr==null)
+							break;
+						m_string2LMBCSCache_withoutnull.remove(currStr);
+					}
+				}
 				return m;
 			}
 		}
@@ -493,12 +553,42 @@ public class NotesStringUtils {
 			byte[] allAsBytes = bOut.toByteArray();
 			all.write(0, allAsBytes, 0, bOut.size());
 			all.setByte(all.size()-1, (byte) 0); 
+			
+			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+				all = new ReadOnlyMemory(all);
+				
+				m_string2LMBCSCache_withnull.put(inStr, all);
+				m_string2LMBCSLastKeys_withnull.add(inStr);
+				
+				//compress cache
+				while (m_string2LMBCSLastKeys_withnull.size()>MAX_STRING2LMBCS_ENTRIES) {
+					String currStr = m_string2LMBCSLastKeys_withnull.poll();
+					if (currStr==null)
+						break;
+					m_string2LMBCSCache_withnull.remove(currStr);
+				}
+			}
 			return all;			
 		}
 		else {
 			Memory all = new Memory(bOut.size());
 			byte[] allAsBytes = bOut.toByteArray();
 			all.write(0, allAsBytes, 0, bOut.size());
+			
+			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+				all = new ReadOnlyMemory(all);
+				
+				m_string2LMBCSCache_withoutnull.put(inStr, all);
+				m_string2LMBCSLastKeys_withoutnull.add(inStr);
+				
+				//compress cache
+				while (m_string2LMBCSLastKeys_withoutnull.size()>MAX_STRING2LMBCS_ENTRIES) {
+					String currStr = m_string2LMBCSLastKeys_withoutnull.poll();
+					if (currStr==null)
+						break;
+					m_string2LMBCSCache_withoutnull.remove(currStr);
+				}
+			}
 			return all;
 		}
 	}
