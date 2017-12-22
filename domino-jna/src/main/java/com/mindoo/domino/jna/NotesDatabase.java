@@ -508,6 +508,27 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the creation date of this database file
+	 * 
+	 * @return creation date
+	 */
+	public NotesTimeDate getCreated() {
+		checkHandle();
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		NotesTimeDateStruct createdStruct = NotesTimeDateStruct.newInstance();
+		
+		short result;
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbIDGet(m_hDB64, createdStruct);
+		}
+		else {
+			result = notesAPI.b32_NSFDbIDGet(m_hDB32, createdStruct);
+		}
+		NotesErrorUtils.checkResult(result);
+		return new NotesTimeDate(createdStruct);
+	}
+	
+	/**
 	 * This function gets the given database's {@link NotesDbReplicaInfo} structure.<br>
 	 * <br>
 	 * This structure contains information that tells the Domino Replicator how to treat the database.<br>
@@ -530,6 +551,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return replica info
 	 */
 	public NotesDbReplicaInfo getReplicaInfo() {
+		checkHandle();
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		NotesDbReplicaInfoStruct retReplicationInfo = NotesDbReplicaInfoStruct.newInstance();

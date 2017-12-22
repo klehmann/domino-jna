@@ -208,6 +208,9 @@ public interface NotesCAPI extends Library {
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
 	
+	public short b64_NSFDbIDGet(long hDB, NotesTimeDateStruct retDbID);
+	public short b32_NSFDbIDGet(int hDB, NotesTimeDateStruct retDbID);
+	
 	/*  Replication flags
 
 	NOTE:  Please note the distinction between REPLFLG_DISABLE and
