@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCAPI;
@@ -610,6 +611,30 @@ public class NotesStringUtils {
 		return unid;
 	}
 
+	/**
+	 * Writes a UNID string to memory
+	 * 
+	 * @param unidStr UNID string
+	 * @param target target memory
+	 */
+	public static void unidToPointer(String unidStr, Pointer target) {
+		try {
+			int fileInnards1 = (int) (Long.parseLong(unidStr.substring(0,8), 16) & 0xffffffff);
+			int fileInnards0 = (int) (Long.parseLong(unidStr.substring(8,16), 16) & 0xffffffff);
+
+			int noteInnards1 = (int) (Long.parseLong(unidStr.substring(16,24), 16) & 0xffffffff);
+			int noteInnards0 = (int) (Long.parseLong(unidStr.substring(24,32), 16) & 0xffffffff);
+
+			target.setInt(0, fileInnards0);
+			target.share(4).setInt(0, fileInnards1);
+			target.share(8).setInt(0, noteInnards0);
+			target.share(12).setInt(0, noteInnards1);
+		}
+		catch (Exception e) {
+			throw new NotesError(0, "Could not convert UNID to memory: "+unidStr, e);
+		}
+	}
+	
 	/**
 	 * This function takes a port name, a server name, and file path relative to the Domino or
 	 * Notes data directory and creates a full network path specification for a Domino database

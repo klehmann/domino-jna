@@ -1894,7 +1894,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				retVersion.HotfixNumber, retVersion.Flags, retVersion.FixpackNumber, retVersion.Spare);
 	}
 
-	public static interface ISearchCallback extends NotesSearch.ISearchCallback {
+	public static abstract class SearchCallback extends NotesSearch.SearchCallback {
 		
 	}
 	
@@ -1952,11 +1952,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param noteClassMaskEnum bitmask of noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, ISearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	public NotesTimeDate search(final String formula, String viewTitle, final EnumSet<Search> searchFlags,
-			EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+			EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		NotesTimeDate endTimeDate = NotesSearch.search(this, null, formula, viewTitle, searchFlags, noteClassMaskEnum, since, callback);
 		return endTimeDate;
 	}
@@ -2015,10 +2015,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param fileTypeEnum filetypes to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, ISearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public NotesTimeDate searchFiles(final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<FileType> fileTypeEnum, NotesTimeDate since, final ISearchCallback callback) throws FormulaCompilationError {
+	public NotesTimeDate searchFiles(final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<FileType> fileTypeEnum, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		NotesTimeDate endTimeDate = NotesSearch.searchFiles(this, null, formula, viewTitle, searchFlags, fileTypeEnum, since, callback);
 		return endTimeDate;
 	}
@@ -2043,9 +2043,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		/**
-		 * Returns the note id used to look up this data
+		 * Returns the note id
 		 * 
-		 * @return note id
+		 * @return note id or 0 if the note could not be found
 		 */
 		public int getNoteId() {
 			return m_noteId;
@@ -2055,7 +2055,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * Returns the raw {@link NotesOriginatorId} object containing the
 		 * data we also provide via direct methods
 		 * 
-		 * @return OID
+		 * @return OID or null if the note could not be found
 		 */
 		public NotesOriginatorId getOID() {
 			if (m_oidWrap==null) {
@@ -2067,7 +2067,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		/**
 		 * Returns the sequence number
 		 * 
-		 * @return sequence number
+		 * @return sequence number or 0 if the note could not be found
 		 */
 		public int getSequence() {
 			return m_oid==null ? 0 : m_oid.Sequence;
@@ -2076,7 +2076,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		/**
 		 * Returns the sequence time ( = "Modified (initially)")
 		 * 
-		 * @return sequence time
+		 * @return sequence time or null if the note could not be found
 		 */
 		public NotesTimeDate getSequenceTime() {
 			NotesOriginatorId oidWrap = getOID();
@@ -2185,9 +2185,29 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Convenience to convert note ids to UNIDs.
-	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
+	 * Convenience method to convert note unids to note ids.
+	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(String[])}.
 	 * 
+	 * @param noteUnids note unids to look up
+	 * @param retNoteIdsByUnid map is populated with found note ids
+	 * @param retNoteUnidsNotFound set is populated with any note unid that could not be found
+	 */
+	public void toNoteIds(String[] noteUnids, Map<String,Integer> retNoteIdsByUnid, Set<String> retNoteUnidsNotFound) {
+		NoteInfo[] infoArr = getMultiNoteInfo(noteUnids);
+		for (int i=0; i<noteUnids.length; i++) {
+			NoteInfo currInfo = infoArr[i];
+			if (currInfo.exists()) {
+				retNoteIdsByUnid.put(noteUnids[i], currInfo.getNoteId());
+			}
+			else {
+				retNoteUnidsNotFound.add(noteUnids[i]);
+			}
+		}
+	}
+	
+	/**
+	 * Convenience method to convert note ids to UNIDs.
+	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
 	 * 
 	 * @param noteIds note ids to look up
 	 * @param retUnidsByNoteId map is populated with found UNIDs
@@ -2195,12 +2215,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public void toUnids(int[] noteIds, Map<Integer,String> retUnidsByNoteId, Set<Integer> retNoteIdsNotFound) {
 		NoteInfo[] infoArr = getMultiNoteInfo(noteIds);
-		for (NoteInfo currInfo : infoArr) {
+		for (int i=0; i<noteIds.length; i++) {
+			NoteInfo currInfo = infoArr[i];
 			if (currInfo.exists()) {
-				retUnidsByNoteId.put(currInfo.getNoteId(), currInfo.getUnid());
+				retUnidsByNoteId.put(noteIds[i], currInfo.getUnid());
 			}
 			else {
-				retNoteIdsNotFound.add(currInfo.getNoteId());
+				retNoteIdsNotFound.add(noteIds[i]);
 			}
 		}
 	}
@@ -2262,7 +2283,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This method can be used to get information for a number documents in a
 	 * database from their note ids in a single call.<br>
-	 * the data returned by this method is the {@link NotesOriginatorId}, which contains
+	 * The data returned by this method is the note id, {@link NotesOriginatorId}, which contains
 	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
 	 * <br>
 	 * In addition, the method checks whether a document exists or has been deleted.<br>
@@ -2309,7 +2330,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				notesAPI.b64_OSUnlockObject(retHandleLong);
 
-				LongByReference retSize = new LongByReference();
+				IntByReference retSize = new IntByReference();
 				LongByReference rethOutBuf = new LongByReference();
 				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
 				
@@ -2327,8 +2348,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				Pointer outBufPtr = notesAPI.b64_OSLockObject(rethOutBuf.getValue());
 				try {
-					retNoteInfo = decodeMultiNoteLookupData(noteIds, outBufPtr);
-					
+					retNoteInfo = decodeMultiNoteLookupData(noteIds.length, outBufPtr);
 				}
 				finally {
 					notesAPI.b64_OSUnlockObject(rethOutBufLong);
@@ -2359,7 +2379,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				notesAPI.b32_OSUnlockObject(retHandleInt);
 
-				LongByReference retSize = new LongByReference();
+				IntByReference retSize = new IntByReference();
 				IntByReference rethOutBuf = new IntByReference();
 				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
 				
@@ -2377,7 +2397,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				
 				Pointer outBufPtr = notesAPI.b32_OSLockObject(rethOutBuf.getValue());
 				try {
-					retNoteInfo = decodeMultiNoteLookupData(noteIds, outBufPtr);
+					retNoteInfo = decodeMultiNoteLookupData(noteIds.length, outBufPtr);
 				}
 				finally {
 					notesAPI.b32_OSUnlockObject(rethOutBufInt);
@@ -2393,22 +2413,155 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Helper method to extract the return data of method {@link #getMultNoteInfo(int[])}
+	 * This method can be used to get information for a number documents in a
+	 * database from their note unids in a single call.<br>
+	 * The data returned by this method is the note id, {@link NotesOriginatorId}, which contains
+	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
+	 * <br>
+	 * In addition, the method checks whether a document exists or has been deleted.<br>
+	 * <br>
+	 * Please note that the method can only handle max. 32767 note ids in one call.
 	 * 
-	 * @param noteIds note ids used for lookup
+	 * @param noteIds array of note ids
+	 * @return lookup results, same size and order as <code>noteUNIDs</code> array
+	 * @throws IllegalArgumentException if note unid array has too many entries (more than 32767)
+	 */
+	public NoteInfo[] getMultiNoteInfo(String[] noteUNIDs) {
+		checkHandle();
+
+		if (noteUNIDs.length ==0) {
+			return new NoteInfo[0];
+		}
+		
+		if (noteUNIDs.length > 32767) {
+			throw new IllegalArgumentException("Max 32767 note ids are supported");
+		}
+		
+		NoteInfo[] retNoteInfo;
+		
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		
+		if (NotesJNAContext.is64Bit()) {
+			LongByReference retHandle = new LongByReference();
+			short result = notesAPI.b64_OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
+			NotesErrorUtils.checkResult(result);
+
+			long retHandleLong = retHandle.getValue();
+			try {
+				Pointer inBufPtr = notesAPI.b64_OSLockObject(retHandleLong);
+				
+				Pointer currInBufPtr = inBufPtr;
+				int offset = 0;
+				
+				for (int i=0; i<noteUNIDs.length; i++) {
+					NotesStringUtils.unidToPointer(noteUNIDs[i], currInBufPtr);
+					offset += 16;
+					currInBufPtr = inBufPtr.share(offset);
+				}
+				
+				notesAPI.b64_OSUnlockObject(retHandleLong);
+
+				IntByReference retSize = new IntByReference();
+				LongByReference rethOutBuf = new LongByReference();
+				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
+				
+				result = notesAPI.b64_NSFDbGetMultNoteInfoByUNID(m_hDB64, (short) (noteUNIDs.length & 0xffff),
+						options, retHandleLong, retSize, rethOutBuf);
+
+				NotesErrorUtils.checkResult(result);
+
+				long rethOutBufLong = rethOutBuf.getValue();
+				
+				//decode return buffer
+				int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+				long retSizeLong = retSize.getValue();
+				if (retSizeLong != noteUNIDs.length*entrySize) {
+					throw new IllegalStateException("Unexpected size of return data. Expected "+noteUNIDs.length*entrySize+" bytes for data of "+noteUNIDs.length+" ids, got "+retSizeLong+" bytes");
+				}
+				
+				Pointer outBufPtr = notesAPI.b64_OSLockObject(rethOutBuf.getValue());
+				try {
+					retNoteInfo = decodeMultiNoteLookupData(noteUNIDs.length, outBufPtr);
+				}
+				finally {
+					notesAPI.b64_OSUnlockObject(rethOutBufLong);
+					notesAPI.b64_OSMemFree(rethOutBufLong);
+				}
+			}
+			finally {
+				notesAPI.b64_OSMemFree(retHandleLong);
+			}
+		}
+		else {
+			IntByReference retHandle = new IntByReference();
+			short result = notesAPI.b32_OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
+			NotesErrorUtils.checkResult(result);
+
+			int retHandleInt = retHandle.getValue();
+			try {
+				Pointer inBufPtr = notesAPI.b32_OSLockObject(retHandleInt);
+				
+				Pointer currInBufPtr = inBufPtr;
+				int offset = 0;
+				
+				for (int i=0; i<noteUNIDs.length; i++) {
+					NotesStringUtils.unidToPointer(noteUNIDs[i], currInBufPtr);
+					offset += 16;
+					currInBufPtr = inBufPtr.share(offset);
+				}
+				
+				notesAPI.b32_OSUnlockObject(retHandleInt);
+
+				IntByReference retSize = new IntByReference();
+				IntByReference rethOutBuf = new IntByReference();
+				short options = NotesCAPI.fINFO_OID | NotesCAPI.fINFO_ALLOW_HUGE | NotesCAPI.fINFO_NOTEID;
+				
+				result = notesAPI.b32_NSFDbGetMultNoteInfoByUNID(m_hDB32, (short) (noteUNIDs.length & 0xffff),
+						options, retHandleInt, retSize, rethOutBuf);
+				NotesErrorUtils.checkResult(result);
+
+				int rethOutBufInt = rethOutBuf.getValue();
+				
+				//decode return buffer
+				int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+				long retSizeLong = retSize.getValue();
+				if (retSizeLong != noteUNIDs.length*entrySize) {
+					throw new IllegalStateException("Unexpected size of return data. Expected "+noteUNIDs.length*entrySize+" bytes for data of "+noteUNIDs.length+" ids, got "+retSizeLong+" bytes");
+				}
+				
+				Pointer outBufPtr = notesAPI.b32_OSLockObject(rethOutBuf.getValue());
+				try {
+					retNoteInfo = decodeMultiNoteLookupData(noteUNIDs.length, outBufPtr);
+				}
+				finally {
+					notesAPI.b32_OSUnlockObject(rethOutBufInt);
+					notesAPI.b32_OSMemFree(rethOutBufInt);
+				}
+			}
+			finally {
+				notesAPI.b32_OSMemFree(retHandleInt);
+			}
+		}
+
+		return retNoteInfo;
+	}
+
+	/**
+	 * Helper method to extract the return data of method {@link #getMultiNoteInfo(int[])} or {@link #getMultiNoteInfo(String[])}
+	 * 
+	 * @param nrOfElements number of list elements
 	 * @param outBufPtr buffer pointer
 	 * @return array of note info objects
 	 */
-	private NoteInfo[] decodeMultiNoteLookupData(int[] noteIds, Pointer outBufPtr) {
-		NoteInfo[] retNoteInfo = new NoteInfo[noteIds.length];
+	private NoteInfo[] decodeMultiNoteLookupData(int nrOfElements, Pointer outBufPtr) {
+		NoteInfo[] retNoteInfo = new NoteInfo[nrOfElements];
 		
 		Pointer entryBufPtr = outBufPtr;
 		
-		for (int i=0; i<noteIds.length; i++) {
+		for (int i=0; i<nrOfElements; i++) {
 			int offsetInEntry = 0;
 			
-			int currNoteId = noteIds[i];
-			int returnedNoteId = entryBufPtr.getInt(0);
+			int currNoteId = entryBufPtr.getInt(0);
 
 			offsetInEntry += 4;
 
@@ -2440,16 +2593,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			oid.Sequence = sequence;
 			oid.SequenceTime = sequenceTimeDate;
 			
-			
 			entryBufPtr = entryBufPtr.share(offsetInEntry);
 			
-			boolean isDeleted = (returnedNoteId & NotesCAPI.NOTEID_RESERVED) == NotesCAPI.NOTEID_RESERVED;
-			boolean isNotPresent = returnedNoteId==0;
+			boolean isDeleted = (currNoteId & NotesCAPI.NOTEID_RESERVED) == NotesCAPI.NOTEID_RESERVED;
+			boolean isNotPresent = currNoteId==0;
 			retNoteInfo[i] = new NoteInfo(currNoteId, oid, isDeleted, isNotPresent);
 		}
 		return retNoteInfo;
 	}
-	
+
 	/**
 	 * This function reads a note into memory and returns a handle to the in-memory copy.<br>
 	 * 

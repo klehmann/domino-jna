@@ -1806,7 +1806,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			short  Count,
 			short  Options,
 			int  hInBuf,
-			LongByReference retSize,
+			IntByReference retSize,
 			IntByReference rethOutBuf);
 	
 	public short b64_NSFDbGetMultNoteInfo(
@@ -1814,7 +1814,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			short  Count,
 			short  Options,
 			long  hInBuf,
-			LongByReference retSize,
+			IntByReference retSize,
 			LongByReference rethOutBuf);
 
 	public short b32_NSFDbGetNoteInfoExt(
@@ -1837,6 +1837,22 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			ShortByReference retResponseCount,
 			IntByReference retParentNoteID);
 
+	public short b64_NSFDbGetMultNoteInfoByUNID(
+			long hDB,
+			short Count,
+			short Options,
+			long hInBuf,
+			IntByReference retSize,
+			LongByReference rethOutBuf);
+	
+	public short b32_NSFDbGetMultNoteInfoByUNID(
+			int hDB,
+			short Count,
+			short Options,
+			int hInBuf,
+			IntByReference retSize,
+			IntByReference rethOutBuf);
+	
 	public short b32_NSFNoteVerifySignature(
 			int  hNote,
 			Memory SignatureItemName,
@@ -1851,10 +1867,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 			Memory retSigner,
 			Memory retCertifier);
 	
-	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
-
 	public short b64_NSFDbSign(long hDb, short noteclass);
 	public short b32_NSFDbSign(int hDb, short noteclass);
+	
+	/*	Definitions for NSFDbGetMultNoteInfo and NSFDbGetMultNoteInfoByUNID */
 	
 	/** Return NoteID */
 	public static short fINFO_NOTEID = 0x0001;

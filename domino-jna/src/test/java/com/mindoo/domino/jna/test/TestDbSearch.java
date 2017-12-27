@@ -12,8 +12,9 @@ import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesDatabase.ISearchCallback;
+import com.mindoo.domino.jna.NotesDatabase.SearchCallback;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesOriginatorId;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.FileType;
@@ -179,10 +180,11 @@ public class TestDbSearch extends BaseJNATestClass {
 				
 				//since = null to search in all documents
 				NotesTimeDate since = null;
-				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new ISearchCallback() {
+				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
+							EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
 							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 						
 						cnt[0]++;

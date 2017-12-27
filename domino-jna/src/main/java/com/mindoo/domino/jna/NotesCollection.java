@@ -3262,10 +3262,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 			final Set<Integer> retIds = new TreeSet<Integer>();
 			
 			NotesSearch.search(m_parentDb, idTable, formula, "-",
-					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.ISearchCallback() {
+					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 						
 						@Override
-						public Action noteFound(NotesDatabase parentDb, int noteId, EnumSet<NoteClass> noteClass, NotesTimeDate dbCreated,
+						public Action noteFound(NotesDatabase parentDb, int noteId,
+								NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
+								EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
 								NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 							retIds.add(noteId);
 							return Action.Continue;
