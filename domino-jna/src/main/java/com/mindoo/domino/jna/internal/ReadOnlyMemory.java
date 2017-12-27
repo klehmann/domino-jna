@@ -23,6 +23,7 @@ public class ReadOnlyMemory extends Memory {
 	public ReadOnlyMemory(Memory wrappedMemory) {
 		super();
 		this.peer = Memory.nativeValue(wrappedMemory);
+		this.size = wrappedMemory.size();
 		//keep reference on original memory to prevent GC
 		m_wrappedMemory = wrappedMemory;
 		m_sealed = true;
