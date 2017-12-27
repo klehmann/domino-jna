@@ -34,7 +34,7 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 			}
 		});
 	}
-	
+
 	public static NotesTimeDateStruct newInstance(final int Innards[]) {
 		return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct>() {
 
@@ -68,6 +68,12 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 		return newInstance(innards);
 	}
 	
+	public static NotesTimeDateStruct newInstance(long timeInMS) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTimeInMillis(timeInMS);
+		return newInstance(cal);
+	}
+
 	/**
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
 	 */
