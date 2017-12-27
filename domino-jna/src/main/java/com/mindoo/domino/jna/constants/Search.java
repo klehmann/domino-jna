@@ -14,7 +14,7 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
  * @author Karsten Lehmann
  */
 public enum Search {
-	/** Include deleted and non-matching notes in search (ALWAYS "ON" in partial searches!) */
+	/** Include deleted and non-matching notes in search (ALWAYS "ON" in partial searches, which are searches using a since date!) */
 	ALL_VERSIONS(0x0001),
 	/** TRUE to return summary buffer with each match */
 	SUMMARY(0x0002),
