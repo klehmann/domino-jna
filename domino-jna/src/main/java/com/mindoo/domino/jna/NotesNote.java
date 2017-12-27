@@ -2714,7 +2714,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				calValue = (Calendar) value;
 			}
 			else if (value instanceof NotesTimeDate) {
-				calValue = ((NotesTimeDate)value).getTimeAsCalendar();
+				calValue = ((NotesTimeDate)value).toCalendar();
 			}
 			else if (value instanceof Date) {
 				calValue = Calendar.getInstance();

@@ -16,8 +16,10 @@ import com.sun.jna.Structure;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate implements IAdaptable {
+public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	private NotesTimeDateStruct m_struct;
+	private Long m_timeAsMillis;
+	private int[] m_innardsForTimeAsMillis = new int[2];
 	
 	/**
 	 * Creates a new date/time object and sets it to the current date/time
@@ -54,6 +56,16 @@ public class NotesTimeDate implements IAdaptable {
 		this(NotesTimeDateStruct.newInstance(cal));
 	}
 
+	/**
+	 * Creates a new date/time object and sets it to the specified time in milliseconds since
+	 * GMT 1/1/70
+	 * 
+	 * @param timeMs the milliseconds since January 1, 1970, 00:00:00 GMT
+	 */
+	public NotesTimeDate(long timeMs) {
+		this(NotesTimeDateStruct.newInstance(timeMs));
+	}
+	
 	/**
 	 * Constructs a new date/time object
 	 * 
@@ -376,24 +388,6 @@ public class NotesTimeDate implements IAdaptable {
 	}
 	
 	/**
-	 * Converts the internal date/time value to a {@link Date}
-	 * 
-	 * @return date
-	 */
-	public Date getTime() {
-		return getTimeAsCalendar().getTime();
-	}
-	
-	/**
-	 * Converts the internal date/time value to a {@link Calendar}
-	 * 
-	 * @return calendar
-	 */
-	public Calendar getTimeAsCalendar() {
-		return NotesDateTimeUtils.timeDateToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), this);
-	}
-	
-	/**
 	 * Modifies the data by adding/subtracting values for year, month, day, hours, minutes and seconds
 	 * 
 	 * @param year positive or negative value or 0 for no change
@@ -443,6 +437,43 @@ public class NotesTimeDate implements IAdaptable {
 				m_struct.Innards[1] = newInnards[1];
 				m_struct.write();
 			}
+		}
+	}
+
+	/**
+	 * Converts the time date to the number of milliseconds since 1/1/70.
+	 * 
+	 * @return milliseconds since January 1, 1970, 00:00:00 GMT
+	 */
+	public long toDateInMillis() {
+		if (m_timeAsMillis==null || !Arrays.equals(m_innardsForTimeAsMillis, m_struct.Innards)) {
+			System.arraycopy(m_struct.Innards, 0, m_innardsForTimeAsMillis, 0, 2);
+			m_timeAsMillis = toCalendar().getTimeInMillis();
+		}
+		return m_timeAsMillis;
+	}
+	
+	public boolean isBefore(NotesTimeDate o) {
+		return toDateInMillis() < o.toDateInMillis();
+	}
+	
+	public boolean isAfter(NotesTimeDate o) {
+		return toDateInMillis() > o.toDateInMillis();
+	}
+	
+	@Override
+	public int compareTo(NotesTimeDate o) {
+		long thisTimeInMillis = toDateInMillis();
+		long otherTimeInMillis = o.toDateInMillis();
+		
+		if (thisTimeInMillis < otherTimeInMillis) {
+			return -1;
+		}
+		else if (thisTimeInMillis > otherTimeInMillis) {
+			return 1;
+		}
+		else {
+			return 0;
 		}
 	}
 }
