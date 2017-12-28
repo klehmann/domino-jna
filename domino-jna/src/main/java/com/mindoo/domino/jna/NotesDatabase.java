@@ -406,6 +406,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * scanner instance. The method only uses the server specified for this scanner instance, not the directory.
 	 * It always searches the whole directory.
 	 * 
+	 * @param server server to search db replica
 	 * @param replicaId replica id to search for
 	 * @return path to database matching this id or null if not found
 	 */
@@ -2295,7 +2296,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public NoteInfo[] getMultiNoteInfo(int[] noteIds) {
 		checkHandle();
 		
-		final int ENTRIESBYCALL = 65535;
+		int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+		//not more than 32767 entries and output buffer cannot exceed 64k
+		final int ENTRIESBYCALL = Math.min(65535, 64000 / entrySize);
 
 		if (noteIds.length < ENTRIESBYCALL)
 			return _getMultiNoteInfo(noteIds);
@@ -2457,15 +2460,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <br>
 	 * In addition, the method checks whether a document exists or has been deleted.<br>
 	 * 
-	 * @param noteIds array of note ids
+	 * @param noteUNIDs array of note unids
 	 * @return lookup results, same size and order as <code>noteUNIDs</code> array
 	 * @throws IllegalArgumentException if note unid array has too many entries (more than 32767)
 	 */
 	public NoteInfo[] getMultiNoteInfo(String[] noteUNIDs) {
 		checkHandle();
 
-		final int ENTRIESBYCALL = 32767;
-
+		int entrySize = 4 /* note id */ + NotesCAPI.oidSize;
+		//not more than 32767 entries and output buffer cannot exceed 64k
+		final int ENTRIESBYCALL = Math.min(32767, 64000 / entrySize);
+		
 		if (noteUNIDs.length < ENTRIESBYCALL)
 			return _getMultiNoteInfo(noteUNIDs);
 		
@@ -2497,7 +2502,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <br>
 	 * Please note that the method can only handle max. 32767 note ids in one call.
 	 * 
-	 * @param noteIds array of note ids
+	 * @param noteUNIDs array of note unids
 	 * @return lookup results, same size and order as <code>noteUNIDs</code> array
 	 * @throws IllegalArgumentException if note unid array has too many entries (more than 32767)
 	 */
@@ -3979,7 +3984,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * This function marks a cluster database in service by clearing the database option flag
 	 * {@link DatabaseOption#OUT_OF_SERVICE}, if set.<br>
 	 * <br>
-	 * When a call to {@link #markInService(String, String) is successful, the Cluster Manager enables
+	 * When a call to {@link #markInService(String, String)} is successful, the Cluster Manager enables
 	 * users to access the database again by removing the "out of service" access restriction.<br>
 	 * <br>
 	 * Traditional Domino database access control list (ACL) privileges apply under all circumstances.
@@ -3987,7 +3992,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * user must have at least designer access privileges for the specified database.
 	 * If a user does not have the proper privileges, a database access error is returned.<br>
 	 * <br>
-	 * The {@link #markInService(String, String)} function only affects databases within a Lotus Domino Server cluster.<br<
+	 * The {@link #markInService(String, String)} function only affects databases within a Lotus Domino Server cluster.<br>
 	 * <br>
 	 * For more information, see the Domino  Administration Help database.
 
@@ -4010,13 +4015,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * The purpose of this function is allow the system administrator to perform maintenance on a database
 	 * without requiring a server shutdown or having to use the database ACL to restrict access.<br>
 	 * <br>
-	 * In order to use {@link #markOutOfService(String)} with a database on a clustered server, the remote
+	 * In order to use {@link #markOutOfService(String, String)} with a database on a clustered server, the remote
 	 * Notes user must have at least designer access privileges.<br>
 	 * <br>
 	 * If a user's privilege level is insufficient, a database access error is returned.<br>
 	 * The {@link #markOutOfService(String, String)} function affects only databases that reside on
 	 * Domino clusters.<br>
-	 * You can mark a database back in service by calling the {@link #markInService(String)} function.<br>
+	 * You can mark a database back in service by calling the {@link #markInService(String, String)} function.<br>
 	 * <br>
 	 * For more information, see the Domino Administration Help database.
 	 * 
