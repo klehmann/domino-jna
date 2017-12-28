@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
@@ -61,6 +62,22 @@ public class NotesOriginatorId implements IAdaptable {
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
 	
+	public NotesOriginatorId(String unid, int sequence, NotesTimeDate sequenceTime) {
+		m_struct = NotesOriginatorIdStruct.newInstance();
+		m_struct.setUNID(unid);
+		m_struct.Sequence = sequence;
+		m_struct.SequenceTime = sequenceTime.getAdapter(NotesTimeDateStruct.class);
+		m_struct.write();
+	}
+	
+	public NotesOriginatorId(String unid, int sequence, int[] sequenceTimeInnards) {
+		m_struct = NotesOriginatorIdStruct.newInstance();
+		m_struct.setUNID(unid);
+		m_struct.Sequence = sequence;
+		m_struct.SequenceTime = NotesTimeDateStruct.newInstance(sequenceTimeInnards);
+		m_struct.write();
+	}
+	
 	public NotesTimeDate getFile() {
 		return m_struct.File==null ? null : new NotesTimeDate(m_struct.File);
 	}
@@ -101,5 +118,10 @@ public class NotesOriginatorId implements IAdaptable {
 	 */
 	public String getUNIDAsString() {
 		return m_struct.getUNIDAsString();
+	}
+	
+	@Override
+	public String toString() {
+		return "NotesOriginatorId [unid="+getUNIDAsString()+", seq="+getSequence()+", seqtime="+getSequenceTime()+"]";
 	}
 }
