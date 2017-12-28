@@ -2286,6 +2286,44 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * The data returned by this method is the note id, {@link NotesOriginatorId}, which contains
 	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
 	 * <br>
+	 * In addition, the method checks whether a document exists or has been deleted.
+	 * 
+	 * @param noteIds array of note ids
+	 * @return lookup results, same size and order as <code>noteIds</code> array
+	 * @throws IllegalArgumentException if note id array has too many entries (more than 65535)
+	 */
+	public NoteInfo[] getMultiNoteInfo(int[] noteIds) {
+		checkHandle();
+		
+		final int ENTRIESBYCALL = 65535;
+
+		if (noteIds.length < ENTRIESBYCALL)
+			return _getMultiNoteInfo(noteIds);
+		
+		//work around C API limit of max 65535 entries per call
+		NoteInfo[] noteInfos = new NoteInfo[noteIds.length];
+		
+		int startOffset = 0;
+		
+		while (startOffset < noteIds.length) {
+			int endOffsetExclusive = Math.min(noteIds.length, startOffset + ENTRIESBYCALL);
+			int[] currNoteIds = new int[endOffsetExclusive - startOffset];
+			System.arraycopy(noteIds, startOffset, currNoteIds, 0, endOffsetExclusive - startOffset);
+			
+			NoteInfo[] currNoteInfos = _getMultiNoteInfo(currNoteIds);
+			System.arraycopy(currNoteInfos, 0, noteInfos, startOffset, currNoteInfos.length);
+			startOffset += ENTRIESBYCALL;
+		}
+		
+		return noteInfos;
+	}
+	
+	/**
+	 * This method can be used to get information for a number documents in a
+	 * database from their note ids in a single call.<br>
+	 * The data returned by this method is the note id, {@link NotesOriginatorId}, which contains
+	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
+	 * <br>
 	 * In addition, the method checks whether a document exists or has been deleted.<br>
 	 * <br>
 	 * Please note that the method can only handle max. 65535 note ids, because it's
@@ -2295,8 +2333,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return lookup results, same size and order as <code>noteIds</code> array
 	 * @throws IllegalArgumentException if note id array has too many entries (more than 65535)
 	 */
-	public NoteInfo[] getMultiNoteInfo(int[] noteIds) {
-		checkHandle();
+	private NoteInfo[] _getMultiNoteInfo(int[] noteIds) {
 
 		if (noteIds.length ==0) {
 			return new NoteInfo[0];
@@ -2419,8 +2456,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
 	 * <br>
 	 * In addition, the method checks whether a document exists or has been deleted.<br>
-	 * <br>
-	 * Please note that the method can only handle max. 32767 note ids in one call.
 	 * 
 	 * @param noteIds array of note ids
 	 * @return lookup results, same size and order as <code>noteUNIDs</code> array
@@ -2429,6 +2464,44 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public NoteInfo[] getMultiNoteInfo(String[] noteUNIDs) {
 		checkHandle();
 
+		final int ENTRIESBYCALL = 32767;
+
+		if (noteUNIDs.length < ENTRIESBYCALL)
+			return _getMultiNoteInfo(noteUNIDs);
+		
+		//work around C API limit of max 32767 entries per call
+		NoteInfo[] noteInfos = new NoteInfo[noteUNIDs.length];
+		
+		int startOffset = 0;
+		
+		while (startOffset < noteUNIDs.length) {
+			int endOffsetExclusive = Math.min(noteUNIDs.length, startOffset + ENTRIESBYCALL);
+			String[] currNoteUNIDs = new String[endOffsetExclusive - startOffset];
+			System.arraycopy(noteUNIDs, startOffset, currNoteUNIDs, 0, endOffsetExclusive - startOffset);
+			
+			NoteInfo[] currNoteInfos = _getMultiNoteInfo(currNoteUNIDs);
+			System.arraycopy(currNoteInfos, 0, noteInfos, startOffset, currNoteInfos.length);
+			startOffset += ENTRIESBYCALL;
+		}
+		
+		return noteInfos;
+	}
+	
+	/**
+	 * This method can be used to get information for a number documents in a
+	 * database from their note unids in a single call.<br>
+	 * The data returned by this method is the note id, {@link NotesOriginatorId}, which contains
+	 * the UNID of the document, the sequence number and the sequence time ("Modified initially" time).<br>
+	 * <br>
+	 * In addition, the method checks whether a document exists or has been deleted.<br>
+	 * <br>
+	 * Please note that the method can only handle max. 32767 note ids in one call.
+	 * 
+	 * @param noteIds array of note ids
+	 * @return lookup results, same size and order as <code>noteUNIDs</code> array
+	 * @throws IllegalArgumentException if note unid array has too many entries (more than 32767)
+	 */
+	private NoteInfo[] _getMultiNoteInfo(String[] noteUNIDs) {
 		if (noteUNIDs.length ==0) {
 			return new NoteInfo[0];
 		}
