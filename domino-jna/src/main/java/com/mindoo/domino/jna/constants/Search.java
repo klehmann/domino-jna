@@ -7,7 +7,7 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 
 /**
  * Use these flags in the search_flags parameter to
- * {@link NotesDatabase#search(String, String, EnumSet, EnumSet, com.mindoo.domino.jna.NotesTimeDate, com.mindoo.domino.jna.NotesDatabase.ISearchCallback)}
+ * {@link NotesDatabase#search(String, String, EnumSet, EnumSet, com.mindoo.domino.jna.NotesTimeDate, com.mindoo.domino.jna.NotesDatabase.SearchCallback)}
  * to control what the function searches for and what information it returns. These values can be bitwise
  * ORed together to combine functionality.
  * 
