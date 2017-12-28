@@ -230,6 +230,11 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	}
 	
 	@Override
+	public int hashCode() {
+		return Arrays.hashCode(m_struct.Innards);
+	}
+	
+	@Override
 	public boolean equals(Object o) {
 		if (o instanceof NotesTimeDate) {
 			return Arrays.equals(m_struct.Innards, ((NotesTimeDate)o).m_struct.Innards);
