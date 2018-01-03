@@ -2902,10 +2902,28 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 *            The new file name of the local database or template.
 	 */
 	public static void renameDatabase(String dbNameOld, String dbNameNew) {
+		renameDatabase(dbNameOld, dbNameNew, false);
+	}
+
+	/**
+	 * Rename a local database or template file name.
+	 * 
+	 * @param dbNameOld
+	 *            The old file name of the local database or template
+	 * @param dbNameNew
+	 *            The new file name of the local database or template
+	 * @param bLower
+	 *            convert dbNameNew to lowerCase
+	 * @return Return status from this call indicates either success or what the error is.
+	 */
+	public static void renameDatabase(String dbNameOld, String dbNameNew, boolean bLower) {
 		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		Memory dbNameOldLMBCS = NotesStringUtils.toLMBCS(dbNameOld, true);
 		Memory dbNameNewLMBCS = NotesStringUtils.toLMBCS(dbNameNew, true);
+		if (bLower) {
+			dbNameNewLMBCS = NotesStringUtils.toLMBCS(dbNameNew.toLowerCase(), true);
+		}
 
 		short result = notesAPI.NSFDbRename(dbNameOldLMBCS, dbNameNewLMBCS);
 
