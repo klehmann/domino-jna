@@ -5,6 +5,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.Action;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.NoteFlags;
@@ -262,13 +263,14 @@ public class NotesSearch {
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
 							NotesItemTableStruct summaryBuffer) {
 
+						ItemTableData itemTableData=null;
 						try {
-							ItemTableData itemTableData=null;
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
 									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+											convertStringsLazily, false);
 								}
 							}
 
@@ -308,6 +310,11 @@ public class NotesSearch {
 						catch (Throwable t) {
 							invocationEx[0] = t;
 							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							if (itemTableData!=null) {
+								itemTableData.free();
+							}
 						}
 					}
 				};
@@ -319,13 +326,14 @@ public class NotesSearch {
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
 							NotesItemTableStruct summaryBuffer) {
 
+						ItemTableData itemTableData=null;
 						try {
-							ItemTableData itemTableData=null;
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
 									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+											convertStringsLazily, false);
 								}
 							}
 
@@ -364,6 +372,11 @@ public class NotesSearch {
 						catch (Throwable t) {
 							invocationEx[0] = t;
 							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							if (itemTableData!=null) {
+								itemTableData.free();
+							}
 						}
 					}
 
@@ -534,13 +547,14 @@ public class NotesSearch {
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
 							NotesItemTableStruct summaryBuffer) {
 
+						ItemTableData itemTableData=null;
 						try {
-							ItemTableData itemTableData=null;
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
 									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+											convertStringsLazily, false);
 								}
 							}
 
@@ -579,6 +593,11 @@ public class NotesSearch {
 						catch (Throwable t) {
 							invocationEx[0] = t;
 							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							if (itemTableData!=null) {
+								itemTableData.free();
+							}
 						}
 					}
 
@@ -591,13 +610,14 @@ public class NotesSearch {
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
 							NotesItemTableStruct summaryBuffer) {
 
+						ItemTableData itemTableData=null;
 						try {
-							ItemTableData itemTableData=null;
 							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
 									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+											convertStringsLazily, false);
 								}
 							}
 
@@ -636,6 +656,11 @@ public class NotesSearch {
 						catch (Throwable t) {
 							invocationEx[0] = t;
 							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							if (itemTableData!=null) {
+								itemTableData.free();
+							}
 						}
 					}
 
@@ -885,6 +910,38 @@ public class NotesSearch {
 		public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData) {
 			return Action.Continue;
 		}
+		
+	}
+	
+	/**
+	 * Interface to access the summary buffer, either item by item or to decode the whole buffer
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface ISummaryBufferAccess {
+		
+		public Iterator<String> getItemNames();
+		
+		public Object getItemValue(String itemName);
+		
+		public int getItemType(String itemName);
+		
+		public boolean hasItem(String itemName);
+		
+		public ItemTableData decodeWholeBuffer();
+		
+
+		/**
+		 * Frees the memory, if not already done
+		 */
+		public void free();
+		
+		/**
+		 * Checks if this memory has already been freed
+		 * 
+		 * @return true if freed
+		 */
+		public boolean isFreed();
 		
 	}
 }

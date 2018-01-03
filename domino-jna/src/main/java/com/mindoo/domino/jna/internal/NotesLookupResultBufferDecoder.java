@@ -18,12 +18,14 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -105,9 +107,10 @@ public class NotesLookupResultBufferDecoder {
 
 			List<NotesViewEntryData> viewEntries = new ArrayList<NotesViewEntryData>();
 			
-            int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-            boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-            
+            final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+            final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+			final boolean decodeAllValues = true;
+
             Memory sharedCollectionPositionMem = null;
 			NotesCollectionPositionStruct sharedPosition = null;
 			if (returnMask.contains(ReadMask.INDEXPOSITION)) {
@@ -209,12 +212,16 @@ public class NotesLookupResultBufferDecoder {
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemValueTablePtr = bufferPtr.share(bufferPos);
-					ItemValueTableData itemTableData = decodeItemValueTable(itemValueTablePtr, gmtOffset, useDayLight, convertStringsLazily);
+					ItemValueTableData itemTableData = decodeItemValueTable(itemValueTablePtr, gmtOffset, useDayLight,
+							convertStringsLazily, decodeAllValues);
 					
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
 
-					Object[] decodedItemValues = itemTableData.getItemValues();
+					Object[] decodedItemValues = new Object[itemTableData.getItemsCount()];
+					for (int c=0; c<itemTableData.getItemsCount(); c++) {
+						decodedItemValues[c] = itemTableData.getItemValue(c);
+					}
 					newData.setColumnValues(decodedItemValues);
 					//add some statistical information to the data object to be able to see which columns "pollute" the summary buffer
 					newData.setColumnValueSizesInBytes(itemTableData.getItemValueLengthsInBytes());
@@ -223,7 +230,8 @@ public class NotesLookupResultBufferDecoder {
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemTablePtr = bufferPtr.share(bufferPos);
-					ItemTableData itemTableData = decodeItemTable(itemTablePtr, gmtOffset, useDayLight, convertStringsLazily);
+					ItemTableData itemTableData = decodeItemTable(itemTablePtr, gmtOffset, useDayLight, convertStringsLazily,
+							decodeAllValues);
 					
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
@@ -258,9 +266,11 @@ public class NotesLookupResultBufferDecoder {
 	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
 	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return item value table data
 	 */
-	public static ItemValueTableData decodeItemValueTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight, boolean convertStringsLazily) {
+	public static ItemValueTableData decodeItemValueTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight,
+			boolean convertStringsLazily, boolean decodeAllValues) {
 		int bufferPos = 0;
 		
 		//skip item value table header
@@ -295,12 +305,13 @@ public class NotesLookupResultBufferDecoder {
 			bufferPos += 2;
 		}
 
-		ItemValueTableData data = new ItemValueTableData();
+		ItemValueTableData data = new ItemValueTableData(gmtOffset, useDayLight, convertStringsLazily);
 		data.m_totalBufferLength = totalBufferLength;
 		data.m_itemsCount = itemsCount;
 
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths, data, convertStringsLazily);
+		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths, data,
+				convertStringsLazily, decodeAllValues);
 
 		return data;
 	}
@@ -315,8 +326,11 @@ public class NotesLookupResultBufferDecoder {
 	 * @param itemValueLengths lengths of the item values
 	 * @param retData data object to populate
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param decodeAllValues true to decode all values in the buffer
 	 */
-	private static void populateItemValueTableData(Pointer bufferPtr, int gmtOffset, boolean useDayLight, int itemsCount, int[] itemNameLengths, int[] itemValueLengths, ItemValueTableData retData, boolean convertStringsLazily) {
+	private static void populateItemValueTableData(Pointer bufferPtr, int gmtOffset, boolean useDayLight, int itemsCount,
+			int[] itemNameLengths, int[] itemValueLengths, ItemValueTableData retData, boolean convertStringsLazily,
+			boolean decodeAllValues) {
 		int bufferPos = 0;
 		String[] itemNames = new String[itemsCount];
 		int[] itemDataTypes = new int[itemsCount];
@@ -326,15 +340,9 @@ public class NotesLookupResultBufferDecoder {
 		
 		for (int j=0; j<itemsCount; j++) {
 			if (itemNameLengths!=null && itemNameLengths[j]>0) {
-				//casting to short should be safe for item names
-				byte[] stringDataArr = new byte[itemNameLengths[j]];
-				bufferPtr.read(bufferPos, stringDataArr, 0, itemNameLengths[j]);
-				
-				LMBCSString lmbcsString = new LMBCSString(stringDataArr);
-				itemNames[j] = lmbcsString.getValue();
+				itemNames[j] = NotesStringUtils.fromLMBCS(bufferPtr.share(bufferPos), itemNameLengths[j]);
 				bufferPos += itemNameLengths[j];
 			}
-			
 			
 			//read data type
 			if (itemValueLengths[j] == 0) {
@@ -346,7 +354,7 @@ public class NotesLookupResultBufferDecoder {
 				continue;
 			}
 			else {
-				itemDataTypes[j] = bufferPtr.getShort(bufferPos) & 0xffff;
+				itemDataTypes[j] = (int) (bufferPtr.getShort(bufferPos) & 0xffff);
 				
 				//add data type size to position
 				bufferPos += 2;
@@ -358,35 +366,39 @@ public class NotesLookupResultBufferDecoder {
 				//skip item value
 				bufferPos += (itemValueLengths[j] - 2);
 
-				if (itemDataTypes[j] == NotesItem.TYPE_TEXT) {
-					Object strVal = ItemDecoder.decodeTextValue(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), convertStringsLazily);
-					decodedItemValues[j] = strVal;
-				}
-				else if (itemDataTypes[j] == NotesItem.TYPE_TEXT_LIST) {
-					//read a text list item value
-					int valueLength = (int) (itemValueBufferSizes[j] & 0xffff);
-					List<Object> listValues = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(itemValueBufferPointers[j], convertStringsLazily);
-					decodedItemValues[j]  = listValues;
-				}
-				else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER) {
-					double numVal = ItemDecoder.decodeNumber(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
-					decodedItemValues[j] = numVal;
-				}
-				else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
-					Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
-					decodedItemValues[j]  = cal;
-				}
-				else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
-					List<Object> numberList = ItemDecoder.decodeNumberList(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
-					decodedItemValues[j]  = numberList;
-				}
-				else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
-					List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j], useDayLight, gmtOffset);
-					decodedItemValues[j] = calendarValues;
+				if (decodeAllValues) {
+					if (itemDataTypes[j] == NotesItem.TYPE_TEXT) {
+						Object strVal = ItemDecoder.decodeTextValue(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), convertStringsLazily);
+						decodedItemValues[j] = strVal;
+					}
+					else if (itemDataTypes[j] == NotesItem.TYPE_TEXT_LIST) {
+						//read a text list item value
+						int valueLength = (int) (itemValueBufferSizes[j] & 0xffff);
+						List<Object> listValues = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(itemValueBufferPointers[j], convertStringsLazily);
+						decodedItemValues[j]  = listValues;
+					}
+					else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER) {
+						double numVal = ItemDecoder.decodeNumber(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+						decodedItemValues[j] = numVal;
+					}
+					else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
+						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
+						decodedItemValues[j]  = cal;
+					}
+					else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
+						List<Object> numberList = ItemDecoder.decodeNumberList(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+						decodedItemValues[j]  = numberList;
+					}
+					else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
+						List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j], useDayLight, gmtOffset);
+						decodedItemValues[j] = calendarValues;
+					}
 				}
 			}
 		}
 		
+		retData.m_itemValueBufferPointers = itemValueBufferPointers;
+		retData.m_itemValueBufferSizes = itemValueBufferSizes;
 		retData.m_itemValues = decodedItemValues;
 		retData.m_itemDataTypes = itemDataTypes;
 		retData.m_itemValueLengthsInBytes = itemValueLengths;
@@ -403,9 +415,11 @@ public class NotesLookupResultBufferDecoder {
 	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
 	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return data
 	 */
-	public static ItemTableData decodeItemTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight, boolean convertStringsLazily) {
+	public static ItemTableData decodeItemTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight,
+			boolean convertStringsLazily, boolean decodeAllValues) {
 		int bufferPos = 0;
 		NotesItemTableStruct itemTable = NotesItemTableStruct.newInstance(bufferPtr);
 		itemTable.read();
@@ -428,17 +442,18 @@ public class NotesLookupResultBufferDecoder {
 		for (int j=0; j<itemsCount; j++) {
 			Pointer itemPtr = bufferPtr.share(bufferPos);
 			itemNameLengths[j] = (int) (itemPtr.getShort(0) & 0xffff);
-			itemValueLengths[j] = (int) (itemPtr.getShort(2) & 0xffff);
+			itemValueLengths[j] = (int) (itemPtr.share(2).getShort(0) & 0xffff);
 			
 			bufferPos += NotesConstants.tableItemSize;
 		}
 		
-		ItemTableData data = new ItemTableData();
+		ItemTableData data = new ItemTableData(gmtOffset, useDayLight, convertStringsLazily);
 		data.m_totalBufferLength = itemTable.getLengthAsInt();
 		data.m_itemsCount = itemsCount;
 		
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths, data, convertStringsLazily);
+		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths,
+				data, convertStringsLazily, decodeAllValues);
 		
 		return data;
 	}
@@ -449,14 +464,34 @@ public class NotesLookupResultBufferDecoder {
 	 * @author Karsten Lehmann
 	 */
 	public static class ItemValueTableData {
-		protected Object[] m_itemValues;
-		protected int[] m_itemDataTypes;
+		private Pointer[] m_itemValueBufferPointers;
+		private int[] m_itemValueBufferSizes;
+		private Object[] m_itemValues;
+		private int[] m_itemDataTypes;
 		protected int m_totalBufferLength;
 		protected int m_itemsCount;
-		protected int[] m_itemValueLengthsInBytes;
+		private int[] m_itemValueLengthsInBytes;
+		private int m_gmtOffset;
+		private boolean m_isDST;
+		private boolean m_convertStringsLazily;
+		private boolean m_freed;
+		
+		public ItemValueTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
+			m_gmtOffset = gmtOffset;
+			m_isDST = isDST;
+			m_convertStringsLazily = convertStringsLazily;
+		}
+		
+		public void free() {
+			m_freed = true;
+		}
+		
+		public boolean isFreed() {
+			return m_freed;
+		}
 		
 		/**
-		 * Returns the decoded item values, with the following types:<br>
+		 * Returns the decoded item value, with the following types:<br>
 		 * <ul>
 		 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
 		 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
@@ -466,21 +501,61 @@ public class NotesLookupResultBufferDecoder {
 		 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
 		 * </ul>
 		 * 
-		 * @return values
+		 * @param index item index between 0 and {@link #getItemsCount()}
+		 * @return value or null if unknown type
 		 */
-		public Object[] getItemValues() {
-			return m_itemValues;
+		public Object getItemValue(int index) {
+			if (m_itemValues[index] == null) {
+				if (isFreed())
+					throw new NotesError(0, "Buffer already freed");
+				
+				int type = getItemDataType(index);
+				if (type == NotesItem.TYPE_TEXT) {
+					m_itemValues[index] = ItemDecoder.decodeTextValue(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_convertStringsLazily);
+				}
+				else if (type == NotesItem.TYPE_TEXT_LIST) {
+					//read a text list item value
+					int valueLength = (int) (m_itemValueBufferSizes[index] & 0xffff);
+					m_itemValues[index] = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(m_itemValueBufferPointers[index], m_convertStringsLazily);
+				}
+				else if (type == NotesItem.TYPE_NUMBER) {
+					m_itemValues[index] = ItemDecoder.decodeNumber(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
+				}
+				else if (type == NotesItem.TYPE_TIME) {
+					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_isDST, m_gmtOffset);
+				}
+				else if (type == NotesItem.TYPE_NUMBER_RANGE) {
+					m_itemValues[index] = ItemDecoder.decodeNumberList(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
+				}
+				else if (type == NotesItem.TYPE_TIME_RANGE) {
+					m_itemValues[index] = ItemDecoder.decodeTimeDateList(m_itemValueBufferPointers[index], m_isDST, m_gmtOffset);
+				}
+			}
+			return m_itemValues[index];
 		}
 		
 		/**
-		 * Returns the data types of decoded item values, e.g. {@link NotesItem#TYPE_TEXT},
+		 * Returns the data type of an item value by its index, e.g. {@link NotesItem#TYPE_TEXT},
 		 * {@link NotesItem#TYPE_TEXT_LIST}, {@link NotesItem#TYPE_NUMBER},
 		 * {@link NotesItem#TYPE_NUMBER_RANGE}
 		 * 
+		 * @param index item index between 0 and {@link #getItemsCount()}
 		 * @return data type
 		 */
-		public int[] getItemDataTypes() {
-			return m_itemDataTypes;
+		public int getItemDataType(int index) {
+			return m_itemDataTypes[index];
+		}
+		
+		/**
+		 * Returns the data types of an item values, e.g. {@link NotesItem#TYPE_TEXT},
+		 * {@link NotesItem#TYPE_TEXT_LIST}, {@link NotesItem#TYPE_NUMBER},
+		 * {@link NotesItem#TYPE_NUMBER_RANGE}
+		 * 
+		 * @param index item index between 0 and {@link #getItemsCount()}
+		 * @return data type
+		 */
+		public int getItemDataTypes(int index) {
+			return m_itemDataTypes[index];
 		}
 		
 		/**
@@ -521,6 +596,10 @@ public class NotesLookupResultBufferDecoder {
 	public static class ItemTableData extends ItemValueTableData {
 		protected String[] m_itemNames;
 		
+		public ItemTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
+			super(gmtOffset, isDST, convertStringsLazily);
+		}
+		
 		/**
 		 * Returns the names of the decoded items (programmatic column names in case of collection data)
 		 * 
@@ -539,7 +618,7 @@ public class NotesLookupResultBufferDecoder {
 		public Object get(String itemName) {
 			for (int i=0; i<m_itemNames.length; i++) {
 				if (m_itemNames[i].equalsIgnoreCase(itemName)) {
-					Object val = m_itemValues[i];
+					Object val = getItemValue(i);
 					if (val instanceof LMBCSString) {
 						return ((LMBCSString)val).getValue();
 					}
@@ -878,7 +957,7 @@ public class NotesLookupResultBufferDecoder {
 			Map<String,Object> data = new CaseInsensitiveMap<String, Object>();
 			int itemCount = getItemsCount();
 			for (int i=0; i<itemCount; i++) {
-				Object val = m_itemValues[i];
+				Object val = getItemValue(i);
 				
 				if (val instanceof LMBCSString) {
 					if (decodeLMBCS) {

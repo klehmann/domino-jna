@@ -3275,13 +3275,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
 				
-				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-				boolean convertStringsLazily = false;
+				final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				final boolean convertStringsLazily = false;
+				final boolean decodeAllValues = true;
 				
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
-					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight, convertStringsLazily);
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight,
+							convertStringsLazily, decodeAllValues);
 				}
 				
 				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,
@@ -3304,13 +3306,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
 				
-				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-				boolean convertStringsLazily = false;
-				
+				final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				final boolean convertStringsLazily = false;
+				final boolean decodeAllValues = true;
+
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
-					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight, convertStringsLazily);
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight,
+							convertStringsLazily, decodeAllValues);
 				}
 				
 				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,

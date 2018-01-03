@@ -2,7 +2,6 @@ package com.mindoo.domino.jna.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Formatter;
@@ -13,8 +12,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -95,38 +94,6 @@ public class NotesStringUtils {
 	}
 	
 	/**
-	 * Scans the ByteBuffer object for null values
-	 * 
-	 * @param in byte buffer
-	 * @return number of bytes before null byte in buffer
-	 */
-	public static int getNullTerminatedLength(ByteBuffer in) {
-		return getNullTerminatedLength(in, 0);
-	}
-	
-	/**
-	 * Scans the ByteBuffer object for null values
-	 * 
-	 * @param in byte buffer
-	 * @param startPosition position to start searching
-	 * @return number of bytes before null byte in buffer, starting at <code>startPosition</code>
-	 */
-	public static int getNullTerminatedLength(ByteBuffer in, int startPosition) {
-		int textEndOffset = (int) in.limit();
-		
-		//search for terminating null character
-		for (int i=startPosition; i<textEndOffset; i++) {
-			byte b = in.get(i);
-			if (b==0) {
-				textEndOffset = i;
-				break;
-			}
-		}
-
-		return textEndOffset - startPosition;
-	}
-	
-	/**
 	 * Reads a list of null terminated strings in LMBCS format at the specified pointer
 	 * 
 	 * @param inPtr pointer
@@ -163,140 +130,6 @@ public class NotesStringUtils {
 	}
 
 	/**
-	 * Reads a list of null terminated strings in LMBCS format from a {@link ByteBuffer}, starting at the current
-	 * buffer's {@link ByteBuffer#position()}, advancing the position to the end of the read data.
-	 * 
-	 * @param inBuf byte buffer
-	 * @param numEntries number of null terminated strings
-	 * @return string list
-	 */
-	public static List<String> fromLMBCSStringList(ByteBuffer inBuf, int numEntries) {
-		return fromLMBCSStringList(inBuf, numEntries, inBuf.position());
-	}
-	
-	/**
-	 * Reads a list of null terminated strings in LMBCS format from a {@link ByteBuffer}, starting at the specified
-	 * ByteBuffer position, advancing the position to the end of the read data.
-	 * 
-	 * @param inBuf byte buffer
-	 * @param numEntries number of null terminated strings
-	 * @param startPosition position to start reading
-	 * @return string list
-	 */
-	public static List<String> fromLMBCSStringList(ByteBuffer inBuf, int numEntries, int startPosition) {
-		List<String> stringList = new ArrayList<String>();
-		
-		int posStartOfString = startPosition;
-		
-		for (int i=0; i<numEntries; i++) {
-			int currStringOffset = 0;
-			
-			while(true) {
-				byte b = inBuf.get(posStartOfString + currStringOffset);
-				currStringOffset++;
-				if (b==0) {
-					break;
-				}
-			}
-			
-			String currString = fromLMBCS(inBuf, currStringOffset-1, posStartOfString, false);
-			stringList.add(currString);
-			
-			if ((i+1)<numEntries) {
-				posStartOfString += currStringOffset;
-			}
-			else {
-				break;
-			}
-		}
-		return stringList;
-	}
-	
-	/**
-	 * Converts the content of a {@link ByteBuffer} from LMBCS format to a Java String, starting at the
-	 * buffer's current {@link ByteBuffer#position()}. The position of the buffer is advanced to the
-	 * end of the read data.
-	 * 
-	 * @param buf byte buffer
-	 * @param textLen length of text, use -1 to let the method search for a terminating \0
-	 * @return decoded String
-	 */
-	public static String fromLMBCS(ByteBuffer buf, int textLen) {
-		return fromLMBCS(buf, textLen, buf.position(), false);
-	}
-	
-	/**
-	 * Converts the content of a {@link ByteBuffer} from LMBCS format to a Java String,
-	 * advancing the position to the end of the read data.
-	 * 
-	 * @param buf byte buffer
-	 * @param textLen length of text, use -1 to let the method search for a terminating \0
-	 * @param startPosition start position
-	 * @param skipAsciiCheck true to skip the check whether the memory contains pure ASCII (parameter added to avoid a duplicate check), will always result in a C API call to convert the string
-	 * @return decoded String
-	 */
-	public static String fromLMBCS(ByteBuffer buf, int textLen, int startPosition, boolean skipAsciiCheck) {
-		if (buf==null || buf.limit()==0 || textLen==0)
-			return "";
-		
-		if (textLen==-1) {
-			int foundLen = 0;
-			int offset = 0;
-			while (true) {
-				if (buf.get(startPosition + offset)==0) {
-					break;
-				}
-				foundLen++;
-				offset++;
-			}
-			textLen = foundLen;
-		}
-		
-		if (!skipAsciiCheck) {
-			boolean isPureAscii = true;
-			
-			for (int i=0; i < textLen; i++) {
-				byte b = buf.get(startPosition + i);
-				if (b <= 0x1f || b >= 0x80) {
-					isPureAscii = false;
-					break;
-				}
-			}
-			
-			if (isPureAscii) {
-				byte[] asciiBytes = new byte[textLen];
-				int oldPos = buf.position();
-				buf.position(startPosition);
-				buf.get(asciiBytes);
-				buf.position(oldPos);
-				
-				String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
-				
-				buf.position(startPosition + textLen);
-				return asciiStr;
-			}
-		}
-		
-		Memory bufAsMem = new Memory(textLen);
-		if (buf.hasArray()) {
-			bufAsMem.write(0, buf.array(), startPosition, textLen);
-		}
-		else {
-			byte[] bufArr = new byte[textLen];
-			int oldPos = buf.position();
-			buf.position(startPosition);
-			buf.get(bufArr);
-			buf.position(oldPos);
-			
-			bufAsMem.write(0, bufArr, 0, textLen);
-		}
-		//skipAsciiCheck=true
-		String retStr = fromLMBCS(bufAsMem, textLen, true);
-		buf.position(startPosition + textLen);
-		return retStr;
-	}
-	
-	/**
 	 * Converts an LMBCS string to a Java String
 	 * 
 	 * @param inPtr pointer in memory
@@ -332,12 +165,12 @@ public class NotesStringUtils {
 			}
 			textLen = foundLen;
 		}
-		
+
 		if (!skipAsciiCheck) {
 			boolean isPureAscii = true;
-			
+			byte[] data = inPtr.getByteArray(0, textLen);
 			for (int i=0; i < textLen; i++) {
-				byte b = inPtr.getByte(i);
+				byte b = data[i];
 				if (b <= 0x1f || b >= 0x80) {
 					isPureAscii = false;
 					break;
@@ -345,8 +178,7 @@ public class NotesStringUtils {
 			}
 			
 			if (isPureAscii) {
-				byte[] asciiBytes = inPtr.getByteArray(0, (int) textLen);
-				String asciiStr = new String(asciiBytes, Charset.forName("ASCII"));
+				String asciiStr = new String(data, Charset.forName("ASCII"));
 				return asciiStr;
 			}
 		}
@@ -356,7 +188,7 @@ public class NotesStringUtils {
 		
 		Memory pBuf_utf8 = null;
 		
-		StringBuilder result = new StringBuilder();
+		StringBuilder result = new StringBuilder(textLen + 5);
 		while (textLen > 0) {
 			long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
 			long outLen=2*len;
