@@ -141,6 +141,10 @@ public interface NotesCAPI extends Library {
 	public static final short NAMES_LIST_PASSWORD_AUTHENTICATED = 0x0002;
 	/**	Set if user requested full admin access and it was granted */
 	public static final short NAMES_LIST_FULL_ADMIN_ACCESS = 0x0004;
+	
+	public void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
+
+	public void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 
 	//	WORD LNPUBLIC OSLoadString(
 	//			HMODULE  hModule,
