@@ -80,7 +80,7 @@ public class SyncResult {
 		return m_removedFromTarget;
 	}
 	
-	public int getNoteCountMatchngFormula() {
+	public int getNoteCountMatchingFormula() {
 		return m_notesMatchingFormula;
 	}
 	
