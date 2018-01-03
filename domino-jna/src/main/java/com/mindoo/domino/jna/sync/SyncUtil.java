@@ -27,7 +27,17 @@ import com.mindoo.domino.jna.utils.NotesNamingUtils;
 
 /**
  * Generic data sync utility that incrementally synchronizes Domino data with external
- * data stores, e.g. to build a custom view indexer or migrate data.
+ * data stores, e.g. to build a custom view indexer or migrate data.<br>
+ * <br>
+ * The algorithm supports synchonizing mulitple db replicas with the same target and
+ * uses a separate sync starting point for each source database.<br>
+ * <br>
+ * We also handle changing the selection formula. In that case, we do a fast comparison
+ * which data needs to be purged from the target and which data needs to be
+ * transferred from source to target.<br>
+ * <br>
+ * In case of a source db replica id change, we clear the target data and restart
+ * the whole sync process from the beginning.
  * 
  * @author Karsten Lehmann
  */
@@ -67,6 +77,7 @@ public class SyncUtil {
 		
 		try {
 			if (isWipeReqired) {
+				//db replica id has changed, tell the target to clear its content and any stored last sync dates
 				target.clear(ctx);
 				lastSyncEndDate = null;
 			}
@@ -186,6 +197,10 @@ public class SyncUtil {
 					}
 					
 					if (!unidsToTransfer.isEmpty()) {
+						//use a fast bulk conversion method to convert the UNIDs to note ids, because
+						//we need a NotesIDTable later to restrict our search+copy operation
+						//(filter parameter of NSFSearchExtended3)
+						
 						Map<String,Integer> retNoteIdsByUnid = new HashMap<String,Integer>();
 						//retNoteUnidsNotFound -> documents might have gotten deleted since our search,
 						//which is not important because our next incremental search will detect this
