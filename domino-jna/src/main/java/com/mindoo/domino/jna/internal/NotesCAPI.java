@@ -142,6 +142,14 @@ public interface NotesCAPI extends Library {
 	/**	Set if user requested full admin access and it was granted */
 	public static final short NAMES_LIST_FULL_ADMIN_ACCESS = 0x0004;
 
+	short b32_NSFDbFTSizeGet(Memory PathName, LongByReference ftSize); // UKR, 03-Jan-2018
+
+	short b64_NSFDbFTSizeGet(Memory PathName, LongByReference ftSize); // UKR, 03-Jan-2018
+
+	short b32_NSFDbIsLocallyEncrypted(int dbHandle, IntByReference retVal); // UKR, 03-Jan-2018
+
+	short b64_NSFDbIsLocallyEncrypted(long dbHandle, IntByReference retVal); // UKR, 03-Jan-2018
+	
 	//	WORD LNPUBLIC OSLoadString(
 	//			HMODULE  hModule,
 	//			STATUS  StringCode,

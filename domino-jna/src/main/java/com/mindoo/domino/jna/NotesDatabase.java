@@ -100,6 +100,76 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private Database m_legacyDbRef;
 	private Integer m_openDatabaseId;
 	
+	/* UKR, 03-JAN-2018 Start */
+	private int		mAllocatedBytes	= 0;
+	private int		mFreeBytes		= 0;
+	private long	mFtSize			= 0;
+
+	public int getAllocatedBytes() {
+		return mAllocatedBytes;
+	}
+
+	public int getFreeBytes() {
+		return mFreeBytes;
+	}
+
+	public long getFtSize() {
+		return mFtSize;
+	}
+
+	public int FTSize(String filePath) {
+		short result = 0;
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath, true);
+		LongByReference ftSize = new LongByReference();
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbFTSizeGet(dbFilePathLMBCS, ftSize);
+			NotesErrorUtils.checkResult(result);
+		} else {
+			result = notesAPI.b32_NSFDbFTSizeGet(dbFilePathLMBCS, ftSize);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		mFtSize = ftSize.getValue();
+		return result;
+	}
+
+	public int isLocallyEncrypted() {
+		short result = 0;
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference retVal = new IntByReference();
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbIsLocallyEncrypted(getHandle64(), retVal);
+			NotesErrorUtils.checkResult(result);
+		} else {
+			result = notesAPI.b32_NSFDbIsLocallyEncrypted(getHandle32(), retVal);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		return retVal.getValue();
+	}
+
+	/**
+	 * @return
+	 */
+	public int getSpaceUsage() {
+		short result = 0;
+		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		IntByReference retAllocatedBytes = new IntByReference();
+		IntByReference retFreeBytes = new IntByReference();
+		if (NotesJNAContext.is64Bit()) {
+			result = notesAPI.b64_NSFDbSpaceUsage(getHandle64(), retAllocatedBytes, retFreeBytes);
+			NotesErrorUtils.checkResult(result);
+		} else {
+			result = notesAPI.b32_NSFDbSpaceUsage(getHandle32(), retAllocatedBytes, retFreeBytes);
+			NotesErrorUtils.checkResult(result);
+		}
+		mAllocatedBytes = retAllocatedBytes.getValue();
+		mFreeBytes = retFreeBytes.getValue();
+		return result;
+	}
+	/* UKR, 03-JAN-2018 End */
+	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
 	 * 
