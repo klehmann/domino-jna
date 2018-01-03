@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna;
 
-import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 

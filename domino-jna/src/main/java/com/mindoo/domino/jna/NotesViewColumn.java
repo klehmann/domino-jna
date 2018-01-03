@@ -1,15 +1,17 @@
 package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat2Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat3Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat4Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat5Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormatStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat2Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat3Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat4Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat5Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormatStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -88,31 +90,29 @@ public class NotesViewColumn {
 		if (m_formula==null) {
 			if (m_formulaCompiled!=null && m_formulaCompiled.length>0) {
 				//lazily decompile formula
-				NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-				
 				Memory formulaCompiledMem = new Memory(m_formulaCompiled.length);
 				formulaCompiledMem.write(0, m_formulaCompiled, 0, m_formulaCompiled.length);
 				
 				short result;
 				
-				if (NotesJNAContext.is64Bit()) {
+				if (PlatformUtils.is64Bit()) {
 					LongByReference rethFormulaText = new LongByReference();
 					ShortByReference retFormulaTextLength = new ShortByReference();
 					
-					result = notesAPI.b64_NSFFormulaDecompile(formulaCompiledMem, true, rethFormulaText, retFormulaTextLength);
+					result = NotesNativeAPI64.get().NSFFormulaDecompile(formulaCompiledMem, true, rethFormulaText, retFormulaTextLength);
 					NotesErrorUtils.checkResult(result);
 					
 					int iFormulaTextLength = (int) (retFormulaTextLength.getValue() & 0xffff);
 					
 					long hFormulaText = rethFormulaText.getValue();
 					if (hFormulaText!=0) {
-						Pointer ptr = notesAPI.b64_OSLockObject(hFormulaText);
+						Pointer ptr = NotesNativeAPI64.get().OSLockObject(hFormulaText);
 						try {
 							m_formula = NotesStringUtils.fromLMBCS(ptr, iFormulaTextLength);
 						}
 						finally {
-							notesAPI.b64_OSUnlockObject(hFormulaText);
-							notesAPI.b64_OSMemFree(hFormulaText);
+							NotesNativeAPI64.get().OSUnlockObject(hFormulaText);
+							NotesNativeAPI64.get().OSMemFree(hFormulaText);
 						}
 					}
 				}
@@ -120,20 +120,20 @@ public class NotesViewColumn {
 					IntByReference rethFormulaText = new IntByReference();
 					ShortByReference retFormulaTextLength = new ShortByReference();
 					
-					result = notesAPI.b32_NSFFormulaDecompile(formulaCompiledMem, true, rethFormulaText, retFormulaTextLength);
+					result = NotesNativeAPI32.get().NSFFormulaDecompile(formulaCompiledMem, true, rethFormulaText, retFormulaTextLength);
 					NotesErrorUtils.checkResult(result);
 					
 					int iFormulaTextLength = (int) (retFormulaTextLength.getValue() & 0xffff);
 					
 					int hFormulaText = rethFormulaText.getValue();
 					if (hFormulaText!=0) {
-						Pointer ptr = notesAPI.b32_OSLockObject(hFormulaText);
+						Pointer ptr = NotesNativeAPI32.get().OSLockObject(hFormulaText);
 						try {
 							m_formula = NotesStringUtils.fromLMBCS(ptr, iFormulaTextLength);
 						}
 						finally {
-							notesAPI.b32_OSUnlockObject(hFormulaText);
-							notesAPI.b32_OSMemFree(hFormulaText);
+							NotesNativeAPI32.get().OSUnlockObject(hFormulaText);
+							NotesNativeAPI32.get().OSMemFree(hFormulaText);
 						}
 					}
 				}
@@ -181,63 +181,63 @@ public class NotesViewColumn {
 	}
 	
 	public boolean isSorted() {
-		return (m_flags1 & NotesCAPI.VCF1_M_Sort) == NotesCAPI.VCF1_M_Sort;
+		return (m_flags1 & NotesConstants.VCF1_M_Sort) == NotesConstants.VCF1_M_Sort;
 	}
 	
 	public boolean isCategory() {
-		return (m_flags1 & NotesCAPI.VCF1_M_SortCategorize) == NotesCAPI.VCF1_M_SortCategorize;
+		return (m_flags1 & NotesConstants.VCF1_M_SortCategorize) == NotesConstants.VCF1_M_SortCategorize;
 	}
 
 	public boolean isSortedDescending() {
-		return (m_flags1 & NotesCAPI.VCF1_M_SortDescending) == NotesCAPI.VCF1_M_SortDescending;
+		return (m_flags1 & NotesConstants.VCF1_M_SortDescending) == NotesConstants.VCF1_M_SortDescending;
 	}
 
 	public boolean isHidden() {
-		return (m_flags1 & NotesCAPI.VCF1_M_Hidden) == NotesCAPI.VCF1_M_Hidden;
+		return (m_flags1 & NotesConstants.VCF1_M_Hidden) == NotesConstants.VCF1_M_Hidden;
 	}
 
 	public boolean isResponse() {
-		return (m_flags1 & NotesCAPI.VCF1_M_Response) == NotesCAPI.VCF1_M_Response;
+		return (m_flags1 & NotesConstants.VCF1_M_Response) == NotesConstants.VCF1_M_Response;
 	}
 
 	public boolean isHideDetail() {
-		return (m_flags1 & NotesCAPI.VCF1_M_HideDetail) == NotesCAPI.VCF1_M_HideDetail;
+		return (m_flags1 & NotesConstants.VCF1_M_HideDetail) == NotesConstants.VCF1_M_HideDetail;
 	}
 
 	public boolean isIcon() {
-		return (m_flags1 & NotesCAPI.VCF1_M_Icon) == NotesCAPI.VCF1_M_Icon;
+		return (m_flags1 & NotesConstants.VCF1_M_Icon) == NotesConstants.VCF1_M_Icon;
 	}
 
 	public boolean isResize() {
-		return (m_flags1 & NotesCAPI.VCF1_M_NoResize) != NotesCAPI.VCF1_M_NoResize;
+		return (m_flags1 & NotesConstants.VCF1_M_NoResize) != NotesConstants.VCF1_M_NoResize;
 	}
 
 	public boolean isResortAscending() {
-		return (m_flags1 & NotesCAPI.VCF1_M_ResortAscending) == NotesCAPI.VCF1_M_ResortAscending;
+		return (m_flags1 & NotesConstants.VCF1_M_ResortAscending) == NotesConstants.VCF1_M_ResortAscending;
 	}
 
 	public boolean isResortDescending() {
-		return (m_flags1 & NotesCAPI.VCF1_M_ResortDescending) == NotesCAPI.VCF1_M_ResortDescending;
+		return (m_flags1 & NotesConstants.VCF1_M_ResortDescending) == NotesConstants.VCF1_M_ResortDescending;
 	}
 
 	public boolean isShowTwistie() {
-		return (m_flags1 & NotesCAPI.VCF1_M_Twistie) == NotesCAPI.VCF1_M_Twistie;
+		return (m_flags1 & NotesConstants.VCF1_M_Twistie) == NotesConstants.VCF1_M_Twistie;
 	}
 
 	public boolean isResortToView() {
-		return (m_flags1 & NotesCAPI.VCF1_M_ResortToView) == NotesCAPI.VCF1_M_ResortToView;
+		return (m_flags1 & NotesConstants.VCF1_M_ResortToView) == NotesConstants.VCF1_M_ResortToView;
 	}
 
 	public boolean isSecondaryResort() {
-		return (m_flags1 & NotesCAPI.VCF1_M_SecondResort) == NotesCAPI.VCF1_M_SecondResort;
+		return (m_flags1 & NotesConstants.VCF1_M_SecondResort) == NotesConstants.VCF1_M_SecondResort;
 	}
 
 	public boolean isSecondaryResortDescending() {
-		return (m_flags1 & NotesCAPI.VCF1_M_SecondResortDescending) == NotesCAPI.VCF1_M_SecondResortDescending;
+		return (m_flags1 & NotesConstants.VCF1_M_SecondResortDescending) == NotesConstants.VCF1_M_SecondResortDescending;
 	}
 
 	public boolean isSortPermuted() {
-		return (m_flags2 & NotesCAPI.VCF2_M_SortPermute) == NotesCAPI.VCF2_M_SortPermute;
+		return (m_flags2 & NotesConstants.VCF2_M_SortPermute) == NotesConstants.VCF2_M_SortPermute;
 	}
 
 }

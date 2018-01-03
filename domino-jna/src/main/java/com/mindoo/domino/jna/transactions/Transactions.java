@@ -3,8 +3,10 @@ package com.mindoo.domino.jna.transactions;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
  * Utility class that gives actions to NSF transactions. NSF transactions cover
@@ -46,23 +48,21 @@ public class Transactions {
 	 */
 	public static boolean areTransactionsSupported(NotesDatabase anyLocalDb) {
 		if (transactionsAvailable==null) {
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-			if (NotesJNAContext.is64Bit()) {
-				short result = notesAPI.b64_NSFTransactionBegin(anyLocalDb.getHandle64(), NotesCAPI.NSF_TRANSACTION_BEGIN_SUB_COMMIT);
+			if (PlatformUtils.is64Bit()) {
+				short result = NotesNativeAPI64.get().NSFTransactionBegin(anyLocalDb.getHandle64(), NotesConstants.NSF_TRANSACTION_BEGIN_SUB_COMMIT);
 				if (result==0) {
 					transactionsAvailable = true;
-					notesAPI.b64_NSFTransactionRollback(anyLocalDb.getHandle64());
+					NotesNativeAPI64.get().NSFTransactionRollback(anyLocalDb.getHandle64());
 				}
 				else {
 					transactionsAvailable = false;
 				}
 			}
 			else {
-				short result = notesAPI.b32_NSFTransactionBegin(anyLocalDb.getHandle32(), NotesCAPI.NSF_TRANSACTION_BEGIN_SUB_COMMIT);
+				short result = NotesNativeAPI32.get().NSFTransactionBegin(anyLocalDb.getHandle32(), NotesConstants.NSF_TRANSACTION_BEGIN_SUB_COMMIT);
 				if (result==0) {
 					transactionsAvailable = true;
-					notesAPI.b32_NSFTransactionRollback(anyLocalDb.getHandle32());
+					NotesNativeAPI32.get().NSFTransactionRollback(anyLocalDb.getHandle32());
 				}
 				else {
 					transactionsAvailable = false;
@@ -113,22 +113,20 @@ public class Transactions {
 		
 		int transactionLevel = activeTransactionDepthForCurrentThread.get().intValue();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		int flags;
 		if (transactionLevel==0) {
-			flags = NotesCAPI.NSF_TRANSACTION_BEGIN_LOCK_DB;
+			flags = NotesConstants.NSF_TRANSACTION_BEGIN_LOCK_DB;
 		}
 		else {
-			flags = NotesCAPI.NSF_TRANSACTION_BEGIN_SUB_COMMIT;
+			flags = NotesConstants.NSF_TRANSACTION_BEGIN_SUB_COMMIT;
 		}
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFTransactionBegin(db.getHandle64(), flags);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFTransactionBegin(db.getHandle64(), flags);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFTransactionBegin(db.getHandle32(), flags);
+			short result = NotesNativeAPI32.get().NSFTransactionBegin(db.getHandle32(), flags);
 			NotesErrorUtils.checkResult(result);
 		}
 		
@@ -136,23 +134,23 @@ public class Transactions {
 		try {
 			T retValue = callable.runInDbTransaction(db);
 			
-			if (NotesJNAContext.is64Bit()) {
-				short result = notesAPI.b64_NSFTransactionCommit(db.getHandle64(), 0);
+			if (PlatformUtils.is64Bit()) {
+				short result = NotesNativeAPI64.get().NSFTransactionCommit(db.getHandle64(), 0);
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				short result = notesAPI.b64_NSFTransactionCommit(db.getHandle32(), 0);
+				short result = NotesNativeAPI32.get().NSFTransactionCommit(db.getHandle32(), 0);
 				NotesErrorUtils.checkResult(result);
 			}
 			return retValue;
 		}
 		catch (Throwable t) {
-			if (NotesJNAContext.is64Bit()) {
-				short result = notesAPI.b64_NSFTransactionRollback(db.getHandle64());
+			if (PlatformUtils.is64Bit()) {
+				short result = NotesNativeAPI64.get().NSFTransactionRollback(db.getHandle64());
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				short result = notesAPI.b64_NSFTransactionRollback(db.getHandle32());
+				short result = NotesNativeAPI32.get().NSFTransactionRollback(db.getHandle32());
 				NotesErrorUtils.checkResult(result);
 			}
 			if (t instanceof RollbackException) {

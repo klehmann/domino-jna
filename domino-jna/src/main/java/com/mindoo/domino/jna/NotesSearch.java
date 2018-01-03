@@ -15,19 +15,20 @@ import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI.b32_NsfSearchProc;
-import com.mindoo.domino.jna.internal.NotesCAPI.b64_NsfSearchProc;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesItemTableStruct;
-import com.mindoo.domino.jna.structs.NotesSearchMatch32Struct;
-import com.mindoo.domino.jna.structs.NotesSearchMatch64Struct;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
+import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -70,7 +71,7 @@ public class NotesSearch {
 	 * The dLength field will be one of the items in the summary information buffer.<br>
 	 * <br>
 	 * Specify a note class to restrict the search to certain classes of notes.<br>
-	 * Specify {@link NotesCAPI#NOTE_CLASS_DOCUMENT} to find documents.<br>
+	 * Specify {@link NotesConstants#NOTE_CLASS_DOCUMENT} to find documents.<br>
 	 * Specify the "since" argument to limit the search to notes created or modified
 	 * in the database since a certain time/date.<br>
 	 * When used to search a database, NSFSearch will search the database file sequentially
@@ -133,7 +134,7 @@ public class NotesSearch {
 	 * The dLength field will be one of the items in the summary information buffer.<br>
 	 * <br>
 	 * Specify a note class to restrict the search to certain classes of notes.<br>
-	 * Specify {@link NotesCAPI#NOTE_CLASS_DOCUMENT} to find documents.<br>
+	 * Specify {@link NotesConstants#NOTE_CLASS_DOCUMENT} to find documents.<br>
 	 * Specify the "since" argument to limit the search to notes created or modified
 	 * in the database since a certain time/date.<br>
 	 * When used to search a database, NSFSearch will search the database file sequentially
@@ -196,7 +197,7 @@ public class NotesSearch {
 	 * The dLength field will be one of the items in the summary information buffer.<br>
 	 * <br>
 	 * Specify a note class to restrict the search to certain classes of notes.<br>
-	 * Specify {@link NotesCAPI#NOTE_CLASS_DOCUMENT} to find documents.<br>
+	 * Specify {@link NotesConstants#NOTE_CLASS_DOCUMENT} to find documents.<br>
 	 * Specify the "since" argument to limit the search to notes created or modified
 	 * in the database since a certain time/date.<br>
 	 * When used to search a database, NSFSearch will search the database file sequentially
@@ -227,7 +228,9 @@ public class NotesSearch {
 	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	private static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, String viewTitle, final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	private static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, String viewTitle,
+			final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since,
+			final SearchCallback callback) throws FormulaCompilationError {
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database already recycled");
 		}
@@ -239,23 +242,21 @@ public class NotesSearch {
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
 
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 		final boolean isDST = NotesDateTimeUtils.isDaylightTime();
 
-		int searchFlagsBitMask = Search.toBitMaskInt(searchFlags);
+		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(searchFlags);
+		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(searchFlags);
 		
-		
-		if (NotesJNAContext.is64Bit()) {
-			final b64_NsfSearchProc apiCallback;
+		if (PlatformUtils.is64Bit()) {
+			final NotesCallbacks.b64_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
 			//not sure if this is necessary, but we had to use a special library extending StdCallLibrary
 			//for Windows and the documentation says this might be required for callbacks as well
 			//(StdCallCallback)
-			if (notesAPI instanceof WinNotesCAPI) {
-				apiCallback = new WinNotesCAPI.b64_NsfSearchProcWin() {
+			if (PlatformUtils.isWindows()) {
+				apiCallback = new WinNotesCallbacks.b64_NsfSearchProcWin() {
 
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
@@ -289,7 +290,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -312,7 +313,7 @@ public class NotesSearch {
 				};
 			}
 			else {
-				apiCallback = new b64_NsfSearchProc() {
+				apiCallback = new NotesCallbacks.b64_NsfSearchProc() {
 
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
@@ -346,7 +347,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -385,7 +386,7 @@ public class NotesSearch {
 				ShortByReference retCompileErrorOffset = new ShortByReference();
 				ShortByReference retCompileErrorLength = new ShortByReference();
 
-				short result = notesAPI.b64_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
+				short result = NotesNativeAPI64.get().NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
 						formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
 						retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
 
@@ -412,7 +413,7 @@ public class NotesSearch {
 				final Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
 
 				int hFilter=0;
-				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;
+				int filterFlags=NotesConstants.SEARCH_FILTER_NONE;
 				
 				if (searchFilter instanceof NotesIDTable) {
 					//NSFSearchExtended3 required that the high order bit for each ID in the table
@@ -426,8 +427,8 @@ public class NotesSearch {
 						long firstId = idTable.getFirstId();
 						long lastId = idTable.getLastId();
 
-						if (((firstId & NotesCAPI.NOTEID_RESERVED)==NotesCAPI.NOTEID_RESERVED) &&
-						((lastId & NotesCAPI.NOTEID_RESERVED)==NotesCAPI.NOTEID_RESERVED)) {
+						if (((firstId & NotesConstants.NOTEID_RESERVED)==NotesConstants.NOTEID_RESERVED) &&
+						((lastId & NotesConstants.NOTEID_RESERVED)==NotesConstants.NOTEID_RESERVED)) {
 							//high order bit already set for every ID
 							tableWithHighOrderBit = idTable;
 							tableWithHighOrderBitCanBeRecycled = false;
@@ -439,7 +440,7 @@ public class NotesSearch {
 						}
 					}
 					hFilter = (int) tableWithHighOrderBit.getHandle64();
-					filterFlags = NotesCAPI.SEARCH_FILTER_NOTEID_TABLE;
+					filterFlags = NotesConstants.SEARCH_FILTER_NOTEID_TABLE;
 				}
 				else if (searchFilter instanceof NotesCollection) {
 					//produces a crash:
@@ -448,7 +449,7 @@ public class NotesSearch {
 //					short result = notesAPI.b64_NSFGetFolderSearchFilter(db.getHandle64(), db.getHandle64(), col.getNoteId(), since, 0, retFilter);
 //					NotesErrorUtils.checkResult(result);
 //					hFilter = retFilter.getValue();
-//					filterFlags = NotesCAPI.SEARCH_FILTER_FOLDER;
+//					filterFlags = NotesConstants.SEARCH_FILTER_FOLDER;
 				}
 				
 				int searchFlags1 = 0;
@@ -473,11 +474,17 @@ public class NotesSearch {
 
 						@Override
 						public Short run() throws Exception {
-							return notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormulaFinal,
+							return NotesNativeAPI64.get().NSFSearchExtended3(db.getHandle64(), hFormulaFinal,
 									hFilterFinal, filterFlagsFinal,
 									viewTitleBuf, searchFlagsBitMaskFinal, searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
 									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
 									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
+
+//							return notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormulaFinal,
+//									hFilterFinal, filterFlagsFinal,
+//									viewTitleBuf, searchFlagsBitMaskFinal, searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
+//									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
+//									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
 
 						}
 					});
@@ -507,7 +514,7 @@ public class NotesSearch {
 			finally {
 				//free handle of formula
 				if (hFormula!=0) {
-					notesAPI.b64_OSMemFree(hFormula);
+					NotesNativeAPI64.get().OSMemFree(hFormula);
 				}
 				if (tableWithHighOrderBit!=null && tableWithHighOrderBitCanBeRecycled) {
 					tableWithHighOrderBit.recycle();
@@ -516,11 +523,11 @@ public class NotesSearch {
 
 		}
 		else {
-			final b32_NsfSearchProc apiCallback;
+			final NotesCallbacks.b32_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
-			if (notesAPI instanceof WinNotesCAPI) {
-				apiCallback = new WinNotesCAPI.b32_NsfSearchProcWin() {
+			if (PlatformUtils.isWindows()) {
+				apiCallback = new WinNotesCallbacks.b32_NsfSearchProcWin() {
 					final Throwable invocationEx[] = new Throwable[1];
 
 					@Override
@@ -555,7 +562,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -578,7 +585,7 @@ public class NotesSearch {
 				};
 			}
 			else {
-				apiCallback = new b32_NsfSearchProc() {
+				apiCallback = new NotesCallbacks.b32_NsfSearchProc() {
 
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
@@ -612,7 +619,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesCAPI.SE_FMATCH)==0) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -652,7 +659,7 @@ public class NotesSearch {
 				ShortByReference retCompileErrorOffset = new ShortByReference();
 				ShortByReference retCompileErrorLength = new ShortByReference();
 
-				short result = notesAPI.b32_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
+				short result = NotesNativeAPI32.get().NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
 						formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
 						retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
 
@@ -678,7 +685,7 @@ public class NotesSearch {
 				final Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, false) : null;
 
 				int hFilter=0;
-				int filterFlags=NotesCAPI.SEARCH_FILTER_NONE;
+				int filterFlags=NotesConstants.SEARCH_FILTER_NONE;
 				
 				if (searchFilter instanceof NotesIDTable) {
 					//NSFSearchExtended3 required that the high order bit for each ID in the table
@@ -692,8 +699,8 @@ public class NotesSearch {
 						long firstId = idTable.getFirstId();
 						long lastId = idTable.getLastId();
 
-						if (((firstId & NotesCAPI.NOTEID_RESERVED)==NotesCAPI.NOTEID_RESERVED) &&
-						((lastId & NotesCAPI.NOTEID_RESERVED)==NotesCAPI.NOTEID_RESERVED)) {
+						if (((firstId & NotesConstants.NOTEID_RESERVED)==NotesConstants.NOTEID_RESERVED) &&
+						((lastId & NotesConstants.NOTEID_RESERVED)==NotesConstants.NOTEID_RESERVED)) {
 							//high order bit already set for every ID
 							tableWithHighOrderBit = idTable;
 							tableWithHighOrderBitCanBeRecycled = false;
@@ -705,7 +712,7 @@ public class NotesSearch {
 						}
 					}
 					hFilter = (int) tableWithHighOrderBit.getHandle32();
-					filterFlags = NotesCAPI.SEARCH_FILTER_NOTEID_TABLE;
+					filterFlags = NotesConstants.SEARCH_FILTER_NOTEID_TABLE;
 				}
 				else if (searchFilter instanceof NotesCollection) {
 					//produces a crash:
@@ -714,22 +721,17 @@ public class NotesSearch {
 //					short result = notesAPI.b32_NSFGetFolderSearchFilter(db.getHandle32(), db.getHandle32(), col.getNoteId(), since, 0, retFilter);
 //					NotesErrorUtils.checkResult(result);
 //					hFilter = retFilter.getValue();
-//					filterFlags = NotesCAPI.SEARCH_FILTER_FOLDER;
+//					filterFlags = NotesConstants.SEARCH_FILTER_FOLDER;
 				}
-				
-				int searchFlags1 = 0;
-				int searchFlags2 = 0;
-				int searchFlags3 = 0;
-				int searchFlags4 = 0;
 				
 				final int hFormulaFinal = hFormula;
 				final int hFilterFinal = hFilter;
 				final int filterFlagsFinal = filterFlags;
 				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
-				final int searchFlags1Final = searchFlags1;
-				final int searchFlags2Final = searchFlags2;
-				final int searchFlags3Final = searchFlags3;
-				final int searchFlags4Final = searchFlags4;
+				final int searchFlags1Final = search1FlagsBitMask;
+				final int searchFlags2Final = 0;
+				final int searchFlags3Final = 0;
+				final int searchFlags4Final = 0;
 				final int noteClassMaskFinal = noteClassMask;
 				
 				short result;
@@ -739,7 +741,7 @@ public class NotesSearch {
 
 						@Override
 						public Short run() throws Exception {
-							return notesAPI.b32_NSFSearchExtended3(db.getHandle32(), hFormulaFinal, hFilterFinal, filterFlagsFinal,
+							return NotesNativeAPI32.get().NSFSearchExtended3(db.getHandle32(), hFormulaFinal, hFilterFinal, filterFlagsFinal,
 									viewTitleBuf, (int) (searchFlagsBitMaskFinal & 0xffff), searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
 									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
 						}
@@ -769,7 +771,7 @@ public class NotesSearch {
 			finally {
 				//free handle of formula
 				if (hFormula!=0) {
-					notesAPI.b32_OSMemFree(hFormula);
+					NotesNativeAPI32.get().OSMemFree(hFormula);
 				}
 				if (tableWithHighOrderBit!=null && tableWithHighOrderBitCanBeRecycled) {
 					tableWithHighOrderBit.recycle();
@@ -781,27 +783,27 @@ public class NotesSearch {
 
 	private static EnumSet<NoteFlags> toNoteFlags(byte flagsAsByte) {
 		EnumSet<NoteFlags> flags = EnumSet.noneOf(NoteFlags.class);
-		boolean isTruncated = (flagsAsByte & NotesCAPI.SE_FTRUNCATED) == NotesCAPI.SE_FTRUNCATED;
+		boolean isTruncated = (flagsAsByte & NotesConstants.SE_FTRUNCATED) == NotesConstants.SE_FTRUNCATED;
 		if (isTruncated)
 			flags.add(NoteFlags.Truncated);
-		boolean isNoAccess = (flagsAsByte & NotesCAPI.SE_FNOACCESS) == NotesCAPI.SE_FNOACCESS;
+		boolean isNoAccess = (flagsAsByte & NotesConstants.SE_FNOACCESS) == NotesConstants.SE_FNOACCESS;
 		if (isNoAccess)
 			flags.add(NoteFlags.NoAccess);
-		boolean isTruncatedAttachment = (flagsAsByte & NotesCAPI.SE_FTRUNCATT) == NotesCAPI.SE_FTRUNCATT;
+		boolean isTruncatedAttachment = (flagsAsByte & NotesConstants.SE_FTRUNCATT) == NotesConstants.SE_FTRUNCATT;
 		if (isTruncatedAttachment)
 			flags.add(NoteFlags.TruncatedAttachments);
-		boolean isNoPurgeStatus = (flagsAsByte & NotesCAPI.SE_FNOPURGE) == NotesCAPI.SE_FNOPURGE;
+		boolean isNoPurgeStatus = (flagsAsByte & NotesConstants.SE_FNOPURGE) == NotesConstants.SE_FNOPURGE;
 		if (isNoPurgeStatus)
 			flags.add(NoteFlags.NoPurgeStatus);
-		boolean isPurged = (flagsAsByte & NotesCAPI.SE_FPURGED) == NotesCAPI.SE_FPURGED;
+		boolean isPurged = (flagsAsByte & NotesConstants.SE_FPURGED) == NotesConstants.SE_FPURGED;
 		if (isPurged)
 			flags.add(NoteFlags.Purged);
-		boolean isMatch = (flagsAsByte & NotesCAPI.SE_FMATCH) == NotesCAPI.SE_FMATCH;
+		boolean isMatch = (flagsAsByte & NotesConstants.SE_FMATCH) == NotesConstants.SE_FMATCH;
 		if (isMatch)
 			flags.add(NoteFlags.Match);
 		else
 			flags.add(NoteFlags.NoMatch);
-		boolean isSoftDeleted = (flagsAsByte & NotesCAPI.SE_FSOFTDELETED) == NotesCAPI.SE_FSOFTDELETED;
+		boolean isSoftDeleted = (flagsAsByte & NotesConstants.SE_FSOFTDELETED) == NotesConstants.SE_FSOFTDELETED;
 		if (isSoftDeleted)
 			flags.add(NoteFlags.SoftDeleted);
 		
@@ -843,7 +845,7 @@ public class NotesSearch {
 		 * @param noteClass class of the note
 		 * @param flags note flags
 		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesCAPI#_NOTE_MODIFIED}
+		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
@@ -859,7 +861,7 @@ public class NotesSearch {
 		 * @param noteClass class of the note
 		 * @param flags note flags
 		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesCAPI#_NOTE_MODIFIED}
+		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
 		public Action deletionStubFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified) {
@@ -876,7 +878,7 @@ public class NotesSearch {
 		 * @param noteClass class of the note
 		 * @param flags note flags
 		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesCAPI#_NOTE_MODIFIED}
+		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */

@@ -7,7 +7,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.Vector;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 import lotus.domino.Base;
 import lotus.domino.Document;
@@ -58,12 +58,12 @@ public class ViewEntryImpl implements ViewEntry {
 
 	@Override
 	public boolean isCategory() throws NotesException {
-		return (m_data.getNoteId() & NotesCAPI.NOTEID_CATEGORY) == NotesCAPI.NOTEID_CATEGORY;
+		return (m_data.getNoteId() & NotesConstants.NOTEID_CATEGORY) == NotesConstants.NOTEID_CATEGORY;
 	}
 
 	@Override
 	public boolean isTotal() throws NotesException {
-		return (m_data.getNoteId() & NotesCAPI.NOTEID_CATEGORY_TOTAL) == NotesCAPI.NOTEID_CATEGORY_TOTAL;
+		return (m_data.getNoteId() & NotesConstants.NOTEID_CATEGORY_TOTAL) == NotesConstants.NOTEID_CATEGORY_TOTAL;
 	}
 
 	@Override

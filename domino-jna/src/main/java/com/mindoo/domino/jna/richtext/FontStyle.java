@@ -3,8 +3,8 @@ package com.mindoo.domino.jna.richtext;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.FontId;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.structs.compoundtext.NotesFontIDFieldsStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesFontIDFieldsStruct;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Container for font styles used in richtext items
@@ -22,7 +22,7 @@ public class FontStyle implements IAdaptable {
 	private byte m_pointSize;
 	
 	public FontStyle() {
-		m_face = NotesCAPI.FONT_FACE_SWISS;
+		m_face = NotesConstants.FONT_FACE_SWISS;
 		m_attrib = 0;
 		m_color = 0;
 		m_pointSize = 10;
@@ -76,37 +76,37 @@ public class FontStyle implements IAdaptable {
 	 */
 	public StandardColors getColor() {
 		switch (m_color) {
-		case NotesCAPI.NOTES_COLOR_BLACK:
+		case NotesConstants.NOTES_COLOR_BLACK:
 			return StandardColors.BLACK;
-		case NotesCAPI.NOTES_COLOR_WHITE:
+		case NotesConstants.NOTES_COLOR_WHITE:
 			return StandardColors.WHITE;
-		case NotesCAPI.NOTES_COLOR_RED:
+		case NotesConstants.NOTES_COLOR_RED:
 			return StandardColors.RED;
-		case NotesCAPI.NOTES_COLOR_GREEN:
+		case NotesConstants.NOTES_COLOR_GREEN:
 			return StandardColors.GREEN;
-		case NotesCAPI.NOTES_COLOR_BLUE:
+		case NotesConstants.NOTES_COLOR_BLUE:
 			return StandardColors.BLUE;
-		case NotesCAPI.NOTES_COLOR_MAGENTA:
+		case NotesConstants.NOTES_COLOR_MAGENTA:
 			return StandardColors.MAGENTA;
-		case NotesCAPI.NOTES_COLOR_YELLOW:
+		case NotesConstants.NOTES_COLOR_YELLOW:
 			return StandardColors.YELLOW;
-		case NotesCAPI.NOTES_COLOR_CYAN:
+		case NotesConstants.NOTES_COLOR_CYAN:
 			return StandardColors.CYAN;
-		case NotesCAPI.NOTES_COLOR_DKRED:
+		case NotesConstants.NOTES_COLOR_DKRED:
 			return StandardColors.DKRED;
-		case NotesCAPI.NOTES_COLOR_DKGREEN:
+		case NotesConstants.NOTES_COLOR_DKGREEN:
 			return StandardColors.DKGREEN;
-		case NotesCAPI.NOTES_COLOR_DKBLUE:
+		case NotesConstants.NOTES_COLOR_DKBLUE:
 			return StandardColors.DKBLUE;
-		case NotesCAPI.NOTES_COLOR_DKMAGENTA:
+		case NotesConstants.NOTES_COLOR_DKMAGENTA:
 			return StandardColors.DKMAGENTA;
-		case NotesCAPI.NOTES_COLOR_DKCYAN:
+		case NotesConstants.NOTES_COLOR_DKCYAN:
 			return StandardColors.DKCYAN;
-		case NotesCAPI.NOTES_COLOR_DKYELLOW:
+		case NotesConstants.NOTES_COLOR_DKYELLOW:
 			return StandardColors.DKYELLOW;
-		case NotesCAPI.NOTES_COLOR_GRAY:
+		case NotesConstants.NOTES_COLOR_GRAY:
 			return StandardColors.GRAY;
-		case NotesCAPI.NOTES_COLOR_LTGRAY:
+		case NotesConstants.NOTES_COLOR_LTGRAY:
 			return StandardColors.LTGRAY;
 		default:
 			//should not happen because we only support setting it via setColor(StandardColors)
@@ -160,15 +160,15 @@ public class FontStyle implements IAdaptable {
 	 */
 	public static enum StandardFonts {
 		/** (e.g. Times Roman family) */
-		ROMAN(NotesCAPI.FONT_FACE_ROMAN),
+		ROMAN(NotesConstants.FONT_FACE_ROMAN),
 		/** (e.g. Helv family) */
-		SWISS(NotesCAPI.FONT_FACE_SWISS),
+		SWISS(NotesConstants.FONT_FACE_SWISS),
 		/** (e.g. Monotype Sans WT) */
-		UNICODE(NotesCAPI.FONT_FACE_UNICODE),
+		UNICODE(NotesConstants.FONT_FACE_UNICODE),
 		/** (e.g. Arial */
-		USERINTERFACE(NotesCAPI.FONT_FACE_USERINTERFACE),
+		USERINTERFACE(NotesConstants.FONT_FACE_USERINTERFACE),
 		/** (e.g. Courier family) */
-		TYPEWRITER(NotesCAPI.FONT_FACE_TYPEWRITER),
+		TYPEWRITER(NotesConstants.FONT_FACE_TYPEWRITER),
 		/** returned if font is not in the standard table; cannot be set via {@link FontStyle#setFontFace(StandardFonts)} */
 		CUSTOMFONT((byte)255);
 		
@@ -189,22 +189,22 @@ public class FontStyle implements IAdaptable {
 	 * @author Karsten Lehmann
 	 */
 	public static enum StandardColors {
-		BLACK(NotesCAPI.NOTES_COLOR_BLACK),
-		WHITE(NotesCAPI.NOTES_COLOR_WHITE),
-		RED(NotesCAPI.NOTES_COLOR_RED),
-		GREEN(NotesCAPI.NOTES_COLOR_GREEN),
-		BLUE(NotesCAPI.NOTES_COLOR_BLUE),
-		MAGENTA(NotesCAPI.NOTES_COLOR_MAGENTA),
-		YELLOW(NotesCAPI.NOTES_COLOR_YELLOW),
-		CYAN(NotesCAPI.NOTES_COLOR_CYAN),
-		DKRED(NotesCAPI.NOTES_COLOR_DKRED),
-		DKGREEN(NotesCAPI.NOTES_COLOR_DKGREEN),
-		DKBLUE(NotesCAPI.NOTES_COLOR_DKBLUE),
-		DKMAGENTA(NotesCAPI.NOTES_COLOR_DKMAGENTA),
-		DKYELLOW(NotesCAPI.NOTES_COLOR_DKYELLOW),
-		DKCYAN(NotesCAPI.NOTES_COLOR_DKCYAN),
-		GRAY(NotesCAPI.NOTES_COLOR_GRAY),
-		LTGRAY(NotesCAPI.NOTES_COLOR_LTGRAY);
+		BLACK(NotesConstants.NOTES_COLOR_BLACK),
+		WHITE(NotesConstants.NOTES_COLOR_WHITE),
+		RED(NotesConstants.NOTES_COLOR_RED),
+		GREEN(NotesConstants.NOTES_COLOR_GREEN),
+		BLUE(NotesConstants.NOTES_COLOR_BLUE),
+		MAGENTA(NotesConstants.NOTES_COLOR_MAGENTA),
+		YELLOW(NotesConstants.NOTES_COLOR_YELLOW),
+		CYAN(NotesConstants.NOTES_COLOR_CYAN),
+		DKRED(NotesConstants.NOTES_COLOR_DKRED),
+		DKGREEN(NotesConstants.NOTES_COLOR_DKGREEN),
+		DKBLUE(NotesConstants.NOTES_COLOR_DKBLUE),
+		DKMAGENTA(NotesConstants.NOTES_COLOR_DKMAGENTA),
+		DKYELLOW(NotesConstants.NOTES_COLOR_DKYELLOW),
+		DKCYAN(NotesConstants.NOTES_COLOR_DKCYAN),
+		GRAY(NotesConstants.NOTES_COLOR_GRAY),
+		LTGRAY(NotesConstants.NOTES_COLOR_LTGRAY);
 		
 		private byte m_color;
 		
@@ -219,114 +219,114 @@ public class FontStyle implements IAdaptable {
 	
 	public FontStyle setBold(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISBOLD) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISBOLD) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISBOLD) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISBOLD) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isBold() {
-		return (m_attrib & NotesCAPI.ISBOLD) == NotesCAPI.ISBOLD;
+		return (m_attrib & NotesConstants.ISBOLD) == NotesConstants.ISBOLD;
 	}
 	
 	public FontStyle setItalic(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISITALIC) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISITALIC) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISITALIC) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISITALIC) & 0xff);
 		}
 		return this;
 	}
 	
 	public boolean isItalic() {
-		return (m_attrib & NotesCAPI.ISUNDERLINE) == NotesCAPI.ISUNDERLINE;
+		return (m_attrib & NotesConstants.ISUNDERLINE) == NotesConstants.ISUNDERLINE;
 	}
 
 	public FontStyle setUnderline(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISUNDERLINE) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISUNDERLINE) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISUNDERLINE) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISUNDERLINE) & 0xff);
 		}
 		return this;
 	}
 	
 	public boolean isUnderline() {
-		return (m_attrib & NotesCAPI.ISUNDERLINE) == NotesCAPI.ISUNDERLINE;
+		return (m_attrib & NotesConstants.ISUNDERLINE) == NotesConstants.ISUNDERLINE;
 	}
 
 	public FontStyle setStrikeout(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISSTRIKEOUT) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISSTRIKEOUT) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISSTRIKEOUT) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISSTRIKEOUT) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isStrikeout() {
-		return (m_attrib & NotesCAPI.ISSTRIKEOUT) == NotesCAPI.ISSTRIKEOUT;
+		return (m_attrib & NotesConstants.ISSTRIKEOUT) == NotesConstants.ISSTRIKEOUT;
 	}
 
 	public FontStyle setSuper(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISSUPER) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISSUPER) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISSUPER) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISSUPER) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isSuper() {
-		return (m_attrib & NotesCAPI.ISSUPER) == NotesCAPI.ISSUPER;
+		return (m_attrib & NotesConstants.ISSUPER) == NotesConstants.ISSUPER;
 	}
 
 	public FontStyle setSub(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISSUB) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISSUB) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISSUB) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISSUB) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isSub() {
-		return (m_attrib & NotesCAPI.ISSUB) == NotesCAPI.ISSUB;
+		return (m_attrib & NotesConstants.ISSUB) == NotesConstants.ISSUB;
 	}
 
 	public FontStyle setShadow(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISSHADOW) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISSHADOW) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISSHADOW) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISSHADOW) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isShadow() {
-		return (m_attrib & NotesCAPI.ISSHADOW) == NotesCAPI.ISSHADOW;
+		return (m_attrib & NotesConstants.ISSHADOW) == NotesConstants.ISSHADOW;
 	}
 
 	public FontStyle setExtrude(boolean b) {
 		if (b) {
-			m_attrib = (byte) ((m_attrib | NotesCAPI.ISEXTRUDE) & 0xff);
+			m_attrib = (byte) ((m_attrib | NotesConstants.ISEXTRUDE) & 0xff);
 		}
 		else {
-			m_attrib = (byte) ((m_attrib & ~NotesCAPI.ISEXTRUDE) & 0xff);
+			m_attrib = (byte) ((m_attrib & ~NotesConstants.ISEXTRUDE) & 0xff);
 		}
 		return this;
 	}
 
 	public boolean isExtrude() {
-		return (m_attrib & NotesCAPI.ISEXTRUDE) == NotesCAPI.ISEXTRUDE;
+		return (m_attrib & NotesConstants.ISEXTRUDE) == NotesConstants.ISEXTRUDE;
 	}
 
 	@Override

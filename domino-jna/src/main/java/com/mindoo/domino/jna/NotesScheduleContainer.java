@@ -5,11 +5,13 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.NotesScheduleStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesScheduleStruct;
 import com.mindoo.domino.jna.utils.NotesBusyTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -26,13 +28,13 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 	private boolean m_noRecycle;
 	
 	public NotesScheduleContainer(long hCntnr64) {
-		if (!NotesJNAContext.is64Bit())
+		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_hCntnr64 = hCntnr64;
 	}
 
 	public NotesScheduleContainer(int hCntnr32) {
-		if (NotesJNAContext.is64Bit())
+		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_hCntnr32 = hCntnr32;
 	}
@@ -51,14 +53,13 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		if (m_noRecycle || isRecycled())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_SchContainer_Free(m_hCntnr64);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().SchContainer_Free(m_hCntnr64);
 			NotesGC.__objectBeeingBeRecycled(NotesScheduleContainer.class, this);
 			m_hCntnr64=0;
 		}
 		else {
-			notesAPI.b32_SchContainer_Free(m_hCntnr32);
+			NotesNativeAPI32.get().SchContainer_Free(m_hCntnr32);
 			NotesGC.__objectBeeingBeRecycled(NotesScheduleContainer.class, this);
 			m_hCntnr32=0;
 		}
@@ -66,7 +67,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 
 	@Override
 	public boolean isRecycled() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_hCntnr64==0;
 		}
 		else {
@@ -85,7 +86,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 	}
 
 	void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hCntnr64==0)
 				throw new NotesError(0, "Note already recycled");
 			NotesGC.__b64_checkValidObjectHandle(NotesNote.class, m_hCntnr64);
@@ -103,13 +104,12 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 	 * @return schedule
 	 */
 	public NotesSchedule getFirstSchedule() {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		
 		IntByReference rethObj = new IntByReference();
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
-			result = notesAPI.b64_SchContainer_GetFirstSchedule(m_hCntnr64, rethObj, schedulePtrMem);
+			result = NotesNativeAPI64.get().SchContainer_GetFirstSchedule(m_hCntnr64, rethObj, schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
 			}
@@ -126,7 +126,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			NotesScheduleStruct retpSchedule = NotesScheduleStruct.newInstance(schedulePtr);
 			retpSchedule.read();
 			
-			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(NotesCAPI.scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
+			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(NotesConstants.scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
 			
 			NotesSchedule schedule=new NotesSchedule(this, retpSchedule, owner, (long) rethObj.getValue());
 			NotesGC.__objectCreated(NotesSchedule.class, schedule);
@@ -134,7 +134,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		}
 		else {
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
-			result = notesAPI.b32_SchContainer_GetFirstSchedule(m_hCntnr32, rethObj, schedulePtrMem);
+			result = NotesNativeAPI32.get().SchContainer_GetFirstSchedule(m_hCntnr32, rethObj, schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
 			}
@@ -151,7 +151,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			NotesScheduleStruct retpSchedule = NotesScheduleStruct.newInstance(schedulePtr);
 			retpSchedule.read();
 			
-			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(NotesCAPI.scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
+			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(NotesConstants.scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
 
 			NotesSchedule schedule=new NotesSchedule(this, retpSchedule, owner, (int) rethObj.getValue());
 			NotesGC.__objectCreated(NotesSchedule.class, schedule);
@@ -169,15 +169,14 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		if (schedule.isRecycled())
 			throw new NotesError(0, "Specified schedule is recycled");
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		
 		IntByReference rethNextSchedule = new IntByReference();
 
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			int hCurSchedule = (int) schedule.getHandle64();
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
-			result = notesAPI.b64_SchContainer_GetNextSchedule(m_hCntnr64, hCurSchedule, rethNextSchedule,
+			result = NotesNativeAPI64.get().SchContainer_GetNextSchedule(m_hCntnr64, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
@@ -192,7 +191,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			NotesScheduleStruct retpNextSchedule = NotesScheduleStruct.newInstance(schedulePtr);
 			retpNextSchedule.read();
 			
-			String owner = NotesStringUtils.fromLMBCS(retpNextSchedule.getPointer().share(NotesCAPI.scheduleSize), (retpNextSchedule.wOwnerNameSize-1) & 0xffff);
+			String owner = NotesStringUtils.fromLMBCS(retpNextSchedule.getPointer().share(NotesConstants.scheduleSize), (retpNextSchedule.wOwnerNameSize-1) & 0xffff);
 
 			NotesSchedule nextSchedule=new NotesSchedule(this, retpNextSchedule, owner, (long) rethNextSchedule.getValue());
 			NotesGC.__objectCreated(NotesSchedule.class, nextSchedule);
@@ -201,7 +200,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		else {
 			int hCurSchedule = (int) schedule.getHandle32();
 			Memory schedulePtrMem = new Memory(Pointer.SIZE);
-			result = notesAPI.b32_SchContainer_GetNextSchedule(m_hCntnr32, hCurSchedule, rethNextSchedule,
+			result = NotesNativeAPI32.get().SchContainer_GetNextSchedule(m_hCntnr32, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
@@ -216,7 +215,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			NotesScheduleStruct retpNextSchedule = NotesScheduleStruct.newInstance(schedulePtr);
 			retpNextSchedule.read();
 			
-			String owner = NotesStringUtils.fromLMBCS(retpNextSchedule.getPointer().share(NotesCAPI.scheduleSize), (retpNextSchedule.wOwnerNameSize-1) & 0xffff);
+			String owner = NotesStringUtils.fromLMBCS(retpNextSchedule.getPointer().share(NotesConstants.scheduleSize), (retpNextSchedule.wOwnerNameSize-1) & 0xffff);
 
 			NotesSchedule nextSchedule=new NotesSchedule(this, retpNextSchedule, owner, rethNextSchedule.getValue());
 			NotesGC.__objectCreated(NotesSchedule.class, nextSchedule);
@@ -230,7 +229,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			return "NotesScheduleContainer [recycled]";
 		}
 		else {
-			return "NotesScheduleContainer [handle="+(NotesJNAContext.is64Bit() ? m_hCntnr64 : m_hCntnr32)+"]";
+			return "NotesScheduleContainer [handle="+(PlatformUtils.is64Bit() ? m_hCntnr64 : m_hCntnr32)+"]";
 		}
 	}
 }

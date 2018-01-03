@@ -10,11 +10,13 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks;
 import com.mindoo.domino.jna.mq.MessageQueue.IMQCallback.Action;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -58,7 +60,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 	}
 	
 	void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_queue==0)
 				throw new NotesError(0, "MessageQueue already recycled");
 			NotesGC.__b64_checkValidObjectHandle(MessageQueue.class, m_queue);
@@ -86,16 +88,15 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @return true if queue exists
 	 */
 	public static boolean hasQueue(String queueName) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory queueNameMem = NotesStringUtils.toLMBCS(queueName, true);
 
 		IntByReference retQueue = new IntByReference();
-		short result = notesAPI.MQOpen(queueNameMem, 0, retQueue);
+		short result = NotesNativeAPI.get().MQOpen(queueNameMem, 0, retQueue);
 		if (result==INotesErrorConstants.ERR_NO_SUCH_MQ) {
 			return false;
 		}
 		else if (result==0) {
-			result = notesAPI.MQClose(retQueue.getValue(), 0);
+			result = NotesNativeAPI.get().MQClose(retQueue.getValue(), 0);
 			NotesErrorUtils.checkResult(result);
 			return true;
 		}
@@ -114,14 +115,13 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @return queue
 	 */
 	public static MessageQueue createAndOpen(String queueName, int quota, boolean noRecycle) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory queueNameMem = NotesStringUtils.toLMBCS(queueName, true);
 
-		short result = notesAPI.MQCreate(queueNameMem, (short) (quota & 0xffff), 0);
+		short result = NotesNativeAPI.get().MQCreate(queueNameMem, (short) (quota & 0xffff), 0);
 		NotesErrorUtils.checkResult(result);
 
 		IntByReference retQueue = new IntByReference();
-		result = notesAPI.MQOpen(queueNameMem, 0, retQueue);
+		result = NotesNativeAPI.get().MQOpen(queueNameMem, 0, retQueue);
 		NotesErrorUtils.checkResult(result);
 
 		MessageQueue queue = new MessageQueue(queueName, retQueue.getValue());
@@ -140,11 +140,10 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @return queue
 	 */
 	public static MessageQueue open(String queueName, boolean createOnFail) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory queueNameMem = NotesStringUtils.toLMBCS(queueName, true);
 
 		IntByReference retQueue = new IntByReference();
-		short result = notesAPI.MQOpen(queueNameMem, createOnFail ? NotesCAPI.MQ_OPEN_CREATE : 0, retQueue);
+		short result = NotesNativeAPI.get().MQOpen(queueNameMem, createOnFail ? NotesConstants.MQ_OPEN_CREATE : 0, retQueue);
 		NotesErrorUtils.checkResult(result);
 
 		MessageQueue queue = new MessageQueue(queueName, retQueue.getValue());
@@ -164,12 +163,12 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * <br>
 	 * Note: MQScan locks out all other message queue function calls until it completes.
 
-	 * @param buffer buffer to be used to read messages, max size is {@link NotesCAPI#MQ_MAX_MSGSIZE} (65326 bytes)
+	 * @param buffer buffer to be used to read messages, max size is {@link NotesConstants#MQ_MAX_MSGSIZE} (65326 bytes)
 	 * @param callback callback to be called for each message; if null, we dequeue the a message and return it in the specified buffer
 	 * @return The number of bytes written to the buffer (important if <code>callback</code> has been set to null)
 	 */
-	public int scan(byte[] buffer, final IMQCallback callback) {
-		return scan(buffer, 0, buffer.length, callback);
+	public int scan(Memory buffer, final IMQCallback callback) {
+		return scan(buffer, 0, (int) buffer.size(), callback);
 	}
 
 	/**
@@ -184,28 +183,24 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * <br>
 	 * Note: MQScan locks out all other message queue function calls until it completes.
 
-	 * @param buffer buffer to be used to read messages, max size is {@link NotesCAPI#MQ_MAX_MSGSIZE} (65326 bytes)
+	 * @param buffer buffer to be used to read messages, max size is {@link NotesConstants#MQ_MAX_MSGSIZE} (65326 bytes)
 	 * @param offset the offset in the buffer where to start writing the message
 	 * @param length the max length of the message in the buffer
 	 * @param callback callback to be called for each message; if null, we dequeue the a message and return it in the specified buffer
 	 * @return The number of bytes written to the buffer (important if <code>callback</code> has been set to null)
 	 */
-	public int scan(final byte[] buffer, int offset, int length, final IMQCallback callback) {
+	public int scan(final Memory buffer, int offset, int length, final IMQCallback callback) {
 		checkHandle();
 		if (buffer!=null && length==0) {
 			throw new IllegalArgumentException("Buffer cannot be empty");
 		}
-		else if (buffer!=null && length > NotesCAPI.MQ_MAX_MSGSIZE) {
-			throw new IllegalArgumentException("Max size for the buffer is "+NotesCAPI.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
+		else if (buffer!=null && length > NotesConstants.MQ_MAX_MSGSIZE) {
+			throw new IllegalArgumentException("Max size for the buffer is "+NotesConstants.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
 		}
 
-		final ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, offset, length);
-
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		final NotesCAPI.MQScanCallback cCallback;
-		if (notesAPI instanceof WinNotesCAPI) {
-			cCallback = new WinNotesCAPI.MQScanCallbackWin() {
+		final NotesCallbacks.MQScanCallback cCallback;
+		if (PlatformUtils.isWindows()) {
+			cCallback = new WinNotesCallbacks.MQScanCallbackWin() {
 
 				@Override
 				public short invoke(Pointer pBuffer, short length, short priority, Pointer ctx) {
@@ -232,7 +227,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 			};
 		}
 		else {
-			cCallback = new NotesCAPI.MQScanCallback() {
+			cCallback = new NotesCallbacks.MQScanCallback() {
 
 				@Override
 				public short invoke(Pointer pBuffer, short length, short priority, Pointer ctx) {
@@ -267,7 +262,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 
 				@Override
 				public Short run() throws Exception {
-					return notesAPI.MQScan(m_queue, byteBuffer, (short) (buffer.length & 0xffff), 0, cCallback, null, retMsgLength);
+					return NotesNativeAPI.get().MQScan(m_queue, buffer, (short) (buffer.size() & 0xffff), 0, cCallback, null, retMsgLength);
 				}
 			});
 		} catch (PrivilegedActionException e) {
@@ -288,8 +283,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 	public void putQuitMsg() {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		notesAPI.MQPutQuitMsg(m_queue);
+		NotesNativeAPI.get().MQPutQuitMsg(m_queue);
 	}
 
 	/**
@@ -300,25 +294,22 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * If the queue is full or in a QUIT state, the message will not be put in the queue, and
 	 * the function will return an appropriate error code.
 	 * 
-	 * @param buffer buffer containing the message.  Maximum buffer length is {@link NotesCAPI#MQ_MAX_MSGSIZE} (65326 bytes)
+	 * @param buffer buffer containing the message.  Maximum buffer length is {@link NotesConstants#MQ_MAX_MSGSIZE} (65326 bytes)
 	 * @param priority priority
 	 * @param offset offset in the buffer where the message starts
 	 * @param length lengths of the message in the buffer
 	 */
-	public void put(byte[] buffer, int priority, int offset, int length) {
+	public void put(Memory buffer, int priority, int offset, int length) {
 		checkHandle();
 
 		if (priority<0 || priority>65535)
 			throw new IllegalArgumentException("Priority must be between 0 and 65535 (WORD datatype in C API)");
 			
-		if (length > NotesCAPI.MQ_MAX_MSGSIZE) {
-			throw new IllegalArgumentException("Max size for the buffer is "+NotesCAPI.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
+		if (length > NotesConstants.MQ_MAX_MSGSIZE) {
+			throw new IllegalArgumentException("Max size for the buffer is "+NotesConstants.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
 		}
 
-		ByteBuffer byteBuf = ByteBuffer.wrap(buffer, offset, length);
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		short result = notesAPI.MQPut(m_queue, (short) (priority & 0xffff), byteBuf, (short) (length & 0xffff), 0);
+		short result = NotesNativeAPI.get().MQPut(m_queue, (short) (priority & 0xffff), buffer, (short) (length & 0xffff), 0);
 		NotesErrorUtils.checkResult(result);
 	}
 
@@ -330,11 +321,11 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * If the queue is full or in a QUIT state, the message will not be put in the queue, and
 	 * the function will return an appropriate error code.
 	 * 
-	 * @param buffer buffer containing the message.  Maximum buffer length is {@link NotesCAPI#MQ_MAX_MSGSIZE} (65326 bytes)
+	 * @param buffer buffer containing the message.  Maximum buffer length is {@link NotesConstants#MQ_MAX_MSGSIZE} (65326 bytes)
 	 * @param priority priority
 	 */
-	public void put(byte[] buffer, int priority) {
-		put(buffer, priority, 0, buffer.length);
+	public void put(Memory buffer, int priority) {
+		put(buffer, priority, 0, (int) buffer.size());
 	}
 
 	/**
@@ -350,8 +341,8 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @param timeoutMillis if waitForMessage is set to <code>true</code>, the number of milliseconds to wait for a message before timing out. Specify 0 to wait forever. If the message queue goes into a QUIT state before the Timeout expires, MQGet will return immediately.
 	 * @return Number of bytes written to the buffer
 	 */
-	public int get(byte[] buffer, boolean waitForMessage, int timeoutMillis) {
-		return get(buffer, waitForMessage, timeoutMillis, 0, buffer.length);
+	public int get(Memory buffer, boolean waitForMessage, int timeoutMillis) {
+		return get(buffer, waitForMessage, timeoutMillis, 0, (int) buffer.size());
 	}
 
 	/**
@@ -369,20 +360,17 @@ public class MessageQueue implements IRecyclableNotesObject {
 	 * @param length the max length of the message in the buffer
 	 * @return Number of bytes written to the buffer
 	 */
-	public int get(byte[] buffer, boolean waitForMessage, int timeoutMillis, int offset, int length) {
+	public int get(Memory buffer, boolean waitForMessage, int timeoutMillis, int offset, int length) {
 		checkHandle();
 
-		if (length > NotesCAPI.MQ_MAX_MSGSIZE) {
-			throw new IllegalArgumentException("Max size for the buffer is "+NotesCAPI.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
+		if (length > NotesConstants.MQ_MAX_MSGSIZE) {
+			throw new IllegalArgumentException("Max size for the buffer is "+NotesConstants.MQ_MAX_MSGSIZE+" bytes. You specified one with "+length+" bytes.");
 		}
 
-		ByteBuffer byteBuf = ByteBuffer.wrap(buffer, offset, length);
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		ShortByReference retMsgLength = new ShortByReference();
 
-		short result = notesAPI.MQGet(m_queue, byteBuf, (short) (length & 0xffff),
-				waitForMessage ? NotesCAPI.MQ_WAIT_FOR_MSG : 0,
+		short result = NotesNativeAPI.get().MQGet(m_queue, buffer, (short) (length & 0xffff),
+				waitForMessage ? NotesConstants.MQ_WAIT_FOR_MSG : 0,
 						timeoutMillis, retMsgLength);
 		NotesErrorUtils.checkResult(result);
 		return retMsgLength.getValue();
@@ -390,8 +378,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 
 	public boolean isQuitPending() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		boolean quitPending = notesAPI.MQIsQuitPending(m_queue);
+		boolean quitPending = NotesNativeAPI.get().MQIsQuitPending(m_queue);
 		return quitPending;
 	}
 
@@ -429,8 +416,7 @@ public class MessageQueue implements IRecyclableNotesObject {
 		if (isRecycled())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		short result = notesAPI.MQClose(m_queue, 0);
+		short result = NotesNativeAPI.get().MQClose(m_queue, 0);
 		NotesErrorUtils.checkResult(result);
 		NotesGC.__objectBeeingBeRecycled(MessageQueue.class, this);
 		m_queue = 0;

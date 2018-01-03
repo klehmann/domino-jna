@@ -7,9 +7,12 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -24,9 +27,9 @@ public class ECL {
 
 	/** Types of ECL settings */
 	public static enum ECLType {
-		Lotusscript((short) NotesCAPI.ECL_TYPE_LOTUS_SCRIPT),
-		JavaApplets((short) NotesCAPI.ECL_TYPE_JAVA_APPLET),
-		Javascript((short) NotesCAPI.ECL_TYPE_JAVASCRIPT);
+		Lotusscript((short) NotesConstants.ECL_TYPE_LOTUS_SCRIPT),
+		JavaApplets((short) NotesConstants.ECL_TYPE_JAVA_APPLET),
+		Javascript((short) NotesConstants.ECL_TYPE_JAVASCRIPT);
 	
 		private short m_type;
 		
@@ -110,40 +113,38 @@ public class ECL {
 		ShortByReference retwCapabilities = new ShortByReference();
 		ShortByReference retwCapabilities2 = new ShortByReference();
 		IntByReference retfUserCanModifyECL = new IntByReference();
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
+				
 		if (m_namesList!=null) {
 			Pointer pNamesList;
 			long handle64=0;
 			int handle32=0;
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				handle64 = m_namesList.getHandle64();
 				if (handle64==0)
 					throw new IllegalStateException("Names list already recycled");
 				
-				pNamesList = notesAPI.b64_OSLockObject(handle64);
+				pNamesList = NotesNativeAPI64.get().OSLockObject(handle64);
 			}
 			else {
 				handle32 = m_namesList.getHandle32();
 				if (handle32==0)
 					throw new IllegalStateException("Names list already recycled");
 				
-				pNamesList = notesAPI.b32_OSLockObject(handle32);
+				pNamesList = NotesNativeAPI32.get().OSLockObject(handle32);
 			}
 			try {
-				short result = notesAPI.ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities2, retwCapabilities2, retfUserCanModifyECL);
+				short result = NotesNativeAPI.get().ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities2, retwCapabilities2, retfUserCanModifyECL);
 				NotesErrorUtils.checkResult(result);
 			}
 			finally {
-				if (NotesJNAContext.is64Bit()) {
+				if (PlatformUtils.is64Bit()) {
 					if (handle64!=0)
-						notesAPI.b64_OSUnlockObject(handle64);
+						NotesNativeAPI64.get().OSUnlockObject(handle64);
 				}
 				else {
 					if (handle32!=0)
-						notesAPI.b32_OSUnlockObject(handle32);
+						NotesNativeAPI32.get().OSUnlockObject(handle32);
 				}
 			}
 		}
@@ -152,23 +153,23 @@ public class ECL {
 			Pointer pNamesList=null;
 			
 			try {
-				if (NotesJNAContext.is64Bit()) {
-					pNamesList = notesAPI.b64_OSLockObject(namesList.getHandle64());
+				if (PlatformUtils.is64Bit()) {
+					pNamesList = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
 				}
 				else {
-					pNamesList = notesAPI.b32_OSLockObject(namesList.getHandle32());
+					pNamesList = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
 				}
 				
-				short result = notesAPI.ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities, retwCapabilities2, retfUserCanModifyECL);
+				short result = NotesNativeAPI.get().ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities, retwCapabilities2, retfUserCanModifyECL);
 				NotesErrorUtils.checkResult(result);
 			}
 			finally {
 				if (pNamesList!=null) {
-					if (NotesJNAContext.is64Bit()) {
-						notesAPI.b64_OSUnlockObject(namesList.getHandle64());
+					if (PlatformUtils.is64Bit()) {
+						NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
 					}
 					else {
-						notesAPI.b32_OSUnlockObject(namesList.getHandle32());
+						NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
 					}
 				}
 				
@@ -255,8 +256,6 @@ public class ECL {
 		if (note!=null && note.isRecycled())
 			throw new NotesError(0, "Note already recycled");
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		ShortByReference retwCapabilities = new ShortByReference();
 		ShortByReference retwCapabilities2 = new ShortByReference();
 
@@ -265,31 +264,31 @@ public class ECL {
 		
 		short result;
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethCESCTX = new LongByReference();
 			if (note!=null) {
-				result = notesAPI.b64_CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);
+				result = NotesNativeAPI64.get().CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);
 			}
 			else {
-				result = notesAPI.b64_CESGetNoSigCTX(rethCESCTX);
+				result = NotesNativeAPI64.get().CESGetNoSigCTX(rethCESCTX);
 			}
 			NotesErrorUtils.checkResult(result);				
 
-			result = notesAPI.b64_ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+			result = NotesNativeAPI64.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
 					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
 			IntByReference rethCESCTX = new IntByReference();
 			if (note!=null) {
-				result = notesAPI.b32_CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);				
+				result = NotesNativeAPI32.get().CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);				
 			}
 			else {
-				result = notesAPI.b32_CESGetNoSigCTX(rethCESCTX);
+				result = NotesNativeAPI32.get().CESGetNoSigCTX(rethCESCTX);
 			}
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b32_ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+			result = NotesNativeAPI32.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
 					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
 			NotesErrorUtils.checkResult(result);
 		}
@@ -309,54 +308,54 @@ public class ECL {
 	 */
 	public static enum ECLCapability {
 		/** Access files (read/write/export/import)*/
-		AccessFiles(NotesCAPI.ECL_FLAG_FILES, false),
+		AccessFiles(NotesConstants.ECL_FLAG_FILES, false),
 		
 		/** Access current db's docs/db */
-		AccessCurrentDatabase(NotesCAPI.ECL_FLAG_DOCS_DBS, false),
+		AccessCurrentDatabase(NotesConstants.ECL_FLAG_DOCS_DBS, false),
 		
 		/** Access environ vars (get/set) */
-		AccessEnvironmentVars(NotesCAPI.ECL_FLAG_ENVIRON, false),
+		AccessEnvironmentVars(NotesConstants.ECL_FLAG_ENVIRON, false),
 		
 		/** Access non-notes dbs (@DB with non "","Notes" first arg) */
-		AccessNonNotesDatabases(NotesCAPI.ECL_FLAG_EXTERN_DBS, false),
+		AccessNonNotesDatabases(NotesConstants.ECL_FLAG_EXTERN_DBS, false),
 		
 		/** Access "code" in external systems (LS, DLLS, DDE) */
-		AccessExternalSystems(NotesCAPI.ECL_FLAG_EXTERN_CODE, false),
+		AccessExternalSystems(NotesConstants.ECL_FLAG_EXTERN_CODE, false),
 		
 		/** Access external programs (OLE/SendMsg/Launch) */
-		AccessExternalPrograms(NotesCAPI.ECL_FLAG_EXTERN_PROGRAMS, false),
+		AccessExternalPrograms(NotesConstants.ECL_FLAG_EXTERN_PROGRAMS, false),
 		
 		/** Send mail (@MailSend) */
-		SendMail(NotesCAPI.ECL_FLAG_SEND_MAIL, false),
+		SendMail(NotesConstants.ECL_FLAG_SEND_MAIL, false),
 		
 		/** Access ECL */
-		AccessECL(NotesCAPI.ECL_FLAG_ECL, false),
+		AccessECL(NotesConstants.ECL_FLAG_ECL, false),
 		
 		/** Read access to other databases */
-		ReadAccessOtherDatabases(NotesCAPI.ECL_FLAG_READ_OTHER_DBS, false),
+		ReadAccessOtherDatabases(NotesConstants.ECL_FLAG_READ_OTHER_DBS, false),
 		
 		/** Write access to other databases */
-		WriteAccessOtherDatabases(NotesCAPI.ECL_FLAG_WRITE_OTHER_DBS, false),
+		WriteAccessOtherDatabases(NotesConstants.ECL_FLAG_WRITE_OTHER_DBS, false),
 		
 		/** Ability to export data (copy/print, etc) */
-		ExportData(NotesCAPI.ECL_FLAG_EXPORT_DATA, false),
+		ExportData(NotesConstants.ECL_FLAG_EXPORT_DATA, false),
 		
 		//extended flags
 		
 		/** Access network programatically */
-		AccessNetwork(NotesCAPI.ECL_FLAG_NETWORK, true),
+		AccessNetwork(NotesConstants.ECL_FLAG_NETWORK, true),
 		
 		/** Property Broker Get */
-		PropertyBrokerGet(NotesCAPI.ECL_FLAG_PROPERTY_GET, true),
+		PropertyBrokerGet(NotesConstants.ECL_FLAG_PROPERTY_GET, true),
 		
 		/** Property Broker Put */
-		PropertyBrokerPut(NotesCAPI.ECL_FLAG_PROPERTY_PUT, true),
+		PropertyBrokerPut(NotesConstants.ECL_FLAG_PROPERTY_PUT, true),
 		
 		/** Widget configuration */
-		WidgetConfiguration(NotesCAPI.ECL_FLAG_WIDGETS, true),
+		WidgetConfiguration(NotesConstants.ECL_FLAG_WIDGETS, true),
 		
 		/** access to load Java */
-		LoadJava(NotesCAPI.ECL_FLAG_LOADJAVA, true),
+		LoadJava(NotesConstants.ECL_FLAG_LOADJAVA, true),
 		
 		//special flag
 		ModifyECL(Integer.MAX_VALUE);

@@ -22,6 +22,7 @@ import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget.DataToRead;
+import com.mindoo.domino.jna.sync.ISyncTarget.TargetResult;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 
 /**
@@ -41,6 +42,8 @@ public class SyncUtil {
 	 * @return result statistics
 	 */
 	public static SyncResult sync(final NotesDatabase dbSource, String selectionFormula, final ISyncTarget target) {
+		long t0=System.currentTimeMillis();
+		
 		String dbReplicaId = dbSource.getReplicaID();
 		String lastDbReplicaId = target.getLastSyncDbReplicaId();
 		//check if replica has changed; in this case, all existing target data needs to be removed
@@ -175,7 +178,11 @@ public class SyncUtil {
 					if (unidsToTransfer.isEmpty() && purgeInTarget.isEmpty()) {
 						//nothing to do
 						target.endingSync(ctx, selectionFormula, dbInstanceId, sourceOIDSearchEndDate);
-						return new SyncResult(sourceOIDsByUNID.size(), 0, 0);
+						long t1=System.currentTimeMillis();
+						return new SyncResult((int) (t1-t0), isWipeReqired, selectionFormulaHasChanged,
+								null, sourceOIDSearchEndDate,
+								0, 0, 0,
+								sourceOIDsByUNID.size(), 0, 0);
 					}
 					
 					if (!unidsToTransfer.isEmpty()) {
@@ -217,6 +224,10 @@ public class SyncUtil {
 				searchFlags.add(Search.SUMMARY);
 			}
 			
+			final int[] addedToTarget = new int[1];
+			final int[] updatedInTarget = new int[1];
+			final int[] removedFromTarget = new int[1];
+			
 			final int[] notesMatchingFormula = new int[1];
 			final int[] notesNotMatchingFormula = new int[1];
 			final int[] notesDeleted = new int[1];
@@ -224,7 +235,13 @@ public class SyncUtil {
 			if (!purgeInTarget.isEmpty()) {
 				//purge entries from target, when they no longer match the changed formula
 				for (Entry<String,NotesOriginatorIdData> currEntry : purgeInTarget.entrySet()) {
-					target.noteChangedNotMatchingFormula(ctx, currEntry.getValue());
+					TargetResult tResult = target.noteChangedNotMatchingFormula(ctx, currEntry.getValue());
+					if (tResult==TargetResult.Added)
+						addedToTarget[0]++;
+					else if (tResult==TargetResult.Removed)
+						removedFromTarget[0]++;
+					else if (tResult==TargetResult.Updated)
+						updatedInTarget[0]++;
 				}
 			}
 			
@@ -260,7 +277,14 @@ public class SyncUtil {
 							}
 						}
 						
-						target.noteChangedMatchingFormula(ctx, oidData, summaryBufferData, note);
+						TargetResult tResult = target.noteChangedMatchingFormula(ctx, oidData, summaryBufferData, note);
+						if (tResult==TargetResult.Added)
+							addedToTarget[0]++;
+						else if (tResult==TargetResult.Removed)
+							removedFromTarget[0]++;
+						else if (tResult==TargetResult.Updated)
+							updatedInTarget[0]++;
+						
 						notesMatchingFormula[0]++;
 						
 						if (note!=null) {
@@ -277,7 +301,14 @@ public class SyncUtil {
 						
 						NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
 						
-						target.noteChangedNotMatchingFormula(ctx, oidData);
+						TargetResult tResult = target.noteChangedNotMatchingFormula(ctx, oidData);
+						if (tResult==TargetResult.Added)
+							addedToTarget[0]++;
+						else if (tResult==TargetResult.Removed)
+							removedFromTarget[0]++;
+						else if (tResult==TargetResult.Updated)
+							updatedInTarget[0]++;
+						
 						notesNotMatchingFormula[0]++;
 						return Action.Continue;
 					}
@@ -289,7 +320,14 @@ public class SyncUtil {
 						
 						NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
 						
-						target.noteDeleted(ctx, oidData);
+						TargetResult tResult = target.noteDeleted(ctx, oidData);
+						if (tResult==TargetResult.Added)
+							addedToTarget[0]++;
+						else if (tResult==TargetResult.Removed)
+							removedFromTarget[0]++;
+						else if (tResult==TargetResult.Updated)
+							updatedInTarget[0]++;
+						
 						notesDeleted[0]++;
 						return Action.Continue;
 					}
@@ -301,7 +339,10 @@ public class SyncUtil {
 			
 			target.endingSync(ctx, selectionFormula, dbInstanceId, startDateForNextSync);
 			
-			return new SyncResult(notesMatchingFormula[0], notesNotMatchingFormula[0], notesDeleted[0]);
+			long t1=System.currentTimeMillis();
+			return new SyncResult((int) (t1-t0), isWipeReqired, selectionFormulaHasChanged, sinceDateForSearch, startDateForNextSync,
+					addedToTarget[0], updatedInTarget[0], removedFromTarget[0],
+					notesMatchingFormula[0], notesNotMatchingFormula[0], notesDeleted[0]);
 		}
 		catch (Throwable t) {
 			target.log(Level.SEVERE, "Exception occurred during sync operation", t);

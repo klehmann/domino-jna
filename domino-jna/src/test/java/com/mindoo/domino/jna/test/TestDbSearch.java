@@ -227,7 +227,7 @@ public class TestDbSearch extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				String server = "";
 				String directory = "";
-				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
+				//return any NSF type (NS*) and directories; not recursive, since NotesConstants.FILE_RECURSE is not set
 				EnumSet<FileType> fileTypes = EnumSet.of(FileType.DBANY, FileType.DIRS);
 				
 				System.out.println("Searching for fakenames database in local directory");
@@ -265,7 +265,7 @@ public class TestDbSearch extends BaseJNATestClass {
 
 				String server = "";
 				String directory = "";
-				//return any NSF type (NS*) and directories; not recursive, since NotesCAPI.FILE_RECURSE is not set
+				//return any NSF type (NS*) and directories; not recursive, since NotesConstants.FILE_RECURSE is not set
 				EnumSet<FileType> fileTypes = EnumSet.of(FileType.DBANY, FileType.DIRS);
 				
 				//check if our local fakenames database is in the returned list

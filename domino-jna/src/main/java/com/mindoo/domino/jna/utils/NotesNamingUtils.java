@@ -12,15 +12,15 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.MacNotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
-import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -97,13 +97,12 @@ public class NotesNamingUtils {
 			return abbrName;
 		}
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
-		Memory outNameMem = new Memory(NotesCAPI.MAXUSERNAME);
+		Memory outNameMem = new Memory(NotesConstants.MAXUSERNAME);
 		ShortByReference outLength = new ShortByReference();
 		
-		short result = notesAPI.DNCanonicalize(0, templateNameMem, inNameMem, outNameMem, NotesCAPI.MAXUSERNAME, outLength);
+		short result = NotesNativeAPI.get().DNCanonicalize(0, templateNameMem, inNameMem, outNameMem, NotesConstants.MAXUSERNAME, outLength);
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
@@ -224,13 +223,12 @@ public class NotesNamingUtils {
 			return abbrName;
 		}
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory templateNameMem = templateName==null || templateName.length()==0 ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
-		Memory outNameMem = new Memory(NotesCAPI.MAXUSERNAME);
+		Memory outNameMem = new Memory(NotesConstants.MAXUSERNAME);
 		ShortByReference outLength = new ShortByReference();
 		
-		short result = notesAPI.DNAbbreviate(0, templateNameMem, inNameMem, outNameMem, NotesCAPI.MAXUSERNAME, outLength);
+		short result = NotesNativeAPI.get().DNAbbreviate(0, templateNameMem, inNameMem, outNameMem, NotesConstants.MAXUSERNAME, outLength);
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
@@ -276,33 +274,32 @@ public class NotesNamingUtils {
 		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 		storeAsUserNamesList(names, bOut);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			throw new IllegalStateException("Only supported for 32 bit");
 		}
 		
 		Memory namesListMem;
-		if (notesAPI instanceof WinNotesCAPI) {
-			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize32);
+		if (PlatformUtils.isWindows()) {
+			namesListMem = new Memory(NotesConstants.winNamesListHeaderSize32);
 			WinNotesNamesListHeader32Struct namesListHeader = WinNotesNamesListHeader32Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 		else {
-			namesListMem = new Memory(NotesCAPI.namesListHeaderSize32);
+			namesListMem = new Memory(NotesConstants.namesListHeaderSize32);
 			NotesNamesListHeader32Struct namesListHeader = NotesNamesListHeader32Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 		
 		IntByReference retHandle = new IntByReference();
-		short result = notesAPI.b32_OSMemAlloc((short) 0, NotesCAPI.namesListHeaderSize32 + bOut.size(), retHandle);
+		short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, NotesConstants.namesListHeaderSize32 + bOut.size(), retHandle);
 		NotesErrorUtils.checkResult(result);
 		
 		final int retHandleAsInt = retHandle.getValue();
 		
 		//write the data
-		Pointer ptr = notesAPI.b32_OSLockObject(retHandleAsInt);
+		Pointer ptr = NotesNativeAPI32.get().OSLockObject(retHandleAsInt);
 		try {
 			byte[] namesListByteArr = namesListMem.getByteArray(0, (int) namesListMem.size());
 			ptr.write(0, namesListByteArr, 0, namesListByteArr.length);
@@ -311,7 +308,7 @@ public class NotesNamingUtils {
 			ptr.write(namesListByteArr.length, namesDataArr, 0, namesDataArr.length);
 		}
 		finally {
-			notesAPI.b32_OSUnlockObject(retHandleAsInt);
+			NotesNativeAPI32.get().OSUnlockObject(retHandleAsInt);
 		}
 
 		return retHandleAsInt;
@@ -328,39 +325,38 @@ public class NotesNamingUtils {
 		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 		storeAsUserNamesList(names, bOut);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (!NotesJNAContext.is64Bit()) {
+		if (!PlatformUtils.is64Bit()) {
 			throw new IllegalStateException("Only supported for 64 bit");
 		}
 		
 		Memory namesListMem;
-		if (notesAPI instanceof WinNotesCAPI) {
-			namesListMem = new Memory(NotesCAPI.winNamesListHeaderSize64);
+		if (PlatformUtils.isWindows()) {
+			namesListMem = new Memory(NotesConstants.winNamesListHeaderSize64);
 			WinNotesNamesListHeader64Struct namesListHeader = WinNotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
-		else if (notesAPI instanceof MacNotesCAPI) {
-			namesListMem = new Memory(NotesCAPI.macNamesListHeaderSize64);
+		else if (PlatformUtils.isMac()) {
+			namesListMem = new Memory(NotesConstants.macNamesListHeaderSize64);
 			MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 		else {
-			namesListMem = new Memory(NotesCAPI.linuxNamesListHeaderSize64);
+			namesListMem = new Memory(NotesConstants.linuxNamesListHeaderSize64);
 			LinuxNotesNamesListHeader64Struct namesListHeader = LinuxNotesNamesListHeader64Struct.newInstance(namesListMem);
 			namesListHeader.NumNames = (short) (names.size() & 0xffff);
 			namesListHeader.write();
 		}
 
 		LongByReference retHandle = new LongByReference();
-		short result = notesAPI.b64_OSMemAlloc((short) 0, (int) namesListMem.size() + bOut.size(), retHandle);
+		short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, (int) namesListMem.size() + bOut.size(), retHandle);
 		NotesErrorUtils.checkResult(result);
 		
 		long retHandleAsLong = retHandle.getValue();
 		
 		//write the data
-		Pointer ptr = notesAPI.b64_OSLockObject(retHandleAsLong);
+		Pointer ptr = NotesNativeAPI64.get().OSLockObject(retHandleAsLong);
 		try {
 			byte[] namesListByteArr = namesListMem.getByteArray(0, (int) namesListMem.size());
 			ptr.write(0, namesListByteArr, 0, namesListByteArr.length);
@@ -369,7 +365,7 @@ public class NotesNamingUtils {
 			ptr.write(namesListByteArr.length, namesDataArr, 0, namesDataArr.length);
 		}
 		finally {
-			notesAPI.b64_OSUnlockObject(retHandleAsLong);
+			NotesNativeAPI64.get().OSUnlockObject(retHandleAsLong);
 		}
 		
 		return retHandleAsLong;
@@ -382,7 +378,7 @@ public class NotesNamingUtils {
 	 * @return names list
 	 */
 	public static NotesNamesList writeNewNamesList(List<String> names) {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			long handle64 = b64_writeUserNamesList(names);
 			NotesNamesList namesList = new NotesNamesList(handle64);
 			NotesGC.__memoryAllocated(namesList);
@@ -404,15 +400,17 @@ public class NotesNamingUtils {
 	 * @return names list
 	 */
 	public static NotesNamesList buildNamesList(String userName) {
+		if (userName==null)
+			throw new NullPointerException("Name cannot be null");
+		
 		//make sure that username is canonical
 		userName = toCanonicalName(userName);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory userNameLMBCS = NotesStringUtils.toLMBCS(userName, true);
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNamesList = new LongByReference();
-			short result = notesAPI.b64_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+			short result = NotesNativeAPI64.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
 			NotesErrorUtils.checkResult(result);
 			long hUserNamesList64 = rethNamesList.getValue();
 			
@@ -422,7 +420,7 @@ public class NotesNamingUtils {
 		}
 		else {
 			IntByReference rethNamesList = new IntByReference();
-			short result = notesAPI.b32_NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+			short result = NotesNativeAPI32.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
 			NotesErrorUtils.checkResult(result);
 			int hUserNamesList32 = rethNamesList.getValue();
 			
@@ -490,8 +488,6 @@ public class NotesNamingUtils {
 		}
 		
 		short bitMaskAsShort = (short) (bitMask & 0xffff);
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		/*Use different header implementations based on architecture, because we have
 		//different alignments and data types:
@@ -509,18 +505,18 @@ public class NotesNamingUtils {
 			} NAMES_LIST;
 		*/
 		
-		if (NotesJNAContext.is64Bit()) {
-			Pointer namesListBufferPtr = notesAPI.b64_OSLockObject(namesList.getHandle64());
+		if (PlatformUtils.is64Bit()) {
+			Pointer namesListBufferPtr = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
 			
 			try {
-				if (notesAPI instanceof WinNotesCAPI) {
+				if (PlatformUtils.isWindows()) {
 					WinNotesNamesListHeader64Struct namesListHeader = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					namesListHeader.Authenticated = bitMask;
 					namesListHeader.write();
 					namesListHeader.read();
 				}
-				else if (notesAPI instanceof MacNotesCAPI) {
+				else if (PlatformUtils.isMac()) {
 					MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 
@@ -539,15 +535,15 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				notesAPI.b64_OSUnlockObject(namesList.getHandle64());
+				NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
 			}
 		}
 		else {
-			Pointer namesListBufferPtr = notesAPI.b32_OSLockObject(namesList.getHandle32());
+			Pointer namesListBufferPtr = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
 			
 			try {
 				//setting authenticated flag for the user is required when running on the server
-				if (notesAPI instanceof WinNotesCAPI) {
+				if (PlatformUtils.isWindows()) {
 					WinNotesNamesListHeader32Struct namesListHeader = WinNotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 					namesListHeader.read();
 					namesListHeader.Authenticated = bitMask;
@@ -563,8 +559,91 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				notesAPI.b32_OSUnlockObject(namesList.getHandle32());
+				NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
 			}
 		}
+	}
+	
+	/**
+	 * Reads which privileges have been set in the names list by method {@link #setPrivileges(NotesNamesList, EnumSet)}
+	 * 
+	 * @param namesList names list
+	 * @return privileges
+	 */
+	public static EnumSet<Privileges> getPrivileges(NotesNamesList namesList) {
+		/*Use different header implementations based on architecture, because we have
+		//different alignments and data types:
+
+		typedef struct {
+			WORD		NumNames;
+			LICENSEID	License;
+											
+
+			#if defined(UNIX) || defined(OS2_2x) || defined(W32)
+			DWORD		Authenticated;
+			#else							
+			WORD		Authenticated;
+			#endif
+			} NAMES_LIST;
+		*/
+		
+		int authenticated;
+		
+		if (PlatformUtils.is64Bit()) {
+			Pointer namesListBufferPtr = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
+			
+			try {
+				if (PlatformUtils.isWindows()) {
+					WinNotesNamesListHeader64Struct namesListHeader = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+					authenticated = namesListHeader.Authenticated;
+				}
+				else if (PlatformUtils.isMac()) {
+					MacNotesNamesListHeader64Struct namesListHeader = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+
+					authenticated = namesListHeader.Authenticated;
+				}
+				else {
+					LinuxNotesNamesListHeader64Struct namesListHeader = LinuxNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+					
+					//setting authenticated flag for the user is required when running on the server
+					authenticated = namesListHeader.Authenticated;
+				}
+			}
+			finally {
+				NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
+			}
+		}
+		else {
+			Pointer namesListBufferPtr = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
+			
+			try {
+				//setting authenticated flag for the user is required when running on the server
+				if (PlatformUtils.isWindows()) {
+					WinNotesNamesListHeader32Struct namesListHeader = WinNotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+					authenticated = namesListHeader.Authenticated;
+				}
+				else {
+					NotesNamesListHeader32Struct namesListHeader = NotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
+					namesListHeader.read();
+					authenticated = namesListHeader.Authenticated;
+				}
+			}
+			finally {
+				NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
+			}
+		}
+		
+		EnumSet<Privileges> privileges = EnumSet.noneOf(Privileges.class);
+		
+		for (Privileges currPrivilege : Privileges.values()) {
+			if ((authenticated & currPrivilege.getValue()) == currPrivilege.getValue()) {
+				privileges.add(currPrivilege);
+			}
+		}
+		return privileges;
 	}
 }

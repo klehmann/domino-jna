@@ -8,13 +8,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI.OSSIGBREAKPROC;
-import com.mindoo.domino.jna.internal.NotesCAPI.OSSIGPROGRESSPROC;
-import com.mindoo.domino.jna.internal.NotesCAPI.OSSIGREPLPROC;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks;
 import com.sun.jna.Pointer;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
 
 /**
  * Utility class that uses signal handlers of Domino to stop and get progress information
@@ -26,8 +24,8 @@ public class SignalHandlerUtil {
 	private static final ConcurrentHashMap<Long, IBreakHandler> m_breakHandlerByThread = new ConcurrentHashMap<Long, IBreakHandler>();
 
 	private static volatile boolean m_breakHandlerInstalled = false;
-	private static volatile NotesCAPI.OSSIGBREAKPROC prevBreakProc = null;
-	private static final WinNotesCAPI.OSSIGBREAKPROC breakProcWin = new WinNotesCAPI.OSSIGBREAKPROCWin() {
+	private static volatile NotesCallbacks.OSSIGBREAKPROC prevBreakProc = null;
+	private static final NotesCallbacks.OSSIGBREAKPROC breakProcWin = new WinNotesCallbacks.OSSIGBREAKPROCWin() {
 
 		@Override
 		public short invoke() {
@@ -48,7 +46,7 @@ public class SignalHandlerUtil {
 		}
 		
 	};
-	private static final NotesCAPI.OSSIGBREAKPROC breakProc = new WinNotesCAPI.OSSIGBREAKPROC() {
+	private static final NotesCallbacks.OSSIGBREAKPROC breakProc = new NotesCallbacks.OSSIGBREAKPROC() {
 
 		@Override
 		public short invoke() {
@@ -76,26 +74,23 @@ public class SignalHandlerUtil {
 	 * @return true if there is an active break handler
 	 */
 	public static boolean hasActiveBreakHandler() {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		OSSIGBREAKPROC breakProc = (OSSIGBREAKPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK);
+		NotesCallbacks.OSSIGBREAKPROC breakProc = (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK);
 		return breakProc != null;
 	}
 	
 	public static synchronized void installGlobalBreakHandler() {
 		if (!m_breakHandlerInstalled) {
-			final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 			try {
 				//AccessController call required to prevent SecurityException when running in XPages
-				prevBreakProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGBREAKPROC>() {
+				prevBreakProc = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCallbacks.OSSIGBREAKPROC>() {
 
 					@Override
-					public OSSIGBREAKPROC run() throws Exception {
-						if (notesAPI instanceof WinNotesCAPI) {
-							return (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProcWin);
+					public NotesCallbacks.OSSIGBREAKPROC run() throws Exception {
+						if (PlatformUtils.isWindows()) {
+							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProcWin);
 						}
 						else {
-							return (OSSIGBREAKPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_CHECK_BREAK, breakProc);
+							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProc);
 						}
 					}
 				});
@@ -167,47 +162,46 @@ public class SignalHandlerUtil {
 	 * @param <T> result type
 	 */
 	public static <T> T runWithProgress(Callable<T> callable, final IProgressListener progressHandler) throws Exception {
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		final OSSIGPROGRESSPROC progressProc;
+		final NotesCallbacks.OSSIGPROGRESSPROC progressProc;
 		final Thread callThread = Thread.currentThread();
 
 		//store a previously registered signal handler for this thread:
-		final OSSIGPROGRESSPROC[] prevProc = new OSSIGPROGRESSPROC[1];
+		final NotesCallbacks.OSSIGPROGRESSPROC[] prevProc = new NotesCallbacks.OSSIGPROGRESSPROC[1];
 
-		if (notesAPI instanceof WinNotesCAPI) {
-			progressProc = new WinNotesCAPI.OSSIGPROGRESSPROCWin() {
+		if (PlatformUtils.isWindows()) {
+			progressProc = new WinNotesCallbacks.OSSIGPROGRESSPROCWin() {
 
 				@Override
 				public short invoke(short option, Pointer data1, Pointer data2) {
 					try {
 						if (Thread.currentThread() == callThread) {
-							if (option == NotesCAPI.PROGRESS_SIGNAL_BEGIN) {
+							if (option == NotesConstants.PROGRESS_SIGNAL_BEGIN) {
 								progressHandler.begin();
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_END) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_END) {
 								progressHandler.end();
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETRANGE) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETRANGE) {
 								long range = Pointer.nativeValue(data1);
 								progressHandler.setRange(range);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETTEXT) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETTEXT) {
 								String str = NotesStringUtils.fromLMBCS(data1, -1);
 								progressHandler.setText(str);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETPOS) {
 								long pos = Pointer.nativeValue(data1);
 								progressHandler.setPos(pos);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_DELTAPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_DELTAPOS) {
 								long deltapos = Pointer.nativeValue(data1);
 								progressHandler.setDeltaPos(deltapos);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETBYTERANGE) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETBYTERANGE) {
 								long totalbytes = Pointer.nativeValue(data1);
 								progressHandler.setByteRange(totalbytes);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETBYTEPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETBYTEPOS) {
 								long bytesDone = Pointer.nativeValue(data1);
 								progressHandler.setBytePos(bytesDone);
 							}
@@ -225,39 +219,39 @@ public class SignalHandlerUtil {
 			};
 		}
 		else {
-			progressProc = new OSSIGPROGRESSPROC() {
+			progressProc = new NotesCallbacks.OSSIGPROGRESSPROC() {
 
 				@Override
 				public short invoke(short option, Pointer data1, Pointer data2) {
 					try {
 						if (Thread.currentThread() == callThread) {
-							if (option == NotesCAPI.PROGRESS_SIGNAL_BEGIN) {
+							if (option == NotesConstants.PROGRESS_SIGNAL_BEGIN) {
 								progressHandler.begin();
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_END) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_END) {
 								progressHandler.end();
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETRANGE) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETRANGE) {
 								long range = Pointer.nativeValue(data1);
 								progressHandler.setRange(range);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETTEXT) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETTEXT) {
 								String str = NotesStringUtils.fromLMBCS(data1, -1);
 								progressHandler.setText(str);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETPOS) {
 								long pos = Pointer.nativeValue(data1);
 								progressHandler.setPos(pos);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_DELTAPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_DELTAPOS) {
 								long deltapos = Pointer.nativeValue(data1);
 								progressHandler.setDeltaPos(deltapos);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETBYTERANGE) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETBYTERANGE) {
 								long totalbytes = Pointer.nativeValue(data1);
 								progressHandler.setByteRange(totalbytes);
 							}
-							else if (option == NotesCAPI.PROGRESS_SIGNAL_SETBYTEPOS) {
+							else if (option == NotesConstants.PROGRESS_SIGNAL_SETBYTEPOS) {
 								long bytesDone = Pointer.nativeValue(data1);
 								progressHandler.setBytePos(bytesDone);
 							}
@@ -281,11 +275,11 @@ public class SignalHandlerUtil {
 			//between setting the new handler and restoring the old one
 			
 			//AccessController call required to prevent SecurityException when running in XPages
-			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGPROGRESSPROC>() {
+			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCallbacks.OSSIGPROGRESSPROC>() {
 
 				@Override
-				public OSSIGPROGRESSPROC run() throws Exception {
-					return (OSSIGPROGRESSPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS, progressProc);
+				public NotesCallbacks.OSSIGPROGRESSPROC run() throws Exception {
+					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, progressProc);
 				}
 			});
 			
@@ -297,15 +291,15 @@ public class SignalHandlerUtil {
 			//since the signal handlers are thread specific)
 			
 			//AccessController call required to prevent SecurityException when running in XPages
-			OSSIGPROGRESSPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGPROGRESSPROC>() {
+			NotesCallbacks.OSSIGPROGRESSPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCallbacks.OSSIGPROGRESSPROC>() {
 
 				@Override
-				public OSSIGPROGRESSPROC run() throws Exception {
-					return (OSSIGPROGRESSPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS);
+				public NotesCallbacks.OSSIGPROGRESSPROC run() throws Exception {
+					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS);
 				}
 			});
 			if (progressProc.equals(currProc)) {
-				notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_PROGRESS, prevProc[0]);
+				NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, prevProc[0]);
 			}
 		}
 	}
@@ -358,64 +352,63 @@ public class SignalHandlerUtil {
 	 */
 	public static <T> T runWithReplicationStateTracking(Callable<T> callable,
 			final IReplicationStateListener replStateHandler) throws Exception {
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		final OSSIGREPLPROC replProc;
+		final NotesCallbacks.OSSIGREPLPROC replProc;
 		final Thread callThread = Thread.currentThread();
 
 		//store a previously registered signal handler for this thread:
-		final OSSIGREPLPROC[] prevProc = new OSSIGREPLPROC[1];
+		final NotesCallbacks.OSSIGREPLPROC[] prevProc = new NotesCallbacks.OSSIGREPLPROC[1];
 
-		if (notesAPI instanceof WinNotesCAPI) {
-			replProc = new WinNotesCAPI.OSSIGREPLPROCWin() {
+		if (PlatformUtils.isWindows()) {
+			replProc = new WinNotesCallbacks.OSSIGREPLPROCWin() {
 
 				@Override
 				public void invoke(short state, Pointer pText1, Pointer pText2) {
 					try {
 						if (Thread.currentThread() == callThread) {
-							if (state == NotesCAPI.REPL_SIGNAL_IDLE) {
+							if (state == NotesConstants.REPL_SIGNAL_IDLE) {
 								replStateHandler.idle();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_PICKSERVER) {
+							else if (state == NotesConstants.REPL_SIGNAL_PICKSERVER) {
 								replStateHandler.pickServer();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_CONNECTING) {
+							else if (state == NotesConstants.REPL_SIGNAL_CONNECTING) {
 								String server = NotesStringUtils.fromLMBCS(pText1, -1);
 								String port = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.connecting(server, port);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SEARCHING) {
+							else if (state == NotesConstants.REPL_SIGNAL_SEARCHING) {
 								String server = NotesStringUtils.fromLMBCS(pText1, -1);
 								String port = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.searching(server, port);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SENDING) {
+							else if (state == NotesConstants.REPL_SIGNAL_SENDING) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.sending(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_RECEIVING) {
+							else if (state == NotesConstants.REPL_SIGNAL_RECEIVING) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.receiving(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SEARCHINGDOCS) {
+							else if (state == NotesConstants.REPL_SIGNAL_SEARCHINGDOCS) {
 								String srcFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								replStateHandler.searchingDocs(srcFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_DONEFILE) {
+							else if (state == NotesConstants.REPL_SIGNAL_DONEFILE) {
 								String localFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String replFileStats = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.doneFile(localFile, replFileStats);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_REDIRECT) {
+							else if (state == NotesConstants.REPL_SIGNAL_REDIRECT) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.redirect(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_BUILDVIEW) {
+							else if (state == NotesConstants.REPL_SIGNAL_BUILDVIEW) {
 								replStateHandler.buildView();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_ABORT) {
+							else if (state == NotesConstants.REPL_SIGNAL_ABORT) {
 								replStateHandler.abort();
 							}
 						}
@@ -430,56 +423,56 @@ public class SignalHandlerUtil {
 			};
 		}
 		else {
-			replProc = new OSSIGREPLPROC() {
+			replProc = new NotesCallbacks.OSSIGREPLPROC() {
 
 				@Override
 				public void invoke(short state, Pointer pText1, Pointer pText2) {
 					try {
 						if (Thread.currentThread() == callThread) {
-							if (state == NotesCAPI.REPL_SIGNAL_IDLE) {
+							if (state == NotesConstants.REPL_SIGNAL_IDLE) {
 								replStateHandler.idle();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_PICKSERVER) {
+							else if (state == NotesConstants.REPL_SIGNAL_PICKSERVER) {
 								replStateHandler.pickServer();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_CONNECTING) {
+							else if (state == NotesConstants.REPL_SIGNAL_CONNECTING) {
 								String server = NotesStringUtils.fromLMBCS(pText1, -1);
 								String port = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.connecting(server, port);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SEARCHING) {
+							else if (state == NotesConstants.REPL_SIGNAL_SEARCHING) {
 								String server = NotesStringUtils.fromLMBCS(pText1, -1);
 								String port = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.searching(server, port);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SENDING) {
+							else if (state == NotesConstants.REPL_SIGNAL_SENDING) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.sending(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_RECEIVING) {
+							else if (state == NotesConstants.REPL_SIGNAL_RECEIVING) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.receiving(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_SEARCHINGDOCS) {
+							else if (state == NotesConstants.REPL_SIGNAL_SEARCHINGDOCS) {
 								String srcFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								replStateHandler.searchingDocs(srcFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_DONEFILE) {
+							else if (state == NotesConstants.REPL_SIGNAL_DONEFILE) {
 								String localFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String replFileStats = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.doneFile(localFile, replFileStats);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_REDIRECT) {
+							else if (state == NotesConstants.REPL_SIGNAL_REDIRECT) {
 								String serverFile = NotesStringUtils.fromLMBCS(pText1, -1);
 								String localFile = NotesStringUtils.fromLMBCS(pText2, -1);
 								replStateHandler.redirect(serverFile, localFile);
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_BUILDVIEW) {
+							else if (state == NotesConstants.REPL_SIGNAL_BUILDVIEW) {
 								replStateHandler.buildView();
 							}
-							else if (state == NotesCAPI.REPL_SIGNAL_ABORT) {
+							else if (state == NotesConstants.REPL_SIGNAL_ABORT) {
 								replStateHandler.abort();
 							}
 						}
@@ -500,11 +493,11 @@ public class SignalHandlerUtil {
 			//between setting the new handler and restoring the old one
 			
 			//AccessController call required to prevent SecurityException when running in XPages
-			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGREPLPROC>() {
+			prevProc[0] = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCallbacks.OSSIGREPLPROC>() {
 
 				@Override
-				public OSSIGREPLPROC run() throws Exception {
-					return (OSSIGREPLPROC) notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_REPL, replProc);
+				public NotesCallbacks.OSSIGREPLPROC run() throws Exception {
+					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_REPL, replProc);
 				}
 			});
 			T result = callable.call();
@@ -515,15 +508,15 @@ public class SignalHandlerUtil {
 			//since the signal handlers are thread specific)
 			
 			//AccessController call required to prevent SecurityException when running in XPages
-			OSSIGREPLPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<OSSIGREPLPROC>() {
+			NotesCallbacks.OSSIGREPLPROC currProc = AccessController.doPrivileged(new PrivilegedExceptionAction<NotesCallbacks.OSSIGREPLPROC>() {
 
 				@Override
-				public OSSIGREPLPROC run() throws Exception {
-					return (OSSIGREPLPROC) notesAPI.OSGetSignalHandler(NotesCAPI.OS_SIGNAL_REPL);
+				public NotesCallbacks.OSSIGREPLPROC run() throws Exception {
+					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_REPL);
 				}
 			});
 			if (replProc.equals(currProc)) {
-				notesAPI.OSSetSignalHandler(NotesCAPI.OS_SIGNAL_REPL, prevProc[0]);
+				NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_REPL, prevProc[0]);
 			}
 		}
 		

@@ -3,7 +3,7 @@ package com.mindoo.domino.jna.constants;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.directory.DirectoryScanner;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * File type flags (used with NSFSearch directory searching, e.g. in {@link DirectoryScanner})
@@ -13,63 +13,63 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum FileType {
 	
 	/** Any file type */
-	ANY(NotesCAPI.FILE_ANY),
+	ANY(NotesConstants.FILE_ANY),
 	
 	/** Starting in V3, any DB that is a candidate for replication */
-	DBREPL(NotesCAPI.FILE_DBREPL),
+	DBREPL(NotesConstants.FILE_DBREPL),
 	
 	/** Databases that can be templates */
-	DBDESIGN(NotesCAPI.FILE_DBDESIGN),
+	DBDESIGN(NotesConstants.FILE_DBDESIGN),
 	
 	/** BOX - Any .BOX (Mail.BOX, SMTP.Box...) */
-	MAILBOX(NotesCAPI.FILE_MAILBOX),
+	MAILBOX(NotesConstants.FILE_MAILBOX),
 	
 	/** NS?, any NSF version */
-	DBANY(NotesCAPI.FILE_DBANY),
+	DBANY(NotesConstants.FILE_DBANY),
 	
 	/** NT?, any NTF version */
-	FTANY(NotesCAPI.FILE_FTANY),
+	FTANY(NotesConstants.FILE_FTANY),
 	
 	/** MDM - modem command file */
-	MDMTYPE(NotesCAPI.FILE_MDMTYPE),
+	MDMTYPE(NotesConstants.FILE_MDMTYPE),
 	
 	/** directories only */
-	DIRSONLY(NotesCAPI.FILE_DIRSONLY),
+	DIRSONLY(NotesConstants.FILE_DIRSONLY),
 	
 	/** VPC - virtual port command file */
-	VPCTYPE(NotesCAPI.FILE_VPCTYPE),
+	VPCTYPE(NotesConstants.FILE_VPCTYPE),
 	
 	/** SCR - comm port script files */
-	SCRTYPE(NotesCAPI.FILE_SCRTYPE),
+	SCRTYPE(NotesConstants.FILE_SCRTYPE),
 	
 	/** ANY Notes database (.NS?, .NT?, .BOX)	*/
-	ANYNOTEFILE(NotesCAPI.FILE_ANYNOTEFILE),
+	ANYNOTEFILE(NotesConstants.FILE_ANYNOTEFILE),
 	
 	/** DTF - Any .DTF. Used for container and sort temp files to give them a more
 	   unique name than .TMP so we can delete *.DTF from the temp directory and
 	   hopefully not blow away other application's temp files. */
-	UNIQUETEMP(NotesCAPI.FILE_UNIQUETEMP),
+	UNIQUETEMP(NotesConstants.FILE_UNIQUETEMP),
 	
 	/** CLN - Any .cln file...multi user cleanup files*/
-	MULTICLN(NotesCAPI.FILE_MULTICLN),
+	MULTICLN(NotesConstants.FILE_MULTICLN),
 	
 	/** any smarticon file *.smi */
-	SMARTI(NotesCAPI.FILE_SMARTI),
+	SMARTI(NotesConstants.FILE_SMARTI),
 	
 	/** File type mask (for FILE_xxx codes above) */
-	TYPEMASK(NotesCAPI.FILE_TYPEMASK),
+	TYPEMASK(NotesConstants.FILE_TYPEMASK),
 	
 	/** List subdirectories as well as normal files */
-	DIRS(NotesCAPI.FILE_DIRS),
+	DIRS(NotesConstants.FILE_DIRS),
 	
 	/** Do NOT return ..'s */
-	NOUPDIRS(NotesCAPI.FILE_NOUPDIRS),
+	NOUPDIRS(NotesConstants.FILE_NOUPDIRS),
 	
 	/** Recurse into subdirectories */
-	RECURSE(NotesCAPI.FILE_RECURSE),
+	RECURSE(NotesConstants.FILE_RECURSE),
 	
 	/** All directories, linked files &amp; directories */
-	LINKSONLY(NotesCAPI.FILE_LINKSONLY);
+	LINKSONLY(NotesConstants.FILE_LINKSONLY);
 
 	private int m_val;
 

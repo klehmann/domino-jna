@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna.constants;
 
 import com.mindoo.domino.jna.NotesCollateDescriptor;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * These are the possible values for the  keytype member of the {@link NotesCollateDescriptor} data structure.<br>
@@ -12,13 +12,13 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum CollateType {
 
 	/** Collate by key in summary buffer (requires key name string) */
-	KEY (NotesCAPI.COLLATE_TYPE_KEY),
+	KEY (NotesConstants.COLLATE_TYPE_KEY),
 	/** Collate by note ID */
-	NOTEID(NotesCAPI.COLLATE_TYPE_NOTEID),
+	NOTEID(NotesConstants.COLLATE_TYPE_NOTEID),
 	/** Collate by "tumbler" summary key (requires key name string) */
-	TUMBLER(NotesCAPI.COLLATE_TYPE_TUMBLER),
+	TUMBLER(NotesConstants.COLLATE_TYPE_TUMBLER),
 	/** Collate by "category" summary key (requires key name string) */
-	CATEGORY(NotesCAPI.COLLATE_TYPE_CATEGORY);
+	CATEGORY(NotesConstants.COLLATE_TYPE_CATEGORY);
 
 	private int m_val;
 	
@@ -42,16 +42,16 @@ public enum CollateType {
 	 * @return collate type
 	 */
 	public static CollateType toType(int value) {
-		if (value == NotesCAPI.COLLATE_TYPE_KEY) {
+		if (value == NotesConstants.COLLATE_TYPE_KEY) {
 			return CollateType.KEY;
 		}
-		else if (value == NotesCAPI.COLLATE_TYPE_NOTEID) {
+		else if (value == NotesConstants.COLLATE_TYPE_NOTEID) {
 			return CollateType.NOTEID;
 		}
-		else if (value == NotesCAPI.COLLATE_TYPE_TUMBLER) {
+		else if (value == NotesConstants.COLLATE_TYPE_TUMBLER) {
 			return CollateType.TUMBLER;
 		}
-		else if (value == NotesCAPI.COLLATE_TYPE_CATEGORY) {
+		else if (value == NotesConstants.COLLATE_TYPE_CATEGORY) {
 			return CollateType.CATEGORY;
 		}
 		else

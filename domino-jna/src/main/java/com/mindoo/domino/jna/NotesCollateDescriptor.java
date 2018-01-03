@@ -2,7 +2,7 @@ package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.constants.CollateType;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Data container for a single sort column of a {@link NotesCollationInfo}
@@ -37,7 +37,7 @@ public class NotesCollateDescriptor {
 	 * @return sorting
 	 */
 	public Direction getDirection() {
-		return (m_flags & NotesCAPI.CDF_M_descending) == NotesCAPI.CDF_M_descending ? Direction.Descending : Direction.Ascending;
+		return (m_flags & NotesConstants.CDF_M_descending) == NotesConstants.CDF_M_descending ? Direction.Descending : Direction.Ascending;
 	}
 	
 	/**
@@ -64,7 +64,7 @@ public class NotesCollateDescriptor {
 	 * @return true to ignore
 	 */
 	public boolean isIgnorePrefixes() {
-		return (m_flags & NotesCAPI.CDF_M_ignoreprefixes) == NotesCAPI.CDF_M_ignoreprefixes;
+		return (m_flags & NotesConstants.CDF_M_ignoreprefixes) == NotesConstants.CDF_M_ignoreprefixes;
 	}
 
 	/**
@@ -73,7 +73,7 @@ public class NotesCollateDescriptor {
 	 * @return true for case-sensitive
 	 */
 	public boolean isCaseSensitiveSort() {
-		return (m_flags & NotesCAPI.CDF_M_casesensitive_in_v5) == NotesCAPI.CDF_M_casesensitive_in_v5;
+		return (m_flags & NotesConstants.CDF_M_casesensitive_in_v5) == NotesConstants.CDF_M_casesensitive_in_v5;
 	}
 	
 	/**
@@ -82,7 +82,7 @@ public class NotesCollateDescriptor {
 	 * @return true for accent-sensitive
 	 */
 	public boolean isAccentSensitiveSort() {
-		return (m_flags & NotesCAPI.CDF_M_accentsensitive_in_v5) == NotesCAPI.CDF_M_accentsensitive_in_v5;
+		return (m_flags & NotesConstants.CDF_M_accentsensitive_in_v5) == NotesConstants.CDF_M_accentsensitive_in_v5;
 	}
 	
 	/**
@@ -91,7 +91,7 @@ public class NotesCollateDescriptor {
 	 * @return true if permuted
 	 */
 	public boolean isPermuted() {
-		return (m_flags & NotesCAPI.CDF_M_permuted) == NotesCAPI.CDF_M_permuted;
+		return (m_flags & NotesConstants.CDF_M_permuted) == NotesConstants.CDF_M_permuted;
 	}
 	
 	/**
@@ -100,7 +100,7 @@ public class NotesCollateDescriptor {
 	 * @return true if pairwise permuted
 	 */
 	public boolean isPermutedPairwise() {
-		return (m_flags & NotesCAPI.CDF_M_permuted_pairwise) == NotesCAPI.CDF_M_permuted_pairwise;
+		return (m_flags & NotesConstants.CDF_M_permuted_pairwise) == NotesConstants.CDF_M_permuted_pairwise;
 	}
 	
 	/**
@@ -109,6 +109,6 @@ public class NotesCollateDescriptor {
 	 * @return true if permuted
 	 */
 	public boolean isFlat() {
-		return (m_flags & NotesCAPI.CDF_M_flat_in_v5) == NotesCAPI.CDF_M_flat_in_v5;
+		return (m_flags & NotesConstants.CDF_M_flat_in_v5) == NotesConstants.CDF_M_flat_in_v5;
 	}
 }

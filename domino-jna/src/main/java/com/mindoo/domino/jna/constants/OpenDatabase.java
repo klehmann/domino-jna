@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Database open options controlling Domino based file locking (scan lock), the removal of deleted note stubs,
@@ -24,7 +24,7 @@ public enum OpenDatabase {
 	 * DBREPLICAINFO.Flag is set, purge documents that have not been modified since the DBREPLICAINFO.Cutoff date.
 	 * This flag will prevent the replicator from opening the specified database.
 	 */
-	PURGE(NotesCAPI.DBOPEN_PURGE),
+	PURGE(NotesConstants.DBOPEN_PURGE),
 	
 	/**
 	 * Force a database fixup, even if the file was properly closed previously. This flag is not
@@ -38,26 +38,26 @@ public enum OpenDatabase {
 	 * NSFDbOpenExtended with {@link #FORCE_FIXUP} will not succeed if db_name specifies a directory.
 	 * This flag will prevent the replicator from opening the specified database.
 	 */
-	FORCE_FIXUP(NotesCAPI.DBOPEN_FORCE_FIXUP),
+	FORCE_FIXUP(NotesConstants.DBOPEN_FORCE_FIXUP),
 	
 	/**
 	 * Scan all notes and all items for validity.<br>
 	 * Note: NSFDbOpenExtended with {@link #FIXUP_FULL_NOTE_SCAN} will not succeed if db_name specifies a directory.
 	 */
-	FIXUP_FULL_NOTE_SCAN(NotesCAPI.DBOPEN_FIXUP_FULL_NOTE_SCAN),
+	FIXUP_FULL_NOTE_SCAN(NotesConstants.DBOPEN_FIXUP_FULL_NOTE_SCAN),
 	
 	/**
 	 * Do not delete bad notes during note scan (skip step 4.3).<br>
 	 * Note: NSFDbOpenExtended with {@link #FIXUP_NO_NOTE_DELETE} will not succeed if db_name specifies a directory.
 	 */
-	FIXUP_NO_NOTE_DELETE(NotesCAPI.DBOPEN_FIXUP_NO_NOTE_DELETE),
+	FIXUP_NO_NOTE_DELETE(NotesConstants.DBOPEN_FIXUP_NO_NOTE_DELETE),
 	
 	/**
 	 * If open fails, failover to another server in the same cluster that has a replica copy of this database.
 	 * If the input server is not a member of a cluster or if the database is not replicated on other
 	 * servers in the cluster, then this flag will have no effect.
 	 */
-	CLUSTER_FAILOVER(NotesCAPI.DBOPEN_CLUSTER_FAILOVER);
+	CLUSTER_FAILOVER(NotesConstants.DBOPEN_CLUSTER_FAILOVER);
 
 	private int m_val;
 

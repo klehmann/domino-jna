@@ -1,9 +1,7 @@
 package com.mindoo.domino.jna.errors;
 
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-
 /**
- * The exception is thrown in {@link NotesJNAContext} when the API is about to be used
+ * The exception is thrown when the API is about to be used
  * on an unsupported platform.
  * 
  * @author Karsten Lehmann

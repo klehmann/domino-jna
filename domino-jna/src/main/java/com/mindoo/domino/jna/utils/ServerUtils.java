@@ -5,9 +5,9 @@ import java.util.List;
 
 import com.mindoo.domino.jna.constants.ClusterLookup;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -52,13 +52,12 @@ public class ServerUtils {
 	public static List<String> getServerClusterMates(String serverName, ClusterLookup lookupMode) {
 		Memory serverNameCanonical = serverName==null ? null : NotesStringUtils.toLMBCS(NotesNamingUtils.toCanonicalName(serverName), true);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference phList = new LongByReference();
 			
-			result = notesAPI.b64_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
+			result = NotesNativeAPI64.get().NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
 			if (result == 2078) // "No cluster mates found"
 				return Collections.emptyList();
 			NotesErrorUtils.checkResult(result);
@@ -67,21 +66,21 @@ public class ServerUtils {
 			if (hList==0)
 				return Collections.emptyList();
 			
-			Pointer pList = notesAPI.b64_OSLockObject(hList);
+			Pointer pList = NotesNativeAPI64.get().OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
-				List clusterMates = ItemDecoder.decodeTextListValue(notesAPI, pList, false);
+				List clusterMates = ItemDecoder.decodeTextListValue(pList, false);
 				return clusterMates;
 			}
 			finally {
-				notesAPI.b64_OSUnlockObject(hList);
-				notesAPI.b64_OSMemFree(hList);
+				NotesNativeAPI64.get().OSUnlockObject(hList);
+				NotesNativeAPI64.get().OSMemFree(hList);
 			}
 		}
 		else {
 			IntByReference phList = new IntByReference();
 			
-			result = notesAPI.b32_NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
+			result = NotesNativeAPI32.get().NSGetServerClusterMates(serverNameCanonical, lookupMode==null ? 0 : lookupMode.getValue(), phList);
 			if (result == 2078) // "No cluster mates found"
 				return Collections.emptyList();
 			NotesErrorUtils.checkResult(result);
@@ -90,15 +89,15 @@ public class ServerUtils {
 			if (hList==0)
 				return Collections.emptyList();
 
-			Pointer pList = notesAPI.b32_OSLockObject(hList);
+			Pointer pList = NotesNativeAPI32.get().OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
-				List clusterMates = ItemDecoder.decodeTextListValue(notesAPI, pList, false);
+				List clusterMates = ItemDecoder.decodeTextListValue(pList, false);
 				return clusterMates;
 			}
 			finally {
-				notesAPI.b32_OSUnlockObject(hList);
-				notesAPI.b32_OSMemFree(hList);
+				NotesNativeAPI32.get().OSUnlockObject(hList);
+				NotesNativeAPI32.get().OSMemFree(hList);
 			}
 		}
 	}

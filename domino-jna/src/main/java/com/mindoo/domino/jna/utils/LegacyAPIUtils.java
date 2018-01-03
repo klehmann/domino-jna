@@ -14,7 +14,6 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 
 import lotus.domino.Database;
@@ -240,13 +239,13 @@ public class LegacyAPIUtils {
 		}
 
 		try {
-			long hList = NotesJNAContext.is64Bit() ? namesList.getHandle64() : namesList.getHandle32();
+			long hList = PlatformUtils.is64Bit() ? namesList.getHandle64() : namesList.getHandle32();
 			final Session session = (Session) createXPageSession.invoke(null, namesList.getNames().get(0), hList, true, false);
 
 			final long[] longHandle = new long[1];
 			final int[] intHandle = new int[1];
 
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				Long oldHandle = (Long) NotesGC.getCustomValue("FakeSessionHandle");
 				if (oldHandle==null) {
 					oldHandle = Long.valueOf(0);

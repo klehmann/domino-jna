@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.constants.Navigate;
-import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
+import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 

@@ -6,8 +6,10 @@ import com.mindoo.domino.jna.NotesUserId;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -51,7 +53,7 @@ public class IDUtils {
 	 */
 	public static NotesUserId getUserIdFromVault(String userName, String password, String serverName) {
 		NotesUserId userId;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethKFC = new LongByReference();
 			_getUserIdFromVault(userName, password, null, rethKFC, null, serverName);
 			userId = new NotesUserId(rethKFC.getValue());
@@ -77,17 +79,15 @@ public class IDUtils {
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
 	private static String _getUserIdFromVault(String userName, String password, String idPath, LongByReference rethKFC64, IntByReference rethKFC32, String serverName) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
 		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
-		Memory serverNameMem = new Memory(NotesCAPI.MAXPATH);
+		Memory serverNameMem = new Memory(NotesConstants.MAXPATH);
 		{
 			Memory serverNameParamMem = NotesStringUtils.toLMBCS(serverName, true);
-			if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesCAPI.MAXPATH)) {
-				throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesCAPI.MAXPATH+" characters)");
+			if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesConstants.MAXPATH)) {
+				throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesConstants.MAXPATH+" characters)");
 			}
 			if (serverNameParamMem!=null) {
 				byte[] serverNameParamArr = serverNameParamMem.getByteArray(0, (int) serverNameParamMem.size());
@@ -99,11 +99,11 @@ public class IDUtils {
 		}
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC64, serverNameMem, 0, (short) 0, null);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC64, serverNameMem, 0, (short) 0, null);
 		}
 		else {
-			result = notesAPI.b32_SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC32, serverNameMem, 0, (short) 0, null);
+			result = NotesNativeAPI32.get().SECidfGet(userNameCanonicalMem, passwordMem, idPathMem, rethKFC32, serverNameMem, 0, (short) 0, null);
 		}
 		NotesErrorUtils.checkResult(result);
 		
@@ -152,7 +152,7 @@ public class IDUtils {
 		IntByReference phKFC32 = null;
 		
 		if (userId!=null) {
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				phKFC64 = new LongByReference();
 				phKFC64.setValue(userId.getHandle64());
 			}
@@ -185,17 +185,15 @@ public class IDUtils {
 		//C API documentation and sample "idvault.c"
 		NotesDatabase anyServerDb = new NotesDatabase(session, serverName, "names.nsf");
 		try {
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-			
 			String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
 			Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
 			Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 			Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
-			Memory serverNameMem = new Memory(NotesCAPI.MAXPATH);
+			Memory serverNameMem = new Memory(NotesConstants.MAXPATH);
 			{
 				Memory serverNameParamMem = NotesStringUtils.toLMBCS(serverName, true);
-				if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesCAPI.MAXPATH)) {
-					throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesCAPI.MAXPATH+" characters)");
+				if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesConstants.MAXPATH)) {
+					throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesConstants.MAXPATH+" characters)");
 				}
 				if (serverNameParamMem!=null) {
 					byte[] serverNameParamArr = serverNameParamMem.getByteArray(0, (int) serverNameParamMem.size());
@@ -207,30 +205,30 @@ public class IDUtils {
 			}
 			
 			short result;
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 			}
 			else {
-				result = notesAPI.b32_SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+				result = NotesNativeAPI32.get().SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 			}
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null);
 				}
 				else {
-					result = notesAPI.b32_SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null);
+					result = NotesNativeAPI32.get().SECidfPut(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null);
 				}
 				NotesErrorUtils.checkResult(result);
 			}
 			finally {
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_SECKFMClose(phKFC64, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().SECKFMClose(phKFC64, NotesConstants.SECKFM_close_WriteIdFile, 0, null);
 					
 				}
 				else {
-					result = notesAPI.b32_SECKFMClose(phKFC32, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+					result = NotesNativeAPI32.get().SECKFMClose(phKFC32, NotesConstants.SECKFM_close_WriteIdFile, 0, null);
 				}
 				NotesErrorUtils.checkResult(result);
 			}
@@ -297,17 +295,15 @@ public class IDUtils {
 	 * @return sync result
 	 */
 	public static SyncResult syncUserIdWithVault(String userName, String password, String idPath, String serverName) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
 		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
-		Memory serverNameMem = new Memory(NotesCAPI.MAXPATH);
+		Memory serverNameMem = new Memory(NotesConstants.MAXPATH);
 		{
 			Memory serverNameParamMem = NotesStringUtils.toLMBCS(serverName, true);
-			if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesCAPI.MAXPATH)) {
-				throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesCAPI.MAXPATH+" characters)");
+			if (serverNameParamMem!=null && (serverNameParamMem.size() > NotesConstants.MAXPATH)) {
+				throw new IllegalArgumentException("Servername length cannot exceed MAXPATH ("+NotesConstants.MAXPATH+" characters)");
 			}
 			if (serverNameParamMem!=null) {
 				byte[] serverNameParamArr = serverNameParamMem.getByteArray(0, (int) serverNameParamMem.size());
@@ -323,29 +319,29 @@ public class IDUtils {
 		IntByReference retdwFlags = new IntByReference();
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 		}
 		else {
-			result = notesAPI.b32_SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			result = NotesNativeAPI32.get().SECKFMOpen (phKFC32, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 		}
 		NotesErrorUtils.checkResult(result);
 		
 		try {
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null, retdwFlags);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC64, serverNameMem, 0, (short) 0, null, retdwFlags);
 			}
 			else {
-				result = notesAPI.b32_SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null, retdwFlags);
+				result = NotesNativeAPI32.get().SECidfSync(userNameCanonicalMem, passwordMem, idPathMem, phKFC32, serverNameMem, 0, (short) 0, null, retdwFlags);
 			}
 			NotesErrorUtils.checkResult(result);
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_SECKFMClose(phKFC64, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().SECKFMClose(phKFC64, NotesConstants.SECKFM_close_WriteIdFile, 0, null);
 			}
 			else {
-				result = notesAPI.b32_SECKFMClose(phKFC32, NotesCAPI.SECKFM_close_WriteIdFile, 0, null);
+				result = NotesNativeAPI32.get().SECKFMClose(phKFC32, NotesConstants.SECKFM_close_WriteIdFile, 0, null);
 			}
 			NotesErrorUtils.checkResult(result);
 		}
@@ -375,14 +371,12 @@ public class IDUtils {
 	 * @param downloadCount (max. 65535) If this user's effective policy setting document has "allow automatic ID downloads" set to no, then this parameter specifies how many downloads the user can now perform. If downloads are automatic this setting should be zero.
 	 */
 	public static void resetUserPasswordInVault(String server, String userName, String password, int downloadCount) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
 		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		Memory serverNameMem = NotesStringUtils.toLMBCS(server, true);
 
-		short result = notesAPI.SECidvResetUserPassword(serverNameMem, userNameCanonicalMem, passwordMem, (short) (downloadCount & 0xffff), 0, null); 
+		short result = NotesNativeAPI.get().SECidvResetUserPassword(serverNameMem, userNameCanonicalMem, passwordMem, (short) (downloadCount & 0xffff), 0, null); 
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -397,13 +391,11 @@ public class IDUtils {
 	 * @param newPassword new password on the ID file. If this parameter is NULL, the password is cleared.  If the specified ID file requires a password and this parameter is NULL, then ERR_BSAFE_PASSWORD_REQUIRED is returned.  If this parameter is set to "", then ERR_BSAFE_NULLPARAM is returned.  If the specified ID file is set for a minimum password length and this string contains less than that minimum, then ERR_REG_MINPSWDCHARS is returned.
 	 */
 	public static void changeIDPassword(String idPath, String oldPassword, String newPassword) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory oldPasswordMem = NotesStringUtils.toLMBCS(oldPassword, true);
 		Memory newPasswordMem = NotesStringUtils.toLMBCS(newPassword, true);
 
-		short result = notesAPI.SECKFMChangePassword(idPathMem, oldPasswordMem, newPasswordMem);
+		short result = NotesNativeAPI.get().SECKFMChangePassword(idPathMem, oldPasswordMem, newPasswordMem);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -413,10 +405,9 @@ public class IDUtils {
 	 * @return username
 	 */
 	public static String getCurrentUsername() {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		Memory retUserNameMem = new Memory(NotesCAPI.MAXUSERNAME+1);
+		Memory retUserNameMem = new Memory(NotesConstants.MAXUSERNAME+1);
 		
-		short result = notesAPI.SECKFMGetUserName(retUserNameMem);
+		short result = NotesNativeAPI.get().SECKFMGetUserName(retUserNameMem);
 		NotesErrorUtils.checkResult(result);
 		
 		int userNameLength = 0;
@@ -444,14 +435,12 @@ public class IDUtils {
 	 * @return user name, in the ID file that is to be switched to
 	 */
 	public static String switchToId(String idPath, String password, boolean dontSetEnvVar) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
-		Memory retUserNameMem = new Memory(NotesCAPI.MAXUSERNAME+1);
+		Memory retUserNameMem = new Memory(NotesConstants.MAXUSERNAME+1);
 		
-		short result = notesAPI.SECKFMSwitchToIDFile(idPathMem, passwordMem, retUserNameMem,
-				NotesCAPI.MAXUSERNAME, dontSetEnvVar ? NotesCAPI.fKFM_switchid_DontSetEnvVar : 0, null);
+		short result = NotesNativeAPI.get().SECKFMSwitchToIDFile(idPathMem, passwordMem, retUserNameMem,
+				NotesConstants.MAXUSERNAME, dontSetEnvVar ? NotesConstants.fKFM_switchid_DontSetEnvVar : 0, null);
 		NotesErrorUtils.checkResult(result);
 		
 		int userNameLength = 0;
@@ -475,26 +464,24 @@ public class IDUtils {
 	 * @throws NotesError e.g. ERR 6408 if password is incorrect
 	 */
 	public static void checkIDPassword(String idPath, String password) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference phKFC64 = new LongByReference();
-			result = notesAPI.b64_SECKFMOpen(phKFC64, idPathMem, passwordMem, 0, 0, null);
+			result = NotesNativeAPI64.get().SECKFMOpen(phKFC64, idPathMem, passwordMem, 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b64_SECKFMClose(phKFC64, 0, 0, null);
+			result = NotesNativeAPI64.get().SECKFMClose(phKFC64, 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
 			IntByReference phKFC32 = new IntByReference();
-			result = notesAPI.b32_SECKFMOpen(phKFC32, idPathMem, passwordMem, 0, 0, null);
+			result = NotesNativeAPI32.get().SECKFMOpen(phKFC32, idPathMem, passwordMem, 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b32_SECKFMClose(phKFC32, 0, 0, null);
+			result = NotesNativeAPI32.get().SECKFMClose(phKFC32, 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -508,15 +495,15 @@ public class IDUtils {
 	 * @param initialBufferSize initial buffer size
 	 * @return result
 	 */
-	private static String getIDInfoAsString(NotesCAPI notesAPI, Memory idPathMem, short infoType, int initialBufferSize) {
+	private static String getIDInfoAsString(Memory idPathMem, short infoType, int initialBufferSize) {
 		Memory retMem = new Memory(initialBufferSize);
 		ShortByReference retActualLen = new ShortByReference();
 		
-		short result = notesAPI.REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
+		short result = NotesNativeAPI.get().REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
 		if (result == INotesErrorConstants.ERR_VALUE_LENGTH) {
 			int requiredLen = (int) (retActualLen.getValue() & 0xffff);
 			retMem = new Memory(requiredLen);
-			result = notesAPI.REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
+			result = NotesNativeAPI.get().REGGetIDInfo(idPathMem, infoType, retMem, (short) retMem.size(), retActualLen);
 		}
 		
 		NotesErrorUtils.checkResult(result);
@@ -531,10 +518,9 @@ public class IDUtils {
 	 * @return canonical username
 	 */
 	public static String getUsernameFromId(String idPath) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		
-		String name = getIDInfoAsString(notesAPI, idPathMem, NotesCAPI.REGIDGetName, NotesCAPI.MAXUSERNAME+1);
+		String name = getIDInfoAsString(idPathMem, NotesConstants.REGIDGetName, NotesConstants.MAXUSERNAME+1);
 		return name;
 	}
 	
@@ -580,18 +566,16 @@ public class IDUtils {
 	 * @throws Exception in case of errors
 	 */
 	public static <T> T openUserIdFile(String idPath, String password, IDAccessCallback<T> callback) throws Exception {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		
 		
 		//open the id file
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference phKFC64 = new LongByReference();
 			
-			result = notesAPI.b64_SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			result = NotesNativeAPI64.get().SECKFMOpen (phKFC64, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			try {
@@ -601,14 +585,14 @@ public class IDUtils {
 			}
 			finally {
 				//and close the ID file afterwards
-				result = notesAPI.b64_SECKFMClose(phKFC64, 0, 0, null);
+				result = NotesNativeAPI64.get().SECKFMClose(phKFC64, 0, 0, null);
 				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
 			IntByReference phKFC32 = new IntByReference();
 			
-			result = notesAPI.b32_SECKFMOpen(phKFC32, idPathMem, passwordMem, NotesCAPI.SECKFM_open_All, 0, null);
+			result = NotesNativeAPI32.get().SECKFMOpen(phKFC32, idPathMem, passwordMem, NotesConstants.SECKFM_open_All, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			try {
@@ -618,7 +602,7 @@ public class IDUtils {
 			}
 			finally {
 				//and close the ID file afterwards
-				result = notesAPI.b32_SECKFMClose(phKFC32, 0, 0, null);
+				result = NotesNativeAPI32.get().SECKFMClose(phKFC32, 0, 0, null);
 				NotesErrorUtils.checkResult(result);
 			}
 		}

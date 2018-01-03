@@ -93,7 +93,7 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		int fixedSize;
 
 		switch (highOrderByte) {
-		case NotesCAPI.LONGRECORDLENGTH:      /* LSIG */
+		case NotesConstants.LONGRECORDLENGTH:      /* LSIG */
 			Memory intLengthMem = new Memory(4);
 			ByteBuffer intLengthBuf = intLengthMem.getByteBuffer(0, intLengthMem.size());
 			m_fileChannel.read(intLengthBuf);
@@ -103,7 +103,7 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 
 			break;
 
-		case NotesCAPI.WORDRECORDLENGTH:      /* WSIG */
+		case NotesConstants.WORDRECORDLENGTH:      /* WSIG */
 			Memory shortLengthMem = new Memory(2);
 			ByteBuffer shortLengthBuf = shortLengthMem.getByteBuffer(0, shortLengthMem.size());
 			m_fileChannel.read(shortLengthBuf);

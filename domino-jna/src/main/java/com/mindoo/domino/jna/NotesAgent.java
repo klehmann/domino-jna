@@ -10,11 +10,13 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -91,15 +93,13 @@ public class NotesAgent implements IRecyclableNotesObject {
 		if (isRecycled())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_AgentClose(m_hAgentB64);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().AgentClose(m_hAgentB64);
 			NotesGC.__objectBeeingBeRecycled(NotesAgent.class, this);
 			m_hAgentB64=0;
 		}
 		else {
-			notesAPI.b32_AgentClose(m_hAgentB32);
+			NotesNativeAPI32.get().AgentClose(m_hAgentB32);
 			NotesGC.__objectBeeingBeRecycled(NotesAgent.class, this);
 			m_hAgentB32=0;
 		}
@@ -107,7 +107,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 
 	@Override
 	public boolean isRecycled() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_hAgentB64==0;
 		}
 		else {
@@ -134,7 +134,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * Checks if the agent is already recycled
 	 */
 	private void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hAgentB64==0)
 				throw new NotesError(0, "Agent already recycled");
 			NotesGC.__b64_checkValidObjectHandle(NotesAgent.class, m_hAgentB64);
@@ -153,14 +153,13 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 */
 	public boolean isEnabled() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		boolean enabled;
-		if (NotesJNAContext.is64Bit()) {
-			enabled = notesAPI.b64_AgentIsEnabled(m_hAgentB64);
+		if (PlatformUtils.is64Bit()) {
+			enabled = NotesNativeAPI64.get().AgentIsEnabled(m_hAgentB64);
 		}
 		else {
-			enabled = notesAPI.b32_AgentIsEnabled(m_hAgentB32);
+			enabled = NotesNativeAPI32.get().AgentIsEnabled(m_hAgentB32);
 		}
 
 		return enabled;
@@ -173,14 +172,13 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 */
 	public boolean isRunAsWebUser() {
 		checkHandle();
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		boolean isRunAsWebUser;
-		if (NotesJNAContext.is64Bit()) {
-			isRunAsWebUser = notesAPI.b64_IsRunAsWebUser(m_hAgentB64);
+		if (PlatformUtils.is64Bit()) {
+			isRunAsWebUser = NotesNativeAPI64.get().IsRunAsWebUser(m_hAgentB64);
 		}
 		else {
-			isRunAsWebUser = notesAPI.b32_IsRunAsWebUser(m_hAgentB32);
+			isRunAsWebUser = NotesNativeAPI32.get().IsRunAsWebUser(m_hAgentB32);
 		}
 
 		return isRunAsWebUser;
@@ -217,18 +215,16 @@ public class NotesAgent implements IRecyclableNotesObject {
 			cHandle = LegacyAPIUtils.getDocHandle(doc);
 		}
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		int ctxFlags = 0;
 		int runFlags = 0;
 		
 		boolean reopenDbAsSigner = runCtx.isReopenDbAsSigner();
 		if (reopenDbAsSigner) {
-			runFlags = NotesCAPI.AGENT_REOPEN_DB;
+			runFlags = NotesConstants.AGENT_REOPEN_DB;
 		}
 		boolean checkSecurity = runCtx.isCheckSecurity();
 		if (checkSecurity) {
-			ctxFlags = NotesCAPI.AGENT_SECURITY_ON;
+			ctxFlags = NotesConstants.AGENT_SECURITY_ON;
 		}
 
 		Writer stdOut = runCtx.getOutputWriter();
@@ -239,9 +235,9 @@ public class NotesAgent implements IRecyclableNotesObject {
 		List<String> effectiveUserNameAsStringList = runCtx.getUsernameAsStringList();
 		NotesNamesList effectiveUserNameAsNamesList = runCtx.getUsernameAsNamesList();
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethContext = new LongByReference();
-			short result = notesAPI.b64_AgentCreateRunContextExt(m_hAgentB64, null, 0, ctxFlags, rethContext);
+			short result = NotesNativeAPI64.get().AgentCreateRunContextExt(m_hAgentB64, null, 0, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
 			NotesNamesList namesListToFree = null;
@@ -249,65 +245,65 @@ public class NotesAgent implements IRecyclableNotesObject {
 			try {
 				if (stdOut!=null) {
 					//redirect stdout to in memory buffer
-					short redirType = NotesCAPI.AGENT_REDIR_MEMORY;
-					result = notesAPI.b64_AgentRedirectStdout(rethContext.getValue(), redirType);
+					short redirType = NotesConstants.AGENT_REDIR_MEMORY;
+					result = NotesNativeAPI64.get().AgentRedirectStdout(rethContext.getValue(), redirType);
 					NotesErrorUtils.checkResult(result);
 				}
 
 				if (timeoutSeconds!=0) {
-					notesAPI.b64_AgentSetTimeExecutionLimit(rethContext.getValue(), timeoutSeconds);
+					NotesNativeAPI64.get().AgentSetTimeExecutionLimit(rethContext.getValue(), timeoutSeconds);
 				}
 
 				if (note!=null) {
-					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), note.getHandle64());
+					NotesNativeAPI64.get().AgentSetDocumentContext(rethContext.getValue(), note.getHandle64());
 				}
 				else if (cHandle!=0) {
-					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), cHandle);
+					NotesNativeAPI64.get().AgentSetDocumentContext(rethContext.getValue(), cHandle);
 				}
 				
 				if (paramDocId!=0) {
-					notesAPI.b64_SetParamNoteID(rethContext.getValue(), paramDocId);
+					NotesNativeAPI64.get().SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
 				
 				if (effectiveUserNameAsNamesList!=null) {
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsStringList!=null) {
 					namesListToFree = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsString!=null) {
 					namesListToFree = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 				
-				result = notesAPI.b64_AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
+				result = NotesNativeAPI64.get().AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
 					LongByReference retBufHandle = new LongByReference();
 					IntByReference retSize = new IntByReference();
 					
-					notesAPI.b64_AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
+					NotesNativeAPI64.get().AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
 					int iRetSize = retSize.getValue();
 					if (iRetSize!=0) {
-						Pointer bufPtr = notesAPI.b64_OSLockObject(retBufHandle.getValue());
+						Pointer bufPtr = NotesNativeAPI64.get().OSLockObject(retBufHandle.getValue());
 						try {
 							//decode std out buffer content
 							String bufContentUnicode = NotesStringUtils.fromLMBCS(bufPtr, iRetSize);
 							stdOut.write(bufContentUnicode);
 						}
 						finally {
-							notesAPI.b64_OSUnlockObject(retBufHandle.getValue());
+							NotesNativeAPI64.get().OSUnlockObject(retBufHandle.getValue());
 						}
 					}
 				}
 			}
 			finally {
-				notesAPI.b64_AgentDestroyRunContext(rethContext.getValue());
+				NotesNativeAPI64.get().AgentDestroyRunContext(rethContext.getValue());
 				
 				if (namesListToFree!=null) {
 					namesListToFree.free();
@@ -316,7 +312,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethContext = new IntByReference();
-			short result = notesAPI.b32_AgentCreateRunContextExt(m_hAgentB32, null, 0, ctxFlags, rethContext);
+			short result = NotesNativeAPI32.get().AgentCreateRunContextExt(m_hAgentB32, null, 0, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
 			NotesNamesList namesListToFree = null;
@@ -324,65 +320,65 @@ public class NotesAgent implements IRecyclableNotesObject {
 			try {
 				if (stdOut!=null) {
 					//redirect stdout to in memory buffer
-					short redirType = NotesCAPI.AGENT_REDIR_MEMORY;
-					result = notesAPI.b32_AgentRedirectStdout(rethContext.getValue(), redirType);
+					short redirType = NotesConstants.AGENT_REDIR_MEMORY;
+					result = NotesNativeAPI32.get().AgentRedirectStdout(rethContext.getValue(), redirType);
 					NotesErrorUtils.checkResult(result);
 				}
 
 				if (timeoutSeconds!=0) {
-					notesAPI.b32_AgentSetTimeExecutionLimit(rethContext.getValue(), timeoutSeconds);
+					NotesNativeAPI32.get().AgentSetTimeExecutionLimit(rethContext.getValue(), timeoutSeconds);
 				}
 
 				if (note!=null) {
-					notesAPI.b32_AgentSetDocumentContext(rethContext.getValue(), note.getHandle32());
+					NotesNativeAPI32.get().AgentSetDocumentContext(rethContext.getValue(), note.getHandle32());
 				}
 				else if (cHandle!=0) {
-					notesAPI.b64_AgentSetDocumentContext(rethContext.getValue(), cHandle);
+					NotesNativeAPI64.get().AgentSetDocumentContext(rethContext.getValue(), cHandle);
 				}
 				
 				if (paramDocId!=0) {
-					notesAPI.b32_SetParamNoteID(rethContext.getValue(), paramDocId);
+					NotesNativeAPI32.get().SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
 				
 				if (effectiveUserNameAsNamesList!=null) {
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsStringList!=null) {
 					namesListToFree = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsString!=null) {
 					namesListToFree = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
-					result = notesAPI.b64_AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
 					NotesErrorUtils.checkResult(result);
 				}
 
-				result = notesAPI.b32_AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
+				result = NotesNativeAPI32.get().AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
 					IntByReference retBufHandle = new IntByReference();
 					IntByReference retSize = new IntByReference();
 					
-					notesAPI.b32_AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
+					NotesNativeAPI32.get().AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
 					int iRetSize = retSize.getValue();
 					if (iRetSize!=0) {
-						Pointer bufPtr = notesAPI.b32_OSLockObject(retBufHandle.getValue());
+						Pointer bufPtr = NotesNativeAPI32.get().OSLockObject(retBufHandle.getValue());
 						try {
 							//decode std out buffer content
 							String bufContentUnicode = NotesStringUtils.fromLMBCS(bufPtr, iRetSize);
 							stdOut.write(bufContentUnicode);
 						}
 						finally {
-							notesAPI.b32_OSUnlockObject(retBufHandle.getValue());
+							NotesNativeAPI32.get().OSUnlockObject(retBufHandle.getValue());
 						}
 					}
 				}
 			}
 			finally {
-				notesAPI.b32_AgentDestroyRunContext(rethContext.getValue());
+				NotesNativeAPI32.get().AgentDestroyRunContext(rethContext.getValue());
 				
 				if (namesListToFree!=null) {
 					namesListToFree.free();
@@ -397,7 +393,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 			return "NotesAgent [recycled]";
 		}
 		else {
-			return "NotesAgent [handle="+(NotesJNAContext.is64Bit() ? m_hAgentB64 : m_hAgentB32)+", name="+getTitle()+"]";
+			return "NotesAgent [handle="+(PlatformUtils.is64Bit() ? m_hAgentB64 : m_hAgentB32)+", name="+getTitle()+"]";
 		}
 	}
 

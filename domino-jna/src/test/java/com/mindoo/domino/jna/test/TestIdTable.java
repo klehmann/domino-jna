@@ -15,7 +15,7 @@ import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback;
 import lotus.domino.Session;
 
 /**
- * Tests cases for string utilities
+ * Tests cases for ID tables
  * 
  * @author Karsten Lehmann
  */

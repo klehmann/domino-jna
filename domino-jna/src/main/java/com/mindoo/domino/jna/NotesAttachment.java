@@ -10,11 +10,13 @@ import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI.NoteExtractCallback;
-import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -77,7 +79,7 @@ public class NotesAttachment {
 	}
 	
 	/**
-	 * Returns file flags, e.g. {@link NotesCAPI#FILEFLAG_SIGN}
+	 * Returns file flags, e.g. {@link NotesConstants#FILEFLAG_SIGN}
 	 * 
 	 * @return flags
 	 */
@@ -153,8 +155,7 @@ public class NotesAttachment {
 		
 		int currOffset = offset;
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			while (true) {
 				int bytesToRead;
 				if ((currOffset+bufferSize) < m_fileSize) {
@@ -170,10 +171,10 @@ public class NotesAttachment {
 				
 				LongByReference rethBuffer = new LongByReference();
 				
-				short result = notesAPI.b64_NSFDbReadObject(m_parentNote.getParent().getHandle64(), m_rrv, currOffset, bytesToRead, rethBuffer);
+				short result = NotesNativeAPI64.get().NSFDbReadObject(m_parentNote.getParent().getHandle64(), m_rrv, currOffset, bytesToRead, rethBuffer);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer ptr = notesAPI.b64_OSLockObject(rethBuffer.getValue());
+				Pointer ptr = NotesNativeAPI64.get().OSLockObject(rethBuffer.getValue());
 				try {
 					byte[] buffer = ptr.getByteArray(0, bytesToRead);
 					Action action = callback.read(buffer);
@@ -182,8 +183,8 @@ public class NotesAttachment {
 					}
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethBuffer.getValue());
-					notesAPI.b64_OSMemFree(rethBuffer.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethBuffer.getValue());
+					NotesNativeAPI64.get().OSMemFree(rethBuffer.getValue());
 				}
 				
 				currOffset += bytesToRead;
@@ -206,10 +207,10 @@ public class NotesAttachment {
 				
 				IntByReference rethBuffer = new IntByReference();
 				
-				short result = notesAPI.b32_NSFDbReadObject(m_parentNote.getParent().getHandle32(), m_rrv, currOffset, bytesToRead, rethBuffer);
+				short result = NotesNativeAPI32.get().NSFDbReadObject(m_parentNote.getParent().getHandle32(), m_rrv, currOffset, bytesToRead, rethBuffer);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer ptr = notesAPI.b32_OSLockObject(rethBuffer.getValue());
+				Pointer ptr = NotesNativeAPI32.get().OSLockObject(rethBuffer.getValue());
 				try {
 					byte[] buffer = ptr.getByteArray(0, bytesToRead);
 					Action action = callback.read(buffer);
@@ -218,8 +219,8 @@ public class NotesAttachment {
 					}
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethBuffer.getValue());
-					notesAPI.b32_OSMemFree(rethBuffer.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethBuffer.getValue());
+					NotesNativeAPI32.get().OSMemFree(rethBuffer.getValue());
 				}
 				
 				currOffset += bytesToRead;
@@ -235,8 +236,6 @@ public class NotesAttachment {
 	public void readData(final IDataCallback callback) {
 		m_parentNote.checkHandle();
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		final NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
@@ -244,11 +243,11 @@ public class NotesAttachment {
 		final int extractFlags = 0;
 		final int hDecryptionCipher = 0;
 		
-		final NoteExtractCallback extractCallback;
+		final NotesCallbacks.NoteExtractCallback extractCallback;
 		final Throwable[] extractError = new Throwable[1];
 		
-		if (notesAPI instanceof WinNotesCAPI) {
-			extractCallback = new WinNotesCAPI.NoteExtractCallbackWin() {
+		if (PlatformUtils.isWindows()) {
+			extractCallback = new WinNotesCallbacks.NoteExtractCallbackWin() {
 				
 				@Override
 				public short invoke(Pointer data, int length, Pointer param) {
@@ -273,7 +272,7 @@ public class NotesAttachment {
 			};
 		}
 		else {
-			extractCallback = new NoteExtractCallback() {
+			extractCallback = new NotesCallbacks.NoteExtractCallback() {
 
 				@Override
 				public short invoke(Pointer data, int length, Pointer param) {
@@ -305,13 +304,13 @@ public class NotesAttachment {
 
 				@Override
 				public Short run() throws Exception {
-					if (NotesJNAContext.is64Bit()) {
-						return notesAPI.b64_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle64(), 
+					if (PlatformUtils.is64Bit()) {
+						return NotesNativeAPI64.get().NSFNoteCipherExtractWithCallback(m_parentNote.getHandle64(), 
 								itemBlockIdByVal, extractFlags, hDecryptionCipher, 
 								extractCallback, null, 0, null);
 					}
 					else {
-						return notesAPI.b32_NSFNoteCipherExtractWithCallback(m_parentNote.getHandle32(), 
+						return NotesNativeAPI32.get().NSFNoteCipherExtractWithCallback(m_parentNote.getHandle32(), 
 								itemBlockIdByVal, extractFlags, hDecryptionCipher, 
 								extractCallback, null, 0, null);
 					}
@@ -338,18 +337,16 @@ public class NotesAttachment {
 	public void deleteFromNote() {
 		m_parentNote.checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteDetachFile(m_parentNote.getHandle64(), itemBlockIdByVal);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFNoteDetachFile(m_parentNote.getHandle64(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFNoteDetachFile(m_parentNote.getHandle32(), itemBlockIdByVal);
+			short result = NotesNativeAPI32.get().NSFNoteDetachFile(m_parentNote.getHandle32(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 	}

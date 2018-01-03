@@ -2,10 +2,10 @@ package com.mindoo.domino.jna;
 
 import java.util.List;
 
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat2Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat4Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat5Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormatStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat2Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat4Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat5Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormatStruct;
 
 /**
  * Container for all attributes that we extract from the view/collection design

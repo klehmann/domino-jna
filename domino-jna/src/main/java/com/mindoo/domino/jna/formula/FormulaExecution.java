@@ -14,11 +14,12 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -51,8 +52,6 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	public FormulaExecution(String formula) throws FormulaCompilationError {
 		m_formula = formula;
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory formulaName = null;
 		short formulaNameLength = 0;
 		Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
@@ -60,7 +59,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 
 		short computeFlags = 0;
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			m_hFormula64 = 0;
 			
 			LongByReference rethFormula = new LongByReference();
@@ -71,7 +70,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			ShortByReference retCompileErrorOffset = new ShortByReference();
 			ShortByReference retCompileErrorLength = new ShortByReference();
 			
-			short result = notesAPI.b64_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
+			short result = NotesNativeAPI64.get().NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
 					formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
 					retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
 
@@ -90,9 +89,9 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			LongByReference rethCompute = new LongByReference();
 			
-			m_ptrCompiledFormula = notesAPI.b64_OSLockObject(m_hFormula64);
+			m_ptrCompiledFormula = NotesNativeAPI64.get().OSLockObject(m_hFormula64);
 			
-			result = notesAPI.b64_NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
+			result = NotesNativeAPI64.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
 			NotesErrorUtils.checkResult(result);
 			
 			m_hCompute64 = rethCompute.getValue();
@@ -110,7 +109,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			ShortByReference retCompileErrorOffset = new ShortByReference();
 			ShortByReference retCompileErrorLength = new ShortByReference();
 
-			short result = notesAPI.b32_NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
+			short result = NotesNativeAPI32.get().NSFFormulaCompile(formulaName, formulaNameLength, formulaText,
 					formulaTextLength, rethFormula, retFormulaLength, retCompileError, retCompileErrorLine,
 					retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength);
 
@@ -129,9 +128,9 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			IntByReference rethCompute = new IntByReference();
 			
-			m_ptrCompiledFormula = notesAPI.b32_OSLockObject(m_hFormula32);
+			m_ptrCompiledFormula = NotesNativeAPI32.get().OSLockObject(m_hFormula32);
 			
-			result = notesAPI.b32_NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
+			result = NotesNativeAPI32.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
 			NotesErrorUtils.checkResult(result);
 			
 			m_hCompute32 = rethCompute.getValue();
@@ -223,7 +222,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	}
 	
 	private void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hCompute64==0) {
 				throw new NotesError(0, "Object already recycled");
 			}
@@ -242,8 +241,6 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	}
 	
 	private List<Object> parseFormulaResult(Pointer valuePtr, int valueLength) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		short dataType = valuePtr.getShort(0);
 		int dataTypeAsInt = (int) (dataType & 0xffff);
 		
@@ -285,33 +282,33 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			throw new IllegalStateException("Value data type does not meet expected date type: found "+checkDataType+", expected "+dataTypeAsInt);
 		}
 		if (dataTypeAsInt == NotesItem.TYPE_TEXT) {
-			String txtVal = (String) ItemDecoder.decodeTextValue(notesAPI, valueDataPtr, valueDataLength, false);
+			String txtVal = (String) ItemDecoder.decodeTextValue(valueDataPtr, valueDataLength, false);
 			return txtVal==null ? Collections.emptyList() : Arrays.asList((Object) txtVal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TEXT_LIST) {
-			List<Object> textList = valueDataLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(notesAPI, valueDataPtr, false);
+			List<Object> textList = valueDataLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(valueDataPtr, false);
 			return textList==null ? Collections.emptyList() : textList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NUMBER) {
-			double numVal = ItemDecoder.decodeNumber(notesAPI, valueDataPtr, valueDataLength);
+			double numVal = ItemDecoder.decodeNumber(valueDataPtr, valueDataLength);
 			return Arrays.asList((Object) Double.valueOf(numVal));
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NUMBER_RANGE) {
-			List<Object> numberList = ItemDecoder.decodeNumberList(notesAPI, valueDataPtr, valueDataLength);
+			List<Object> numberList = ItemDecoder.decodeNumberList(valueDataPtr, valueDataLength);
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
 			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 			
-			Calendar cal = ItemDecoder.decodeTimeDate(notesAPI, valueDataPtr, valueDataLength, useDayLight, gmtOffset);
+			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
 			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
 			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 			
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(notesAPI, valueDataPtr, useDayLight, gmtOffset);
+			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
 			return calendarValues==null ? Collections.emptyList() : calendarValues;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
@@ -352,16 +349,14 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			}
 		}
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethResult = new LongByReference();
 			ShortByReference retResultLength = new ShortByReference();
 			IntByReference retNoteMatchesFormula = new IntByReference();
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
 			
-			short result = notesAPI.b64_NSFComputeEvaluate(m_hCompute64, note.getHandle64(), rethResult, retResultLength,
+			short result = NotesNativeAPI64.get().NSFComputeEvaluate(m_hCompute64, note.getHandle64(), rethResult, retResultLength,
 					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
 			NotesErrorUtils.checkResult(result);
 			
@@ -369,15 +364,15 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			long hResult = rethResult.getValue();
 			if (hResult!=0) {
-				Pointer valuePtr = notesAPI.b64_OSLockObject(hResult);
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hResult);
 				int valueLength = retResultLength.getValue() & 0xffff;
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(hResult);
-					notesAPI.b64_OSMemFree(hResult);
+					NotesNativeAPI64.get().OSUnlockObject(hResult);
+					NotesNativeAPI64.get().OSMemFree(hResult);
 				}
 			}
 			
@@ -391,7 +386,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
 
-			short result = notesAPI.b32_NSFComputeEvaluate(m_hCompute32, note.getHandle32(), rethResult, retResultLength,
+			short result = NotesNativeAPI32.get().NSFComputeEvaluate(m_hCompute32, note.getHandle32(), rethResult, retResultLength,
 					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
 			NotesErrorUtils.checkResult(result);
 			
@@ -399,15 +394,15 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			int hResult = rethResult.getValue();
 			if (hResult!=0) {
-				Pointer valuePtr = notesAPI.b32_OSLockObject(hResult);
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hResult);
 				int valueLength = retResultLength.getValue() & 0xffff;
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(hResult);
-					notesAPI.b32_OSMemFree(hResult);
+					NotesNativeAPI32.get().OSUnlockObject(hResult);
+					NotesNativeAPI32.get().OSMemFree(hResult);
 				}
 			}
 			
@@ -457,17 +452,15 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		if (isRecycled())
 			return;
 
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hCompute64!=0) {
-				short result = notesAPI.b64_NSFComputeStop(m_hCompute64);
+				short result = NotesNativeAPI64.get().NSFComputeStop(m_hCompute64);
 				NotesErrorUtils.checkResult(result);
 				m_hCompute64=0;
 			}
 			if (m_hFormula64!=0) {
-				notesAPI.b64_OSUnlockObject(m_hFormula64);
-				notesAPI.b64_OSMemFree(m_hFormula64);
+				NotesNativeAPI64.get().OSUnlockObject(m_hFormula64);
+				NotesNativeAPI64.get().OSMemFree(m_hFormula64);
 				
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula64 = 0;
@@ -475,13 +468,13 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		}
 		else {
 			if (m_hCompute32!=0) {
-				short result = notesAPI.b32_NSFComputeStop(m_hCompute32);
+				short result = NotesNativeAPI32.get().NSFComputeStop(m_hCompute32);
 				NotesErrorUtils.checkResult(result);
 				m_hCompute32=0;
 			}
 			if (m_hFormula32!=0) {
-				notesAPI.b32_OSUnlockObject(m_hFormula32);
-				notesAPI.b32_OSMemFree(m_hFormula32);
+				NotesNativeAPI32.get().OSUnlockObject(m_hFormula32);
+				NotesNativeAPI32.get().OSMemFree(m_hFormula32);
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula32 = 0;
 			}
@@ -490,7 +483,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 
 	@Override
 	public boolean isRecycled() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hFormula64==0 && m_hCompute64==0) {
 				return true;
 			}

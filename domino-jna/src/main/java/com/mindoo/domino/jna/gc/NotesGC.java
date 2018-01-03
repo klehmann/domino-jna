@@ -7,7 +7,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 import com.mindoo.domino.jna.errors.NotesError;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
  * Utility class to simplify memory management with Notes handles. The class tracks
@@ -79,7 +80,7 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_b64OpenHandlesDominoObjects.get().size();
 		}
 		else {
@@ -96,7 +97,7 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_b64OpenHandlesMemory.get().size();
 		}
 		else {
@@ -209,7 +210,7 @@ public class NotesGC {
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			
 			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(key, obj);
@@ -244,7 +245,7 @@ public class NotesGC {
 			throw new NotesError(0, "Memory is already freed");
 		
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			IAllocatedMemory oldObj = m_b64OpenHandlesMemory.get().put(mem.getHandle64(), mem);
 			if (oldObj!=null && oldObj!=mem) {
 				throw new IllegalStateException("Duplicate handle detected. Memory to store: "+mem+", object found in open handle list: "+oldObj);
@@ -353,10 +354,10 @@ public class NotesGC {
 			throw new NotesError(0, "Object is already recycled");
 
 		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
-			System.out.println("AutoGC - Removing object: "+obj.getClass()+" with handle="+(NotesJNAContext.is64Bit() ? obj.getHandle64() : obj.getHandle32()));
+			System.out.println("AutoGC - Removing object: "+obj.getClass()+" with handle="+(PlatformUtils.is64Bit() ? obj.getHandle64() : obj.getHandle32()));
 		}
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			m_b64OpenHandlesDominoObjects.get().remove(key);
 		}
@@ -379,10 +380,10 @@ public class NotesGC {
 			throw new NotesError(0, "Memory has already been freed");
 
 		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
-			System.out.println("AutoGC - Removing memory: "+mem.getClass()+" with handle="+(NotesJNAContext.is64Bit() ? mem.getHandle64() : mem.getHandle32()));
+			System.out.println("AutoGC - Removing memory: "+mem.getClass()+" with handle="+(PlatformUtils.is64Bit() ? mem.getHandle64() : mem.getHandle32()));
 		}
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			m_b64OpenHandlesMemory.get().remove(mem.getHandle64());
 		}
 		else {
@@ -431,6 +432,8 @@ public class NotesGC {
 			return callable.call();
 		}
 		else {
+			NotesNativeAPI.initialize();
+
 			m_activeAutoGC.set(Boolean.TRUE);
 			m_activeAutoGCCustomValues.set(new HashMap<String, Object>());
 			
@@ -441,7 +444,7 @@ public class NotesGC {
 			LinkedHashMap<Long,IAllocatedMemory> b64HandlesMemory = null;
 			
 			try {
-				if (NotesJNAContext.is64Bit()) {
+				if (PlatformUtils.is64Bit()) {
 					b64HandlesDominoObjects = new LinkedHashMap<HashKey64,IRecyclableNotesObject>();
 					m_b64OpenHandlesDominoObjects.set(b64HandlesDominoObjects);
 					
@@ -461,7 +464,7 @@ public class NotesGC {
 			finally {
 				boolean writeDebugMsg = Boolean.TRUE.equals(m_writeDebugMessages.get());
 				
-				if (NotesJNAContext.is64Bit()) {
+				if (PlatformUtils.is64Bit()) {
 					{
 						//recycle created Domino objects
 						if (!b64HandlesDominoObjects.isEmpty()) {

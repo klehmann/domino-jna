@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.apache.commons.collections4.map.HashedMap;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * These bit masks define the types of notes in a database. The bit masks may be or'ed together
@@ -16,64 +16,64 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum NoteClass {
 	
 	/** old name for document note */
-	DATA(NotesCAPI.NOTE_CLASS_DOCUMENT),
+	DATA(NotesConstants.NOTE_CLASS_DOCUMENT),
 
 	/** document note */
-	DOCUMENT(NotesCAPI.NOTE_CLASS_DOCUMENT),
+	DOCUMENT(NotesConstants.NOTE_CLASS_DOCUMENT),
 
 	/** notefile info (help-about) note */
-	INFO(NotesCAPI.NOTE_CLASS_INFO),
+	INFO(NotesConstants.NOTE_CLASS_INFO),
 	
 	/** form note */
-	FORM(NotesCAPI.NOTE_CLASS_FORM),
+	FORM(NotesConstants.NOTE_CLASS_FORM),
 
 	/** view note */
-	VIEW(NotesCAPI.NOTE_CLASS_VIEW),
+	VIEW(NotesConstants.NOTE_CLASS_VIEW),
 	
 	/** icon note */
-	ICON(NotesCAPI.NOTE_CLASS_ICON),
+	ICON(NotesConstants.NOTE_CLASS_ICON),
 	
 	/** design note collection */
-	DESIGN(NotesCAPI.NOTE_CLASS_DESIGN),
+	DESIGN(NotesConstants.NOTE_CLASS_DESIGN),
 	
 	/** acl note */
-	ACL(NotesCAPI.NOTE_CLASS_ACL),
+	ACL(NotesConstants.NOTE_CLASS_ACL),
 
 	/** Notes product help index note */
-	HELP_INDEX(NotesCAPI.NOTE_CLASS_HELP_INDEX),
+	HELP_INDEX(NotesConstants.NOTE_CLASS_HELP_INDEX),
 
 	/** designer's help note */
-	HELP(NotesCAPI.NOTE_CLASS_HELP),
+	HELP(NotesConstants.NOTE_CLASS_HELP),
 	
 	/** filter note */
-	FILTER(NotesCAPI.NOTE_CLASS_FILTER),
+	FILTER(NotesConstants.NOTE_CLASS_FILTER),
 	
 	/** field note */
-	FIELD(NotesCAPI.NOTE_CLASS_FIELD),
+	FIELD(NotesConstants.NOTE_CLASS_FIELD),
 	
 	/** replication formula */
-	REPLFORMULA(NotesCAPI.NOTE_CLASS_REPLFORMULA),
+	REPLFORMULA(NotesConstants.NOTE_CLASS_REPLFORMULA),
 
 	/** Private design note, use $PrivateDesign view to locate/classify */
-	PRIVATE(NotesCAPI.NOTE_CLASS_PRIVATE),
+	PRIVATE(NotesConstants.NOTE_CLASS_PRIVATE),
 
 	/** MODIFIER - default version of each */
-	DEFAULT(NotesCAPI.NOTE_CLASS_DEFAULT),
+	DEFAULT(NotesConstants.NOTE_CLASS_DEFAULT),
 	
 	/** see {@link Search#NOTIFYDELETIONS} */
-	NOTIFYDELETION(NotesCAPI.NOTE_CLASS_NOTIFYDELETION),
+	NOTIFYDELETION(NotesConstants.NOTE_CLASS_NOTIFYDELETION),
 	
 	/** all note types */
-	ALL(NotesCAPI.NOTE_CLASS_ALL),
+	ALL(NotesConstants.NOTE_CLASS_ALL),
 	
 	/** all non-data notes */
-	ALLNONDATA(NotesCAPI.NOTE_CLASS_ALLNONDATA),
+	ALLNONDATA(NotesConstants.NOTE_CLASS_ALLNONDATA),
 	
 	/** no notes */
-	NONE(NotesCAPI.NOTE_CLASS_NONE),
+	NONE(NotesConstants.NOTE_CLASS_NONE),
 	
 	/** Define symbol for those note classes that allow only one such in a file */
-	SINGLE_INSTANCE(NotesCAPI.NOTE_CLASS_SINGLE_INSTANCE);
+	SINGLE_INSTANCE(NotesConstants.NOTE_CLASS_SINGLE_INSTANCE);
 
 	private int m_val;
 	private static Map<Integer,NoteClass> classesByValue = new HashedMap<Integer, NoteClass>();

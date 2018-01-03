@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -275,7 +275,7 @@ public class NotesViewEntryData {
 	 */
 	public boolean isCategory()  {
 		if (m_noteId!=null) {
-			return (m_noteId.intValue() & NotesCAPI.NOTEID_CATEGORY) == NotesCAPI.NOTEID_CATEGORY;
+			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY) == NotesConstants.NOTEID_CATEGORY;
 		}
 		return false;
 	}
@@ -288,7 +288,7 @@ public class NotesViewEntryData {
 	 */
 	public boolean isTotal() {
 		if (m_noteId!=null) {
-			return (m_noteId.intValue() & NotesCAPI.NOTEID_CATEGORY_TOTAL) == NotesCAPI.NOTEID_CATEGORY_TOTAL;
+			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY_TOTAL) == NotesConstants.NOTEID_CATEGORY_TOTAL;
 		}
 		return false;
 	}
@@ -495,7 +495,7 @@ public class NotesViewEntryData {
 	 * @return programmatic column names converted to lowercase
 	 */
 	public Iterator<String> getColumnNames() {
-		if ((m_parentCollection.getNoteId() & NotesCAPI.NOTE_ID_SPECIAL) == NotesCAPI.NOTE_ID_SPECIAL) {
+		if ((m_parentCollection.getNoteId() & NotesConstants.NOTE_ID_SPECIAL) == NotesConstants.NOTE_ID_SPECIAL) {
 			//special collection (e.g. design collection) where we cannot use the legacy API to read
 			//the column names
 			if (m_summaryData!=null) {

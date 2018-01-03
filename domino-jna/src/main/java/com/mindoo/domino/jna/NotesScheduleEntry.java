@@ -4,9 +4,9 @@ import java.util.Calendar;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.constants.ScheduleAttr;
-import com.mindoo.domino.jna.structs.NotesSchedEntryExtStruct;
-import com.mindoo.domino.jna.structs.NotesSchedEntryStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
+import com.mindoo.domino.jna.internal.structs.NotesSchedEntryExtStruct;
+import com.mindoo.domino.jna.internal.structs.NotesSchedEntryStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 
 /**
  * Entry of a schedule list retrieved via {@link NotesSchedule#extractScheduleList(NotesTimeDate, NotesTimeDate)}

@@ -112,6 +112,7 @@ public class TestNamesListCreation extends BaseJNATestClass {
 				final String unid = docHidden.getUniversalID();
 
 				docHidden.save(true, false);
+				docHidden.recycle();
 				
 				try {
 					NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
@@ -141,8 +142,7 @@ public class TestNamesListCreation extends BaseJNATestClass {
 					dbData.recycle();
 				}
 				
-				
-				dbData = new NotesDatabase(getSession(), "", "fakenames.nsf");
+				dbData = new NotesDatabase(session, "", "fakenames.nsf");
 				try {
 					NotesCollection colFromDbData = dbData.openCollectionByName("PeopleFlatMultiColumnSort");
 					try {

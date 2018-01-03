@@ -8,17 +8,17 @@ import java.util.Map;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesViewColumn;
 import com.mindoo.domino.jna.NotesViewFormat;
-import com.mindoo.domino.jna.structs.viewformat.NotesColorValueStruct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat2Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat3Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat4Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormat5Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewColumnFormatStruct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewFormatHeaderStruct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat2Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat4Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormat5Struct;
-import com.mindoo.domino.jna.structs.viewformat.NotesViewTableFormatStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesColorValueStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat2Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat3Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat4Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat5Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormatStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewFormatHeaderStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat2Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat4Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat5Struct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormatStruct;
 import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Pointer;
@@ -75,8 +75,8 @@ public class ViewFormatDecoder {
 		
 		int colCount = (int) (tableFormat1.Columns & 0xffff);
 		
-		currPtr = currPtr.share(NotesCAPI.notesViewTableFormatSize);
-		valueLengthRemaining -= NotesCAPI.notesViewTableFormatSize;
+		currPtr = currPtr.share(NotesConstants.notesViewTableFormatSize);
+		valueLengthRemaining -= NotesConstants.notesViewTableFormatSize;
 		
 
 		//read view column data v1
@@ -84,13 +84,13 @@ public class ViewFormatDecoder {
 			NotesViewColumnFormatStruct colFormat = NotesViewColumnFormatStruct.newInstance(currPtr);
 			colFormat.read();
 			
-			if (NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE != colFormat.Signature)
-				throw new AssertionError("Signature of column #"+i+" with format v1 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesViewTableFormatSize + (colCount * NotesCAPI.notesViewColumnFormatSize)));
+			if (NotesConstants.VIEW_COLUMN_FORMAT_SIGNATURE != colFormat.Signature)
+				throw new AssertionError("Signature of column #"+i+" with format v1 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesConstants.notesViewTableFormatSize + (colCount * NotesConstants.notesViewColumnFormatSize)));
 			
 			columnsFormat1.put(i, colFormat);
 			
-			currPtr = currPtr.share(NotesCAPI.notesViewColumnFormatSize);
-			valueLengthRemaining -= NotesCAPI.notesViewColumnFormatSize;
+			currPtr = currPtr.share(NotesConstants.notesViewColumnFormatSize);
+			valueLengthRemaining -= NotesConstants.notesViewColumnFormatSize;
 		}
 		
 		Map<Integer,String> columnItemNames = new HashMap<Integer, String>();
@@ -128,13 +128,13 @@ public class ViewFormatDecoder {
 			valueLengthRemaining -= currConstantValueSize;
 		}
 		
-		if (valueLengthRemaining >= NotesCAPI.notesViewTableFormat2Size) {
+		if (valueLengthRemaining >= NotesConstants.notesViewTableFormat2Size) {
 			//read view format v2
 			tableFormat2 = NotesViewTableFormat2Struct.newInstance(currPtr);
 			tableFormat2.read();
 			
-			if (NotesCAPI.VALID_VIEW_FORMAT_SIG != tableFormat2.wSig)
-				throw new AssertionError("Signature of view table format v2 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesCAPI.notesViewTableFormatSize + (colCount * NotesCAPI.notesViewColumnFormatSize) + NotesCAPI.notesViewTableFormat2Size));
+			if (NotesConstants.VALID_VIEW_FORMAT_SIG != tableFormat2.wSig)
+				throw new AssertionError("Signature of view table format v2 is not correct.\nMem dump:\n"+DumpUtil.dumpAsAscii(dataPtr, NotesConstants.notesViewTableFormatSize + (colCount * NotesConstants.notesViewColumnFormatSize) + NotesConstants.notesViewTableFormat2Size));
 			
 			int tableFormat2Size = (int) (tableFormat2.Length & 0xffff);
 			currPtr = currPtr.share(tableFormat2Size);
@@ -147,18 +147,18 @@ public class ViewFormatDecoder {
 			//had a v4 signature
 			
 			/*
-			if (valueLengthRemaining >= (colCount * NotesCAPI.notesViewColumnFormat2Size)) {
+			if (valueLengthRemaining >= (colCount * NotesConstants.notesViewColumnFormat2Size)) {
 				//read view column data v2
 				for (int i=0; i<colCount; i++) {
 					NotesViewColumnFormat2Struct colFormat = NotesViewColumnFormat2Struct.newInstance(currPtr);
 					colFormat.read();
 					
-					Assert.assertEquals("Signature of column #"+i+" with format v2 is correct", NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE2, colFormat.Signature);
+					Assert.assertEquals("Signature of column #"+i+" with format v2 is correct", NotesConstants.VIEW_COLUMN_FORMAT_SIGNATURE2, colFormat.Signature);
 					
 					columnsFormat2.put(i, colFormat);
 					
-					currPtr = currPtr.share(NotesCAPI.notesViewColumnFormat2Size);
-					valueLengthRemaining -= NotesCAPI.notesViewColumnFormat2Size;
+					currPtr = currPtr.share(NotesConstants.notesViewColumnFormat2Size);
+					valueLengthRemaining -= NotesConstants.notesViewColumnFormat2Size;
 				}
 				
 				if (valueLengthRemaining >= 2) {
@@ -288,24 +288,24 @@ public class ViewFormatDecoder {
 					
 					valueLengthRemaining -= (Pointer.nativeValue(currPtr) - Pointer.nativeValue(ptrBeforeFormat3));
 					
-					if (valueLengthRemaining >= (colCount*NotesCAPI.notesViewColumnFormat3Size)) {
+					if (valueLengthRemaining >= (colCount*NotesConstants.notesViewColumnFormat3Size)) {
 						//read view column data v3
 						for (int i=0; i<colCount; i++) {
 							System.out.println("Reading c3 column "+i);
-							System.out.println(DumpUtil.dumpAsAscii(currPtr, NotesCAPI.notesViewColumnFormat3Size+10));
+							System.out.println(DumpUtil.dumpAsAscii(currPtr, NotesConstants.notesViewColumnFormat3Size+10));
 							NotesViewColumnFormat3Struct colFormat = NotesViewColumnFormat3Struct.newInstance(currPtr);
 							colFormat.read();
 							
-							Assert.assertEquals("Signature of column #"+i+" with format v3 is correct", NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE3, colFormat.Signature);
+							Assert.assertEquals("Signature of column #"+i+" with format v3 is correct", NotesConstants.VIEW_COLUMN_FORMAT_SIGNATURE3, colFormat.Signature);
 							
 							columnsFormat3.put(i, colFormat);
 							
 							//TODO find out where these 4 bytes come from
-							currPtr = currPtr.share(NotesCAPI.notesViewColumnFormat3Size + 4);
-							valueLengthRemaining -= (NotesCAPI.notesViewColumnFormat3Size + 4);
+							currPtr = currPtr.share(NotesConstants.notesViewColumnFormat3Size + 4);
+							valueLengthRemaining -= (NotesConstants.notesViewColumnFormat3Size + 4);
 						}
 
-						if (valueLengthRemaining >= NotesCAPI.notesViewTableFormat4Size) {
+						if (valueLengthRemaining >= NotesConstants.notesViewTableFormat4Size) {
 							//read view format v4
 							tableFormat4 = NotesViewTableFormat4Struct.newInstance(currPtr);
 							tableFormat4.read();
@@ -314,21 +314,21 @@ public class ViewFormatDecoder {
 							currPtr = currPtr.share(tableFormat4Size);
 							valueLengthRemaining -= tableFormat4Size;
 							
-							if (valueLengthRemaining >= (colCount*NotesCAPI.notesViewColumnFormat4Size)) {
+							if (valueLengthRemaining >= (colCount*NotesConstants.notesViewColumnFormat4Size)) {
 								//read view column data v4
 								for (int i=0; i<colCount; i++) {
 									NotesViewColumnFormat4Struct colFormat = NotesViewColumnFormat4Struct.newInstance(currPtr);
 									colFormat.read();
 									
-									Assert.assertEquals("Signature of column #"+i+" with format v4 is correct", NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE4, colFormat.Signature);
+									Assert.assertEquals("Signature of column #"+i+" with format v4 is correct", NotesConstants.VIEW_COLUMN_FORMAT_SIGNATURE4, colFormat.Signature);
 									
 									columnsFormat4.put(i, colFormat);
 									
-									currPtr = currPtr.share(NotesCAPI.notesViewColumnFormat4Size);
-									valueLengthRemaining -= NotesCAPI.notesViewColumnFormat4Size;
+									currPtr = currPtr.share(NotesConstants.notesViewColumnFormat4Size);
+									valueLengthRemaining -= NotesConstants.notesViewColumnFormat4Size;
 								}
 
-								if (valueLengthRemaining >= NotesCAPI.notesViewTableFormat5Size) {
+								if (valueLengthRemaining >= NotesConstants.notesViewTableFormat5Size) {
 									//read view format v5
 									tableFormat5 = NotesViewTableFormat5Struct.newInstance(currPtr);
 									tableFormat5.read();
@@ -337,18 +337,18 @@ public class ViewFormatDecoder {
 									currPtr = currPtr.share(tableFormat5Size);
 									valueLengthRemaining -= tableFormat5Size;
 									
-									if (valueLengthRemaining >= (colCount*NotesCAPI.notesViewColumnFormat5Size)) {
+									if (valueLengthRemaining >= (colCount*NotesConstants.notesViewColumnFormat5Size)) {
 										//read view column data v5
 										for (int i=0; i<colCount; i++) {
 											NotesViewColumnFormat5Struct colFormat = NotesViewColumnFormat5Struct.newInstance(currPtr);
 											colFormat.read();
 											
-											Assert.assertEquals("Signature of column #"+i+" with format v5 is correct", NotesCAPI.VIEW_COLUMN_FORMAT_SIGNATURE5, colFormat.Signature);
+											Assert.assertEquals("Signature of column #"+i+" with format v5 is correct", NotesConstants.VIEW_COLUMN_FORMAT_SIGNATURE5, colFormat.Signature);
 											
 											columnsFormat5.put(i, colFormat);
 											
-											currPtr = currPtr.share(NotesCAPI.notesViewColumnFormat5Size);
-											valueLengthRemaining -= NotesCAPI.notesViewColumnFormat5Size;
+											currPtr = currPtr.share(NotesConstants.notesViewColumnFormat5Size);
+											valueLengthRemaining -= NotesConstants.notesViewColumnFormat5Size;
 										}		
 									}
 								}
@@ -399,7 +399,7 @@ public class ViewFormatDecoder {
 	}
 
 	private static boolean hasGradient(NotesColorValueStruct color) {
-		return (color.Flags & NotesCAPI.COLOR_VALUE_FLAGS_HASGRADIENT) == NotesCAPI.COLOR_VALUE_FLAGS_HASGRADIENT;
+		return (color.Flags & NotesConstants.COLOR_VALUE_FLAGS_HASGRADIENT) == NotesConstants.COLOR_VALUE_FLAGS_HASGRADIENT;
 	}
 
 	private static class ViewFormatAdaptable implements IAdaptable {

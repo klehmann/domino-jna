@@ -6,10 +6,10 @@ import java.util.List;
 
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
-import com.mindoo.domino.jna.structs.NotesRangeStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
+import com.mindoo.domino.jna.internal.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -19,12 +19,12 @@ import com.sun.jna.ptr.ShortByReference;
 
 public class ItemDecoder {
 
-	public static double decodeNumber(NotesCAPI notesAPI, Pointer ptr, int valueLength) {
+	public static double decodeNumber(Pointer ptr, int valueLength) {
 		double numVal = ptr.getDouble(0);
 		return numVal;
 	}
 	
-	public static Object decodeTextValue(NotesCAPI notesAPI, Pointer ptr, int valueLength, boolean convertStringsLazily) {
+	public static Object decodeTextValue(Pointer ptr, int valueLength, boolean convertStringsLazily) {
 		if (valueLength<=0) {
 			return "";
 		}
@@ -42,7 +42,7 @@ public class ItemDecoder {
 		}
 	}
 	
-	public static List<Object> decodeTextListValue(NotesCAPI notesAPI, Pointer ptr, boolean convertStringsLazily) {
+	public static List<Object> decodeTextListValue(Pointer ptr, boolean convertStringsLazily) {
 		//read a text list item value
 		int listCountAsInt = ptr.getShort(0) & 0xffff;
 		
@@ -52,7 +52,7 @@ public class ItemDecoder {
 		ShortByReference retTextLength = new ShortByReference();
 		
 		for (short l=0; l<listCountAsInt; l++) {
-			short result = notesAPI.ListGetText(ptr, false, l, retTextPointer, retTextLength);
+			short result = NotesNativeAPI.get().ListGetText(ptr, false, l, retTextPointer, retTextLength);
 			NotesErrorUtils.checkResult(result);
 			
 			//retTextPointer[0] points to the list entry text
@@ -80,7 +80,7 @@ public class ItemDecoder {
 		return listValues;
 	}
 	
-	public static Calendar decodeTimeDate(NotesCAPI notesAPI, final Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
+	public static Calendar decodeTimeDate(final Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
 		NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptr);
 		NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
 		
@@ -88,7 +88,7 @@ public class ItemDecoder {
 		return calDate;
 	}
 	
-	public static List<Object> decodeNumberList(NotesCAPI notesAPI, Pointer ptr, int valueLength) {
+	public static List<Object> decodeNumberList(Pointer ptr, int valueLength) {
 		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		
@@ -97,7 +97,7 @@ public class ItemDecoder {
 		int rangeEntriesAsInt = range.RangeEntries & 0xffff;
 		
 		//skip range header
-		Pointer ptrAfterRange = ptr.share(NotesCAPI.rangeSize);
+		Pointer ptrAfterRange = ptr.share(NotesConstants.rangeSize);
 		
 		//we create an object list, because number ranges contain double[] array
 		//(not sure whether number ranges exist in real life)
@@ -110,7 +110,7 @@ public class ItemDecoder {
 		Pointer ptrAfterListEntries = ptrAfterRange.share(8 * listEntriesAsInt);
 		
 		for (int t=0; t<rangeEntriesAsInt; t++) {
-			Pointer ptrListEntry = ptrAfterListEntries.share(t * NotesCAPI.numberPairSize);
+			Pointer ptrListEntry = ptrAfterListEntries.share(t * NotesConstants.numberPairSize);
 			NotesNumberPairStruct numPair = NotesNumberPairStruct.newInstance(ptrListEntry);
 			numPair.read();
 			double lower = numPair.Lower;
@@ -122,7 +122,7 @@ public class ItemDecoder {
 		return numberValues;
 	}
 	
-	public static List<Object> decodeTimeDateList(NotesCAPI notesAPI, Pointer ptr, boolean useDayLight, int gmtOffset) {
+	public static List<Object> decodeTimeDateList(Pointer ptr, boolean useDayLight, int gmtOffset) {
 		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		
@@ -131,12 +131,12 @@ public class ItemDecoder {
 		int rangeEntriesAsInt = range.RangeEntries & 0xffff;
 		
 		//skip range header
-		Pointer ptrAfterRange = ptr.share(NotesCAPI.rangeSize);
+		Pointer ptrAfterRange = ptr.share(NotesConstants.rangeSize);
 		
 		List<Object> calendarValues = new ArrayList<Object>(listEntriesAsInt + rangeEntriesAsInt);
 		
 		for (int t=0; t<listEntriesAsInt; t++) {
-			Pointer ptrListEntry = ptrAfterRange.share(t * NotesCAPI.timeDateSize);
+			Pointer ptrListEntry = ptrAfterRange.share(t * NotesConstants.timeDateSize);
 			NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptrListEntry);
 			NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
 			
@@ -147,10 +147,10 @@ public class ItemDecoder {
 		}
 		
 		//move position to the range data
-		Pointer ptrAfterListEntries = ptrAfterRange.share(listEntriesAsInt * NotesCAPI.timeDateSize);
+		Pointer ptrAfterListEntries = ptrAfterRange.share(listEntriesAsInt * NotesConstants.timeDateSize);
 		
 		for (int t=0; t<rangeEntriesAsInt; t++) {
-			Pointer ptrRangeEntry = ptrAfterListEntries.share(t * NotesCAPI.timeDatePairSize);
+			Pointer ptrRangeEntry = ptrAfterListEntries.share(t * NotesConstants.timeDatePairSize);
 			NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(ptrRangeEntry);
 			timeDatePair.read();
 			

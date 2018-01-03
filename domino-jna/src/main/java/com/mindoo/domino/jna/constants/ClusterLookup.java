@@ -1,6 +1,6 @@
 package com.mindoo.domino.jna.constants;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * These values are used as input to the NSGetServerClusterMates function.<br>
@@ -22,13 +22,13 @@ public enum ClusterLookup {
 	 * Instructs the NSGetServerClusterMates function to not use the cluster name cache and forces
 	 * a lookup on the target server instead
 	 * */
-	LOOKUP_NOCACHE(NotesCAPI.CLUSTER_LOOKUP_NOCACHE),
+	LOOKUP_NOCACHE(NotesConstants.CLUSTER_LOOKUP_NOCACHE),
 	
 	/**
 	 * Instructs the NSGetServerClusterMates function to only use the cluster name cache and
 	 * restricts lookup to the workstation cache
 	 */
-	LOOKUP_CACHEONLY(NotesCAPI.CLUSTER_LOOKUP_CACHEONLY);
+	LOOKUP_CACHEONLY(NotesConstants.CLUSTER_LOOKUP_CACHEONLY);
 	
 	private int m_val;
 	

@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna.errors;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 
@@ -21,7 +21,7 @@ public class NotesErrorUtils {
 	 */
 	public static void checkResult(short result) {
 		if (result > 0) {
-			short status = (short) (result & NotesCAPI.ERR_MASK);
+			short status = (short) (result & NotesConstants.ERR_MASK);
 			if (status==0)
 				return;
 			
@@ -46,15 +46,8 @@ public class NotesErrorUtils {
 		if (err==0)
 			return "";
 	
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory retBuffer = new Memory(256);
-		short outStrLength;
-		if (NotesJNAContext.is64Bit()) {
-			outStrLength = notesAPI.b64_OSLoadString(0, err, retBuffer, (short) 255);
-		}
-		else {
-			outStrLength = notesAPI.b32_OSLoadString(0, err, retBuffer, (short) 255);
-		}
+		short outStrLength = NotesNativeAPI.get().OSLoadString(0, err, retBuffer, (short) 255);
 		if (outStrLength==0) {
 			return "";
 		}

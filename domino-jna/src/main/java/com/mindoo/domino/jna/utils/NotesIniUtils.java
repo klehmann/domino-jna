@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna.utils;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.sun.jna.Memory;
 
 /**
@@ -26,12 +26,10 @@ public class NotesIniUtils {
 	 * @return value
 	 */
 	public static String getEnvironmentString(String variableName) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
-		
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
-		Memory rethValueBuffer = new Memory(NotesCAPI.MAXENVVALUE);
+		Memory rethValueBuffer = new Memory(NotesConstants.MAXENVVALUE);
 		
-		short result = api.OSGetEnvironmentString(variableNameMem, rethValueBuffer, NotesCAPI.MAXENVVALUE);
+		short result = NotesNativeAPI.get().OSGetEnvironmentString(variableNameMem, rethValueBuffer, NotesConstants.MAXENVVALUE);
 		if (result==1) {
 			String str = NotesStringUtils.fromLMBCS(rethValueBuffer, -1);
 			return str;
@@ -56,11 +54,8 @@ public class NotesIniUtils {
 	 * @return value as long
 	 */
 	public static long getEnvironmentLong(String variableName) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
-		
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
-		
-		long longVal = api.OSGetEnvironmentLong(variableNameMem);
+		long longVal = NotesNativeAPI.get().OSGetEnvironmentLong(variableNameMem);
 		return longVal;
 	}
 
@@ -79,12 +74,17 @@ public class NotesIniUtils {
 	 * @return value as int
 	 */
 	public static int getEnvironmentInt(String variableName) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
+		String value = getEnvironmentString(variableName);
+		if (StringUtil.isEmpty(value))
+			return 0;
 		
-		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
-		
-		int intVal = api.OSGetEnvironmentInt(variableNameMem);
-		return intVal;
+		try {
+			int iVal = (int) Double.parseDouble(value);
+			return iVal;
+		}
+		catch (NumberFormatException e) {
+			return 0;
+		}
 	}
 
 	/**
@@ -97,10 +97,9 @@ public class NotesIniUtils {
 	 * @param value new value
 	 */
 	public static void setEnvironmentString(String variableName, String value) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
 		Memory valueMem = NotesStringUtils.toLMBCS(value, true);
-		api.OSSetEnvironmentVariable(variableNameMem, valueMem);
+		NotesNativeAPI.get().OSSetEnvironmentVariable(variableNameMem, valueMem);
 	}
 	
 	/**
@@ -112,8 +111,7 @@ public class NotesIniUtils {
 	 * @param value new value
 	 */
 	public static void setEnvironmentInt(String variableName, int value) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
-		api.OSSetEnvironmentInt(variableNameMem, value);
+		NotesNativeAPI.get().OSSetEnvironmentInt(variableNameMem, value);
 	}
 }

@@ -9,5 +9,9 @@ public enum OSDirectory {
 	/** Domino data directory */
 	DATA,
 	/** Domino temp directory */
-	TEMP;
+	TEMP,
+	/** DAOS Base directory */
+	DAOS,
+	/** Temporary folder used for view rebuilds */
+	VIEWREBUILD;
 }

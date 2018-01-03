@@ -13,10 +13,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -317,8 +316,6 @@ public class NotesStringUtils {
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(Pointer inPtr, int textLen, boolean skipAsciiCheck) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		if (inPtr==null || textLen==0) {
 			return "";
 		}
@@ -361,7 +358,7 @@ public class NotesStringUtils {
 		
 		StringBuilder result = new StringBuilder();
 		while (textLen > 0) {
-			long len=(textLen>NotesCAPI.MAXPATH) ? NotesCAPI.MAXPATH : textLen;
+			long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
 			long outLen=2*len;
 			
 			if (pBuf_utf8==null || pBuf_utf8.size()!=(outLen+1)) {
@@ -369,7 +366,7 @@ public class NotesStringUtils {
 			}
 
 			//convert text from LMBCS to utf8
-			int len_utf8 = notesAPI.OSTranslate(NotesCAPI.OS_TRANSLATE_LMBCS_TO_UTF8, pText, (short) (len & 0xffff), pBuf_utf8, (short) (outLen & 0xffff));
+			int len_utf8 = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8, pText, (short) (len & 0xffff), pBuf_utf8, (short) (outLen & 0xffff));
 			pBuf_utf8.setByte(len_utf8, (byte) 0);
 			
 			// copy 
@@ -378,7 +375,7 @@ public class NotesStringUtils {
 				currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
 				if (currConvertedStr.contains("\0")) {
 					//Notes uses \0 for multiline strings
-					if (notesAPI instanceof WinNotesCAPI && useOSLineBreak) {
+					if (PlatformUtils.isWindows() && useOSLineBreak) {
 						currConvertedStr = currConvertedStr.replace("\0", "\r\n");
 					}
 					else {
@@ -504,8 +501,6 @@ public class NotesStringUtils {
 			}
 			inStr = sb.toString();
 		}
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		String currRemainingStr = inStr;
 		
@@ -542,7 +537,7 @@ public class NotesStringUtils {
 				throw new IllegalStateException("out buffer is expected to be in WORD range. "+out.size()+" >= 65535");
 			}
 			
-			short outContentLength = notesAPI.OSTranslate(NotesCAPI.OS_TRANSLATE_UTF8_TO_LMBCS, in, (short) (in.size() & 0xffff), out, (short) (out.size() & 0xffff));
+			short outContentLength = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_UTF8_TO_LMBCS, in, (short) (in.size() & 0xffff), out, (short) (out.size() & 0xffff));
 			byte[] outAsBytes = new byte[outContentLength];
 			
 			out.read(0, outAsBytes, 0, outContentLength);
@@ -653,10 +648,9 @@ public class NotesStringUtils {
 		Memory serverNameMem = toLMBCS(serverName, true);
 		Memory fileNameMem = toLMBCS(fileName, true);
 		
-		Memory retPathMem = new Memory(NotesCAPI.MAXPATH);
+		Memory retPathMem = new Memory(NotesConstants.MAXPATH);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		short result = notesAPI.OSPathNetConstruct(portNameMem, serverNameMem, fileNameMem, retPathMem);
+		short result = NotesNativeAPI.get().OSPathNetConstruct(portNameMem, serverNameMem, fileNameMem, retPathMem);
 		NotesErrorUtils.checkResult(result);
 		String retPath = fromLMBCS(retPathMem, getNullTerminatedLength(retPathMem));
 		return retPath;
@@ -681,13 +675,12 @@ public class NotesStringUtils {
 	 * @return String array of portname, servername, filename
 	 */
 	public static String[] osPathNetParse(String pathName) {
-		Memory retPortNameMem = new Memory(NotesCAPI.MAXPATH);
-		Memory retServerNameMem = new Memory(NotesCAPI.MAXPATH);
-		Memory retFileNameMem = new Memory(NotesCAPI.MAXPATH);
+		Memory retPortNameMem = new Memory(NotesConstants.MAXPATH);
+		Memory retServerNameMem = new Memory(NotesConstants.MAXPATH);
+		Memory retFileNameMem = new Memory(NotesConstants.MAXPATH);
 		
 		Memory pathNameMem = toLMBCS(pathName, true);
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		short result = notesAPI.OSPathNetParse(pathNameMem, retPortNameMem, retServerNameMem, retFileNameMem);
+		short result = NotesNativeAPI.get().OSPathNetParse(pathNameMem, retPortNameMem, retServerNameMem, retFileNameMem);
 		NotesErrorUtils.checkResult(result);
 		
 		String portName = fromLMBCS(retPortNameMem, getNullTerminatedLength(retPortNameMem));

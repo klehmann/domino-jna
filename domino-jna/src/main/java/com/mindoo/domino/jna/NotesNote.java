@@ -41,36 +41,37 @@ import com.mindoo.domino.jna.html.TargetType;
 import com.mindoo.domino.jna.internal.CollationDecoder;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
 import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI.b32_CWFErrorProc;
-import com.mindoo.domino.jna.internal.NotesCAPI.b64_CWFErrorProc;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
+import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
+import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
+import com.mindoo.domino.jna.internal.structs.NotesObjectDescriptorStruct;
+import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
+import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
+import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.conversion.IRichTextConversion;
-import com.mindoo.domino.jna.structs.NoteIdStruct;
-import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
-import com.mindoo.domino.jna.structs.NotesCDFieldStruct;
-import com.mindoo.domino.jna.structs.NotesFileObjectStruct;
-import com.mindoo.domino.jna.structs.NotesNumberPairStruct;
-import com.mindoo.domino.jna.structs.NotesObjectDescriptorStruct;
-import com.mindoo.domino.jna.structs.NotesOriginatorIdStruct;
-import com.mindoo.domino.jna.structs.NotesRangeStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDatePairStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.structs.html.HTMLAPIReference32Struct;
-import com.mindoo.domino.jna.structs.html.HTMLAPIReference64Struct;
-import com.mindoo.domino.jna.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -106,7 +107,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param hNote handle
 	 */
 	NotesNote(NotesDatabase parentDb, int hNote) {
-		if (NotesJNAContext.is64Bit())
+		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_parentDb = parentDb;
 		m_hNote32 = hNote;
@@ -119,7 +120,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param hNote handle
 	 */
 	NotesNote(NotesDatabase parentDb, long hNote) {
-		if (!NotesJNAContext.is64Bit())
+		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_parentDb = parentDb;
 		m_hNote64 = hNote;
@@ -140,7 +141,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (docHandle==0)
 				throw new NotesError(0, "Could not read db handle");
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				m_hNote64 = docHandle;
 			}
 			else {
@@ -158,7 +159,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 			long dbHandle = LegacyAPIUtils.getDBHandle(legacyDb);
 			try {
-				if (NotesJNAContext.is64Bit()) {
+				if (PlatformUtils.is64Bit()) {
 					m_parentDb = (NotesDatabase) NotesGC.__b64_checkValidObjectHandle(NotesDatabase.class, dbHandle);
 				}
 				else {
@@ -196,7 +197,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	public static NotesNote toNote(NotesDatabase parentDb, Document doc) {
 		long handle = LegacyAPIUtils.getDocHandle(doc);
 		NotesNote note;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			note = new NotesNote(parentDb, handle);
 		}
 		else {
@@ -213,7 +214,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return document
 	 */
 	public Document toDocument(Database db) {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return LegacyAPIUtils.createDocument(db, m_hNote64);
 		}
 		else {
@@ -241,12 +242,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory retNoteId = new Memory(4);
 		retNoteId.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ID, retNoteId);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ID, retNoteId);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ID, retNoteId);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ID, retNoteId);
 		}
 		return retNoteId.getInt(0);
 	}
@@ -263,12 +263,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			Memory retNoteClass = new Memory(2);
 			retNoteClass.clear();
 			
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_CLASS, retNoteClass);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_CLASS, retNoteClass);
 			}
 			else {
-				notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_CLASS, retNoteClass);
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_CLASS, retNoteClass);
 			}
 			int noteClassMask = retNoteClass.getShort(0);
 			m_noteClass = NoteClass.toNoteClasses(noteClassMask);
@@ -292,7 +291,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			return "NotesNote [recycled]";
 		}
 		else {
-			return "NotesNote [handle="+(NotesJNAContext.is64Bit() ? m_hNote64 : m_hNote32)+", noteid="+getNoteId()+"]";
+			return "NotesNote [handle="+(PlatformUtils.is64Bit() ? m_hNote64 : m_hNote32)+", noteid="+getNoteId()+"]";
 		}
 	}
 	
@@ -316,15 +315,14 @@ public class NotesNote implements IRecyclableNotesObject {
 	private NotesOriginatorIdStruct getOIDStruct() {
 		checkHandle();
 		
-		Memory retOid = new Memory(NotesCAPI.oidSize);
+		Memory retOid = new Memory(NotesConstants.oidSize);
 		retOid.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
 		}
 		NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
 		oidStruct.read();
@@ -351,24 +349,23 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void setUNID(String newUnid) {
 		checkHandle();
 		
-		Memory retOid = new Memory(NotesCAPI.oidSize);
+		Memory retOid = new Memory(NotesConstants.oidSize);
 		retOid.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
 		}
 		NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
 		oidStruct.read();
 		oidStruct.setUNID(newUnid);
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteSetInfo(m_hNote64, NotesCAPI._NOTE_OID, retOid);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteSetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
 		}
 		else {
-			notesAPI.b32_NSFNoteSetInfo(m_hNote32, NotesCAPI._NOTE_OID, retOid);
+			NotesNativeAPI32.get().NSFNoteSetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
 		}
 	}
 	
@@ -380,15 +377,14 @@ public class NotesNote implements IRecyclableNotesObject {
 	public Calendar getLastModified() {
 		checkHandle();
 		
-		Memory retModified = new Memory(NotesCAPI.timeDateSize);
+		Memory retModified = new Memory(NotesConstants.timeDateSize);
 		retModified.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_MODIFIED, retModified);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_MODIFIED, retModified);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_MODIFIED, retModified);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_MODIFIED, retModified);
 		}
 		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
@@ -422,15 +418,14 @@ public class NotesNote implements IRecyclableNotesObject {
 	public Calendar getLastAccessed() {
 		checkHandle();
 		
-		Memory retModified = new Memory(NotesCAPI.timeDateSize);
+		Memory retModified = new Memory(NotesConstants.timeDateSize);
 		retModified.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ACCESSED, retModified);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ACCESSED, retModified);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ACCESSED, retModified);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ACCESSED, retModified);
 		}
 		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
@@ -446,15 +441,14 @@ public class NotesNote implements IRecyclableNotesObject {
 	public Calendar getAddedToFileTime() {
 		checkHandle();
 		
-		Memory retModified = new Memory(NotesCAPI.timeDateSize);
+		Memory retModified = new Memory(NotesConstants.timeDateSize);
 		retModified.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ADDED_TO_FILE, retModified);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_ADDED_TO_FILE, retModified);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ADDED_TO_FILE, retModified);
 		}
 		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
 		td.read();
@@ -472,7 +466,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public boolean isReadOnly() {
 		int flags = getFlags();
-		return (flags & NotesCAPI.NOTE_FLAG_READONLY) == NotesCAPI.NOTE_FLAG_READONLY;
+		return (flags & NotesConstants.NOTE_FLAG_READONLY) == NotesConstants.NOTE_FLAG_READONLY;
 	}
 	
 	/**
@@ -484,11 +478,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public boolean isTruncated() {
 		int flags = getFlags();
-		return (flags & NotesCAPI.NOTE_FLAG_ABSTRACTED) == NotesCAPI.NOTE_FLAG_ABSTRACTED;
+		return (flags & NotesConstants.NOTE_FLAG_ABSTRACTED) == NotesConstants.NOTE_FLAG_ABSTRACTED;
 	}
 	
 	/**
-	 * Reads the note flags (e.g. {@link NotesCAPI#NOTE_FLAG_READONLY})
+	 * Reads the note flags (e.g. {@link NotesConstants#NOTE_FLAG_READONLY})
 	 * 
 	 * @return flags
 	 */
@@ -498,12 +492,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory retFlags = new Memory(2);
 		retFlags.clear();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteGetInfo(m_hNote64, NotesCAPI._NOTE_FLAGS, retFlags);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_FLAGS, retFlags);
 		}
 		else {
-			notesAPI.b32_NSFNoteGetInfo(m_hNote32, NotesCAPI._NOTE_FLAGS, retFlags);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_FLAGS, retFlags);
 		}
 		short flags = retFlags.getShort(0);
 		return flags;
@@ -523,16 +516,15 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (m_noRecycle || isRecycled())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteClose(m_hNote64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteClose(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__objectBeeingBeRecycled(NotesNote.class, this);
 			m_hNote64=0;
 		}
 		else {
-			result = notesAPI.b32_NSFNoteClose(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteClose(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__objectBeeingBeRecycled(NotesNote.class, this);
 			m_hNote32=0;
@@ -541,7 +533,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 	@Override
 	public boolean isRecycled() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_hNote64==0;
 		}
 		else {
@@ -563,7 +555,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (m_legacyDocRef!=null && isRecycled(m_legacyDocRef))
 			throw new NotesError(0, "Wrapped legacy document already recycled");
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_hNote64==0)
 				throw new NotesError(0, "Note already recycled");
 			NotesGC.__b64_checkValidObjectHandle(NotesNote.class, m_hNote64);
@@ -581,13 +573,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void unsign() {
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteUnsign(m_hNote64);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFNoteUnsign(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFNoteUnsign(m_hNote32);
+			short result = NotesNativeAPI32.get().NSFNoteUnsign(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -617,13 +608,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		int updateFlagsBitmask = UpdateNote.toBitMaskForUpdateExt(updateFlags);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteUpdateExtended(m_hNote64, updateFlagsBitmask);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFNoteUpdateExtended(m_hNote64, updateFlagsBitmask);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFNoteUpdateExtended(m_hNote32, updateFlagsBitmask);
+			short result = NotesNativeAPI32.get().NSFNoteUpdateExtended(m_hNote32, updateFlagsBitmask);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -664,15 +654,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 		
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFItemInfo(m_hNote64, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFItemInfo(m_hNote64, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
 		}
 		else {
-			result = notesAPI.b32_NSFItemInfo(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
+			result = NotesNativeAPI32.get().NSFItemInfo(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff), null, null, null, null);
 		}
 		return result == 0;	
 	}
@@ -685,12 +673,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	public boolean hasComposite() {
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			return notesAPI.b64_NSFNoteHasComposite(m_hNote64) == 1;
+		if (PlatformUtils.is64Bit()) {
+			return NotesNativeAPI64.get().NSFNoteHasComposite(m_hNote64) == 1;
 		}
 		else {
-			return notesAPI.b32_NSFNoteHasComposite(m_hNote32) == 1;
+			return NotesNativeAPI32.get().NSFNoteHasComposite(m_hNote32) == 1;
 		}
 	}
 	
@@ -703,12 +690,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	public boolean hasMIME() {
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			return notesAPI.b64_NSFNoteHasMIME(m_hNote64) == 1;
+		if (PlatformUtils.is64Bit()) {
+			return NotesNativeAPI64.get().NSFNoteHasMIME(m_hNote64) == 1;
 		}
 		else {
-			return notesAPI.b32_NSFNoteHasMIME(m_hNote32) == 1;
+			return NotesNativeAPI32.get().NSFNoteHasMIME(m_hNote32) == 1;
 		}
 	}
 	
@@ -720,12 +706,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	public boolean hasMIMEPart() {
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			return notesAPI.b64_NSFNoteHasMIMEPart(m_hNote64) == 1;
+		if (PlatformUtils.is64Bit()) {
+			return NotesNativeAPI64.get().NSFNoteHasMIMEPart(m_hNote64) == 1;
 		}
 		else {
-			return notesAPI.b32_NSFNoteHasMIMEPart(m_hNote32) == 1;
+			return NotesNativeAPI32.get().NSFNoteHasMIMEPart(m_hNote32) == 1;
 		}
 	}
 	
@@ -769,13 +754,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		int flagsAsInt = UpdateNote.toBitMaskForUpdateExt(flags);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteDeleteExtended(m_parentDb.getHandle64(), getNoteId(), flagsAsInt);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
+			result = NotesNativeAPI32.get().NSFNoteDeleteExtended(m_parentDb.getHandle32(), getNoteId(), flagsAsInt);
 		}
 		NotesErrorUtils.checkResult(result);
 	}
@@ -790,13 +774,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFItemDelete(m_hNote64, itemNameMem, (short) (itemNameMem.size() & 0xffff));
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFItemDelete(m_hNote64, itemNameMem, (short) (itemNameMem.size() & 0xffff));
 		}
 		else {
-			result = notesAPI.b32_NSFItemDelete(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff));
+			result = NotesNativeAPI32.get().NSFItemDelete(m_hNote32, itemNameMem, (short) (itemNameMem.size() & 0xffff));
 		}
 		if (result==INotesErrorConstants.ERR_ITEM_NOT_FOUND) {
 			return;
@@ -822,18 +805,16 @@ public class NotesNote implements IRecyclableNotesObject {
 	public String getItemValueString(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		synchronized (MAX_TEXT_ITEM_VALUE) {
 			try {
 				short length;
-				if (NotesJNAContext.is64Bit()) {
-					length = notesAPI.b64_NSFItemGetText(m_hNote64, itemNameMem, MAX_TEXT_ITEM_VALUE, (short) (MAX_TEXT_ITEM_VALUE.size() & 0xffff));
+				if (PlatformUtils.is64Bit()) {
+					length = NotesNativeAPI64.get().NSFItemGetText(m_hNote64, itemNameMem, MAX_TEXT_ITEM_VALUE, (short) (MAX_TEXT_ITEM_VALUE.size() & 0xffff));
 				}
 				else {
-					length = notesAPI.b32_NSFItemGetText(m_hNote32, itemNameMem, MAX_TEXT_ITEM_VALUE, (short) (MAX_TEXT_ITEM_VALUE.size() & 0xffff));
+					length = NotesNativeAPI32.get().NSFItemGetText(m_hNote32, itemNameMem, MAX_TEXT_ITEM_VALUE, (short) (MAX_TEXT_ITEM_VALUE.size() & 0xffff));
 				}
 				int lengthAsInt = (int) length & 0xffff;
 				if (lengthAsInt==0) {
@@ -875,18 +856,15 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void setItemValueString(String itemName, String itemValue, boolean isSummary) {
 		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		Memory itemValueMem = NotesStringUtils.toLMBCS(itemValue, false);
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemSetTextSummary(m_hNote64, itemNameMem, itemValueMem, itemValueMem==null ? 0 : ((short) (itemValueMem.size() & 0xffff)), isSummary);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemSetTextSummary(m_hNote64, itemNameMem, itemValueMem, itemValueMem==null ? 0 : ((short) (itemValueMem.size() & 0xffff)), isSummary);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemSetTextSummary(m_hNote32, itemNameMem, itemValueMem, itemValueMem==null ? 0 : ((short) (itemValueMem.size() & 0xffff)), isSummary);
+			short result = NotesNativeAPI32.get().NSFItemSetTextSummary(m_hNote32, itemNameMem, itemValueMem, itemValueMem==null ? 0 : ((short) (itemValueMem.size() & 0xffff)), isSummary);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -900,19 +878,17 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void setItemValueDouble(String itemName, double value) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		Memory doubleMem = new Memory(Native.getNativeSize(Double.TYPE));
 		doubleMem.setDouble(0, value);
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemSetNumber(m_hNote64, itemNameMem, doubleMem);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemSetNumber(m_hNote64, itemNameMem, doubleMem);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemSetNumber(m_hNote32, itemNameMem, doubleMem);
+			short result = NotesNativeAPI32.get().NSFItemSetNumber(m_hNote32, itemNameMem, doubleMem);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -931,19 +907,17 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		NotesTimeDate timeDate = NotesDateTimeUtils.calendarToTimeDate(cal);
 		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : timeDate.getAdapter(NotesTimeDateStruct.class);
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemSetTime(m_hNote64, itemNameMem, timeDateStruct);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemSetTime(m_hNote64, itemNameMem, timeDateStruct);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemSetTime(m_hNote32, itemNameMem, timeDateStruct);
+			short result = NotesNativeAPI32.get().NSFItemSetTime(m_hNote32, itemNameMem, timeDateStruct);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -982,19 +956,17 @@ public class NotesNote implements IRecyclableNotesObject {
 	public List<String> getItemValueStringList(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		synchronized (MAX_TEXT_ITEM_VALUE) {
 			try {
 				short nrOfValues;
-				if (NotesJNAContext.is64Bit()) {
-					nrOfValues = notesAPI.b64_NSFItemGetTextListEntries(m_hNote64, itemNameMem);
+				if (PlatformUtils.is64Bit()) {
+					nrOfValues = NotesNativeAPI64.get().NSFItemGetTextListEntries(m_hNote64, itemNameMem);
 					
 				}
 				else {
-					nrOfValues = notesAPI.b32_NSFItemGetTextListEntries(m_hNote32, itemNameMem);
+					nrOfValues = NotesNativeAPI32.get().NSFItemGetTextListEntries(m_hNote32, itemNameMem);
 				}
 				
 				int nrOfValuesAsInt = (int) (nrOfValues & 0xffff);
@@ -1009,11 +981,11 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 				for (int i=0; i<nrOfValuesAsInt; i++) {
 					short length;
-					if (NotesJNAContext.is64Bit()) {
-						length = notesAPI.b64_NSFItemGetTextListEntry(m_hNote64, itemNameMem, (short) (i & 0xffff), MAX_TEXT_ITEM_VALUE, retBufferSize);
+					if (PlatformUtils.is64Bit()) {
+						length = NotesNativeAPI64.get().NSFItemGetTextListEntry(m_hNote64, itemNameMem, (short) (i & 0xffff), MAX_TEXT_ITEM_VALUE, retBufferSize);
 					}
 					else {
-						length = notesAPI.b32_NSFItemGetTextListEntry(m_hNote32, itemNameMem, (short) (i & 0xffff), MAX_TEXT_ITEM_VALUE, retBufferSize);
+						length = NotesNativeAPI32.get().NSFItemGetTextListEntry(m_hNote32, itemNameMem, (short) (i & 0xffff), MAX_TEXT_ITEM_VALUE, retBufferSize);
 					}
 					
 					int lengthAsInt = (int) length & 0xffff;
@@ -1062,8 +1034,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	public String getItemValueAsText(String itemName, char multiValueDelimiter) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		synchronized (MAX_TEXT_ITEM_VALUE) {
@@ -1072,11 +1042,11 @@ public class NotesNote implements IRecyclableNotesObject {
 				short retBufferSize = (short) (Math.min(60*1024, MAX_TEXT_ITEM_VALUE.size()) & 0xffff);
 
 				short length;
-				if (NotesJNAContext.is64Bit()) {
-					length = notesAPI.b64_NSFItemConvertToText(m_hNote64, itemNameMem, MAX_TEXT_ITEM_VALUE, retBufferSize, multiValueDelimiter);
+				if (PlatformUtils.is64Bit()) {
+					length = NotesNativeAPI64.get().NSFItemConvertToText(m_hNote64, itemNameMem, MAX_TEXT_ITEM_VALUE, retBufferSize, multiValueDelimiter);
 				}
 				else {
-					length = notesAPI.b32_NSFItemConvertToText(m_hNote32, itemNameMem, MAX_TEXT_ITEM_VALUE, retBufferSize, multiValueDelimiter);
+					length = NotesNativeAPI32.get().NSFItemConvertToText(m_hNote32, itemNameMem, MAX_TEXT_ITEM_VALUE, retBufferSize, multiValueDelimiter);
 				}
 				int lengthAsInt = (int) length & 0xffff;
 				if (lengthAsInt==0) {
@@ -1111,20 +1081,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	public double getItemValueDouble(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		DoubleByReference retNumber = new DoubleByReference();
 		
-		if (NotesJNAContext.is64Bit()) {
-			boolean exists = notesAPI.b64_NSFItemGetNumber(m_hNote64, itemNameMem, retNumber);
+		if (PlatformUtils.is64Bit()) {
+			boolean exists = NotesNativeAPI64.get().NSFItemGetNumber(m_hNote64, itemNameMem, retNumber);
 			if (!exists) {
 				return 0;
 			}
 		}
 		else {
-			boolean exists = notesAPI.b32_NSFItemGetNumber(m_hNote32, itemNameMem, retNumber);
+			boolean exists = NotesNativeAPI32.get().NSFItemGetNumber(m_hNote32, itemNameMem, retNumber);
 			if (!exists) {
 				return 0;
 			}
@@ -1184,20 +1152,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	public Calendar getItemValueDateTime(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		NotesTimeDateStruct td_item_value = NotesTimeDateStruct.newInstance();
 		
-		if (NotesJNAContext.is64Bit()) {
-			boolean exists = notesAPI.b64_NSFItemGetTime(m_hNote64, itemNameMem, td_item_value);
+		if (PlatformUtils.is64Bit()) {
+			boolean exists = NotesNativeAPI64.get().NSFItemGetTime(m_hNote64, itemNameMem, td_item_value);
 			if (!exists) {
 				return null;
 			}
 		}
 		else {
-			boolean exists = notesAPI.b32_NSFItemGetTime(m_hNote32, itemNameMem, td_item_value);
+			boolean exists = NotesNativeAPI32.get().NSFItemGetTime(m_hNote32, itemNameMem, td_item_value);
 			if (!exists) {
 				return null;
 			}
@@ -1214,14 +1180,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return item value as list
 	 */
 	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, NotesBlockIdStruct valueBlockId, int valueLength) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Pointer poolPtr;
-		if (NotesJNAContext.is64Bit()) {
-			poolPtr = notesAPI.b64_OSLockObject((long) valueBlockId.pool);
+		if (PlatformUtils.is64Bit()) {
+			poolPtr = NotesNativeAPI64.get().OSLockObject((long) valueBlockId.pool);
 		}
 		else {
-			poolPtr = notesAPI.b32_OSLockObject(valueBlockId.pool);
+			poolPtr = NotesNativeAPI32.get().OSLockObject(valueBlockId.pool);
 		}
 		
 		int block = (valueBlockId.block & 0xffff);
@@ -1233,12 +1197,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			return values;
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_OSUnlockObject((long) valueBlockId.pool);
-				
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().OSUnlockObject((long) valueBlockId.pool);
 			}
 			else {
-				notesAPI.b32_OSUnlockObject(valueBlockId.pool);
+				NotesNativeAPI32.get().OSUnlockObject(valueBlockId.pool);
 			}
 		}
 	}
@@ -1254,8 +1217,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return item value as list
 	 */
 	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, Pointer valuePtr, int valueLength) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		short dataType = valuePtr.getShort(0);
 		int dataTypeAsInt = (int) (dataType & 0xffff);
 		
@@ -1309,33 +1270,33 @@ public class NotesNote implements IRecyclableNotesObject {
 			throw new IllegalStateException("Value data type does not meet expected date type: found "+checkDataType+", expected "+dataTypeAsInt);
 		}
 		if (dataTypeAsInt == NotesItem.TYPE_TEXT) {
-			String txtVal = (String) ItemDecoder.decodeTextValue(notesAPI, valueDataPtr, valueDataLength, false);
+			String txtVal = (String) ItemDecoder.decodeTextValue(valueDataPtr, valueDataLength, false);
 			return txtVal==null ? Collections.emptyList() : Arrays.asList((Object) txtVal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TEXT_LIST) {
-			List<Object> textList = valueDataLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(notesAPI, valueDataPtr, false);
+			List<Object> textList = valueDataLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(valueDataPtr, false);
 			return textList==null ? Collections.emptyList() : textList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NUMBER) {
-			double numVal = ItemDecoder.decodeNumber(notesAPI, valueDataPtr, valueDataLength);
+			double numVal = ItemDecoder.decodeNumber(valueDataPtr, valueDataLength);
 			return Arrays.asList((Object) Double.valueOf(numVal));
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NUMBER_RANGE) {
-			List<Object> numberList = ItemDecoder.decodeNumberList(notesAPI, valueDataPtr, valueDataLength);
+			List<Object> numberList = ItemDecoder.decodeNumberList(valueDataPtr, valueDataLength);
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
 			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 			
-			Calendar cal = ItemDecoder.decodeTimeDate(notesAPI, valueDataPtr, valueDataLength, useDayLight, gmtOffset);
+			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
 			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
 			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 			
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(notesAPI, valueDataPtr, useDayLight, gmtOffset);
+			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
 			return calendarValues==null ? Collections.emptyList() : calendarValues;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_OBJECT) {
@@ -1344,7 +1305,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			int rrv = objDescriptor.RRV;
 			
-			if (objDescriptor.ObjectType == NotesCAPI.OBJECT_FILE) {
+			if (objDescriptor.ObjectType == NotesConstants.OBJECT_FILE) {
 				Pointer fileObjectPtr = valueDataPtr;
 				
 				NotesFileObjectStruct fileObject = NotesFileObjectStruct.newInstance(fileObjectPtr);
@@ -1368,7 +1329,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					}
 				}
 				
-				Pointer fileNamePtr = fileObjectPtr.share(NotesCAPI.fileObjectSize);
+				Pointer fileNamePtr = fileObjectPtr.share(NotesConstants.fileObjectSize);
 				String fileName = NotesStringUtils.fromLMBCS(fileNamePtr, fileNameLength);
 				
 				NotesAttachment attInfo = new NotesAttachment(fileName, compression, flags, fileSize,
@@ -1397,38 +1358,38 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_FORMULA) {
 			boolean isSelectionFormula = "$FORMULA".equalsIgnoreCase(itemName) && getNoteClass().contains(NoteClass.VIEW);
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethFormulaText = new LongByReference();
 				ShortByReference retFormulaTextLength = new ShortByReference();
-				short result = notesAPI.b64_NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
+				short result = NotesNativeAPI64.get().NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
 				NotesErrorUtils.checkResult(result);
 
-				Pointer formulaPtr = notesAPI.b64_OSLockObject(rethFormulaText.getValue());
+				Pointer formulaPtr = NotesNativeAPI64.get().OSLockObject(rethFormulaText.getValue());
 				try {
 					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
 					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
 					return Arrays.asList((Object) formula);
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethFormulaText.getValue());
-					notesAPI.b64_OSMemFree(rethFormulaText.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethFormulaText.getValue());
+					NotesNativeAPI64.get().OSMemFree(rethFormulaText.getValue());
 				}
 			}
 			else {
 				IntByReference rethFormulaText = new IntByReference();
 				ShortByReference retFormulaTextLength = new ShortByReference();
-				short result = notesAPI.b32_NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
+				short result = NotesNativeAPI32.get().NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer formulaPtr = notesAPI.b32_OSLockObject(rethFormulaText.getValue());
+				Pointer formulaPtr = NotesNativeAPI32.get().OSLockObject(rethFormulaText.getValue());
 				try {
 					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
 					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
 					return Arrays.asList((Object) formula);
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethFormulaText.getValue());
-					notesAPI.b32_OSMemFree(rethFormulaText.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethFormulaText.getValue());
+					NotesNativeAPI32.get().OSMemFree(rethFormulaText.getValue());
 				}
 			}
 		}
@@ -1457,8 +1418,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public NotesAttachment attachFile(String filePathOnDisk, String uniqueFileNameInNote, Compression compression) {
 		checkHandle();
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		//make sure that the unique filename is really unique, since it will be used to return the NotesAttachment object
 		List<Object> existingFileItems = FormulaExecution.evaluate("@AttachmentNames", this);
@@ -1485,12 +1444,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory uniqueFileNameInNoteMem = NotesStringUtils.toLMBCS(reallyUniqueFileName, true);
 		short compressionAsShort = (short) (compression.getValue() & 0xffff);
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFNoteAttachFile(m_hNote64, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFNoteAttachFile(m_hNote64, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFNoteAttachFile(m_hNote32, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
+			short result = NotesNativeAPI32.get().NSFNoteAttachFile(m_hNote32, $fileItemName, (short) (($fileItemName.size()-1) & 0xffff), filePathOnDiskMem, uniqueFileNameInNoteMem, compressionAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
 		return getAttachment(reallyUniqueFileName);
@@ -1539,8 +1498,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	public List<Object> getItemValue(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		NotesItem item = getFirstItem(itemName);
 		if (item==null) {
 			return Collections.emptyList();
@@ -1554,11 +1511,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesBlockIdStruct valueBlockId = item.getValueBlockId();
 		
 		Pointer poolPtr;
-		if (NotesJNAContext.is64Bit()) {
-			poolPtr = notesAPI.b64_OSLockObject((long) valueBlockId.pool);
+		if (PlatformUtils.is64Bit()) {
+			poolPtr = NotesNativeAPI64.get().OSLockObject((long) valueBlockId.pool);
 		}
 		else {
-			poolPtr = notesAPI.b32_OSLockObject(valueBlockId.pool);
+			poolPtr = NotesNativeAPI32.get().OSLockObject(valueBlockId.pool);
 		}
 		
 		int block = (int) (valueBlockId.block & 0xffff);
@@ -1570,12 +1527,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			return values;
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_OSUnlockObject((long) valueBlockId.pool);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().OSUnlockObject((long) valueBlockId.pool);
 				
 			}
 			else {
-				notesAPI.b32_OSUnlockObject(valueBlockId.pool);
+				NotesNativeAPI32.get().OSUnlockObject(valueBlockId.pool);
 			}
 		}
 	}
@@ -1620,39 +1577,39 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		public boolean isSigned() {
-			return (m_itemFlags & NotesCAPI.ITEM_SIGN) == NotesCAPI.ITEM_SIGN;
+			return (m_itemFlags & NotesConstants.ITEM_SIGN) == NotesConstants.ITEM_SIGN;
 		}
 		
 		public boolean isSealed() {
-			return (m_itemFlags & NotesCAPI.ITEM_SEAL) == NotesCAPI.ITEM_SEAL;
+			return (m_itemFlags & NotesConstants.ITEM_SEAL) == NotesConstants.ITEM_SEAL;
 		}
 		
 		public boolean isSummary() {
-			return (m_itemFlags & NotesCAPI.ITEM_SUMMARY) == NotesCAPI.ITEM_SUMMARY;
+			return (m_itemFlags & NotesConstants.ITEM_SUMMARY) == NotesConstants.ITEM_SUMMARY;
 		}
 		
 		public boolean isReadWriters() {
-			return (m_itemFlags & NotesCAPI.ITEM_READWRITERS) == NotesCAPI.ITEM_READWRITERS;
+			return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
 		}
 		
 		public boolean isNames() {
-			return (m_itemFlags & NotesCAPI.ITEM_NAMES) == NotesCAPI.ITEM_NAMES;
+			return (m_itemFlags & NotesConstants.ITEM_NAMES) == NotesConstants.ITEM_NAMES;
 		}
 		
 		public boolean isPlaceholder() {
-			return (m_itemFlags & NotesCAPI.ITEM_PLACEHOLDER) == NotesCAPI.ITEM_PLACEHOLDER;
+			return (m_itemFlags & NotesConstants.ITEM_PLACEHOLDER) == NotesConstants.ITEM_PLACEHOLDER;
 		}
 		
 		public boolean isProtected() {
-			return (m_itemFlags & NotesCAPI.ITEM_PROTECTED) == NotesCAPI.ITEM_PROTECTED;
+			return (m_itemFlags & NotesConstants.ITEM_PROTECTED) == NotesConstants.ITEM_PROTECTED;
 		}
 		
 		public boolean isReaders() {
-			return (m_itemFlags & NotesCAPI.ITEM_READERS) == NotesCAPI.ITEM_READERS;
+			return (m_itemFlags & NotesConstants.ITEM_READERS) == NotesConstants.ITEM_READERS;
 		}
 		
 		public boolean isUnchanged() {
-			return (m_itemFlags & NotesCAPI.ITEM_UNCHANGED) == NotesCAPI.ITEM_UNCHANGED;
+			return (m_itemFlags & NotesConstants.ITEM_UNCHANGED) == NotesConstants.ITEM_UNCHANGED;
 		}
 
 	}
@@ -1675,8 +1632,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void getItems(final String searchForItemName, final IItemCallback callback) {
 		checkHandle();
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory itemNameMem = StringUtil.isEmpty(searchForItemName) ? null : NotesStringUtils.toLMBCS(searchForItemName, false);
 		
 		NotesBlockIdStruct.ByReference itemBlockId = NotesBlockIdStruct.ByReference.newInstance();
@@ -1686,12 +1641,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		short result;
 		
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFItemInfo(m_hNote64, itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff),
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFItemInfo(m_hNote64, itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff),
 					itemBlockId, retDataType, valueBlockId, retValueLen);
 		}
 		else {
-			result = notesAPI.b32_NSFItemInfo(m_hNote32, itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff),
+			result = NotesNativeAPI32.get().NSFItemInfo(m_hNote32, itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff),
 					itemBlockId, retDataType, valueBlockId, retValueLen);
 		}
 		
@@ -1729,13 +1684,13 @@ public class NotesNote implements IRecyclableNotesObject {
 			itemBlockIdByVal.pool = itemBlockId.pool;
 			itemBlockIdByVal.block = itemBlockId.block;
 			
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_NSFItemInfoNext(m_hNote64, itemBlockIdByVal,
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NSFItemInfoNext(m_hNote64, itemBlockIdByVal,
 						itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff), itemBlockId, retDataType,
 						valueBlockId, retNextValueLen);
 			}
 			else {
-				result = notesAPI.b32_NSFItemInfoNext(m_hNote32, itemBlockIdByVal,
+				result = NotesNativeAPI32.get().NSFItemInfoNext(m_hNote32, itemBlockIdByVal,
 						itemNameMem, itemNameMem==null ? 0 : (short) (itemNameMem.size() & 0xffff), itemBlockId, retDataType,
 						valueBlockId, retNextValueLen);
 			}
@@ -1849,14 +1804,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		ByteByReference signed_flag_ptr = new ByteByReference();
 		ByteByReference sealed_flag_ptr = new ByteByReference();
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteIsSignedOrSealed(m_hNote64, signed_flag_ptr, sealed_flag_ptr);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteIsSignedOrSealed(m_hNote64, signed_flag_ptr, sealed_flag_ptr);
 			byte signed = signed_flag_ptr.getValue();
 			return signed == 1;
 		}
 		else {
-			notesAPI.b32_NSFNoteIsSignedOrSealed(m_hNote32, signed_flag_ptr, sealed_flag_ptr);
+			NotesNativeAPI32.get().NSFNoteIsSignedOrSealed(m_hNote32, signed_flag_ptr, sealed_flag_ptr);
 			byte signed = signed_flag_ptr.getValue();
 			return signed == 1;
 		}
@@ -1873,14 +1827,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		ByteByReference signed_flag_ptr = new ByteByReference();
 		ByteByReference sealed_flag_ptr = new ByteByReference();
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			notesAPI.b64_NSFNoteIsSignedOrSealed(m_hNote64, signed_flag_ptr, sealed_flag_ptr);
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteIsSignedOrSealed(m_hNote64, signed_flag_ptr, sealed_flag_ptr);
 			byte sealed = sealed_flag_ptr.getValue();
 			return sealed == 1;
 		}
 		else {
-			notesAPI.b32_NSFNoteIsSignedOrSealed(m_hNote32, signed_flag_ptr, sealed_flag_ptr);
+			NotesNativeAPI32.get().NSFNoteIsSignedOrSealed(m_hNote32, signed_flag_ptr, sealed_flag_ptr);
 			byte sealed = sealed_flag_ptr.getValue();
 			return sealed == 1;
 		}
@@ -1928,25 +1881,25 @@ public class NotesNote implements IRecyclableNotesObject {
 	
 	private ValidationPhase decodeValidationPhase(short phase) {
 		ValidationPhase phaseEnum = null;
-		if (phase == NotesCAPI.CWF_DV_FORMULA) {
+		if (phase == NotesConstants.CWF_DV_FORMULA) {
 			phaseEnum = ValidationPhase.CWF_DV_FORMULA;
 		}
-		else if (phase == NotesCAPI.CWF_IT_FORMULA) {
+		else if (phase == NotesConstants.CWF_IT_FORMULA) {
 			phaseEnum = ValidationPhase.CWF_IT_FORMULA;
 		}
-		else if (phase == NotesCAPI.CWF_IV_FORMULA) {
+		else if (phase == NotesConstants.CWF_IV_FORMULA) {
 			phaseEnum = ValidationPhase.CWF_IV_FORMULA;
 		}
-		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA) {
+		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA) {
 			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA;
 		}
-		else if (phase == NotesCAPI.CWF_DATATYPE_CONVERSION) {
+		else if (phase == NotesConstants.CWF_DATATYPE_CONVERSION) {
 			phaseEnum = ValidationPhase.CWF_DATATYPE_CONVERSION;
 		}
-		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA_LOAD) {
+		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA_LOAD) {
 			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_LOAD;
 		}
-		else if (phase == NotesCAPI.CWF_COMPUTED_FORMULA_SAVE) {
+		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA_SAVE) {
 			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_SAVE;
 		}
 
@@ -1957,7 +1910,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(ptrCDField);
 		cdField.read();
 		
-		Pointer defaultValueFormulaPtr = ptrCDField.share(NotesCAPI.cdFieldSize);
+		Pointer defaultValueFormulaPtr = ptrCDField.share(NotesConstants.cdFieldSize);
 		Pointer inputTranslationFormulaPtr = defaultValueFormulaPtr.share(cdField.DVLength & 0xffff);
 		Pointer inputValidityCheckFormulaPtr = inputTranslationFormulaPtr.share((cdField.ITLength &0xffff) +
 				(cdField.TabOrder & 0xffff));
@@ -2030,14 +1983,13 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		int dwFlags = 0;
 		if (continueOnError) {
-			dwFlags = NotesCAPI.CWF_CONTINUE_ON_ERROR;
+			dwFlags = NotesConstants.CWF_CONTINUE_ON_ERROR;
 		}
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			b64_CWFErrorProc errorProc;
-			if (notesAPI instanceof WinNotesCAPI) {
-				errorProc = new WinNotesCAPI.b64_CWFErrorProcWin() {
+		if (PlatformUtils.is64Bit()) {
+			NotesCallbacks.b64_CWFErrorProc errorProc;
+			if (PlatformUtils.isWindows()) {
+				errorProc = new WinNotesCallbacks.b64_CWFErrorProcWin() {
 
 					@Override
 					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
@@ -2048,14 +2000,14 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = notesAPI.b64_OSLockObject(hErrorText);
+							Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
 							
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								notesAPI.b64_OSUnlockObject(hErrorText);
+								NotesNativeAPI64.get().OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2075,7 +2027,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				};
 			}
 			else {
-				errorProc = new b64_CWFErrorProc() {
+				errorProc = new NotesCallbacks.b64_CWFErrorProc() {
 
 					@Override
 					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
@@ -2086,14 +2038,14 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = notesAPI.b64_OSLockObject(hErrorText);
+							Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
 							System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								notesAPI.b64_OSUnlockObject(hErrorText);
+								NotesNativeAPI64.get().OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2112,13 +2064,13 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 				};
 			}
-			short result = notesAPI.b64_NSFNoteComputeWithForm(m_hNote64, 0, dwFlags, errorProc, null);
+			short result = NotesNativeAPI64.get().NSFNoteComputeWithForm(m_hNote64, 0, dwFlags, errorProc, null);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			b32_CWFErrorProc errorProc;
-			if (notesAPI instanceof WinNotesCAPI) {
-				errorProc = new WinNotesCAPI.b32_CWFErrorProcWin() {
+			NotesCallbacks.b32_CWFErrorProc errorProc;
+			if (PlatformUtils.isWindows()) {
+				errorProc = new WinNotesCallbacks.b32_CWFErrorProcWin() {
 
 					@Override
 					public short invoke(Pointer pCDField, short phase, short error, int hErrorText,
@@ -2129,13 +2081,13 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = notesAPI.b32_OSLockObject(hErrorText);
+							Pointer errorTextPtr = NotesNativeAPI32.get().OSLockObject(hErrorText);
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								notesAPI.b32_OSUnlockObject(hErrorText);
+								NotesNativeAPI32.get().OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2155,7 +2107,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				};
 			}
 			else {
-				errorProc = new b32_CWFErrorProc() {
+				errorProc = new NotesCallbacks.b32_CWFErrorProc() {
 
 					@Override
 					public short invoke(Pointer pCDField, short phase, short error, int hErrorText,
@@ -2166,13 +2118,13 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = notesAPI.b32_OSLockObject(hErrorText);
+							Pointer errorTextPtr = NotesNativeAPI32.get().OSLockObject(hErrorText);
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								notesAPI.b32_OSUnlockObject(hErrorText);
+								NotesNativeAPI32.get().OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2191,7 +2143,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 				};
 			}
-			short result = notesAPI.b32_NSFNoteComputeWithForm(m_hNote32, 0, dwFlags, errorProc, null);
+			short result = NotesNativeAPI32.get().NSFNoteComputeWithForm(m_hNote32, 0, dwFlags, errorProc, null);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -2206,22 +2158,22 @@ public class NotesNote implements IRecyclableNotesObject {
 		 * messages because recipients, other than the sender, will not be able to decrypt
 		 * the message. This flag can be useful to encrypt documents in a local database to
 		 * keep them secure or to encrypt documents that can only be decrypted by the same user. */
-		ENCRYPT_WITH_USER_PUBLIC_KEY (NotesCAPI.ENCRYPT_WITH_USER_PUBLIC_KEY),
+		ENCRYPT_WITH_USER_PUBLIC_KEY (NotesConstants.ENCRYPT_WITH_USER_PUBLIC_KEY),
 		
 		/**
 		 * Encrypt SMIME if MIME present
 		 */
-		ENCRYPT_SMIME_IF_MIME_PRESENT (NotesCAPI.ENCRYPT_SMIME_IF_MIME_PRESENT),
+		ENCRYPT_SMIME_IF_MIME_PRESENT (NotesConstants.ENCRYPT_SMIME_IF_MIME_PRESENT),
 		
 		/**
 		 * Encrypt SMIME no sender.
 		 */
-		ENCRYPT_SMIME_NO_SENDER (NotesCAPI.ENCRYPT_SMIME_NO_SENDER),
+		ENCRYPT_SMIME_NO_SENDER (NotesConstants.ENCRYPT_SMIME_NO_SENDER),
 		
 		/**
 		 * Encrypt SMIME trusting all certificates.
 		 */
-		ENCRYPT_SMIME_TRUST_ALL_CERTS(NotesCAPI.ENCRYPT_SMIME_TRUST_ALL_CERTS);
+		ENCRYPT_SMIME_TRUST_ALL_CERTS(NotesConstants.ENCRYPT_SMIME_TRUST_ALL_CERTS);
 		
 		private int m_mode;
 		
@@ -2327,8 +2279,6 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public NotesNote copyAndEncrypt(NotesUserId id, EnumSet<EncryptionMode> encryptionMode) {
 		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		int flags = 0;
 		for (EncryptionMode currMode : encryptionMode) {
@@ -2338,9 +2288,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		short flagsShort = (short) (flags & 0xffff);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethDstNote = new LongByReference();
-			result = notesAPI.b64_NSFNoteCopyAndEncryptExt2(m_hNote64, id==null ? 0 : id.getHandle64(), flagsShort, rethDstNote, 0, null);
+			result = NotesNativeAPI64.get().NSFNoteCopyAndEncryptExt2(m_hNote64, id==null ? 0 : id.getHandle64(), flagsShort, rethDstNote, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
@@ -2349,7 +2299,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethDstNote = new IntByReference();
-			result = notesAPI.b32_NSFNoteCopyAndEncryptExt2(m_hNote32, id==null ? 0 : id.getHandle32(), flagsShort, rethDstNote, 0, null);
+			result = NotesNativeAPI32.get().NSFNoteCopyAndEncryptExt2(m_hNote32, id==null ? 0 : id.getHandle32(), flagsShort, rethDstNote, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(m_parentDb, rethDstNote.getValue());
@@ -2365,11 +2315,9 @@ public class NotesNote implements IRecyclableNotesObject {
 			throw new NotesError(0, "Target database already recycled");
 		}
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference note_handle_dst = new LongByReference();
-			short result = notesAPI.b64_NSFNoteCopy(m_hNote64, note_handle_dst);
+			short result = NotesNativeAPI64.get().NSFNoteCopy(m_hNote64, note_handle_dst);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(targetDb, note_handle_dst.getValue());
@@ -2377,19 +2325,19 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesOriginatorId newOid = targetDb.generateOID();
 			NotesOriginatorIdStruct newOidStruct = newOid.getAdapter(NotesOriginatorIdStruct.class);
 			
-			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_ID, null);
-			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_OID, newOidStruct.getPointer());
+			NotesNativeAPI64.get().NSFNoteSetInfo(copyNote.getHandle64(), NotesConstants._NOTE_ID, null);
+			NotesNativeAPI64.get().NSFNoteSetInfo(copyNote.getHandle64(), NotesConstants._NOTE_OID, newOidStruct.getPointer());
 			
 			LongByReference targetDbHandle = new LongByReference();
 			targetDbHandle.setValue(targetDb.getHandle64());
-			notesAPI.b64_NSFNoteSetInfo(copyNote.getHandle64(), NotesCAPI._NOTE_DB, targetDbHandle.getPointer());
+			NotesNativeAPI64.get().NSFNoteSetInfo(copyNote.getHandle64(), NotesConstants._NOTE_DB, targetDbHandle.getPointer());
 			
 			NotesGC.__objectCreated(NotesNote.class, copyNote);
 			return copyNote;
 		}
 		else {
 			IntByReference note_handle_dst = new IntByReference();
-			short result = notesAPI.b32_NSFNoteCopy(m_hNote32, note_handle_dst);
+			short result = NotesNativeAPI32.get().NSFNoteCopy(m_hNote32, note_handle_dst);
 			NotesErrorUtils.checkResult(result);
 			
 			NotesNote copyNote = new NotesNote(targetDb, note_handle_dst.getValue());
@@ -2397,12 +2345,12 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesOriginatorId newOid = targetDb.generateOID();
 			NotesOriginatorIdStruct newOidStruct = newOid.getAdapter(NotesOriginatorIdStruct.class);
 			
-			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_ID, null);
-			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_OID, newOidStruct.getPointer());
+			NotesNativeAPI32.get().NSFNoteSetInfo(copyNote.getHandle32(), NotesConstants._NOTE_ID, null);
+			NotesNativeAPI32.get().NSFNoteSetInfo(copyNote.getHandle32(), NotesConstants._NOTE_OID, newOidStruct.getPointer());
 			
 			IntByReference targetDbHandle = new IntByReference();
 			targetDbHandle.setValue(targetDb.getHandle32());
-			notesAPI.b32_NSFNoteSetInfo(copyNote.getHandle32(), NotesCAPI._NOTE_DB, targetDbHandle.getPointer());
+			NotesNativeAPI32.get().NSFNoteSetInfo(copyNote.getHandle32(), NotesConstants._NOTE_DB, targetDbHandle.getPointer());
 			
 			NotesGC.__objectCreated(NotesNote.class, copyNote);
 			return copyNote;
@@ -2436,18 +2384,16 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void decrypt(NotesUserId id) {
 		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
-		short decryptFlags = NotesCAPI.DECRYPT_ATTACHMENTS_IN_PLACE;
+		short decryptFlags = NotesConstants.DECRYPT_ATTACHMENTS_IN_PLACE;
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteCipherDecrypt(m_hNote64, id==null ? 0 : id.getHandle64(), decryptFlags,
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteCipherDecrypt(m_hNote64, id==null ? 0 : id.getHandle64(), decryptFlags,
 					null, 0, null);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteCipherDecrypt(m_hNote32, id==null ? 0 : id.getHandle32(), decryptFlags,
+			result = NotesNativeAPI32.get().NSFNoteCipherDecrypt(m_hNote32, id==null ? 0 : id.getHandle32(), decryptFlags,
 					null, 0, null);
 		}
 		NotesErrorUtils.checkResult(result);
@@ -2618,20 +2564,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
 		checkHandle();
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		if (value instanceof String) {
 			Memory strValueMem = NotesStringUtils.toLMBCS((String)value, false);
 
 			int valueSize = (int) (2 + (strValueMem==null ? 0 : strValueMem.size()));
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
@@ -2643,15 +2587,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
@@ -2663,7 +2607,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		
@@ -2671,12 +2615,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (value instanceof Number) {
 			int valueSize = 2 + 8;
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
@@ -2686,15 +2630,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
@@ -2704,7 +2648,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -2730,12 +2674,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 			int valueSize = 2 + 8;
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
@@ -2750,15 +2694,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
@@ -2773,7 +2717,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -2785,24 +2729,24 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 			
 			short result;
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethList = new LongByReference();
 				ShortByReference retListSize = new ShortByReference();
 
-				result = notesAPI.b64_ListAllocate((short) 0, 
+				result = NotesNativeAPI64.get().ListAllocate((short) 0, 
 						(short) 0,
 						1, rethList, null, retListSize);
 				
 				NotesErrorUtils.checkResult(result);
 
 				long hList = rethList.getValue();
-				notesAPI.b64_OSUnlockObject(hList);
+				NotesNativeAPI64.get().OSUnlockObject(hList);
 				
 				for (int i=0; i<strList.size(); i++) {
 					String currStr = strList.get(i);
 					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
-					result = notesAPI.b64_ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
+					result = NotesNativeAPI64.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
 							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
 					NotesErrorUtils.checkResult(result);
 				}
@@ -2810,33 +2754,33 @@ public class NotesNote implements IRecyclableNotesObject {
 				int listSize = retListSize.getValue() & 0xffff;
 				
 				@SuppressWarnings("unused")
-				Pointer valuePtr = notesAPI.b64_OSLockObject(hList);
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hList);
 				try {
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(hList);
+					NotesNativeAPI64.get().OSUnlockObject(hList);
 				}
 			}
 			else {
 				IntByReference rethList = new IntByReference();
 				ShortByReference retListSize = new ShortByReference();
 
-				result = notesAPI.b32_ListAllocate((short) 0, 
+				result = NotesNativeAPI32.get().ListAllocate((short) 0, 
 						(short) 0,
 						1, rethList, null, retListSize);
 				
 				NotesErrorUtils.checkResult(result);
 
 				int hList = rethList.getValue();
-				notesAPI.b32_OSUnlockObject(hList);
+				NotesNativeAPI32.get().OSUnlockObject(hList);
 				
 				for (int i=0; i<strList.size(); i++) {
 					String currStr = strList.get(i);
 					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
-					result = notesAPI.b32_ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
+					result = NotesNativeAPI32.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
 							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
 					NotesErrorUtils.checkResult(result);
 				}
@@ -2844,13 +2788,13 @@ public class NotesNote implements IRecyclableNotesObject {
 				int listSize = retListSize.getValue() & 0xffff;
 				
 				@SuppressWarnings("unused")
-				Pointer valuePtr = notesAPI.b32_OSLockObject(hList);
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hList);
 				try {
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(hList);
+					NotesNativeAPI32.get().OSUnlockObject(hList);
 				}
 			}
 		}
@@ -2878,16 +2822,16 @@ public class NotesNote implements IRecyclableNotesObject {
 				throw new IllegalArgumentException("Number range list size must fit in a WORD ("+numberList.size()+">65535)");
 			}
 
-			int valueSize = 2 + NotesCAPI.rangeSize + 
+			int valueSize = 2 + NotesConstants.rangeSize + 
 					8 * numberList.size() +
-					NotesCAPI.numberPairSize * numberArrList.size();
+					NotesConstants.numberPairSize * numberArrList.size();
 
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
@@ -2899,7 +2843,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
 					range.write();
 
-					Pointer doubleListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					Pointer doubleListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
 					for (int i=0; i<numberList.size(); i++) {
 						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
@@ -2916,7 +2860,7 @@ public class NotesNote implements IRecyclableNotesObject {
 						numberPair.Upper = currNumberArr[1];
 						numberPair.write();
 
-						doubleArrListPtr = doubleArrListPtr.share(NotesCAPI.numberPairSize);
+						doubleArrListPtr = doubleArrListPtr.share(NotesConstants.numberPairSize);
 					}
 					
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, (int) rethItem.getValue(),
@@ -2924,15 +2868,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
@@ -2944,7 +2888,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
 					range.write();
 
-					Pointer doubleListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					Pointer doubleListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
 					for (int i=0; i<numberList.size(); i++) {
 						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
@@ -2961,7 +2905,7 @@ public class NotesNote implements IRecyclableNotesObject {
 						numberPair.Upper = currNumberArr[1];
 						numberPair.write();
 
-						doubleArrListPtr = doubleArrListPtr.share(NotesCAPI.numberPairSize);
+						doubleArrListPtr = doubleArrListPtr.share(NotesConstants.numberPairSize);
 					}
 					
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, rethItem.getValue(),
@@ -2969,7 +2913,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -3005,16 +2949,16 @@ public class NotesNote implements IRecyclableNotesObject {
 				throw new IllegalArgumentException("Date range list size must fit in a WORD ("+calendarArrList.size()+">65535)");
 			}
 
-			int valueSize = 2 + NotesCAPI.rangeSize + 
+			int valueSize = 2 + NotesConstants.rangeSize + 
 					8 * calendarList.size() +
-					NotesCAPI.timeDatePairSize * calendarArrList.size();
+					NotesConstants.timeDatePairSize * calendarArrList.size();
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
@@ -3026,7 +2970,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
 					range.write();
 
-					Pointer dateListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
 					for (Calendar currCal : calendarList) {
 						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
@@ -3060,22 +3004,22 @@ public class NotesNote implements IRecyclableNotesObject {
 						timeDatePair.Upper = timeDateEnd;
 						timeDatePair.write();
 
-						rangeListPtr = rangeListPtr.share(NotesCAPI.timeDatePairSize);
+						rangeListPtr = rangeListPtr.share(NotesConstants.timeDatePairSize);
 					}
 
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
@@ -3087,7 +3031,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
 					range.write();
 
-					Pointer dateListPtr = rangePtr.share(NotesCAPI.rangeSize);
+					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
 					for (Calendar currCal : calendarList) {
 						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
@@ -3121,14 +3065,14 @@ public class NotesNote implements IRecyclableNotesObject {
 						timeDatePair.Upper = timeDateEnd;
 						timeDatePair.write();
 
-						rangeListPtr = rangeListPtr.share(NotesCAPI.timeDatePairSize);
+						rangeListPtr = rangeListPtr.share(NotesConstants.timeDatePairSize);
 					}
 
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -3163,14 +3107,14 @@ public class NotesNote implements IRecyclableNotesObject {
 			NotesUniversalNoteIdStruct struct = ((NotesUniversalNoteId)value).getAdapter(NotesUniversalNoteIdStruct.class);
 
 			//date type + LIST structure + UNIVERSALNOTEID
-			int valueSize = 2 + 2 + 2 * NotesCAPI.timeDateSize;
+			int valueSize = 2 + 2 + 2 * NotesConstants.timeDateSize;
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = notesAPI.b64_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b64_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
@@ -3181,21 +3125,21 @@ public class NotesNote implements IRecyclableNotesObject {
 					valuePtr = valuePtr.share(2);
 					
 					struct.write();
-					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesCAPI.timeDateSize), 0, 2*NotesCAPI.timeDateSize);
+					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
 
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
 					return item;
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = notesAPI.b32_OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = notesAPI.b32_OSLockObject(rethItem.getValue());
+				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
@@ -3206,13 +3150,13 @@ public class NotesNote implements IRecyclableNotesObject {
 					valuePtr = valuePtr.share(2);
 					
 					struct.write();
-					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesCAPI.timeDateSize), 0, 2*NotesCAPI.timeDateSize);
+					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
 
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
 					return item;
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(rethItem.getValue());
+					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -3545,7 +3489,6 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short flagsShort = ItemType.toBitMask(flags);
 		
 		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
@@ -3559,13 +3502,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		retItemBlockId.write();
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFItemAppendByBLOCKID(m_hNote64, flagsShort, itemNameMem,
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFItemAppendByBLOCKID(m_hNote64, flagsShort, itemNameMem,
 					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
 					valueLength, retItemBlockId);
 		}
 		else {
-			result = notesAPI.b32_NSFItemAppendByBLOCKID(m_hNote32, flagsShort, itemNameMem,
+			result = NotesNativeAPI32.get().NSFItemAppendByBLOCKID(m_hNote32, flagsShort, itemNameMem,
 					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
 					valueLength, retItemBlockId);
 		}
@@ -3583,7 +3526,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * the user was the real author of the document.<br>
 	 * <br>
 	 * The signature is derived from the User ID. A signature item has data type {@link NotesItem#TYPE_SIGNATURE}
-	 * and item flags {@link NotesCAPI#ITEM_SEAL}. The data value of the signature item is a digest
+	 * and item flags {@link NotesConstants#ITEM_SEAL}. The data value of the signature item is a digest
 	 * of the data stored in items in the note, signed with the user's private key.<br>
 	 * <br>
 	 * This method signs entire document. It creates a digest of all the items in the note, and
@@ -3600,27 +3543,26 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void sign() {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteExpand(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteSign(m_hNote64);
+			result = NotesNativeAPI64.get().NSFNoteSign(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			result = NotesNativeAPI64.get().NSFNoteContract(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
 		}
 		else {
-			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteExpand(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b32_NSFNoteSign(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteSign(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteContract(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -3653,44 +3595,71 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void sign(NotesUserId id, boolean signNotesIfMimePresent) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteExpand(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteSignExt3(m_hNote64, id==null ? 0 : id.getHandle64(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			result = NotesNativeAPI64.get().NSFNoteSignExt3(m_hNote64, id==null ? 0 : id.getHandle64(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			result = NotesNativeAPI64.get().NSFNoteContract(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 			
 			//verify signature
 			NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
-			Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
-			Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+			Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
+			Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
 
-			result = notesAPI.b64_NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
+			result = NotesNativeAPI64.get().NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteExpand(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b32_NSFNoteSignExt3(m_hNote32, id==null ? 0 : id.getHandle32(), null, NotesCAPI.MAXWORD, 0, signNotesIfMimePresent ? NotesCAPI.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+			result = NotesNativeAPI32.get().NSFNoteSignExt3(m_hNote32, id==null ? 0 : id.getHandle32(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteContract(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 			
 			//verify signature
 			NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
-			Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
-			Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
+			Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
+			Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
 
-			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
+			result = NotesNativeAPI32.get().NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 		}
+	}
+	
+	/**
+	 * This function will sign all hotspots in a document that contain object code.<br>
+	 * <br>
+	 * Using the current ID, signature data will be added to any signature containing CD
+	 * records for hotspots having code within TYPE_COMPOSITE items.<br>
+	 * <br>
+	 * This routine only operates on documents.<br>
+	 * If the note is a design element, the routine returns without signing anything.
+	 * 
+	 * @return true if any hotspots are signed
+	 */
+	public boolean signHotSpots() {
+		checkHandle();
+		
+		IntByReference retfSigned = new IntByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteSignHotspots(m_hNote64, 0, retfSigned);
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFNoteSignHotspots(m_hNote32, 0, retfSigned);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return retfSigned.getValue() == 1;
 	}
 	
 	/**
@@ -3754,30 +3723,28 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 		
 		NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
-		Memory retSigner = new Memory(NotesCAPI.MAXUSERNAME);
-		Memory retCertifier = new Memory(NotesCAPI.MAXUSERNAME);
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
+		Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
+		Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
 		short result;
 		
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_NSFNoteExpand(m_hNote64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteExpand(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 
-			result = notesAPI.b64_NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
+			result = NotesNativeAPI64.get().NSFNoteVerifySignature (m_hNote64, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b64_NSFNoteContract(m_hNote64);
+			result = NotesNativeAPI64.get().NSFNoteContract(m_hNote64);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			result = notesAPI.b32_NSFNoteExpand(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteExpand(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b32_NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
+			result = NotesNativeAPI32.get().NSFNoteVerifySignature (m_hNote32, null, retWhenSigned, retSigner, retCertifier);
 			NotesErrorUtils.checkResult(result);
 			
-			result = notesAPI.b32_NSFNoteContract(m_hNote32);
+			result = NotesNativeAPI32.get().NSFNoteContract(m_hNote32);
 			NotesErrorUtils.checkResult(result);
 		}
 
@@ -3871,18 +3838,16 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void convertHtmlElement(String itemName, EnumSet<HtmlConvertOption> options, int itemIndex, int itemOffset, IHtmlItemImageConversionCallback callback) {
 		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		LongByReference phHTML64 = new LongByReference();
 		IntByReference phHTML32 = new IntByReference();
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_HTMLCreateConverter(phHTML64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().HTMLCreateConverter(phHTML64);
 		}
 		else {
-			result = notesAPI.b32_HTMLCreateConverter(phHTML32);
+			result = NotesNativeAPI32.get().HTMLCreateConverter(phHTML32);
 		}
 		NotesErrorUtils.checkResult(result);
 		
@@ -3891,11 +3856,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		try {
 			if (!options.isEmpty()) {
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
 				}
 				else {
-					result = notesAPI.b32_HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
+					result = NotesNativeAPI32.get().HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
 				}
 				NotesErrorUtils.checkResult(result);
 			}
@@ -3906,22 +3871,22 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			int skip;
 			
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_HTMLConvertElement(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLConvertElement(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
 				NotesErrorUtils.checkResult(result);
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b64_HTMLGetProperty(hHTML64, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = NotesNativeAPI64.get().HTMLGetProperty(hHTML64, (long) NotesConstants.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 				skip = callback.setSize(totalLen);
 			}
 			else {
-				result = notesAPI.b32_HTMLConvertElement(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem, itemIndex, itemOffset);
+				result = NotesNativeAPI32.get().HTMLConvertElement(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem, itemIndex, itemOffset);
 				NotesErrorUtils.checkResult(result);
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b32_HTMLGetProperty(hHTML32, (int) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = NotesNativeAPI32.get().HTMLGetProperty(hHTML32, (int) NotesConstants.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 				skip = callback.setSize(totalLen);
@@ -3931,18 +3896,18 @@ public class NotesNote implements IRecyclableNotesObject {
 				throw new IllegalArgumentException("Skip value cannot be greater than size: "+skip+" > "+totalLen);
 			
 			IntByReference len = new IntByReference();
-			len.setValue(NotesCAPI.MAXPATH);
+			len.setValue(NotesConstants.MAXPATH);
 			int startOffset=skip;
-			Memory bufMem = new Memory(NotesCAPI.MAXPATH+1);
+			Memory bufMem = new Memory(NotesConstants.MAXPATH+1);
 			
 			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
-				len.setValue(NotesCAPI.MAXPATH);
+				len.setValue(NotesConstants.MAXPATH);
 				
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLGetText(hHTML64, startOffset, len, bufMem);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLGetText(hHTML64, startOffset, len, bufMem);
 				}
 				else {
-					result = notesAPI.b32_HTMLGetText(hHTML32, startOffset, len, bufMem);
+					result = NotesNativeAPI32.get().HTMLGetText(hHTML32, startOffset, len, bufMem);
 				}
 				NotesErrorUtils.checkResult(result);
 				
@@ -3955,11 +3920,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_HTMLDestroyConverter(hHTML64);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLDestroyConverter(hHTML64);
 			}
 			else {
-				result = notesAPI.b32_HTMLDestroyConverter(hHTML32);
+				result = NotesNativeAPI32.get().HTMLDestroyConverter(hHTML32);
 			}
 			NotesErrorUtils.checkResult(result);
 		}
@@ -4300,8 +4265,6 @@ public class NotesNote implements IRecyclableNotesObject {
 			EnumSet<HtmlConvertOption> options, EnumSet<ReferenceType> refTypeFilter,
 			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
 		checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		LongByReference phHTML64 = new LongByReference();
 		phHTML64.setValue(0);
@@ -4309,11 +4272,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		phHTML32.setValue(0);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_HTMLCreateConverter(phHTML64);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().HTMLCreateConverter(phHTML64);
 		}
 		else {
-			result = notesAPI.b32_HTMLCreateConverter(phHTML32);
+			result = NotesNativeAPI32.get().HTMLCreateConverter(phHTML32);
 		}
 		NotesErrorUtils.checkResult(result);
 		
@@ -4322,11 +4285,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		try {
 			if (!options.isEmpty()) {
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
 				}
 				else {
-					result = notesAPI.b32_HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
+					result = NotesNativeAPI32.get().HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
 				}
 				NotesErrorUtils.checkResult(result);
 			}
@@ -4335,55 +4298,55 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			int totalLen;
 			
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				if (itemName==null) {
-					result = notesAPI.b64_HTMLConvertNote(hHTML64, getParent().getHandle64(), m_hNote64, 0, null);
+					result = NotesNativeAPI64.get().HTMLConvertNote(hHTML64, getParent().getHandle64(), m_hNote64, 0, null);
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
-					result = notesAPI.b64_HTMLConvertItem(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem);
+					result = NotesNativeAPI64.get().HTMLConvertItem(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem);
 					NotesErrorUtils.checkResult(result);
 				}
 				
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b64_HTMLGetProperty(hHTML64, (long) NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = NotesNativeAPI64.get().HTMLGetProperty(hHTML64, (long) NotesConstants.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 			}
 			else {
 				if (itemName==null) {
-					result = notesAPI.b32_HTMLConvertNote(hHTML32, getParent().getHandle32(), m_hNote32, 0, null);
+					result = NotesNativeAPI32.get().HTMLConvertNote(hHTML32, getParent().getHandle32(), m_hNote32, 0, null);
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
-					result = notesAPI.b32_HTMLConvertItem(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem);
+					result = NotesNativeAPI32.get().HTMLConvertItem(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem);
 					NotesErrorUtils.checkResult(result);
 					
 				}
 
 				Memory tLenMem = new Memory(4);
-				result = notesAPI.b32_HTMLGetProperty(hHTML32, NotesCAPI.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
+				result = NotesNativeAPI32.get().HTMLGetProperty(hHTML32, NotesConstants.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
 
 			}
 			
 			IntByReference len = new IntByReference();
-			len.setValue(NotesCAPI.MAXPATH);
+			len.setValue(NotesConstants.MAXPATH);
 			int startOffset=0;
-			Memory textMem = new Memory(NotesCAPI.MAXPATH+1);
+			Memory textMem = new Memory(NotesConstants.MAXPATH+1);
 			
 			StringBuilder htmlText = new StringBuilder();
 			
 			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
-				len.setValue(NotesCAPI.MAXPATH);
+				len.setValue(NotesConstants.MAXPATH);
 				textMem.setByte(0, (byte) 0);
 				
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLGetText(hHTML64, startOffset, len, textMem);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLGetText(hHTML64, startOffset, len, textMem);
 				}
 				else {
-					result = notesAPI.b32_HTMLGetText(hHTML32, startOffset, len, textMem);
+					result = NotesNativeAPI32.get().HTMLGetText(hHTML32, startOffset, len, textMem);
 				}
 				NotesErrorUtils.checkResult(result);
 				
@@ -4399,11 +4362,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			Memory refCount = new Memory(4);
 			
-			if (NotesJNAContext.is64Bit()) {
-				result=notesAPI.b64_HTMLGetProperty(hHTML64, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+			if (PlatformUtils.is64Bit()) {
+				result=NotesNativeAPI64.get().HTMLGetProperty(hHTML64, NotesConstants.HTMLAPI_PROP_NUMREFS, refCount);
 			}
 			else {
-				result=notesAPI.b32_HTMLGetProperty(hHTML32, NotesCAPI.HTMLAPI_PROP_NUMREFS, refCount);
+				result=NotesNativeAPI32.get().HTMLGetProperty(hHTML32, NotesConstants.HTMLAPI_PROP_NUMREFS, refCount);
 			}
 			NotesErrorUtils.checkResult(result);
 			
@@ -4417,11 +4380,11 @@ public class NotesNote implements IRecyclableNotesObject {
 				IntByReference phRef32 = new IntByReference();
 				phRef32.setValue(0);
 				
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLGetReference(hHTML64, i, phRef64);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLGetReference(hHTML64, i, phRef64);
 				}
 				else {
-					result = notesAPI.b32_HTMLGetReference(hHTML32, i, phRef32);
+					result = NotesNativeAPI32.get().HTMLGetReference(hHTML32, i, phRef32);
 				}
 				NotesErrorUtils.checkResult(result);
 				
@@ -4430,11 +4393,11 @@ public class NotesNote implements IRecyclableNotesObject {
 				long hRef64 = phRef64.getValue();
 				int hRef32 = phRef32.getValue();
 				
-				if (NotesJNAContext.is64Bit()) {
-					result = notesAPI.b64_HTMLLockAndFixupReference(hRef64, ppRef);
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().HTMLLockAndFixupReference(hRef64, ppRef);
 				}
 				else {
-					result = notesAPI.b32_HTMLLockAndFixupReference(hRef32, ppRef);
+					result = NotesNativeAPI32.get().HTMLLockAndFixupReference(hRef32, ppRef);
 				}
 				NotesErrorUtils.checkResult(result);
 				try {
@@ -4446,7 +4409,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					Pointer pTargets;
 					
 					//use separate structs for 64/32, because RefType uses 8 bytes on 64 and 4 bytes on 32 bit
-					if (NotesJNAContext.is64Bit()) {
+					if (PlatformUtils.is64Bit()) {
 						HTMLAPIReference64Struct htmlApiRef = HTMLAPIReference64Struct.newInstance(ppRef.getPointer(0));
 						htmlApiRef.read();
 						iRefType = (int) htmlApiRef.RefType;
@@ -4478,7 +4441,7 @@ public class NotesNote implements IRecyclableNotesObject {
 						List<IHtmlApiUrlTargetComponent<?>> targets = new ArrayList<IHtmlApiUrlTargetComponent<?>>(nTargets);
 						
 						for (int t=0; t<nTargets; t++) {
-							Pointer pCurrTarget = pTargets.share(t * NotesCAPI.htmlApiUrlComponentSize);
+							Pointer pCurrTarget = pTargets.share(t * NotesConstants.htmlApiUrlComponentSize);
 							HtmlApi_UrlTargetComponentStruct currTarget = HtmlApi_UrlTargetComponentStruct.newInstance(pCurrTarget);
 							currTarget.read();
 							
@@ -4489,20 +4452,20 @@ public class NotesNote implements IRecyclableNotesObject {
 							
 							if (targetTypeFilterForRefType==null || targetTypeFilterForRefType.contains(targetType)) {
 								switch (currTarget.ReferenceType) {
-								case NotesCAPI.URT_Name:
+								case NotesConstants.URT_Name:
 									currTarget.Value.setType(Pointer.class);
 									currTarget.Value.read();
 									String name = NotesStringUtils.fromLMBCS(currTarget.Value.name, -1);
 									targets.add(new HtmlApiUrlTargetComponent(targetType, String.class, name));
 									break;
-								case NotesCAPI.URT_NoteId:
+								case NotesConstants.URT_NoteId:
 									currTarget.Value.setType(NoteIdStruct.class);
 									currTarget.Value.read();
 									NoteIdStruct noteIdStruct = currTarget.Value.nid;
 									int iNoteId = noteIdStruct.nid;
 									targets.add(new HtmlApiUrlTargetComponent(targetType, Integer.class, iNoteId));
 									break;
-								case NotesCAPI.URT_Unid:
+								case NotesConstants.URT_Unid:
 									currTarget.Value.setType(NotesUniversalNoteIdStruct.class);
 									currTarget.Value.read();
 									NotesUniversalNoteIdStruct unidStruct = currTarget.Value.unid;
@@ -4510,13 +4473,13 @@ public class NotesNote implements IRecyclableNotesObject {
 									String unid = unidStruct.toString();
 									targets.add(new HtmlApiUrlTargetComponent(targetType, String.class, unid));
 									break;
-								case NotesCAPI.URT_None:
+								case NotesConstants.URT_None:
 									targets.add(new HtmlApiUrlTargetComponent(targetType, Object.class, null));
 									break;
-								case NotesCAPI.URT_RepId:
+								case NotesConstants.URT_RepId:
 									//TODO find out how to decode this one
 									break;
-								case NotesCAPI.URT_Special:
+								case NotesConstants.URT_Special:
 									//TODO find out how to decode this one
 									break;
 								}
@@ -4529,16 +4492,16 @@ public class NotesNote implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					if (NotesJNAContext.is64Bit()) {
+					if (PlatformUtils.is64Bit()) {
 						if (hRef64!=0) {
-							notesAPI.b64_OSMemoryUnlock(hRef64);
-							notesAPI.b64_OSMemoryFree(hRef64);
+							NotesNativeAPI64.get().OSMemoryUnlock(hRef64);
+							NotesNativeAPI64.get().OSMemoryFree(hRef64);
 						}
 					}
 					else {
 						if (hRef32!=0) {
-							notesAPI.b32_OSMemoryUnlock(hRef32);
-							notesAPI.b32_OSMemoryFree(hRef32);
+							NotesNativeAPI32.get().OSMemoryUnlock(hRef32);
+							NotesNativeAPI32.get().OSMemoryFree(hRef32);
 						}
 					}
 				}
@@ -4547,15 +4510,15 @@ public class NotesNote implements IRecyclableNotesObject {
 			return new HtmlConversionResult(htmlText.toString(), references, options);
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				if (hHTML64!=0) {
-					result = notesAPI.b64_HTMLDestroyConverter(hHTML64);
+					result = NotesNativeAPI64.get().HTMLDestroyConverter(hHTML64);
 				}
 				
 			}
 			else {
 				if (hHTML32!=0) {
-					result = notesAPI.b64_HTMLDestroyConverter(hHTML32);
+					result = NotesNativeAPI32.get().HTMLDestroyConverter(hHTML32);
 				}
 			}
 			NotesErrorUtils.checkResult(result);
@@ -4627,13 +4590,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	public RichTextBuilder createRichTextItem(String itemName) {
 		checkHandle();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethCompound = new LongByReference();
-			result = notesAPI.b64_CompoundTextCreate(m_hNote64, itemNameMem, rethCompound);
+			result = NotesNativeAPI64.get().CompoundTextCreate(m_hNote64, itemNameMem, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			long hCompound = rethCompound.getValue();
 			CompoundTextWriter ct = new CompoundTextWriter(hCompound, false);
@@ -4643,7 +4605,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethCompound = new IntByReference();
-			result = notesAPI.b32_CompoundTextCreate(m_hNote32, itemNameMem, rethCompound);
+			result = NotesNativeAPI32.get().CompoundTextCreate(m_hNote32, itemNameMem, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			int hCompound = rethCompound.getValue();
 			CompoundTextWriter ct = new CompoundTextWriter(hCompound, false);

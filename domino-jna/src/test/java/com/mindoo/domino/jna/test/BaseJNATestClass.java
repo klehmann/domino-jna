@@ -2,19 +2,19 @@ package com.mindoo.domino.jna.test;
 
 import java.util.concurrent.Callable;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
-import com.sun.jna.Native;
 
 import lotus.domino.Database;
 import lotus.domino.NotesException;
 import lotus.domino.NotesFactory;
 import lotus.domino.NotesThread;
 import lotus.domino.Session;
-
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
 
 public class BaseJNATestClass {
 	public static final String DBPATH_FAKENAMES_VIEWS_NSF = "fakenames-views.nsf";
@@ -24,6 +24,8 @@ public class BaseJNATestClass {
 	
 	@BeforeClass
 	public static void initNotes() {
+		NotesNativeAPI.initialize();
+		
 		String notesProgramDir = System.getenv("Notes_ExecDirectory");
 		String notesIniPath = System.getenv("NotesINI");
 		
@@ -35,7 +37,6 @@ public class BaseJNATestClass {
 			m_notesInitExtendedCalled = true;
 		}
 		NotesThread.sinitThread();
-		Native.setProtected(true);
 	}
 	
 	@AfterClass

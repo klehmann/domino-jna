@@ -10,12 +10,13 @@ import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.NotesBlockIdStruct;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ByteByReference;
@@ -242,8 +243,6 @@ public class NotesItem {
 	 */
 	public String getValueAsText(char separator) {
 		m_parentNote.checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		valueBlockIdByVal.pool = m_valueBlockId.pool;
@@ -257,11 +256,11 @@ public class NotesItem {
 				short length;
 				int valueLength = getValueLength();
 				
-				if (NotesJNAContext.is64Bit()) {
-					length = notesAPI.b64_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
+				if (PlatformUtils.is64Bit()) {
+					length = NotesNativeAPI64.get().NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
 				else {
-					length = notesAPI.b32_NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
+					length = NotesNativeAPI32.get().NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
 				
 				int lengthAsInt = (int) length & 0xffff;
@@ -287,11 +286,10 @@ public class NotesItem {
 		
 		m_parentNote.checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		ByteByReference retSeqByte = new ByteByReference();
 		ByteByReference retDupItemID = new ByteByReference();
 		
-		Memory item_name = new Memory(NotesCAPI.MAXUSERNAME);
+		Memory item_name = new Memory(NotesConstants.MAXUSERNAME);
 		ShortByReference retName_len = new ShortByReference();
 		ShortByReference retItem_flags = new ShortByReference();
 		ShortByReference retDataType = new ShortByReference();
@@ -301,19 +299,17 @@ public class NotesItem {
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
-		if (NotesJNAContext.is64Bit()) {
-			NotesBlockIdStruct retValueBid = new NotesBlockIdStruct();
+		if (PlatformUtils.is64Bit()) {
+			NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
 			
-			notesAPI.b64_NSFItemQueryEx(m_parentNote.getHandle64(),
+			NotesNativeAPI64.get().NSFItemQueryEx(m_parentNote.getHandle64(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
-			
-			
 		}
 		else {
-			NotesBlockIdStruct retValueBid = new NotesBlockIdStruct();
+			NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
 
-			notesAPI.b32_NSFItemQueryEx(m_parentNote.getHandle32(),
+			NotesNativeAPI32.get().NSFItemQueryEx(m_parentNote.getHandle32(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
 		}
@@ -330,19 +326,19 @@ public class NotesItem {
 	public boolean isSigned() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_SIGN) == NotesCAPI.ITEM_SIGN;
+		return (m_itemFlags & NotesConstants.ITEM_SIGN) == NotesConstants.ITEM_SIGN;
 	}
 	
 	public boolean isSealed() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_SEAL) == NotesCAPI.ITEM_SEAL;
+		return (m_itemFlags & NotesConstants.ITEM_SEAL) == NotesConstants.ITEM_SEAL;
 	}
 	
 	public boolean isSummary() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_SUMMARY) == NotesCAPI.ITEM_SUMMARY;
+		return (m_itemFlags & NotesConstants.ITEM_SUMMARY) == NotesConstants.ITEM_SUMMARY;
 	}
 	
 	public void setSummary(boolean flag) {
@@ -350,14 +346,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isSummary()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SUMMARY;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_SUMMARY;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isSummary()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SUMMARY;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_SUMMARY;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -368,14 +364,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isSealed()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SEAL;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_SEAL;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isSealed()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SEAL;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_SEAL;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -386,14 +382,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isSigned()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_SIGN;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_SIGN;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isSigned()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_SIGN;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_SIGN;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -404,14 +400,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isNames()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_NAMES;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_NAMES;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isNames()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_NAMES;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_NAMES;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -422,14 +418,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isPlaceholder()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_PLACEHOLDER;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_PLACEHOLDER;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isPlaceholder()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_PLACEHOLDER;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_PLACEHOLDER;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -440,14 +436,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isAuthors()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_READWRITERS;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_READWRITERS;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isAuthors()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_READWRITERS;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_READWRITERS;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -458,14 +454,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isReaders()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_READERS;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_READERS;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isReaders()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_READERS;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_READERS;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -476,14 +472,14 @@ public class NotesItem {
 		if (flag) {
 			if (!isProtected()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt | NotesCAPI.ITEM_PROTECTED;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_PROTECTED;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
 		else {
 			if (isProtected()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
-				int newFlagsAsInt = flagsAsInt & ~NotesCAPI.ITEM_PROTECTED;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_PROTECTED;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
@@ -491,7 +487,6 @@ public class NotesItem {
 	
 	private void setItemFlags(short newFlags) {
 		m_parentNote.checkHandle();
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		loadItemNameAndFlags();
 
@@ -500,11 +495,11 @@ public class NotesItem {
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
 		Pointer poolPtr;
-		if (NotesJNAContext.is64Bit()) {
-			poolPtr = notesAPI.b64_OSLockObject((long) m_itemBlockId.pool);
+		if (PlatformUtils.is64Bit()) {
+			poolPtr = NotesNativeAPI64.get().OSLockObject((long) m_itemBlockId.pool);
 		}
 		else {
-			poolPtr = notesAPI.b32_OSLockObject(m_itemBlockId.pool);
+			poolPtr = NotesNativeAPI32.get().OSLockObject(m_itemBlockId.pool);
 		}
 		
 		int block = (int) (m_itemBlockId.block & 0xffff);
@@ -519,11 +514,11 @@ public class NotesItem {
 			}
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_OSUnlockObject((long) m_itemBlockId.pool);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().OSUnlockObject((long) m_itemBlockId.pool);
 			}
 			else {
-				notesAPI.b32_OSUnlockObject(m_itemBlockId.pool);
+				NotesNativeAPI32.get().OSUnlockObject(m_itemBlockId.pool);
 			}
 		}
 	}
@@ -531,43 +526,43 @@ public class NotesItem {
 	public boolean isReadWriters() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_READWRITERS) == NotesCAPI.ITEM_READWRITERS;
+		return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
 	}
 	
 	public boolean isNames() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_NAMES) == NotesCAPI.ITEM_NAMES;
+		return (m_itemFlags & NotesConstants.ITEM_NAMES) == NotesConstants.ITEM_NAMES;
 	}
 	
 	public boolean isPlaceholder() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_PLACEHOLDER) == NotesCAPI.ITEM_PLACEHOLDER;
+		return (m_itemFlags & NotesConstants.ITEM_PLACEHOLDER) == NotesConstants.ITEM_PLACEHOLDER;
 	}
 	
 	public boolean isProtected() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_PROTECTED) == NotesCAPI.ITEM_PROTECTED;
+		return (m_itemFlags & NotesConstants.ITEM_PROTECTED) == NotesConstants.ITEM_PROTECTED;
 	}
 	
 	public boolean isReaders() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_READERS) == NotesCAPI.ITEM_READERS;
+		return (m_itemFlags & NotesConstants.ITEM_READERS) == NotesConstants.ITEM_READERS;
 	}
 	
 	public boolean isAuthors() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_READWRITERS) == NotesCAPI.ITEM_READWRITERS;
+		return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
 	}
 	
 	public boolean isUnchanged() {
 		loadItemNameAndFlags();
 		
-		return (m_itemFlags & NotesCAPI.ITEM_UNCHANGED) == NotesCAPI.ITEM_UNCHANGED;
+		return (m_itemFlags & NotesConstants.ITEM_UNCHANGED) == NotesConstants.ITEM_UNCHANGED;
 	}
 	
 	/**
@@ -580,8 +575,6 @@ public class NotesItem {
 	 */
 	public Calendar getModifiedDateTime() {
 		m_parentNote.checkHandle();
-
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		
 		NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 		
@@ -589,14 +582,14 @@ public class NotesItem {
 		itemIdByVal.pool = m_itemBlockId.pool;
 		itemIdByVal.block = m_itemBlockId.block;
 		
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle64(),
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle64(),
 					itemIdByVal, 0, retTime);
 			
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle32(),
+			short result = NotesNativeAPI32.get().NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle32(),
 					itemIdByVal, 0, retTime);
 			
 			NotesErrorUtils.checkResult(result);
@@ -625,13 +618,12 @@ public class NotesItem {
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemCopy(targetNote.getHandle64(), itemBlockIdByVal);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemCopy(targetNote.getHandle64(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemCopy(targetNote.getHandle32(), itemBlockIdByVal);
+			short result = NotesNativeAPI32.get().NSFItemCopy(targetNote.getHandle32(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -646,13 +638,12 @@ public class NotesItem {
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_NSFItemDeleteByBLOCKID(m_parentNote.getHandle64(), itemBlockIdByVal);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemDeleteByBLOCKID(m_parentNote.getHandle64(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = notesAPI.b32_NSFItemDeleteByBLOCKID(m_parentNote.getHandle32(), itemBlockIdByVal);
+			short result = NotesNativeAPI32.get().NSFItemDeleteByBLOCKID(m_parentNote.getHandle32(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
@@ -667,14 +658,12 @@ public class NotesItem {
 		if (getType() != TYPE_COMPOSITE)
 			throw new UnsupportedOperationException("Item is not of type TYPE_COMPOSITE (type found: "+getType());
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Pointer poolPtr;
-		if (NotesJNAContext.is64Bit()) {
-			poolPtr = notesAPI.b64_OSLockObject((long) m_valueBlockId.pool);
+		if (PlatformUtils.is64Bit()) {
+			poolPtr = NotesNativeAPI64.get().OSLockObject((long) m_valueBlockId.pool);
 		}
 		else {
-			poolPtr = notesAPI.b32_OSLockObject(m_valueBlockId.pool);
+			poolPtr = NotesNativeAPI32.get().OSLockObject(m_valueBlockId.pool);
 		}
 		
 		int block = (m_valueBlockId.block & 0xffff);
@@ -719,14 +708,14 @@ public class NotesItem {
 				short highOrderByte = (short) (recordType & 0xFF00);
 				
 				switch (highOrderByte) {
-				case NotesCAPI.LONGRECORDLENGTH:      /* LSIG */
+				case NotesConstants.LONGRECORDLENGTH:      /* LSIG */
 					dwLength = cdRecordPtr.share(2).getInt(0);
 
 					fixedSize = 6; //sizeof(LSIG);
 
 					break;
 
-				case NotesCAPI.WORDRECORDLENGTH:      /* WSIG */
+				case NotesConstants.WORDRECORDLENGTH:      /* WSIG */
 					dwLength = (int) (cdRecordPtr.share(2).getShort(0) & 0xffff);
 
 					fixedSize = 4; //sizeof(WSIG);
@@ -772,11 +761,11 @@ public class NotesItem {
 			}
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_OSUnlockObject((long) m_valueBlockId.pool);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().OSUnlockObject((long) m_valueBlockId.pool);
 			}
 			else {
-				notesAPI.b32_OSUnlockObject(m_valueBlockId.pool);
+				NotesNativeAPI32.get().OSUnlockObject(m_valueBlockId.pool);
 			}
 		}
 	}
@@ -798,14 +787,13 @@ public class NotesItem {
 	 * @param writer writer is used to write extracted text
 	 */
 	void getAllCompositeTextContent(final Writer writer) {
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		final boolean useOSLineBreaks = NotesStringUtils.isUseOSLineDelimiter();
 		
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
 			public Action recordVisited(Pointer dataPtr, CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
-				if (signature==NotesCAPI.SIG_CD_TEXT) {
+				if (signature==NotesConstants.SIG_CD_TEXT) {
 					Pointer txtPtr = dataPtr.share(4);
 					int txtMemLength = dataLength-4;
 					if (txtMemLength>0) {
@@ -820,9 +808,9 @@ public class NotesItem {
 						}
 					}
 				}
-				else if (signature==NotesCAPI.SIG_CD_PARAGRAPH) {
+				else if (signature==NotesConstants.SIG_CD_PARAGRAPH) {
 					try {
-						if (notesAPI instanceof WinNotesCAPI && useOSLineBreaks) {
+						if (PlatformUtils.isWindows() && useOSLineBreaks) {
 							writer.write("\r\n");
 						}
 						else {

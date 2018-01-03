@@ -3,59 +3,59 @@ package com.mindoo.domino.jna.html;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 public enum ReferenceType {
 
 	/**
 	 * unknown purpose
 	 */
-	UNKNOWN(NotesCAPI.HTMLAPI_REF_UNKNOWN),
+	UNKNOWN(NotesConstants.HTMLAPI_REF_UNKNOWN),
 	
 	/**
 	 * A tag HREF= value
 	 */
-	HREF(NotesCAPI.HTMLAPI_REF_HREF),
+	HREF(NotesConstants.HTMLAPI_REF_HREF),
 	
 	/**
 	 * IMG tag SRC= value
 	 */
-	IMG(NotesCAPI.HTMLAPI_REF_IMG),
+	IMG(NotesConstants.HTMLAPI_REF_IMG),
 
 	/**
 	 * (I)FRAME tag SRC= value
 	 */
-	FRAME(NotesCAPI.HTMLAPI_REF_FRAME),
+	FRAME(NotesConstants.HTMLAPI_REF_FRAME),
 	
 	/**
 	 * Java applet reference
 	 */
-	APPLET(NotesCAPI.HTMLAPI_REF_APPLET),
+	APPLET(NotesConstants.HTMLAPI_REF_APPLET),
 
 	/**
 	 * plugin SRC= reference
 	 */
-	EMBED(NotesCAPI.HTMLAPI_REF_EMBED),
+	EMBED(NotesConstants.HTMLAPI_REF_EMBED),
 	
 	/**
 	 * active object DATA= referendce
 	 */
-	OBJECT(NotesCAPI.HTMLAPI_REF_OBJECT),
+	OBJECT(NotesConstants.HTMLAPI_REF_OBJECT),
 
 	/**
 	 * BASE tag value
 	 */
-	BASE(NotesCAPI.HTMLAPI_REF_BASE),
+	BASE(NotesConstants.HTMLAPI_REF_BASE),
 	
 	/**
 	 * BODY BACKGROUND
 	 */
-	BACKGROUND(NotesCAPI.HTMLAPI_REF_BACKGROUND),
+	BACKGROUND(NotesConstants.HTMLAPI_REF_BACKGROUND),
 	
 	/**
 	 * IMG SRC= value from MIME message
 	 */
-	CID(NotesCAPI.HTMLAPI_REF_CID);
+	CID(NotesConstants.HTMLAPI_REF_CID);
 	
 	int m_type;
 	

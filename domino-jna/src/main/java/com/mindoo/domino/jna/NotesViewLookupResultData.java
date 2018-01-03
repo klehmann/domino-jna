@@ -3,7 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Container class for a lookup result in a collection/view
@@ -122,7 +122,7 @@ public class NotesViewLookupResultData {
 	 * @return true if more to do
 	 */
 	public boolean hasMoreToDo() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_MORE_TO_DO) == NotesCAPI.SIGNAL_MORE_TO_DO;
+		return (m_signalFlags & NotesConstants.SIGNAL_MORE_TO_DO) == NotesConstants.SIGNAL_MORE_TO_DO;
 	}
 	
 	/**
@@ -131,7 +131,7 @@ public class NotesViewLookupResultData {
 	 * @return true if database was modified
 	 */
 	public boolean isDatabaseModified() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_DATABASE_MODIFIED) == NotesCAPI.SIGNAL_DATABASE_MODIFIED;
+		return (m_signalFlags & NotesConstants.SIGNAL_DATABASE_MODIFIED) == NotesConstants.SIGNAL_DATABASE_MODIFIED;
 	}
 	
 	/**
@@ -145,7 +145,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewDefiningItemModified() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_DEFN_ITEM_MODIFIED) == NotesCAPI.SIGNAL_DEFN_ITEM_MODIFIED;
+		return (m_signalFlags & NotesConstants.SIGNAL_DEFN_ITEM_MODIFIED) == NotesConstants.SIGNAL_DEFN_ITEM_MODIFIED;
 	}
 
 	/**
@@ -159,7 +159,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewOtherItemModified() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_VIEW_ITEM_MODIFIED) == NotesCAPI.SIGNAL_VIEW_ITEM_MODIFIED;
+		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_ITEM_MODIFIED) == NotesConstants.SIGNAL_VIEW_ITEM_MODIFIED;
 	}
 	
 	/**
@@ -170,7 +170,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewIndexModified() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_INDEX_MODIFIED) == NotesCAPI.SIGNAL_INDEX_MODIFIED;
+		return (m_signalFlags & NotesConstants.SIGNAL_INDEX_MODIFIED) == NotesConstants.SIGNAL_INDEX_MODIFIED;
 	}
 
 	/**
@@ -180,7 +180,7 @@ public class NotesViewLookupResultData {
 	 * @return true if time relative
 	 */
 	public boolean isViewTimeRelative() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_VIEW_TIME_RELATIVE) == NotesCAPI.SIGNAL_VIEW_TIME_RELATIVE;
+		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_TIME_RELATIVE) == NotesConstants.SIGNAL_VIEW_TIME_RELATIVE;
 	}
 	
 	/**	
@@ -193,6 +193,6 @@ public class NotesViewLookupResultData {
 	 *  @return true if we have conflicts
 	 */
 	public boolean hasAnyNonDataConflicts() {
-		return (m_signalFlags & NotesCAPI.SIGNAL_ANY_NONDATA_CONFLICT) != 0;
+		return (m_signalFlags & NotesConstants.SIGNAL_ANY_NONDATA_CONFLICT) != 0;
 	}
 }

@@ -1,6 +1,6 @@
 package com.mindoo.domino.jna.constants;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Access Control Level symbols used to qualify user or server access to a given Domino database.
@@ -10,25 +10,25 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum AclLevel {
 	
 	/** User or Server has no access to the database. */
-	NOACCESS(NotesCAPI.ACL_LEVEL_NOACCESS),
+	NOACCESS(NotesConstants.ACL_LEVEL_NOACCESS),
 	
 	/** User or Server can add new data documents to a database, but cannot examine the new document or the database. */
-	DEPOSITOR(NotesCAPI.ACL_LEVEL_DEPOSITOR),
+	DEPOSITOR(NotesConstants.ACL_LEVEL_DEPOSITOR),
 	
 	/** User or Server can only view data documents in the database. */
-	READER(NotesCAPI.ACL_LEVEL_READER),
+	READER(NotesConstants.ACL_LEVEL_READER),
 	
 	/** User or Server can create and/or edit their own data documents and examine existing ones in the database. */
-	AUTHOR(NotesCAPI.ACL_LEVEL_AUTHOR),
+	AUTHOR(NotesConstants.ACL_LEVEL_AUTHOR),
 	
 	/** User or Server can create and/or edit any data document. */
-	EDITOR(NotesCAPI.ACL_LEVEL_EDITOR),
+	EDITOR(NotesConstants.ACL_LEVEL_EDITOR),
 	
 	/** User or Server can create and/or edit any data document and/or design document. */
-	DESIGNER(NotesCAPI.ACL_LEVEL_DESIGNER),
+	DESIGNER(NotesConstants.ACL_LEVEL_DESIGNER),
 	
 	/** User or Server can create and/or maintain any type of database or document, including the ACL. */
-	MANAGER(NotesCAPI.ACL_LEVEL_MANAGER);
+	MANAGER(NotesConstants.ACL_LEVEL_MANAGER);
 
 	private int m_val;
 	
@@ -52,25 +52,25 @@ public enum AclLevel {
 	 * @return access level
 	 */
 	public static AclLevel toLevel(int value) {
-		if (value == NotesCAPI.ACL_LEVEL_NOACCESS) {
+		if (value == NotesConstants.ACL_LEVEL_NOACCESS) {
 			return AclLevel.NOACCESS;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_DEPOSITOR) {
+		else if (value == NotesConstants.ACL_LEVEL_DEPOSITOR) {
 			return AclLevel.DEPOSITOR;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_READER) {
+		else if (value == NotesConstants.ACL_LEVEL_READER) {
 			return AclLevel.READER;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_AUTHOR) {
+		else if (value == NotesConstants.ACL_LEVEL_AUTHOR) {
 			return AclLevel.AUTHOR;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_EDITOR) {
+		else if (value == NotesConstants.ACL_LEVEL_EDITOR) {
 			return AclLevel.EDITOR;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_DESIGNER) {
+		else if (value == NotesConstants.ACL_LEVEL_DESIGNER) {
 			return AclLevel.DESIGNER;
 		}
-		else if (value == NotesCAPI.ACL_LEVEL_MANAGER) {
+		else if (value == NotesConstants.ACL_LEVEL_MANAGER) {
 			return AclLevel.MANAGER;
 		}
 		else

@@ -9,16 +9,15 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.MacNotesCAPI;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.LinuxNotesNamesListHeader64Struct;
-import com.mindoo.domino.jna.structs.MacNotesNamesListHeader64Struct;
-import com.mindoo.domino.jna.structs.NotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader32Struct;
-import com.mindoo.domino.jna.structs.WinNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
+import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -34,14 +33,14 @@ public class NotesNamesList implements IAllocatedMemory {
 	private boolean m_noRecycle;
 
 	public NotesNamesList(int handle) {
-		if (NotesJNAContext.is64Bit())
+		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor not available in 64 bit");
 		
 		m_handle32 = handle;
 	}
 
 	public NotesNamesList(long handle) {
-		if (!NotesJNAContext.is64Bit())
+		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor not available in 32 bit");
 		
 		m_handle64 = handle;
@@ -56,15 +55,14 @@ public class NotesNamesList implements IAllocatedMemory {
 		if (m_noRecycle || isFreed())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
-			short result = notesAPI.b64_OSMemFree(m_handle64);
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().OSMemFree(m_handle64);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_handle64=0;
 		}
 		else {
-			short result = notesAPI.b32_OSMemFree(m_handle32);
+			short result = NotesNativeAPI32.get().OSMemFree(m_handle32);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_handle32=0;
@@ -73,7 +71,7 @@ public class NotesNamesList implements IAllocatedMemory {
 
 	@Override
 	public boolean isFreed() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_handle64==0;
 		}
 		else {
@@ -95,7 +93,7 @@ public class NotesNamesList implements IAllocatedMemory {
 	 * Checks if the database is already recycled
 	 */
 	private void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_handle64==0)
 				throw new NotesError(0, "Memory already freed");
 			NotesGC.__b64_checkValidMemHandle(getClass(), m_handle64);
@@ -113,7 +111,7 @@ public class NotesNamesList implements IAllocatedMemory {
 			return "NotesNamesList [freed]";
 		}
 		else {
-			return "NotesNamesList [handle="+(NotesJNAContext.is64Bit() ? m_handle64 : m_handle32)+", values="+getNames()+"]";
+			return "NotesNamesList [handle="+(PlatformUtils.is64Bit() ? m_handle64 : m_handle32)+", values="+getNames()+"]";
 		}
 	}
 	
@@ -126,24 +124,22 @@ public class NotesNamesList implements IAllocatedMemory {
 		checkHandle();
 		
 		if (m_names==null) {
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-			if (NotesJNAContext.is64Bit()) {
-				Pointer ptr = notesAPI.b64_OSLockObject(m_handle64);
+			if (PlatformUtils.is64Bit()) {
+				Pointer ptr = NotesNativeAPI64.get().OSLockObject(m_handle64);
 				try {
 					m_names = readNamesList(ptr);
 				}
 				finally {
-					notesAPI.b64_OSUnlockObject(m_handle64);
+					NotesNativeAPI64.get().OSUnlockObject(m_handle64);
 				}
 			}
 			else {
-				Pointer ptr = notesAPI.b32_OSLockObject(m_handle32);
+				Pointer ptr = NotesNativeAPI32.get().OSLockObject(m_handle32);
 				try {
 					m_names = readNamesList(ptr);
 				}
 				finally {
-					notesAPI.b32_OSUnlockObject(m_handle32);
+					NotesNativeAPI32.get().OSUnlockObject(m_handle32);
 				}
 			}
 		}
@@ -163,10 +159,8 @@ public class NotesNamesList implements IAllocatedMemory {
 
 		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		if (NotesJNAContext.is64Bit()) {
-			if (notesAPI instanceof WinNotesCAPI) {
+		if (PlatformUtils.is64Bit()) {
+			if (PlatformUtils.isWindows()) {
 				WinNotesNamesListHeader64Struct namesList = WinNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 				
@@ -175,7 +169,7 @@ public class NotesNamesList implements IAllocatedMemory {
 				offset = namesList.size();
 				numNames = (int) (namesList.NumNames & 0xffff);
 			}
-			else if (notesAPI instanceof MacNotesCAPI) {
+			else if (PlatformUtils.isMac()) {
 				MacNotesNamesListHeader64Struct namesList = MacNotesNamesListHeader64Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 
@@ -195,7 +189,7 @@ public class NotesNamesList implements IAllocatedMemory {
 			}
 		}
 		else {
-			if (notesAPI instanceof WinNotesCAPI) {
+			if (PlatformUtils.isWindows()) {
 				WinNotesNamesListHeader32Struct namesList = WinNotesNamesListHeader32Struct.newInstance(namesListBufferPtr);
 				namesList.read();
 

@@ -3,9 +3,9 @@ package com.mindoo.domino.jna.richtext;
 import java.util.Arrays;
 
 import com.mindoo.domino.jna.IAdaptable;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.structs.compoundtext.NotesCompoundStyleStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 
 /**
  * Container for paragraph style attributes used in richtext items
@@ -43,10 +43,9 @@ public class TextStyle implements IAdaptable {
 		if (styleName==null)
 			throw new NullPointerException("Style name cannot be null");
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		m_styleName = styleName;
 		NotesCompoundStyleStruct style = NotesCompoundStyleStruct.newInstance();
-		notesAPI.CompoundTextInitStyle(style);
+		NotesNativeAPI.get().CompoundTextInitStyle(style);
 		style.read();
 		m_justifyMode = style.JustifyMode;
 		m_lineSpacing = style.LineSpacing;
@@ -59,7 +58,7 @@ public class TextStyle implements IAdaptable {
 		m_tab = style.Tab==null ? null : style.Tab.clone();
 		m_flags = style.Flags;
 		//unlink hide flags so that we can set hide when for preview
-		m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_UNLINK) & 0xffff);
+		m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_UNLINK) & 0xffff);
 	}
 	
 	public String getName() {
@@ -73,15 +72,15 @@ public class TextStyle implements IAdaptable {
 	
 	public Justify getAlign() {
 		switch (m_justifyMode) {
-		case NotesCAPI.JUSTIFY_LEFT:
+		case NotesConstants.JUSTIFY_LEFT:
 			return Justify.LEFT;
-		case NotesCAPI.JUSTIFY_RIGHT:
+		case NotesConstants.JUSTIFY_RIGHT:
 			return Justify.RIGHT;
-		case NotesCAPI.JUSTIFY_BLOCK:
+		case NotesConstants.JUSTIFY_BLOCK:
 			return Justify.BLOCK;
-		case NotesCAPI.JUSTIFY_CENTER:
+		case NotesConstants.JUSTIFY_CENTER:
 			return Justify.CENTER;
-		case NotesCAPI.JUSTIFY_NONE:
+		case NotesConstants.JUSTIFY_NONE:
 			return Justify.NONE;
 		default:
 			return null;
@@ -126,39 +125,39 @@ public class TextStyle implements IAdaptable {
 
 	public double getLeftMargin() {
 		 //there are 72 * 20 TWIPS to an inch
-		return m_leftMargin / NotesCAPI.ONEINCH;
+		return m_leftMargin / NotesConstants.ONEINCH;
 	}
 	
 	public TextStyle setLeftMargin(double margin) {
-		double result = margin * NotesCAPI.ONEINCH;
+		double result = margin * NotesConstants.ONEINCH;
 		if (result < 0 || result > 65535)
-			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesCAPI.ONEINCH));
+			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesConstants.ONEINCH));
 		m_leftMargin = (short) result;
 		return this;
 	}
 	
 	public double getRightMargin() {
 		 //there are 72 * 20 TWIPS to an inch
-		return m_rightMargin / NotesCAPI.ONEINCH;
+		return m_rightMargin / NotesConstants.ONEINCH;
 	}
 	
 	public TextStyle setRightMargin(double margin) {
-		double result = margin * NotesCAPI.ONEINCH;
+		double result = margin * NotesConstants.ONEINCH;
 		if (result < 0 || result > 65535)
-			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesCAPI.ONEINCH));
+			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesConstants.ONEINCH));
 		m_rightMargin = (short) result;
 		return this;
 	}
 
 	public double getFirstLineLeftMargin() {
 		 //there are 72 * 20 TWIPS to an inch
-		return m_firstLineLeftMargin / NotesCAPI.ONEINCH;
+		return m_firstLineLeftMargin / NotesConstants.ONEINCH;
 	}
 	
 	public TextStyle setFirstLineLeftMargin(double margin) {
-		double result = margin * NotesCAPI.ONEINCH;
+		double result = margin * NotesConstants.ONEINCH;
 		if (result < 0 || result > 65535)
-			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesCAPI.ONEINCH));
+			throw new IllegalArgumentException("Value must be between 0 and "+(65535/NotesConstants.ONEINCH));
 		m_firstLineLeftMargin = (short) result;
 		return this;
 	}
@@ -193,156 +192,156 @@ public class TextStyle implements IAdaptable {
 	
 	public TextStyle setPaginateBefore(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_PAGINATE_BEFORE) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_PAGINATE_BEFORE) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_PAGINATE_BEFORE) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_PAGINATE_BEFORE) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isPaginateBefore() {
-		return (m_flags & NotesCAPI.PABFLAG_PAGINATE_BEFORE) == NotesCAPI.PABFLAG_PAGINATE_BEFORE;
+		return (m_flags & NotesConstants.PABFLAG_PAGINATE_BEFORE) == NotesConstants.PABFLAG_PAGINATE_BEFORE;
 	}
 	
 	public TextStyle setKeepWithNext(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_KEEP_WITH_NEXT) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_KEEP_WITH_NEXT) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_KEEP_WITH_NEXT) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_KEEP_WITH_NEXT) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isKeepWithNext() {
-		return (m_flags & NotesCAPI.PABFLAG_KEEP_WITH_NEXT) == NotesCAPI.PABFLAG_KEEP_WITH_NEXT;
+		return (m_flags & NotesConstants.PABFLAG_KEEP_WITH_NEXT) == NotesConstants.PABFLAG_KEEP_WITH_NEXT;
 	}
 
 	public TextStyle setKeepTogether(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_KEEP_TOGETHER) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_KEEP_TOGETHER) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_KEEP_TOGETHER) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_KEEP_TOGETHER) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isKeepTogether() {
-		return (m_flags & NotesCAPI.PABFLAG_KEEP_TOGETHER) == NotesCAPI.PABFLAG_KEEP_TOGETHER;
+		return (m_flags & NotesConstants.PABFLAG_KEEP_TOGETHER) == NotesConstants.PABFLAG_KEEP_TOGETHER;
 	}
 
 	public TextStyle setHideReadOnly(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_RO) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_RO) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_RO) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_RO) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideReadOnly() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_RO) == NotesCAPI.PABFLAG_HIDE_RO;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_RO) == NotesConstants.PABFLAG_HIDE_RO;
 	}
 	
 	public TextStyle setHideReadWrite(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_RW) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_RW) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_RW) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_RW) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideReadWrite() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_RW) == NotesCAPI.PABFLAG_HIDE_RW;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_RW) == NotesConstants.PABFLAG_HIDE_RW;
 	}
 	
 	public TextStyle setHideWhenPrinting(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_PR) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_PR) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_PR) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_PR) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideWhenPrinting() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_PR) == NotesCAPI.PABFLAG_HIDE_PR;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_PR) == NotesConstants.PABFLAG_HIDE_PR;
 	}
 	
 	public TextStyle setHideWhenCopied(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_CO) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_CO) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_CO) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_CO) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideWhenCopied() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_CO) == NotesCAPI.PABFLAG_HIDE_CO;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_CO) == NotesConstants.PABFLAG_HIDE_CO;
 	}
 
 	public TextStyle setHideWhenPreviewed(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_PV) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_PV) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_PV) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_PV) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideWhenEditedInPreview() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_PV) == NotesCAPI.PABFLAG_HIDE_PV;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_PV) == NotesConstants.PABFLAG_HIDE_PV;
 	}
 
 	public TextStyle setHideWhenEditedInPreview(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_HIDE_PVE) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_HIDE_PVE) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_HIDE_PVE) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_HIDE_PVE) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isHideWhenPreviewed() {
-		return (m_flags & NotesCAPI.PABFLAG_HIDE_PVE) == NotesCAPI.PABFLAG_HIDE_PVE;
+		return (m_flags & NotesConstants.PABFLAG_HIDE_PVE) == NotesConstants.PABFLAG_HIDE_PVE;
 	}
 
 	public TextStyle setDisplayAsNumberedList(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_NUMBEREDLIST) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_NUMBEREDLIST) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_NUMBEREDLIST) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_NUMBEREDLIST) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isDisplayAsNumberedList() {
-		return (m_flags & NotesCAPI.PABFLAG_NUMBEREDLIST) == NotesCAPI.PABFLAG_NUMBEREDLIST;
+		return (m_flags & NotesConstants.PABFLAG_NUMBEREDLIST) == NotesConstants.PABFLAG_NUMBEREDLIST;
 	}
 
 	public TextStyle setDisplayAsBulletList(boolean b) {
 		if (b) {
-			m_flags = (short) ((m_flags | NotesCAPI.PABFLAG_BULLET) & 0xffff);
+			m_flags = (short) ((m_flags | NotesConstants.PABFLAG_BULLET) & 0xffff);
 		}
 		else {
-			m_flags = (short) ((m_flags & ~NotesCAPI.PABFLAG_BULLET) & 0xffff);
+			m_flags = (short) ((m_flags & ~NotesConstants.PABFLAG_BULLET) & 0xffff);
 		}
 		return this;
 	}
 
 	public boolean isDisplayAsBulletList() {
-		return (m_flags & NotesCAPI.PABFLAG_BULLET) == NotesCAPI.PABFLAG_BULLET;
+		return (m_flags & NotesConstants.PABFLAG_BULLET) == NotesConstants.PABFLAG_BULLET;
 	}
 	
 	@Override
@@ -402,15 +401,15 @@ public class TextStyle implements IAdaptable {
 
 	public static enum Justify {
 		/** flush left, ragged right */
-		LEFT (NotesCAPI.JUSTIFY_LEFT),
+		LEFT (NotesConstants.JUSTIFY_LEFT),
 		/** flush right, ragged left */
-		RIGHT(NotesCAPI.JUSTIFY_RIGHT),
+		RIGHT(NotesConstants.JUSTIFY_RIGHT),
 		/** full block justification */
-		BLOCK(NotesCAPI.JUSTIFY_BLOCK),
+		BLOCK(NotesConstants.JUSTIFY_BLOCK),
 		/** centered */
-		CENTER(NotesCAPI.JUSTIFY_CENTER),
+		CENTER(NotesConstants.JUSTIFY_CENTER),
 		/** no line wrapping AT ALL (except hard CRs) */
-		NONE(NotesCAPI.JUSTIFY_NONE);
+		NONE(NotesConstants.JUSTIFY_NONE);
 		
 		private short m_constant;
 		
@@ -426,9 +425,8 @@ public class TextStyle implements IAdaptable {
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
 		if (clazz==NotesCompoundStyleStruct.class) {
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 			NotesCompoundStyleStruct styleStruct = NotesCompoundStyleStruct.newInstance();
-			notesAPI.CompoundTextInitStyle(styleStruct);
+			NotesNativeAPI.get().CompoundTextInitStyle(styleStruct);
 			styleStruct.read();
 			styleStruct.JustifyMode = m_justifyMode;
 			styleStruct.LineSpacing = m_lineSpacing;

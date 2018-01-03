@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.richtext.conversion;
 
 import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.constants.CDRecordType;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
@@ -101,7 +101,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 				int version = beginDataBuf.getShort(0);
 				int signature = beginDataBuf.share(2).getShort(0);
 				
-				if (signature == NotesCAPI.SIG_CD_V4HOTSPOTBEGIN) {
+				if (signature == NotesConstants.SIG_CD_V4HOTSPOTBEGIN) {
 					RichTextNavPosition savedPos = nav.getCurrentRecordPosition();
 					if (nav.gotoNext()) {
 						//check what is next
@@ -118,7 +118,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 							Memory hotspotRecordDataBuf = nav.getCurrentRecordData();
 							
 							short type = hotspotRecordDataBuf.getShort(0);
-							if (type == NotesCAPI.HOTSPOTREC_TYPE_FILE) {
+							if (type == NotesConstants.HOTSPOTREC_TYPE_FILE) {
 								int flags = hotspotRecordDataBuf.share(2).getInt(0);
 								int dataLength = (int) (hotspotRecordDataBuf.share(6).getShort(0)  & 0xffff);
 								

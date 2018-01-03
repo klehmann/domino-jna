@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.test;
 
 import java.util.EnumSet;
 
+import org.junit.Test;
+
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback;
 import com.mindoo.domino.jna.NotesViewEntryData;
@@ -16,8 +18,7 @@ import lotus.domino.Session;
  */
 public class TestSignDb extends BaseJNATestClass {
 
-	//commented out; requires native reading of DESIGN view collation structure
-	//@Test
+	@Test
 	public void testSignDb() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -32,6 +33,11 @@ public class TestSignDb extends BaseJNATestClass {
 						return true;
 					}
 
+					@Override
+					public boolean shouldReadSummaryDataFromDesignCollection() {
+						return true;
+					}
+					
 					@Override
 					public Action noteSigned(NotesViewEntryData noteData) {
 						System.out.println("Note signed: ID="+noteData.getNoteId()+", data="+noteData.getColumnDataAsMap());

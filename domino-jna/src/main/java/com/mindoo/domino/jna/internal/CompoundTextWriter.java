@@ -39,18 +39,19 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesFontIDFieldsStruct;
+import com.mindoo.domino.jna.internal.structs.viewformat.NotesColorValueStruct;
 import com.mindoo.domino.jna.richtext.CaptionPosition;
 import com.mindoo.domino.jna.richtext.FontStyle;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.TextStyle;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.structs.compoundtext.NotesCompoundStyleStruct;
-import com.mindoo.domino.jna.structs.compoundtext.NotesFontIDFieldsStruct;
-import com.mindoo.domino.jna.structs.viewformat.NotesColorValueStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -79,7 +80,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	private Map<Integer,Integer> m_definedStyleId;
 
 	public CompoundTextWriter(long handle, boolean isStandalone) {
-		if (!NotesJNAContext.is64Bit())
+		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_handle64 = handle;
 		m_isStandalone = isStandalone;
@@ -87,7 +88,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	public CompoundTextWriter(int handle, boolean isStandalone) {
-		if (NotesJNAContext.is64Bit())
+		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_handle32 = handle;
 		m_isStandalone = isStandalone;
@@ -109,7 +110,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 	
 	public void checkHandle() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_handle64==0)
 				throw new NotesError(0, "Compound text already recycled");
 			NotesGC.__b64_checkValidObjectHandle(CompoundTextWriter.class, m_handle64);
@@ -122,7 +123,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	private int getDefaultFontId() {
-		return getFontId(NotesCAPI.FONT_FACE_SWISS, (byte) 0, (byte) 0, (byte) 10);
+		return getFontId(NotesConstants.FONT_FACE_SWISS, (byte) 0, (byte) 0, (byte) 10);
 	}
 
 	private int getFontId(byte face, byte attrib, byte color, byte pointSize) {
@@ -159,8 +160,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
 		short result;
 		NotesUniversalNoteIdStruct viewUNIDStruct = NotesUniversalNoteIdStruct.fromString(viewUnid);
@@ -179,11 +178,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		dbReplicaIdStructByVal.Innards[0] = dbReplicaIdInnards[0];
 		dbReplicaIdStructByVal.Innards[1] = dbReplicaIdInnards[1];
 
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddDocLink(m_handle64, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddDocLink(m_handle64, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAddDocLink(m_handle32, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
+			result = NotesNativeAPI32.get().CompoundTextAddDocLink(m_handle32, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
@@ -205,17 +204,15 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		NotesDatabase db = note.getParent();
 		NotesNote formNote = StringUtil.isEmpty(form) ? null : db.findDesignNote(form, NoteClass.FORM);
 
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddRenderedNote(m_handle64, note.getHandle64(), formNote==null ? 0 : formNote.getHandle64(), 0);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddRenderedNote(m_handle64, note.getHandle64(), formNote==null ? 0 : formNote.getHandle64(), 0);
 		}
 		else {
-			result = notesAPI.b64_CompoundTextAddRenderedNote(m_handle32, note.getHandle32(), formNote==null ? 0 : formNote.getHandle32(), 0);
+			result = NotesNativeAPI32.get().CompoundTextAddRenderedNote(m_handle32, note.getHandle32(), formNote==null ? 0 : formNote.getHandle32(), 0);
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
@@ -241,7 +238,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			if (isClosed())
 				throw new NotesError(0, "CompoundText already closed");
 
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 			IntByReference retStyleId = new IntByReference();
 
 			NotesCompoundStyleStruct styleStruct = style.getAdapter(NotesCompoundStyleStruct.class);
@@ -251,11 +247,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			Memory styleNameMem = NotesStringUtils.toLMBCS(style.getName(), true);
 
 			short result;
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_CompoundTextDefineStyle(m_handle64, styleNameMem, styleStruct, retStyleId);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().CompoundTextDefineStyle(m_handle64, styleNameMem, styleStruct, retStyleId);
 			}
 			else {
-				result = notesAPI.b32_CompoundTextDefineStyle(m_handle32, styleNameMem, styleStruct, retStyleId);
+				result = NotesNativeAPI32.get().CompoundTextDefineStyle(m_handle32, styleNameMem, styleStruct, retStyleId);
 
 			}
 			NotesErrorUtils.checkResult(result);
@@ -278,8 +274,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory txtMem = NotesStringUtils.toLMBCS(txt, false);
 		Memory lineDelimMem = new Memory(3);
 		lineDelimMem.setByte(0, (byte) '\r'); 
@@ -297,20 +291,20 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			fontId = fontIdObj.getFontId();
 		}
 		
-		int dwStyleID = textStyle==null ? NotesCAPI.STYLE_ID_SAMEASPREV : getStyleId(textStyle);
+		int dwStyleID = textStyle==null ? NotesConstants.STYLE_ID_SAMEASPREV : getStyleId(textStyle);
 
-		Pointer nlsInfoPtr = notesAPI.OSGetLMBCSCLS();
+		Pointer nlsInfoPtr = NotesNativeAPI.get().OSGetLMBCSCLS();
 		short result;
-		int dwFlags = NotesCAPI.COMP_PRESERVE_LINES | NotesCAPI.COMP_PARA_BLANK_LINE;
+		int dwFlags = NotesConstants.COMP_PRESERVE_LINES | NotesConstants.COMP_PARA_BLANK_LINE;
 		if (createParagraphOnLinebreak) {
-			dwFlags = dwFlags | NotesCAPI.COMP_PARA_LINE;
+			dwFlags = dwFlags | NotesConstants.COMP_PARA_LINE;
 		}
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddTextExt(m_handle64, dwStyleID, fontId, txtMem, (int) txtMem.size(),
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddTextExt(m_handle64, dwStyleID, fontId, txtMem, (int) txtMem.size(),
 					lineDelimMem, dwFlags, nlsInfoPtr);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAddTextExt(m_handle32, dwStyleID, fontId, txtMem, (int) txtMem.size(),
+			result = NotesNativeAPI32.get().CompoundTextAddTextExt(m_handle32, dwStyleID, fontId, txtMem, (int) txtMem.size(),
 					lineDelimMem, dwFlags, nlsInfoPtr);
 		}
 		NotesErrorUtils.checkResult(result);
@@ -326,16 +320,14 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAssimilateItem(m_handle64, otherNote.getHandle64(), itemNameMem, 0);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAssimilateItem(m_handle64, otherNote.getHandle64(), itemNameMem, 0);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAssimilateItem(m_handle32, otherNote.getHandle32(), itemNameMem, 0);
+			result = NotesNativeAPI32.get().CompoundTextAssimilateItem(m_handle32, otherNote.getHandle32(), itemNameMem, 0);
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
@@ -352,13 +344,12 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, cdRecordPtr, recordLength);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, cdRecordPtr, recordLength);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, cdRecordPtr, recordLength);
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, cdRecordPtr, recordLength);
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
@@ -387,7 +378,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (!ct.isStandalone())
 			throw new NotesError(0, "Provided compound text is not of type standalone");
 		
-		final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 
 		CloseResult closeResult = ct.closeStandaloneContext();
@@ -395,13 +385,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			final CompoundTextStandaloneBuffer buffer = closeResult.getBuffer();
 			final int bufferLength = buffer.getSize();
 			
-			//TODO find the right method signature to make this work:
-//			if (NotesJNAContext.is64Bit()) {
-//				result = notesAPI.b64_CompoundTextAssimilateBuffer(buffer.getHandle64(), bufferLength, 0);
-//			}
-//			else {
-//				result = notesAPI.b32_CompoundTextAssimilateBuffer(buffer.getHandle32(), bufferLength, 0);
-//			}
 			try {
 				AccessController.doPrivileged(new PrivilegedExceptionAction() {
 
@@ -410,11 +393,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 						File tmpFile = File.createTempFile("comptext", ".tmp");
 						FileOutputStream fOut = null;
 						Pointer ptr;
-						if (NotesJNAContext.is64Bit()) {
-							ptr = notesAPI.b64_OSLockObject(buffer.getHandle64());
+						if (PlatformUtils.is64Bit()) {
+							ptr = NotesNativeAPI64.get().OSLockObject(buffer.getHandle64());
 						}
 						else {
-							ptr = notesAPI.b32_OSLockObject(buffer.getHandle32());
+							ptr = NotesNativeAPI32.get().OSLockObject(buffer.getHandle32());
 						}
 						try {
 							byte[] bufferData = ptr.getByteArray(0, bufferLength);
@@ -423,11 +406,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 							fOut.flush();
 						}
 						finally {
-							if (NotesJNAContext.is64Bit()) {
-								notesAPI.b64_OSUnlockObject(buffer.getHandle64());
+							if (PlatformUtils.is64Bit()) {
+								NotesNativeAPI64.get().OSUnlockObject(buffer.getHandle64());
 							}
 							else {
-								notesAPI.b32_OSUnlockObject(buffer.getHandle32());
+								NotesNativeAPI32.get().OSUnlockObject(buffer.getHandle32());
 							}
 							
 							if (fOut!=null)
@@ -439,11 +422,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 							Memory filePathMem = NotesStringUtils.toLMBCS(filePath, true);
 
 							short result;
-							if (NotesJNAContext.is64Bit()) {
-								result = notesAPI.b64_CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
+							if (PlatformUtils.is64Bit()) {
+								result = NotesNativeAPI64.get().CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
 							}
 							else {
-								result = notesAPI.b32_CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
+								result = NotesNativeAPI32.get().CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
 							}
 							NotesErrorUtils.checkResult(result);
 						}
@@ -466,11 +449,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			String filePath = closeResult.getFilePath();
 			Memory filePathMem = NotesStringUtils.toLMBCS(filePath, true);
 			
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
 			}
 			else {
-				result = notesAPI.b32_CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
+				result = NotesNativeAPI32.get().CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
 			}
 			NotesErrorUtils.checkResult(result);
 		}
@@ -517,16 +500,14 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			return;
 		}
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		Memory filePathMem = NotesStringUtils.toLMBCS(filePath, true);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAssimilateFile(m_handle64, filePathMem, 0);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
+			result = NotesNativeAPI32.get().CompoundTextAssimilateFile(m_handle32, filePathMem, 0);
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
@@ -633,7 +614,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			throw new IllegalArgumentException("Width/Height must be specified");
 		}
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 		short result;
 		
 		//write graphic header
@@ -665,7 +645,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				1 + 				// Flags
 				2 				// Reserved
 				);
-		graphicMem.setShort(0, NotesCAPI.SIG_CD_GRAPHIC);
+		graphicMem.setShort(0, NotesConstants.SIG_CD_GRAPHIC);
 		graphicMem.share(2).setInt(0, (int) graphicMem.size());
 		
 		boolean isResized = resizeToWidth!=-1 && resizeToWidth!=-1;
@@ -696,20 +676,20 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			graphicMem.share(6 + 16).setShort(0, (short) 0);
 		}
 		//Version: BYTE
-		graphicMem.share(6 + 18).setByte(0, NotesCAPI.CDGRAPHIC_VERSION3);
+		graphicMem.share(6 + 18).setByte(0, NotesConstants.CDGRAPHIC_VERSION3);
 		
 		//Flags:
-		graphicMem.share(6 + 19).setByte(0, (byte) NotesCAPI.CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS);
+		graphicMem.share(6 + 19).setByte(0, (byte) NotesConstants.CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS);
 		//Reserved:
 		graphicMem.share(6 + 20).setShort(0, (short) 0);
 		
 		
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, graphicMem, (int) graphicMem.size());
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, graphicMem, (int) graphicMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, graphicMem, (int) graphicMem.size());
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, graphicMem, (int) graphicMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
 		m_hasData=true;
@@ -741,18 +721,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				4 + //Flags
 				4  //Reserved
 				);
-		imageHeaderMem.setShort(0, NotesCAPI.SIG_CD_IMAGEHEADER);
+		imageHeaderMem.setShort(0, NotesConstants.SIG_CD_IMAGEHEADER);
 		imageHeaderMem.share(2).setInt(0, (int) imageHeaderMem.size());
 		short imageTypeShort;
 		switch (fileType) {
 		case Gif:
-			imageTypeShort = NotesCAPI.CDIMAGETYPE_GIF;
+			imageTypeShort = NotesConstants.CDIMAGETYPE_GIF;
 			break;
 		case Jpeg:
-			imageTypeShort = NotesCAPI.CDIMAGETYPE_JPEG;
+			imageTypeShort = NotesConstants.CDIMAGETYPE_JPEG;
 			break;
 		case Bmp:
-			imageTypeShort = NotesCAPI.CDIMAGETYPE_BMP;
+			imageTypeShort = NotesConstants.CDIMAGETYPE_BMP;
 			break;
 		default:
 			throw new IllegalArgumentException("Unknown image type: "+fileType);
@@ -780,12 +760,12 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		imageHeaderMem.share(20).setInt(0, 0); //flags
 		imageHeaderMem.share(24).setInt(0, 0); //reserved
 
-		if (NotesJNAContext.is64Bit()) {
-			result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, imageHeaderMem, (int) imageHeaderMem.size());
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, imageHeaderMem, (int) imageHeaderMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, imageHeaderMem, (int) imageHeaderMem.size());
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, imageHeaderMem, (int) imageHeaderMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
 		
@@ -846,18 +826,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 					segSize
 					);
 			
-			imageSegMem.setShort(0, NotesCAPI.SIG_CD_IMAGESEGMENT); // LSIG
+			imageSegMem.setShort(0, NotesConstants.SIG_CD_IMAGESEGMENT); // LSIG
 			imageSegMem.share(2).setInt(0, (int) imageSegMem.size()); // LSIG
 			imageSegMem.share(6).setShort(0, (short) (len & 0xffff)); // DataSize
 			imageSegMem.share(8).setShort(0, (short) (segSize & 0xffff)); // SegSize
 			imageSegMem.share(10).write(0, buf, 0, len); // Data
 			
-			if (NotesJNAContext.is64Bit()) {
-				result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, imageSegMem, (int) imageSegMem.size());
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, imageSegMem, (int) imageSegMem.size());
 				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, imageSegMem, (int) imageSegMem.size());
+				result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, imageSegMem, (int) imageSegMem.size());
 				NotesErrorUtils.checkResult(result);
 			}
 		}
@@ -919,7 +899,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	if (captionColorBlue<0 || captionColorBlue>255)
 		throw new IllegalArgumentException("Blue value of color can only be between 0 and 255");
 	
-	NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 	Memory beginMem = new Memory(
 			2 + //BSIG
 			2 + //Version
@@ -930,18 +909,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //	Data:
 //	[00 00 ad ff            ]   [....    ]
 	
-	beginMem.setShort(0, NotesCAPI.SIG_CD_BEGIN);
+	beginMem.setShort(0, NotesConstants.SIG_CD_BEGIN);
 	beginMem.share(1).setByte(0, (byte) (beginMem.size() & 0xff));
 	beginMem.share(2).setShort(0, (short) 0);
-	beginMem.share(4).setShort(0, (short) (NotesCAPI.SIG_CD_V4HOTSPOTBEGIN & 0xffff));
+	beginMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTBEGIN & 0xffff));
 	
 	short result;
-	if (NotesJNAContext.is64Bit()) {
-		result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, beginMem, (int) beginMem.size());
+	if (PlatformUtils.is64Bit()) {
+		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, beginMem, (int) beginMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	else {
-		result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, beginMem, (int) beginMem.size());
+		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, beginMem, (int) beginMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	m_hasData=true;
@@ -974,23 +953,23 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			fileNameToDisplayMem.size()
 			);
 	
-	hotspotBeginMem.setShort(0, NotesCAPI.SIG_CD_HOTSPOTBEGIN);
+	hotspotBeginMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTBEGIN);
 	hotspotBeginMem.share(2).setShort(0, (short) (hotspotBeginMem.size() & 0xffff));
-	hotspotBeginMem.share(4).setShort(0, NotesCAPI.HOTSPOTREC_TYPE_FILE);
+	hotspotBeginMem.share(4).setShort(0, NotesConstants.HOTSPOTREC_TYPE_FILE);
 	
-	int flags = NotesCAPI.HOTSPOTREC_RUNFLAG_NOBORDER;
+	int flags = NotesConstants.HOTSPOTREC_RUNFLAG_NOBORDER;
 	hotspotBeginMem.share(6).setInt(0, flags);
 	hotspotBeginMem.share(10).setShort(0, (short) ((uniqueFileNameAttachment.size() + fileNameToDisplayMem.size()) & 0xffff));
 	
 	hotspotBeginMem.share(12).write(0, uniqueFileNameAttachment.getByteArray(0, (int) uniqueFileNameAttachment.size()), 0, (int) uniqueFileNameAttachment.size());
 	hotspotBeginMem.share(12 + uniqueFileNameAttachment.size()).write(0, fileNameToDisplayMem.getByteArray(0, (int) fileNameToDisplayMem.size()), 0, (int) fileNameToDisplayMem.size());
 	
-	if (NotesJNAContext.is64Bit()) {
-		result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, hotspotBeginMem, (int) hotspotBeginMem.size());
+	if (PlatformUtils.is64Bit()) {
+		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotBeginMem, (int) hotspotBeginMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	else {
-		result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, hotspotBeginMem, (int) hotspotBeginMem.size());
+		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotBeginMem, (int) hotspotBeginMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -1018,16 +997,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			captionTextMem.size()
 			);
 	
-	captionMem.setShort(0, NotesCAPI.SIG_CD_CAPTION);
+	captionMem.setShort(0, NotesConstants.SIG_CD_CAPTION);
 	captionMem.share(2).setShort(0, (short) (captionMem.size() & 0xffff));
 	captionMem.share(4).setShort(0, (short) (captionTextMem.size() & 0xffff));
 	
 	byte captionPosition;
 	if (captionPos==CaptionPosition.BELOWCENTER) {
-		captionPosition = NotesCAPI.CAPTION_POSITION_BELOW_CENTER;
+		captionPosition = NotesConstants.CAPTION_POSITION_BELOW_CENTER;
 	}
 	else if (captionPos==CaptionPosition.MIDDLECENTER) {
-		captionPosition = NotesCAPI.CAPTION_POSITION_MIDDLE_CENTER;
+		captionPosition = NotesConstants.CAPTION_POSITION_MIDDLE_CENTER;
 	}
 	else {
 		captionPosition = 0;
@@ -1048,18 +1027,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	colorStruct.Component1 = captionColorRedByte;
 	colorStruct.Component2 = captionColorGreenByte;
 	colorStruct.Component3 = captionColorBlueByte;
-	colorStruct.Flags = NotesCAPI.COLOR_VALUE_FLAGS_ISRGB;
+	colorStruct.Flags = NotesConstants.COLOR_VALUE_FLAGS_ISRGB;
 	colorStruct.write();
 	captionMem.share(11).write(0, colorStruct.getPointer().getByteArray(0, 6), 0, 6);
 	captionMem.share(17).write(0, new byte[11], 0, 11);
 	captionMem.share(28).write(0, captionTextMem.getByteArray(0, (int) captionTextMem.size()), 0, (int) captionTextMem.size());
 	
-	if (NotesJNAContext.is64Bit()) {
-		result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, captionMem, (int) captionMem.size());
+	if (PlatformUtils.is64Bit()) {
+		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, captionMem, (int) captionMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	else {
-		result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, captionMem, (int) captionMem.size());
+		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, captionMem, (int) captionMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -1068,30 +1047,30 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //		Data:
 	
 	Memory hotspotEndMem = new Memory(2);
-	hotspotEndMem.setShort(0, NotesCAPI.SIG_CD_HOTSPOTEND);
+	hotspotEndMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTEND);
 	hotspotEndMem.share(1).setByte(0, (byte) (hotspotEndMem.size() & 0xff));
 	
-	if (NotesJNAContext.is64Bit()) {
-		result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, hotspotEndMem, (int) hotspotEndMem.size());
+	if (PlatformUtils.is64Bit()) {
+		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotEndMem, (int) hotspotEndMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	else {
-		result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, hotspotEndMem, (int) hotspotEndMem.size());
+		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotEndMem, (int) hotspotEndMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	
 	Memory endMem = new Memory(6);
-	endMem.setShort(0, NotesCAPI.SIG_CD_END);
+	endMem.setShort(0, NotesConstants.SIG_CD_END);
 	endMem.share(1).setByte(0, (byte) (endMem.size() & 0xff));
 	endMem.share(2).setShort(0, (short) 0);
-	endMem.share(4).setShort(0, (short) (NotesCAPI.SIG_CD_V4HOTSPOTEND & 0xffff));
+	endMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTEND & 0xffff));
 
-	if (NotesJNAContext.is64Bit()) {
-		result = notesAPI.b64_CompoundTextAddCDRecords(m_handle64, endMem, (int) endMem.size());
+	if (PlatformUtils.is64Bit()) {
+		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, endMem, (int) endMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	else {
-		result = notesAPI.b32_CompoundTextAddCDRecords(m_handle32, endMem, (int) endMem.size());
+		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, endMem, (int) endMem.size());
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -1122,18 +1101,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			return;
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
-			result = notesAPI.b64_CompoundTextClose(m_handle64, null, null, null, (short) 0);
+			result = NotesNativeAPI64.get().CompoundTextClose(m_handle64, null, null, null, (short) 0);
 			m_handle64 = 0;
 			m_closed = true;
 		}
 		else {
 			NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
-			result = notesAPI.b32_CompoundTextClose(m_handle32, null, null, null, (short) 0);
+			result = NotesNativeAPI32.get().CompoundTextClose(m_handle32, null, null, null, (short) 0);
 			m_handle32 = 0;
 			m_closed = true;
 		}
@@ -1155,18 +1132,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		
 		checkHandle();
 		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-
-		Memory returnFileMem = new Memory(NotesCAPI.MAXPATH);
+		Memory returnFileMem = new Memory(NotesConstants.MAXPATH);
 		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethBuffer = new LongByReference();
 			rethBuffer.setValue(0);
 			IntByReference retBufSize = new IntByReference();
 			retBufSize.setValue(0);
 			NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
-			result = notesAPI.b64_CompoundTextClose(m_handle64, rethBuffer, retBufSize, returnFileMem, (short) (NotesCAPI.MAXPATH & 0xffff));
+			result = NotesNativeAPI64.get().CompoundTextClose(m_handle64, rethBuffer, retBufSize, returnFileMem, (short) (NotesConstants.MAXPATH & 0xffff));
 			NotesErrorUtils.checkResult(result);
 			m_handle64 = 0;
 			m_closed = true;
@@ -1199,7 +1174,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			IntByReference retBufSize = new IntByReference();
 			retBufSize.setValue(0);
 			NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
-			result = notesAPI.b32_CompoundTextClose(m_handle32, rethBuffer, retBufSize, returnFileMem, (short) (NotesCAPI.MAXPATH & 0xffff));
+			result = NotesNativeAPI32.get().CompoundTextClose(m_handle32, rethBuffer, retBufSize, returnFileMem, (short) (NotesConstants.MAXPATH & 0xffff));
 			NotesErrorUtils.checkResult(result);
 			m_handle32 = 0;
 			m_closed = true;
@@ -1266,17 +1241,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isRecycled())
 			return;
 
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			if (m_handle64!=0) {
-				notesAPI.b64_CompoundTextDiscard(m_handle64);
+				NotesNativeAPI64.get().CompoundTextDiscard(m_handle64);
 				NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
 				m_handle64=0;
 			}
 		}
 		else {
 			if (m_handle32!=0) {
-				notesAPI.b32_CompoundTextDiscard(m_handle32);
+				NotesNativeAPI32.get().CompoundTextDiscard(m_handle32);
 				NotesGC.__objectBeeingBeRecycled(CompoundTextWriter.class, this);
 				m_handle32=0;
 			}
@@ -1285,7 +1259,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 
 	@Override
 	public boolean isRecycled() {
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			return m_handle64==0;
 		}
 		else {
@@ -1314,7 +1288,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			return "CompoundTextWriter [recycled]";
 		}
 		else {
-			return "CompoundTextWriter [handle="+(NotesJNAContext.is64Bit() ? m_handle64 : m_handle32)+", standalone="+isStandalone()+", closed="+isClosed()+"]";
+			return "CompoundTextWriter [handle="+(PlatformUtils.is64Bit() ? m_handle64 : m_handle32)+", standalone="+isStandalone()+", closed="+isClosed()+"]";
 		}
 	}
 
@@ -1332,14 +1306,14 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		private File m_file;
 		
 		public CompoundTextStandaloneBuffer(long handle, int size) {
-			if (!NotesJNAContext.is64Bit())
+			if (!PlatformUtils.is64Bit())
 				throw new NotesError(0, "Constructor is 64 bit only");
 			m_handle64 = handle;
 			m_size = size;
 		}
 		
 		public CompoundTextStandaloneBuffer(int handle, int size) {
-			if (NotesJNAContext.is64Bit())
+			if (PlatformUtils.is64Bit())
 				throw new NotesError(0, "Constructor is 32 bit only");
 			m_handle32 = handle;
 			m_size = size;
@@ -1377,8 +1351,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		 * @throws FileNotFoundException  in case of I/O errors
 		 */
 		public FileInfo asFileOnDisk() throws FileNotFoundException {
-			final NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-			
 			if (m_file==null || !m_file.exists()) {
 				try {
 					m_file = AccessController.doPrivileged(new PrivilegedExceptionAction<File>() {
@@ -1388,11 +1360,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 							File tmpFile = File.createTempFile("comptext", ".tmp");
 							FileOutputStream fOut = null;
 							Pointer ptr;
-							if (NotesJNAContext.is64Bit()) {
-								ptr = notesAPI.b64_OSLockObject(m_handle64);
+							if (PlatformUtils.is64Bit()) {
+								ptr = NotesNativeAPI64.get().OSLockObject(m_handle64);
 							}
 							else {
-								ptr = notesAPI.b32_OSLockObject(m_handle32);
+								ptr = NotesNativeAPI32.get().OSLockObject(m_handle32);
 							}
 							try {
 								byte[] bufferData = ptr.getByteArray(0, m_size);
@@ -1401,11 +1373,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 								fOut.flush();
 							}
 							finally {
-								if (NotesJNAContext.is64Bit()) {
-									notesAPI.b64_OSUnlockObject(m_handle64);
+								if (PlatformUtils.is64Bit()) {
+									NotesNativeAPI64.get().OSUnlockObject(m_handle64);
 								}
 								else {
-									notesAPI.b32_OSUnlockObject(m_handle32);
+									NotesNativeAPI32.get().OSUnlockObject(m_handle32);
 								}
 								
 								if (fOut!=null)
@@ -1440,16 +1412,14 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			if (isFreed())
 				return;
 			
-			NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-			
-			if (NotesJNAContext.is64Bit()) {
-				short result = notesAPI.b64_OSMemFree(m_handle64);
+			if (PlatformUtils.is64Bit()) {
+				short result = NotesNativeAPI64.get().OSMemFree(m_handle64);
 				NotesErrorUtils.checkResult(result);
 				NotesGC.__memoryBeeingFreed(this);
 				m_handle64=0;
 			}
 			else {
-				short result = notesAPI.b32_OSMemFree(m_handle32);
+				short result = NotesNativeAPI32.get().OSMemFree(m_handle32);
 				NotesErrorUtils.checkResult(result);
 				NotesGC.__memoryBeeingFreed(this);
 				m_handle32=0;
@@ -1474,7 +1444,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 
 		@Override
 		public boolean isFreed() {
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				return m_handle64==0;
 			}
 			else {
@@ -1498,7 +1468,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				return "CompoundTextStandaloneBuffer [freed]";
 			}
 			else {
-				return "CompoundTextStandaloneBuffer [handle="+(NotesJNAContext.is64Bit() ? m_handle64 : m_handle32)+", size="+getSize()+"]";
+				return "CompoundTextStandaloneBuffer [handle="+(PlatformUtils.is64Bit() ? m_handle64 : m_handle32)+", size="+getSize()+"]";
 			}
 		}
 	}

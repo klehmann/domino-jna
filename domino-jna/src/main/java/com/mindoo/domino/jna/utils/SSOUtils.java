@@ -6,14 +6,14 @@ import java.util.List;
 import com.mindoo.domino.jna.NotesSSOToken;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
-import com.mindoo.domino.jna.internal.WinNotesCAPI;
-import com.mindoo.domino.jna.structs.WinNotesSSOTokenStruct32;
-import com.mindoo.domino.jna.structs.WinNotesSSOTokenStruct64;
-import com.mindoo.domino.jna.structs.NotesSSOTokenStruct32;
-import com.mindoo.domino.jna.structs.NotesSSOTokenStruct64;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesSSOTokenStruct32;
+import com.mindoo.domino.jna.internal.structs.NotesSSOTokenStruct64;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.WinNotesSSOTokenStruct32;
+import com.mindoo.domino.jna.internal.structs.WinNotesSSOTokenStruct64;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -39,8 +39,6 @@ public class SSOUtils {
 	 */
 	public static NotesSSOToken generateSSOToken(String orgName, String configName,
 			String userName, NotesTimeDate creationDate, NotesTimeDate expirationDate, boolean enableRenewal) {
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		NotesTimeDateStruct creationDateStruct = creationDate==null ? null : creationDate.getAdapter(NotesTimeDateStruct.class);
 		NotesTimeDateStruct expirationDateStruct = expirationDate==null ? null : expirationDate.getAdapter(NotesTimeDateStruct.class);
@@ -59,13 +57,13 @@ public class SSOUtils {
 		long hToken64 = 0;
 		int hToken32 = 0;
 		
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference retmhToken = new LongByReference();
 			retmhToken.setValue(0);
 
-			result = notesAPI.b64_SECTokenGenerate(null, orgNameMem, configNameMem, userNameCanonicalMem,
+			result = NotesNativeAPI64.get().SECTokenGenerate(null, orgNameMem, configNameMem, userNameCanonicalMem,
 					creationDateStruct, expirationDateStruct,
-					retmhToken, enableRenewal ? NotesCAPI.fSECToken_EnableRenewal : 0, renewalDate==null ? null : renewalDate.getPointer());
+					retmhToken, enableRenewal ? NotesConstants.fSECToken_EnableRenewal : 0, renewalDate==null ? null : renewalDate.getPointer());
 			NotesErrorUtils.checkResult(result);
 
 			if (renewalDate!=null) {
@@ -77,15 +75,15 @@ public class SSOUtils {
 			if (hToken64==0)
 				throw new IllegalStateException("SECTokenGenerate returned null value for the SSO token");
 
-			ptr = notesAPI.b64_OSMemoryLock(hToken64);
+			ptr = NotesNativeAPI64.get().OSMemoryLock(hToken64);
 		}
 		else {
 			IntByReference retmhToken = new IntByReference();
 			retmhToken.setValue(0);
 			
-			result = notesAPI.b32_SECTokenGenerate(null, orgNameMem, configNameMem, userNameCanonicalMem,
+			result = NotesNativeAPI32.get().SECTokenGenerate(null, orgNameMem, configNameMem, userNameCanonicalMem,
 					creationDateStruct, expirationDateStruct,
-					retmhToken, enableRenewal ? NotesCAPI.fSECToken_EnableRenewal : 0, renewalDate==null ? null : renewalDate.getPointer());
+					retmhToken, enableRenewal ? NotesConstants.fSECToken_EnableRenewal : 0, renewalDate==null ? null : renewalDate.getPointer());
 			NotesErrorUtils.checkResult(result);
 			
 			if (renewalDate!=null) {
@@ -96,7 +94,7 @@ public class SSOUtils {
 			if (hToken32==0)
 				throw new IllegalStateException("SECTokenGenerate returned null value for the SSO token");
 
-			ptr = notesAPI.b32_OSMemoryLock(hToken32);
+			ptr = NotesNativeAPI32.get().OSMemoryLock(hToken32);
 		}
 		
 		try {
@@ -105,30 +103,30 @@ public class SSOUtils {
 			String data=null;
 			boolean isSecureOnly;
 			
-			if (NotesJNAContext.is64Bit()) {
-				if (notesAPI instanceof WinNotesCAPI) {
+			if (PlatformUtils.is64Bit()) {
+				if (PlatformUtils.isWindows()) {
 					WinNotesSSOTokenStruct64 tokenData = WinNotesSSOTokenStruct64.newInstance(ptr);
 					tokenData.read();
 					
 					//decode name
 					if (tokenData.mhName!=0) {
-						Pointer ptrName = notesAPI.b64_OSMemoryLock(tokenData.mhName);
+						Pointer ptrName = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhName);
 						try {
 							name = NotesStringUtils.fromLMBCS(ptrName, -1);
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhName);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhName);
 						}
 					}
 					
 					//decode domain list
 					if (tokenData.wNumDomains>0 && tokenData.mhDomainList!=0) {
-						Pointer ptrDomains = notesAPI.b64_OSMemoryLock(tokenData.mhDomainList);
+						Pointer ptrDomains = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhDomainList);
 						try {
 							domains = NotesStringUtils.fromLMBCSStringList(ptrDomains, (int) (tokenData.wNumDomains & 0xffff));
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhDomainList);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhDomainList);
 						}
 					}
 					else {
@@ -136,12 +134,12 @@ public class SSOUtils {
 					}
 					
 					if (tokenData.mhData!=0) {
-						Pointer ptrData = notesAPI.b64_OSMemoryLock(tokenData.mhData);
+						Pointer ptrData = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhData);
 						try {
 							data = NotesStringUtils.fromLMBCS(ptrData, -1);
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhData);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhData);
 						}
 					}
 					isSecureOnly = tokenData.isSecureOnly();
@@ -153,23 +151,23 @@ public class SSOUtils {
 					
 					//decode name
 					if (tokenData.mhName!=0) {
-						Pointer ptrName = notesAPI.b64_OSMemoryLock(tokenData.mhName);
+						Pointer ptrName = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhName);
 						try {
 							name = NotesStringUtils.fromLMBCS(ptrName, -1);
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhName);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhName);
 						}
 					}
 					
 					//decode domain list
 					if (tokenData.wNumDomains>0 && tokenData.mhDomainList!=0) {
-						Pointer ptrDomains = notesAPI.b64_OSMemoryLock(tokenData.mhDomainList);
+						Pointer ptrDomains = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhDomainList);
 						try {
 							domains = NotesStringUtils.fromLMBCSStringList(ptrDomains, (int) (tokenData.wNumDomains & 0xffff));
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhDomainList);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhDomainList);
 						}
 					}
 					else {
@@ -177,41 +175,41 @@ public class SSOUtils {
 					}
 					
 					if (tokenData.mhData!=0) {
-						Pointer ptrData = notesAPI.b64_OSMemoryLock(tokenData.mhData);
+						Pointer ptrData = NotesNativeAPI64.get().OSMemoryLock(tokenData.mhData);
 						try {
 							data = NotesStringUtils.fromLMBCS(ptrData, -1);
 						}
 						finally {
-							notesAPI.b64_OSMemoryUnlock(tokenData.mhData);
+							NotesNativeAPI64.get().OSMemoryUnlock(tokenData.mhData);
 						}
 					}
 					isSecureOnly = tokenData.isSecureOnly();
 				}
 			}
 			else {
-				if (notesAPI instanceof WinNotesCAPI) {
+				if (PlatformUtils.isWindows()) {
 					WinNotesSSOTokenStruct32 tokenData = WinNotesSSOTokenStruct32.newInstance(ptr);
 					tokenData.read();
 					
 					//decode name
 					if (tokenData.mhName!=0) {
-						Pointer ptrName = notesAPI.b32_OSMemoryLock(tokenData.mhName);
+						Pointer ptrName = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhName);
 						try {
 							name = NotesStringUtils.fromLMBCS(ptrName, -1);
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhName);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhName);
 						}
 					}
 					
 					//decode domain list
 					if (tokenData.wNumDomains>0 && tokenData.mhDomainList!=0) {
-						Pointer ptrDomains = notesAPI.b32_OSMemoryLock(tokenData.mhDomainList);
+						Pointer ptrDomains = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhDomainList);
 						try {
 							domains = NotesStringUtils.fromLMBCSStringList(ptrDomains, (int) (tokenData.wNumDomains & 0xffff));
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhDomainList);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhDomainList);
 						}
 					}
 					else {
@@ -219,12 +217,12 @@ public class SSOUtils {
 					}
 					
 					if (tokenData.mhData!=0) {
-						Pointer ptrData = notesAPI.b32_OSMemoryLock(tokenData.mhData);
+						Pointer ptrData = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhData);
 						try {
 							data = NotesStringUtils.fromLMBCS(ptrData, -1);
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhData);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhData);
 						}
 					}
 					isSecureOnly = tokenData.isSecureOnly();
@@ -236,23 +234,23 @@ public class SSOUtils {
 					
 					//decode name
 					if (tokenData.mhName!=0) {
-						Pointer ptrName = notesAPI.b32_OSMemoryLock(tokenData.mhName);
+						Pointer ptrName = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhName);
 						try {
 							name = NotesStringUtils.fromLMBCS(ptrName, -1);
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhName);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhName);
 						}
 					}
 					
 					//decode domain list
 					if (tokenData.wNumDomains>0 && tokenData.mhDomainList!=0) {
-						Pointer ptrDomains = notesAPI.b32_OSMemoryLock(tokenData.mhDomainList);
+						Pointer ptrDomains = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhDomainList);
 						try {
 							domains = NotesStringUtils.fromLMBCSStringList(ptrDomains, (int) (tokenData.wNumDomains & 0xffff));
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhDomainList);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhDomainList);
 						}
 					}
 					else {
@@ -260,12 +258,12 @@ public class SSOUtils {
 					}
 					
 					if (tokenData.mhData!=0) {
-						Pointer ptrData = notesAPI.b32_OSMemoryLock(tokenData.mhData);
+						Pointer ptrData = NotesNativeAPI32.get().OSMemoryLock(tokenData.mhData);
 						try {
 							data = NotesStringUtils.fromLMBCS(ptrData, -1);
 						}
 						finally {
-							notesAPI.b32_OSMemoryUnlock(tokenData.mhData);
+							NotesNativeAPI32.get().OSMemoryUnlock(tokenData.mhData);
 						}
 					}
 					isSecureOnly = tokenData.isSecureOnly();
@@ -277,18 +275,18 @@ public class SSOUtils {
 			return ssoToken;
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
+			if (PlatformUtils.is64Bit()) {
 				if (hToken64!=0) {
-					notesAPI.b64_OSMemoryUnlock(hToken64);
+					NotesNativeAPI64.get().OSMemoryUnlock(hToken64);
 					//frees SSO_TOKEN and its members
-					notesAPI.b64_OSMemoryFree(hToken64);
+					NotesNativeAPI64.get().OSMemoryFree(hToken64);
 				}
 			}
 			else {
 				if (hToken32!=0) {
-					notesAPI.b32_OSMemoryUnlock(hToken32);
+					NotesNativeAPI32.get().OSMemoryUnlock(hToken32);
 					//frees SSO_TOKEN and its members
-					notesAPI.b32_OSMemoryFree(hToken32);
+					NotesNativeAPI32.get().OSMemoryFree(hToken32);
 				}
 			}
 		}

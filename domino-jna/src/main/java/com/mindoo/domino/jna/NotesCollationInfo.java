@@ -2,7 +2,7 @@ package com.mindoo.domino.jna;
 
 import java.util.List;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Container object that provides access to the available sortings for a {@link NotesCollection}
@@ -24,7 +24,7 @@ public class NotesCollationInfo {
 	 * @return true for unique keys
 	 */
 	public boolean isUnique() {
-		return (m_flags & NotesCAPI.COLLATION_FLAG_UNIQUE) == NotesCAPI.COLLATION_FLAG_UNIQUE;
+		return (m_flags & NotesConstants.COLLATION_FLAG_UNIQUE) == NotesConstants.COLLATION_FLAG_UNIQUE;
 	}
 
 	/**
@@ -33,7 +33,7 @@ public class NotesCollationInfo {
 	 * @return true for build on demand
 	 */
 	public boolean isBuildOnDemand() {
-		return (m_flags & NotesCAPI.COLLATION_FLAG_BUILD_ON_DEMAND) == NotesCAPI.COLLATION_FLAG_BUILD_ON_DEMAND;
+		return (m_flags & NotesConstants.COLLATION_FLAG_BUILD_ON_DEMAND) == NotesConstants.COLLATION_FLAG_BUILD_ON_DEMAND;
 	}
 
 	/**

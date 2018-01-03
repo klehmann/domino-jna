@@ -22,8 +22,9 @@ import com.mindoo.domino.jna.internal.CompoundTextWriter.CloseResult;
 import com.mindoo.domino.jna.internal.CompoundTextWriter.CloseResultType;
 import com.mindoo.domino.jna.internal.CompoundTextWriter.CompoundTextStandaloneBuffer;
 import com.mindoo.domino.jna.internal.CompoundTextWriter.CompoundTextStandaloneBuffer.FileInfo;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 
@@ -42,12 +43,10 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 	 * Creates a new standalone richtext item
 	 */
 	public StandaloneRichText() {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		short result;
-		if (NotesJNAContext.is64Bit()) {
+		if (PlatformUtils.is64Bit()) {
 			LongByReference rethCompound = new LongByReference();
-			result = notesAPI.b64_CompoundTextCreate((long)0, null, rethCompound);
+			result = NotesNativeAPI64.get().CompoundTextCreate((long)0, null, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			long hCompound = rethCompound.getValue();
 			CompoundTextWriter ct = new CompoundTextWriter(hCompound, true);
@@ -56,7 +55,7 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 		}
 		else {
 			IntByReference rethCompound = new IntByReference();
-			result = notesAPI.b32_CompoundTextCreate((int)0, null, rethCompound);
+			result = NotesNativeAPI32.get().CompoundTextCreate((int)0, null, rethCompound);
 			NotesErrorUtils.checkResult(result);
 			int hCompound = rethCompound.getValue();
 			CompoundTextWriter ct = new CompoundTextWriter(hCompound, true);

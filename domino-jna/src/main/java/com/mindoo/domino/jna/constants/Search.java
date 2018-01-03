@@ -3,7 +3,7 @@ package com.mindoo.domino.jna.constants;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Use these flags in the search_flags parameter to
@@ -15,27 +15,62 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
  */
 public enum Search {
 	/** Include deleted and non-matching notes in search (ALWAYS "ON" in partial searches, which are searches using a since date!) */
-	ALL_VERSIONS(0x0001),
+	ALL_VERSIONS(NotesConstants.SEARCH_ALL_VERSIONS),
 	/** TRUE to return summary buffer with each match */
-	SUMMARY(0x0002),
+	SUMMARY(NotesConstants.SEARCH_SUMMARY),
 	/** For directory mode file type filtering. If set, "NoteClassMask" is treated as a FILE_xxx mask for directory filtering */
-	FILETYPE(0x0004),
-	/** Set {@link NotesCAPI#NOTE_CLASS_NOTIFYDELETION} bit of NoteClass for deleted notes */
-	NOTIFYDELETIONS(0x0010),
+	FILETYPE(NotesConstants.SEARCH_FILETYPE),
+	/** Set {@link NotesConstants#NOTE_CLASS_NOTIFYDELETION} bit of NoteClass for deleted notes */
+	NOTIFYDELETIONS(NotesConstants.SEARCH_NOTIFYDELETIONS),
 	/** return error if we don't have full privileges */
-	ALLPRIVS(0x0040),
+	ALLPRIVS(NotesConstants.SEARCH_ALLPRIVS),
 	/** Use current session's user name, not server's */
-	SESSION_USERNAME(0x0400),
+	SESSION_USERNAME(NotesConstants.SEARCH_SESSION_USERNAME),
 	/** Filter out "Truncated" documents */
-	NOABSTRACTS(0x1000),
+	NOABSTRACTS(NotesConstants.SEARCH_NOABSTRACTS),
 	/** Search formula applies only to data notes, i.e., others match */
-	DATAONLY_FORMULA(0x4000),
+	DATAONLY_FORMULA(NotesConstants.SEARCH_DATAONLY_FORMULA),
 	
 	/** Full search (as if Since was "1") but exclude DATA notes prior to passed-in Since time */
-	FULL_DATACUTOFF(0x02000000),
+	FULL_DATACUTOFF(NotesConstants.SEARCH_FULL_DATACUTOFF),
 	
 	/** Allow search to return id's only i.e. no summary buffer */
-	NOPRIVCHECK(0x0800);
+	NOPRIVCHECK(NotesConstants.SEARCH_NOPRIVCHECK),
+	
+	/** Search includes all children of matching documents. */
+	ALLCHILDREN(NotesConstants.SEARCH_ALLCHILDREN),
+	
+	/** Search includes all descendants of matching documents. */
+	ALLDESCENDANTS(NotesConstants.SEARCH_ALLDESCENDANTS),
+	
+	/**
+	 * Include *** ALL *** named ghost notes in the search (profile docs,
+	 * xACL's, etc). Note: use SEARCH1_PROFILE_DOCS, etc., introduced in R6, for
+	 * finer control
+	 */
+	NAMED_GHOSTS(NotesConstants.SEARCH_NAMED_GHOSTS),
+	
+	/** Return only docs with protection fields (BS_PROTECTED set in note header) */
+	ONLYPROTECTED(NotesConstants.SEARCH_ONLYPROTECTED),
+	
+	/** Return soft deleted documents */
+	SOFTDELETIONS(NotesConstants.SEARCH_SOFTDELETIONS),
+	
+	// search1 flags
+	
+	/** flag to let the selection formula be run against profile documents; must
+	 * be used together with {@link #PROFILE_DOCS} */
+	SELECT_NAMED_GHOSTS(NotesConstants.SEARCH1_SELECT_NAMED_GHOSTS),
+	
+	/**
+	 * Include profile documents (a specific type of named ghost note) in the
+	 * search Note: set {@link #SELECT_NAMED_GHOSTS}, too, if you want the
+	 * selection formula to be applied to the profile docs (so as not to get
+	 * them all back as matches).
+	 */
+	PROFILE_DOCS(NotesConstants.SEARCH1_PROFILE_DOCS);
+	
+	private static EnumSet<Search> SEARCH1_FLAGS = EnumSet.of(SELECT_NAMED_GHOSTS, PROFILE_DOCS);
 	
 	private int m_val;
 	
@@ -47,24 +82,24 @@ public enum Search {
 		return m_val;
 	}
 	
-	public static short toBitMask(EnumSet<Search> findSet) {
+	public static short toBitMaskSearch1Flags(EnumSet<Search> searchFlagSet) {
 		int result = 0;
-		if (findSet!=null) {
-			for (Search currFind : values()) {
-				if (findSet.contains(currFind)) {
-					result = result | currFind.getValue();
+		if (searchFlagSet!=null) {
+			for (Search currFlag : values()) {
+				if (SEARCH1_FLAGS.contains(currFlag) && searchFlagSet.contains(currFlag)) {
+					result = result | currFlag.getValue();
 				}
 			}
 		}
 		return (short) (result & 0xffff);
 	}
-	
-	public static int toBitMaskInt(EnumSet<Search> findSet) {
+
+	public static int toBitMaskStdFlagsInt(EnumSet<Search> searchFlagSet) {
 		int result = 0;
-		if (findSet!=null) {
-			for (Search currFind : values()) {
-				if (findSet.contains(currFind)) {
-					result = result | currFind.getValue();
+		if (searchFlagSet!=null) {
+			for (Search currFlag : values()) {
+				if (!SEARCH1_FLAGS.contains(currFlag) && searchFlagSet.contains(currFlag)) {
+					result = result | currFlag.getValue();
 				}
 			}
 		}

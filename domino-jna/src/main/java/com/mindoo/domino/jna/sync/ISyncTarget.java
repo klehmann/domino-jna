@@ -97,6 +97,8 @@ public interface ISyncTarget {
 		NoteWithSummaryItems
 	}
 
+	public enum TargetResult {Added, Removed, Updated, None}
+	
 	/**
 	 * The method is called for every note that has changed since the last sync end date and
 	 * that currently matches the selection formula.
@@ -105,8 +107,9 @@ public interface ISyncTarget {
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
 	 * @param summaryBufferData summary buffer if {@link #getWhichDataToRead()} returned {@link DataToRead#SummaryBuffer}, null otherwse
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
+	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public void noteChangedMatchingFormula(Object ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
+	public TargetResult noteChangedMatchingFormula(Object ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
 
 	/**
 	 * The method is called for every note that changed since the last sync end date and
@@ -114,16 +117,18 @@ public interface ISyncTarget {
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
+	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public void noteChangedNotMatchingFormula(Object ctx, NotesOriginatorIdData oid);
+	public TargetResult noteChangedNotMatchingFormula(Object ctx, NotesOriginatorIdData oid);
 
 	/**
 	 * The method is called for every note that got deleted since the last sync end date.
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
+	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public void noteDeleted(Object ctx, NotesOriginatorIdData oid);
+	public TargetResult noteDeleted(Object ctx, NotesOriginatorIdData oid);
 
 	/**
 	 * Method is called during the log process in case expensive log messages are

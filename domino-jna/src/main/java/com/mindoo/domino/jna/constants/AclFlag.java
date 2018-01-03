@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * 
@@ -46,50 +46,50 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum AclFlag {
 	
 	/** Authors can't create new notes (only edit existing ones) */
-	AUTHOR_NOCREATE(NotesCAPI.ACL_FLAG_AUTHOR_NOCREATE),
+	AUTHOR_NOCREATE(NotesConstants.ACL_FLAG_AUTHOR_NOCREATE),
 	
 	/** Entry represents a Server (V4) */
-	SERVER(NotesCAPI.ACL_FLAG_SERVER),
+	SERVER(NotesConstants.ACL_FLAG_SERVER),
 	
 	/** User cannot delete notes */
-	NODELETE(NotesCAPI.ACL_FLAG_NODELETE),
+	NODELETE(NotesConstants.ACL_FLAG_NODELETE),
 	
 	/** User can create personal agents (V4) */
-	CREATE_PRAGENT(NotesCAPI.ACL_FLAG_CREATE_PRAGENT),
+	CREATE_PRAGENT(NotesConstants.ACL_FLAG_CREATE_PRAGENT),
 	
 	/** User can create personal folders (V4) */
-	CREATE_PRFOLDER(NotesCAPI.ACL_FLAG_CREATE_PRFOLDER),
+	CREATE_PRFOLDER(NotesConstants.ACL_FLAG_CREATE_PRFOLDER),
 	
 	/** Entry represents a Person (V4) */
-	PERSON(NotesCAPI.ACL_FLAG_PERSON),
+	PERSON(NotesConstants.ACL_FLAG_PERSON),
 
 	/** Entry represents a group (V4) */
-	GROUP(NotesCAPI.ACL_FLAG_GROUP),
+	GROUP(NotesConstants.ACL_FLAG_GROUP),
 	
 	/** User can create and update shared views &amp; folders (V4)<br>
 This allows an Editor to assume some Designer-level access */
-	CREATE_FOLDER(NotesCAPI.ACL_FLAG_CREATE_FOLDER),
+	CREATE_FOLDER(NotesConstants.ACL_FLAG_CREATE_FOLDER),
 	
 	/** User can create LotusScript */
-	CREATE_LOTUSSCRIPT(NotesCAPI.ACL_FLAG_CREATE_LOTUSSCRIPT),
+	CREATE_LOTUSSCRIPT(NotesConstants.ACL_FLAG_CREATE_LOTUSSCRIPT),
 	
 	/** User can read public notes */
-	PUBLICREADER(NotesCAPI.ACL_FLAG_PUBLICREADER),
+	PUBLICREADER(NotesConstants.ACL_FLAG_PUBLICREADER),
 	
 	/** User can write public notes */
-	PUBLICWRITER(NotesCAPI.ACL_FLAG_PUBLICWRITER),
+	PUBLICWRITER(NotesConstants.ACL_FLAG_PUBLICWRITER),
 	
 	/** User CANNOT register monitors for this database */
-	MONITORS_DISALLOWED(NotesCAPI.ACL_FLAG_MONITORS_DISALLOWED),
+	MONITORS_DISALLOWED(NotesConstants.ACL_FLAG_MONITORS_DISALLOWED),
 	
 	/** User cannot replicate or copy this database */
-	NOREPLICATE(NotesCAPI.ACL_FLAG_NOREPLICATE),
+	NOREPLICATE(NotesConstants.ACL_FLAG_NOREPLICATE),
 	
 	/** Admin server can modify reader and author fields in db */
-	ADMIN_READERAUTHOR(NotesCAPI.ACL_FLAG_ADMIN_READERAUTHOR),
+	ADMIN_READERAUTHOR(NotesConstants.ACL_FLAG_ADMIN_READERAUTHOR),
 	
 	/** Entry is administration server (V4) */
-	ADMIN_SERVER(NotesCAPI.ACL_FLAG_ADMIN_SERVER);
+	ADMIN_SERVER(NotesConstants.ACL_FLAG_ADMIN_SERVER);
 
 	private int m_val;
 	

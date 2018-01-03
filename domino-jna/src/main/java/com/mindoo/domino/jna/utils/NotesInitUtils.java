@@ -1,8 +1,8 @@
 package com.mindoo.domino.jna.utils;
 
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.internal.NotesJNAContext;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.sun.jna.StringArray;
 
 public class NotesInitUtils {
@@ -39,10 +39,11 @@ public class NotesInitUtils {
 	 * @param argvArr arguments
 	 */
 	public static void notesInitExtended(String[] argvArr) {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
+		StringArray strArr = new StringArray(argvArr);
 
-		short result = api.NotesInitExtended(argvArr.length, new StringArray(argvArr));
-		NotesErrorUtils.checkResult(result);
+		short result = NotesNativeAPI.get().NotesInitExtended(argvArr.length, strArr);
+		if (result!=0)
+			throw new NotesError(result, "Error initializing Notes connection");
 	}
 
 	/**
@@ -55,8 +56,7 @@ public class NotesInitUtils {
 	 * the event of a Notes/Domino crash.
 	 */
 	public static void notesTerm() {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
-		api.NotesTerm();
+		NotesNativeAPI.get().NotesTerm();
 	}
 
 	/**
@@ -78,8 +78,7 @@ public class NotesInitUtils {
 	 * be the thread that calls {@link #notesTerm()}.
 	 */
 	public static void notesInitThread() {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
-		short result = api.NotesInitThread();
+		short result = NotesNativeAPI.get().NotesInitThread();
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -90,7 +89,6 @@ public class NotesInitUtils {
 	 * {@link #notesTermThread()} will free resources allocated by Domino or Notes for that thread.
 	 */
 	public static void notesTermThread() {
-		NotesCAPI api = NotesJNAContext.getNotesAPI();
-		api.NotesTermThread();
+		NotesNativeAPI.get().NotesTermThread();
 	}
 }

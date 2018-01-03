@@ -18,12 +18,13 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.structs.NotesCollectionPositionStruct;
-import com.mindoo.domino.jna.structs.NotesCollectionStatsStruct;
-import com.mindoo.domino.jna.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
+import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
+import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -77,15 +78,13 @@ public class NotesLookupResultBufferDecoder {
 	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime,
 			boolean convertStringsLazily, String singleColumnLookupName) {
-		
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
 
 		Pointer bufferPtr;
-		if (NotesJNAContext.is64Bit()) {
-			bufferPtr = notesAPI.b64_OSLockObject(bufferHandle);
+		if (PlatformUtils.is64Bit()) {
+			bufferPtr = NotesNativeAPI64.get().OSLockObject(bufferHandle);
 		}
 		else {
-			bufferPtr = notesAPI.b32_OSLockObject((int) bufferHandle);
+			bufferPtr = NotesNativeAPI32.get().OSLockObject((int) bufferHandle);
 		}
 		
 		int bufferPos = 0;
@@ -113,7 +112,7 @@ public class NotesLookupResultBufferDecoder {
 			NotesCollectionPositionStruct sharedPosition = null;
 			if (returnMask.contains(ReadMask.INDEXPOSITION)) {
 				//allocate memory for a position
-				sharedCollectionPositionMem = new Memory(NotesCAPI.collectionPositionSize);
+				sharedCollectionPositionMem = new Memory(NotesConstants.collectionPositionSize);
 				sharedPosition = NotesCollectionPositionStruct.newInstance(sharedCollectionPositionMem);
 			}
 			
@@ -240,13 +239,13 @@ public class NotesLookupResultBufferDecoder {
 			return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo, retDiffTime);
 		}
 		finally {
-			if (NotesJNAContext.is64Bit()) {
-				notesAPI.b64_OSUnlockObject(bufferHandle);
-				notesAPI.b64_OSMemFree(bufferHandle);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().OSUnlockObject(bufferHandle);
+				NotesNativeAPI64.get().OSMemFree(bufferHandle);
 			}
 			else {
-				notesAPI.b32_OSUnlockObject((int)bufferHandle);
-				notesAPI.b32_OSMemFree((int)bufferHandle);
+				NotesNativeAPI32.get().OSUnlockObject((int)bufferHandle);
+				NotesNativeAPI32.get().OSMemFree((int)bufferHandle);
 			}
 		}
 		
@@ -265,7 +264,7 @@ public class NotesLookupResultBufferDecoder {
 		int bufferPos = 0;
 		
 		//skip item value table header
-		bufferPos += NotesCAPI.itemValueTableSize;
+		bufferPos += NotesConstants.itemValueTableSize;
 		
 //		The information in a view summary of values is as follows:
 //
@@ -318,8 +317,6 @@ public class NotesLookupResultBufferDecoder {
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 */
 	private static void populateItemValueTableData(Pointer bufferPtr, int gmtOffset, boolean useDayLight, int itemsCount, int[] itemNameLengths, int[] itemValueLengths, ItemValueTableData retData, boolean convertStringsLazily) {
-		NotesCAPI notesAPI = NotesJNAContext.getNotesAPI();
-		
 		int bufferPos = 0;
 		String[] itemNames = new String[itemsCount];
 		int[] itemDataTypes = new int[itemsCount];
@@ -362,29 +359,29 @@ public class NotesLookupResultBufferDecoder {
 				bufferPos += (itemValueLengths[j] - 2);
 
 				if (itemDataTypes[j] == NotesItem.TYPE_TEXT) {
-					Object strVal = ItemDecoder.decodeTextValue(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), convertStringsLazily);
+					Object strVal = ItemDecoder.decodeTextValue(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), convertStringsLazily);
 					decodedItemValues[j] = strVal;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_TEXT_LIST) {
 					//read a text list item value
 					int valueLength = (int) (itemValueBufferSizes[j] & 0xffff);
-					List<Object> listValues = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(notesAPI, itemValueBufferPointers[j], convertStringsLazily);
+					List<Object> listValues = valueLength==0 ? Collections.emptyList() : ItemDecoder.decodeTextListValue(itemValueBufferPointers[j], convertStringsLazily);
 					decodedItemValues[j]  = listValues;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER) {
-					double numVal = ItemDecoder.decodeNumber(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+					double numVal = ItemDecoder.decodeNumber(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
 					decodedItemValues[j] = numVal;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
-					Calendar cal = ItemDecoder.decodeTimeDate(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
+					Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
 					decodedItemValues[j]  = cal;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
-					List<Object> numberList = ItemDecoder.decodeNumberList(notesAPI, itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+					List<Object> numberList = ItemDecoder.decodeNumberList(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
 					decodedItemValues[j]  = numberList;
 				}
 				else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
-					List<Object> calendarValues = ItemDecoder.decodeTimeDateList(notesAPI, itemValueBufferPointers[j], useDayLight, gmtOffset);
+					List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j], useDayLight, gmtOffset);
 					decodedItemValues[j] = calendarValues;
 				}
 			}
@@ -433,7 +430,7 @@ public class NotesLookupResultBufferDecoder {
 			itemNameLengths[j] = (int) (itemPtr.getShort(0) & 0xffff);
 			itemValueLengths[j] = (int) (itemPtr.getShort(2) & 0xffff);
 			
-			bufferPos += NotesCAPI.tableItemSize;
+			bufferPos += NotesConstants.tableItemSize;
 		}
 		
 		ItemTableData data = new ItemTableData();

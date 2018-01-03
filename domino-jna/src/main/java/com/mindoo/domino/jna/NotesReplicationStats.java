@@ -1,6 +1,6 @@
 package com.mindoo.domino.jna;
 
-import com.mindoo.domino.jna.structs.ReplServStatsStruct;
+import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
 import com.sun.jna.Pointer;
 
 /**

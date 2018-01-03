@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
+import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Database creation options.
@@ -12,37 +12,37 @@ import com.mindoo.domino.jna.internal.NotesCAPI;
 public enum CreateDatabase {
 
 	/** Create a locally encrypted database. */
-	LOCALSECURITY(NotesCAPI.DBCREATE_LOCALSECURITY),
+	LOCALSECURITY(NotesConstants.DBCREATE_LOCALSECURITY),
 	
 	/** NSFNoteUpdate will not use an object store for notes in the database. */
-	OBJSTORE_NEVER(NotesCAPI.DBCREATE_OBJSTORE_NEVER),
+	OBJSTORE_NEVER(NotesConstants.DBCREATE_OBJSTORE_NEVER),
 	
 	/** The maximum database length is specified in bytes in NSFDbCreateExtended. */
-	MAX_SPECIFIED(NotesCAPI.DBCREATE_MAX_SPECIFIED),
+	MAX_SPECIFIED(NotesConstants.DBCREATE_MAX_SPECIFIED),
 	
 	/** Don't support note hierarchy - ODS21 and up only */
-	NORESPONSE_INFO(NotesCAPI.DBCREATE_NORESPONSE_INFO),
+	NORESPONSE_INFO(NotesConstants.DBCREATE_NORESPONSE_INFO),
 	
 	/** Don't maintain unread lists for this DB */
-	NOUNREAD(NotesCAPI.DBCREATE_NOUNREAD),
+	NOUNREAD(NotesConstants.DBCREATE_NOUNREAD),
 	
 	/** Skip overwriting freed disk buffer space */
-	NO_FREE_OVERWRITE(NotesCAPI.DBCREATE_NO_FREE_OVERWRITE),
+	NO_FREE_OVERWRITE(NotesConstants.DBCREATE_NO_FREE_OVERWRITE),
 	
 	/** Maintain form/bucket bitmap */
-	FORM_BUCKET_OPT(NotesCAPI.DBCREATE_FORM_BUCKET_OPT),
+	FORM_BUCKET_OPT(NotesConstants.DBCREATE_FORM_BUCKET_OPT),
 	
 	/** Disable transaction logging for this database if specified */
-	DISABLE_TXN_LOGGING(NotesCAPI.DBCREATE_DISABLE_TXN_LOGGING),
+	DISABLE_TXN_LOGGING(NotesConstants.DBCREATE_DISABLE_TXN_LOGGING),
 	
 	/** Enable maintaining last accessed time */
-	MAINTAIN_LAST_ACCESSED(NotesCAPI.DBCREATE_MAINTAIN_LAST_ACCESSED),
+	MAINTAIN_LAST_ACCESSED(NotesConstants.DBCREATE_MAINTAIN_LAST_ACCESSED),
 	
 	/** TRUE if database is a mail[n].box database */
-	IS_MAILBOX(NotesCAPI.DBCREATE_IS_MAILBOX),
+	IS_MAILBOX(NotesConstants.DBCREATE_IS_MAILBOX),
 	
 	/** TRUE if database should allow "large" (&lt;64K bytes) UNK table */
-	LARGE_UNKTABLE(NotesCAPI.DBCREATE_LARGE_UNKTABLE);
+	LARGE_UNKTABLE(NotesConstants.DBCREATE_LARGE_UNKTABLE);
 
 	private short m_val;
 	

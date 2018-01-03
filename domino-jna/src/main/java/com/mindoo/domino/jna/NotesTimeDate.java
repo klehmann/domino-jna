@@ -5,8 +5,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
-import com.mindoo.domino.jna.internal.NotesCAPI;
-import com.mindoo.domino.jna.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
@@ -193,7 +193,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return true if date part exists
 	 */
 	public boolean hasDate() {
-        boolean hasDate=(m_struct.Innards[1]!=0 && m_struct.Innards[1]!=NotesCAPI.ANYDAY);
+        boolean hasDate=(m_struct.Innards[1]!=0 && m_struct.Innards[1]!=NotesConstants.ANYDAY);
 		return hasDate;
 	}
 	
@@ -203,7 +203,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return true if time part exists
 	 */
 	public boolean hasTime() {
-        boolean hasDate=(m_struct.Innards[0]!=0 && m_struct.Innards[0]!=NotesCAPI.ALLDAY);
+        boolean hasDate=(m_struct.Innards[0]!=0 && m_struct.Innards[0]!=NotesConstants.ALLDAY);
 		return hasDate;
 	}
 	
@@ -351,7 +351,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * Removes the time part of this timedate
 	 */
 	public void setAnyTime() {
-		m_struct.Innards[0] = NotesCAPI.ALLDAY;
+		m_struct.Innards[0] = NotesConstants.ALLDAY;
 		m_struct.write();
 	}
 	
@@ -361,14 +361,14 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return true if there is no time
 	 */
 	public boolean isAnyTime() {
-		return m_struct.Innards[0] == NotesCAPI.ALLDAY;
+		return m_struct.Innards[0] == NotesConstants.ALLDAY;
 	}
 	
 	/**
 	 * Removes the date part of this timedate
 	 */
 	public void setAnyDate() {
-		m_struct.Innards[1] = NotesCAPI.ANYDAY;
+		m_struct.Innards[1] = NotesConstants.ANYDAY;
 		m_struct.write();
 	}
 	
@@ -378,7 +378,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return true if there is no date
 	 */
 	public boolean isAnyDate() {
-		return m_struct.Innards[1] == NotesCAPI.ANYDAY;
+		return m_struct.Innards[1] == NotesConstants.ANYDAY;
 	}
 	
 	/**
