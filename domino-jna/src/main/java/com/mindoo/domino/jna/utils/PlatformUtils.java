@@ -1,6 +1,8 @@
 
 package com.mindoo.domino.jna.utils;
 
+import java.io.File;
+
 import com.mindoo.domino.jna.constants.OSDirectory;
 import com.mindoo.domino.jna.internal.NotesCAPI;
 import com.mindoo.domino.jna.internal.NotesJNAContext;
@@ -36,12 +38,23 @@ public class PlatformUtils {
 		case TEMP:
 			notesAPI.OSGetSystemTempDirectory(retPathName, NotesCAPI.MAXPATH);
 			break;
+		case VIEWREBUILD:
+			notesAPI.NIFGetViewRebuildDir(retPathName, NotesCAPI.MAXPATH);
+			break;
+		case DAOS:
+			notesAPI.DAOSGetBaseStoragePath(retPathName, NotesCAPI.MAXPATH);
+			break;
 		default:
 			throw new IllegalArgumentException("Unsupported directory type: "+osDirectory);
 		}
 		notesAPI.OSPathAddTrailingPathSep(retPathName);
 		strReturn = NotesStringUtils.fromLMBCS(retPathName, NotesStringUtils.getNullTerminatedLength(retPathName));
 
+		File file = new File(strReturn);
+		if (!file.exists()) {
+			strReturn = "";
+		}
+		
 		return strReturn;
 	}
 
