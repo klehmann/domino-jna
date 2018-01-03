@@ -21,6 +21,7 @@ The project provides functionality that is not available in the classic Java API
 * **richtext item writing**: create richtext items with text, images, doclinks, by rendering other notes and appending other richtet items
 * **richtext item conversion**: multi-level conversion of richtext item content, e.g. to **add/remove file hotspots (file icons with custom image that open file on click) independent from the actual file attachment** or do mail merge with richtext
 * **richtext-html conversion** with advanced quality and access to embedded images
+* **incremental data synchronization** with external databases or indexers. Generic design, sample implementation for [CQEngine](https://github.com/netonjm/CGEngine)
 * **quick check if a document is editable** by a specified user (without the need to scan through author items)
 * **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (IBM's Java API does not return ids of deleted docs)
@@ -29,7 +30,7 @@ The project provides functionality that is not available in the classic Java API
 * **run agents bypassing ECL checks**, pass an in-memory document for data exchange readable as `Session.DocumentContext` and redirect Agent output to a Java `Writer`
 * read/write replication data (replica id and flags)
 * clearing the replication history
-* fast noteid / UNID conversion
+* fast noteid / UNID bulk conversion with lookup of "modified in this file" property (part of the note OID - originator id)
 * compute @Usernameslist values for any Notes user
 * faster **formula execution on documents** with document modified/selected/deleted by formula check
 * **SSO token computation** (with tokens also working on Websphere)
