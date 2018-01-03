@@ -332,10 +332,22 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 		m_indexLock.unlock();
 	}
 
+	/**
+	 * Method to filter the internal CQEngine index collection using any indices
+	 * you defined in {@link #addIndices(IndexedCollection)}.
+	 * 
+	 * @param query CQEngine query
+	 * @return result set
+	 */
 	public ResultSet<T> retrieve(Query<T> query) {
 		return m_indexCollection.retrieve(query);
 	}
 	
+	/**
+	 * Returns the an unmodifiable version of the internal CQEngine index collection
+	 * 
+	 * @return index collection
+	 */
 	@SuppressWarnings("unchecked")
 	public Collection<T> getContent() {
 		return Collections.unmodifiableCollection(m_indexCollection);
