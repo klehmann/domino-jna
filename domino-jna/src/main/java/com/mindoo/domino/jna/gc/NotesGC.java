@@ -416,6 +416,15 @@ public class NotesGC {
 	}
 	
 	/**
+	 * Throws an exception when the code is currently not running in a runWithAutoGC block
+	 */
+	public static void ensureRunningInAutoGC() {
+		if (!Boolean.TRUE.equals(m_activeAutoGC.get())) {
+			throw new NotesError(0, "Please wrap code accessing the JNA API in a NotesGC.runWithAutoGC(Callable) block");
+		}
+	}
+	
+	/**
 	 * Runs a piece of code and automatically disposes any allocated Notes objects at the end.
 	 * The method supported nested calls.
 	 * 

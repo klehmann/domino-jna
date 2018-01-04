@@ -49,6 +49,8 @@ public class NotesNativeAPI64 {
 	 * @return API
 	 */
 	public static NotesNativeAPI64 get() {
+		NotesGC.ensureRunningInAutoGC();
+		
 		if (NotesNativeAPI.m_initError!=null) {
 			if (NotesNativeAPI.m_initError instanceof RuntimeException)
 				throw (RuntimeException) NotesNativeAPI.m_initError;

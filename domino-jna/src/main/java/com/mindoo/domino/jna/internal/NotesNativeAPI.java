@@ -141,6 +141,16 @@ public class NotesNativeAPI {
 	 * @return API
 	 */
 	public static NotesNativeAPI get() {
+		NotesGC.ensureRunningInAutoGC();
+		return getUnchecked();
+	}
+	
+	/**
+	 * Returns the API instance used to call native Domino C API methods for 32 and 64 bit
+	 * 
+	 * @return API
+	 */
+	public static NotesNativeAPI getUnchecked() {
 		if (m_initError!=null) {
 			if (m_initError instanceof RuntimeException)
 				throw (RuntimeException) m_initError;
