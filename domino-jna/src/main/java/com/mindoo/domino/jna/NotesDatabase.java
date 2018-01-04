@@ -452,7 +452,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function creates a new Domino database.
 	 * 
-	 * @param session current session
 	 * @param serverName server name, either canonical, abbreviated or common name
 	 * @param filePath filepath to database
 	 * @param dbClass specifies the class of the database created. See {@link DBClass} for classes that may be specified.
@@ -461,7 +460,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param encryption encryption strength
 	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, DBCLASS_BY_EXTENSION and use the option, DBCREATE_MAX_SPECIFIED.
 	 */
-	public static void createDatabase(Session session, String serverName, String filePath, DBClass dbClass, boolean forceCreation, EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize) {
+	public static void createDatabase(String serverName, String filePath, DBClass dbClass, boolean forceCreation, EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize) {
 		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
 		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath, true);
 		
