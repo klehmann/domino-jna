@@ -2800,4 +2800,21 @@ This allows an Editor to assume some Designer-level access */
 	/** Return an error if the template is not found */
 	public int DESIGN_ERR_TMPL_NOT_FOUND = 0x00000008	;
 
+	/*	NSF File Information Buffer size.  This buffer is defined to contain
+	Text (host format) that is NULL-TERMINATED.  This is the ONLY null-terminated
+	field in all of NSF. */
+
+	public int NSF_INFO_SIZE = 128;
+
+	/*	Define argument to NSFDbInfoParse/Modify to manipulate components from DbInfo */
+
+	/** database title */
+	public short INFOPARSE_TITLE = 0;
+	/** database categories */
+	public short INFOPARSE_CATEGORIES = 1;
+	/** template name (for a design template database) */
+	public short INFOPARSE_CLASS	 = 2;
+	/** inherited template name (for a database that inherited its design from a design template) */
+	public short INFOPARSE_DESIGN_CLASS = 3;
+
 }

@@ -4184,4 +4184,206 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		NotesErrorUtils.checkResult(result);
 	}
+	
+	/**
+	 * This function gets the database information buffer of a Domino database.<br>
+	 * <br>
+	 * The information buffer is a NULL terminated string and consists of one or more of the
+	 * following pieces of information:<br>
+	 * <ul>
+	 * <li>database title</li>
+	 * <li>categories</li>
+	 * <li>class</li>
+	 * <li>and design class</li>
+	 * </ul>
+	 * <br>
+	 * Use NSFDbInfoParse to retrieve any one piece of information from the buffer.<br>
+	 * <br>
+	 * Database information appears in the Notes UI, in the File, Database, Properties InfoBox.<br>
+	 * Clicking the Basics tab displays the Title field with the database title.<br>
+	 * <br>
+	 * Selecting the Design tab opens the Design tabbed page. The database class is displayed in the
+	 * Database is a template/Template Name field and the database design class is displayed in the
+	 * Inherit design from template/Template Name field. The Categories field displays the database
+	 * categories.<br>
+	 * <br>
+	 * Database categories are different than view categories.<br>
+	 * Database categories are keywords specified for the database.<br>
+	 * Each server's database catalog (CATALOG.NSF) contains a view, called Databases by Category,
+	 * which lists only the categorized databases.<br>
+	 * <br>
+	 * The database title also appears on the Notes Desktop below each database icon.
+	 * 
+	 * @return buffer
+	 */
+	private Memory getDbInfoBuffer() {
+		checkHandle();
+		
+		Memory infoBuf = new Memory(NotesConstants.NSF_INFO_SIZE);
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFDbInfoGet(m_hDB64, infoBuf);
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFDbInfoGet(m_hDB32, infoBuf);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return infoBuf;
+	}
+	
+	/**
+	 * Writes the modified db info buffer
+	 * 
+	 * @param infoBuf info buffer
+	 */
+	private void writeDbInfoBuffer(Memory infoBuf) {
+		checkHandle();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFDbInfoSet(m_hDB64, infoBuf);
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFDbInfoSet(m_hDB32, infoBuf);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		//as documented in NSFDbInfoSet, we need to update the icon note as well
+		NotesNote iconNote = openIconNote();
+		if (iconNote.hasItem("$TITLE")) {
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NSFItemSetText(iconNote.getHandle64(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
+			}
+			else {
+				result = NotesNativeAPI32.get().NSFItemSetText(iconNote.getHandle32(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
+			}
+			NotesErrorUtils.checkResult(result);
+
+			iconNote.update();
+		}
+		iconNote.recycle();
+	}
+	
+	/**
+	 * Returns the database title
+	 * 
+	 * @return title
+	 */
+	public String getTitle() {
+		checkHandle();
+		
+		Memory infoBuf = getDbInfoBuffer();
+		Memory titleMem = new Memory(NotesConstants.NSF_INFO_SIZE - 1);
+		
+		NotesNativeAPI.get().NSFDbInfoParse(infoBuf, NotesConstants.INFOPARSE_TITLE, titleMem, (short) (titleMem.size() & 0xffff));
+		return NotesStringUtils.fromLMBCS(titleMem, -1);
+	}
+	
+	/**
+	 * Changes the database title
+	 * 
+	 * @param newTitle new title
+	 */
+	public void setTitle(String newTitle) {
+		checkHandle();
+		Memory infoBuf = getDbInfoBuffer();
+		Memory newTitleMem = NotesStringUtils.toLMBCS(newTitle, true);
+		
+		NotesNativeAPI.get().NSFDbInfoModify(infoBuf, NotesConstants.INFOPARSE_TITLE, newTitleMem);
+		
+		writeDbInfoBuffer(infoBuf);
+	}
+
+	/**
+	 * Returns the database categories
+	 * 
+	 * @return categories
+	 */
+	public String getCategories() {
+		checkHandle();
+		
+		Memory infoBuf = getDbInfoBuffer();
+		Memory categoriesMem = new Memory(NotesConstants.NSF_INFO_SIZE - 1);
+		
+		NotesNativeAPI.get().NSFDbInfoParse(infoBuf, NotesConstants.INFOPARSE_CATEGORIES, categoriesMem, (short) (categoriesMem.size() & 0xffff));
+		return NotesStringUtils.fromLMBCS(categoriesMem, -1);
+	}
+	
+	/**
+	 * Changes the database categories
+	 * 
+	 * @param newCategories new categories
+	 */
+	public void setCategories(String newCategories) {
+		checkHandle();
+		Memory infoBuf = getDbInfoBuffer();
+		Memory newCategoriesMem = NotesStringUtils.toLMBCS(newCategories, true);
+		
+		NotesNativeAPI.get().NSFDbInfoModify(infoBuf, NotesConstants.INFOPARSE_CATEGORIES, newCategoriesMem);
+		
+		writeDbInfoBuffer(infoBuf);
+	}
+	
+	/**
+	 * The template name of a database, if the database is a template. If the database is not a template, returns an empty string.
+	 * 
+	 * @return template name or "" if no template
+	 */
+	public String getTemplateName() {
+		checkHandle();
+		
+		Memory infoBuf = getDbInfoBuffer();
+		Memory templateNameMem = new Memory(NotesConstants.NSF_INFO_SIZE - 1);
+		
+		NotesNativeAPI.get().NSFDbInfoParse(infoBuf, NotesConstants.INFOPARSE_CLASS, templateNameMem, (short) (templateNameMem.size() & 0xffff));
+		return NotesStringUtils.fromLMBCS(templateNameMem, -1);
+	}
+	
+	/**
+	 * Changes the template name of a template database.
+	 * 
+	 * @param newTemplateName new template name
+	 */
+	public void setTemplateName(String newTemplateName) {
+		checkHandle();
+		Memory infoBuf = getDbInfoBuffer();
+		Memory newTemplateNameMem = NotesStringUtils.toLMBCS(newTemplateName, true);
+		
+		NotesNativeAPI.get().NSFDbInfoModify(infoBuf, NotesConstants.INFOPARSE_CLASS, newTemplateNameMem);
+		
+		writeDbInfoBuffer(infoBuf);
+	}
+	
+	/**
+	 *  The name of the design template from which a database inherits its design.<br>
+	 *  If the database does not inherit its design from a design template, it returns an empty string ("").
+	 * 
+	 * @return template name or ""
+	 */
+	public String getDesignTemplateName() {
+		checkHandle();
+		
+		Memory infoBuf = getDbInfoBuffer();
+		Memory designTemplateNameMem = new Memory(NotesConstants.NSF_INFO_SIZE - 1);
+		
+		NotesNativeAPI.get().NSFDbInfoParse(infoBuf, NotesConstants.INFOPARSE_DESIGN_CLASS, designTemplateNameMem, (short) (designTemplateNameMem.size() & 0xffff));
+		return NotesStringUtils.fromLMBCS(designTemplateNameMem, -1);
+	}
+	
+	/**
+	 * Changes the name of the design template from which a database inherits its design
+	 * 
+	 * @param newDesignTemplateName new design template name
+	 */
+	public void setDesignTemplateName(String newDesignTemplateName) {
+		checkHandle();
+		Memory infoBuf = getDbInfoBuffer();
+		Memory newDesignTemplateNameMem = NotesStringUtils.toLMBCS(newDesignTemplateName, true);
+		
+		NotesNativeAPI.get().NSFDbInfoModify(infoBuf, NotesConstants.INFOPARSE_DESIGN_CLASS, newDesignTemplateNameMem);
+		
+		writeDbInfoBuffer(infoBuf);
+	}
+
 }

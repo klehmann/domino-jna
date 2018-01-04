@@ -359,6 +359,16 @@ public class NotesNativeAPI {
 	public native void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
 	public native void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
+	public native void NSFDbInfoParse(
+			Pointer Info,
+			short What,
+			Pointer Buffer,
+			short Length);
+	public native void NSFDbInfoModify(
+			Pointer Info,
+			short What,
+			Pointer Buffer);
+
 	/**
 	 * Returns the alignment to be used for the current platform
 	 * @return alignment

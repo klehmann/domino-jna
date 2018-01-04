@@ -210,6 +210,11 @@ public class NotesNativeAPI64 {
 			short  ItemNameLength,
 			int  Flags,
 			NotesTimeDateStruct retTime);
+	public native short NSFItemSetText(
+			long hNote,
+			Memory ItemName,
+			Memory ItemText,
+			short TextLength);
 	public native short NSFItemSetTextSummary(
 			long  hNote,
 			Memory ItemName,
@@ -471,6 +476,12 @@ public class NotesNativeAPI64 {
 	public native short NSFHideDesign(long hdb1, long hdb2, int param3, int param4);
 	public native short NSFDbDeleteNotes(long hDB, long hTable, Memory retUNIDArray);
 	public native short NSFDbIsLocallyEncrypted(long hDB, IntByReference retVal);
+	public native short NSFDbInfoGet(
+			long hDB,
+			Pointer retBuffer);
+	public native short NSFDbInfoSet(
+			long hDB,
+			Pointer Buffer);
 
 	public native short NSFBuildNamesList(Memory UserName, int dwFlags, LongByReference rethNamesList);
 
