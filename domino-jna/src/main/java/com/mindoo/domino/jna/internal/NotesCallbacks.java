@@ -102,7 +102,7 @@ public interface NotesCallbacks {
 	/**
 	 * Callback used to abort design refresh
 	 */
-	interface ABORTCHECKPROC {
+	interface ABORTCHECKPROC extends Callback {
 		short invoke();
 	}
 	
