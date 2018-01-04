@@ -60,7 +60,7 @@ public class NotesNativeAPI {
 	 * Initializes the Domino API
 	 */
 	public static void initialize() {
-		if (m_instanceWithoutCrashLogging==null) {
+		if (m_instanceWithoutCrashLogging==null && m_initError==null) {
 			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<NotesNativeAPI>() {
 
 				@Override
@@ -141,16 +141,7 @@ public class NotesNativeAPI {
 	 * @return API
 	 */
 	public static NotesNativeAPI get() {
-		NotesGC.ensureRunningInAutoGC();
-		return getUnchecked();
-	}
-	
-	/**
-	 * Returns the API instance used to call native Domino C API methods for 32 and 64 bit
-	 * 
-	 * @return API
-	 */
-	public static NotesNativeAPI getUnchecked() {
+		//check if this failed the last time
 		if (m_initError!=null) {
 			if (m_initError instanceof RuntimeException)
 				throw (RuntimeException) m_initError;
@@ -158,9 +149,17 @@ public class NotesNativeAPI {
 				throw new NotesError(0, "Error initializing Domino JNA API", m_initError);
 		}
 		
-		if (m_instanceWithoutCrashLogging==null)
-			throw new NotesError(0, "API not initialized yet. Please call NotesNativeAPI.initialize() first. The easiest way to do this is by wrapping your code in a NotesGC.runWithAutoGC block");
-		
+		if (m_instanceWithoutCrashLogging==null) {
+			initialize();
+			
+			if (m_initError!=null) {
+				if (m_initError instanceof RuntimeException)
+					throw (RuntimeException) m_initError;
+				else
+					throw new NotesError(0, "Error initializing Domino JNA API", m_initError);
+			}
+		}
+
 		if (NotesGC.isLogCrashingThreadStacktrace()) {
 			if (m_instanceWithCrashLogging==null) {
 				m_instanceWithCrashLogging = wrapWithCrashStackLogging(NotesNativeAPI.class, m_instanceWithoutCrashLogging);

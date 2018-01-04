@@ -41,7 +41,7 @@ public class NotesInitUtils {
 	public static void notesInitExtended(String[] argvArr) {
 		StringArray strArr = new StringArray(argvArr);
 
-		short result = NotesNativeAPI.getUnchecked().NotesInitExtended(argvArr.length, strArr);
+		short result = NotesNativeAPI.get().NotesInitExtended(argvArr.length, strArr);
 		if (result!=0)
 			throw new NotesError(result, "Error initializing Notes connection");
 	}
@@ -56,7 +56,7 @@ public class NotesInitUtils {
 	 * the event of a Notes/Domino crash.
 	 */
 	public static void notesTerm() {
-		NotesNativeAPI.getUnchecked().NotesTerm();
+		NotesNativeAPI.get().NotesTerm();
 	}
 
 	/**
@@ -78,7 +78,7 @@ public class NotesInitUtils {
 	 * be the thread that calls {@link #notesTerm()}.
 	 */
 	public static void notesInitThread() {
-		short result = NotesNativeAPI.getUnchecked().NotesInitThread();
+		short result = NotesNativeAPI.get().NotesInitThread();
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -89,6 +89,6 @@ public class NotesInitUtils {
 	 * {@link #notesTermThread()} will free resources allocated by Domino or Notes for that thread.
 	 */
 	public static void notesTermThread() {
-		NotesNativeAPI.getUnchecked().NotesTermThread();
+		NotesNativeAPI.get().NotesTermThread();
 	}
 }
