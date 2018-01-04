@@ -456,9 +456,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param filePath filepath to database
 	 * @param dbClass specifies the class of the database created. See {@link DBClass} for classes that may be specified.
 	 * @param forceCreation controls whether the call will overwrite an existing database of the same name. Set to TRUE to overwrite, set to FALSE not to overwrite.
-	 * @param options database creation option flags.  See DBCREATE_xxx
+	 * @param options database creation option flags.  See {@link CreateDatabase}
 	 * @param encryption encryption strength
-	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, DBCLASS_BY_EXTENSION and use the option, DBCREATE_MAX_SPECIFIED.
+	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, {@link DBClass#BY_EXTENSION} and use the option, {@link CreateDatabase#MAX_SPECIFIED}.
 	 */
 	public static void createDatabase(String serverName, String filePath, DBClass dbClass, boolean forceCreation, EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize) {
 		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);

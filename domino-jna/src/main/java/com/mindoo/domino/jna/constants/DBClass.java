@@ -9,6 +9,12 @@ import com.mindoo.domino.jna.internal.NotesConstants;
  */
 public enum DBClass {
 
+	/** The type of the database is determined by the filename extension.<br>
+	 * The extensions and their database classes are .NSX (NSFTESTFILE), .NSF (NOTEFILE), .DSK (DESKTOP),
+	 * .NCF (NOTECLIPBOARD), .NTF (TEMPLATEFILE), .NSG (GIANTNOTEFILE), .NSH (HUGENOTEFILE), NTD (ONEDOCFILE),
+	 * NS2 (V2NOTEFILE), NTM (ENCAPSMAILFILE). */
+	BY_EXTENSION(NotesConstants.DBCLASS_BY_EXTENSION),
+	
 	/** A test database. */
 	NSFTESTFILE(NotesConstants.DBCLASS_NSFTESTFILE),
 	

@@ -624,7 +624,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * .NSF (NOTEFILE), .DSK (DESKTOP), .NCF (NOTECLIPBOARD), .NTF (TEMPLATEFILE),
 	 * .NSG (GIANTNOTEFILE), .NSH (HUGENOTEFILE), NTD (ONEDOCFILE),
 	 * NS2 (V2NOTEFILE), NTM (ENCAPSMAILFILE). */
-public int DBCLASS_BY_EXTENSION = 0;	
+public short DBCLASS_BY_EXTENSION = 0;	
 
 /** A test database. */
 public short DBCLASS_NSFTESTFILE = (short) (0xff00 & 0xffff);
