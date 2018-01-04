@@ -45,9 +45,11 @@ public class DirectoryScanner {
 	/**
 	 * Starts the directory scan. During the scan, we call {@link #entryRead(SearchResultData)} with
 	 * every entry we found
+	 * 
+	 * @return search result; override {@link #isAccepted(SearchResultData)} to apply your own filtering or {@link #entryRead(SearchResultData)} to read results while scanning
 	 */
-	public void scan() {
-		scan(null);
+	public List<SearchResultData> scan() {
+		return scan(null);
 	}
 	
 	/**
