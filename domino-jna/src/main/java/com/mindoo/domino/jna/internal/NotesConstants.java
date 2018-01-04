@@ -2795,4 +2795,9 @@ This allows an Editor to assume some Designer-level access */
 	public byte CAPTION_POSITION_BELOW_CENTER = 0;	/*	Centered below object */
 	public byte CAPTION_POSITION_MIDDLE_CENTER = 1;	/*	Centered on object */
 
+	/** Force operation, even if destination "up to date" */
+	public int DESIGN_FORCE = 0x00000001;
+	/** Return an error if the template is not found */
+	public int DESIGN_ERR_TMPL_NOT_FOUND = 0x00000008	;
+
 }

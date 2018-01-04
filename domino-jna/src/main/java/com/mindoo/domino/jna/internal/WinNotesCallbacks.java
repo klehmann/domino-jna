@@ -32,6 +32,8 @@ public interface WinNotesCallbacks {
 
 	interface OSSIGBREAKPROCWin extends NotesCallbacks.OSSIGBREAKPROC, StdCallCallback {}
 
+	interface ABORTCHECKPROCWin extends NotesCallbacks.ABORTCHECKPROC {}
+	
 	interface OSSIGPROGRESSPROCWin extends NotesCallbacks.OSSIGPROGRESSPROC, StdCallCallback {}
 
 	interface OSSIGREPLPROCWin extends NotesCallbacks.OSSIGREPLPROC, StdCallCallback {}

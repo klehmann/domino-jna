@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
@@ -915,4 +917,10 @@ public class NotesNativeAPI32 {
 	public native void CompoundTextDiscard(
 			int hCompound);
 
+	public native short DesignRefresh(
+			Memory Server,
+			int hDB,
+			int dwFlags,
+			ABORTCHECKPROC AbortCheck,
+			OSSIGMSGPROC MessageProc);
 }

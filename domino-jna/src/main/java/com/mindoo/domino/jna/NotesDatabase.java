@@ -43,11 +43,13 @@ import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.WinNotesCallbacks.ABORTCHECKPROCWin;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
@@ -64,6 +66,7 @@ import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
+import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -4106,5 +4109,79 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public int getFTSize() {
 		return getFTSize(getServer(), getRelativeFilePath());
+	}
+
+	/**
+	 * This function will refresh the database design, as allowed by the database/design properties and
+	 * access control of Domino, from a server's templates.<br>
+	 * <br>
+	 * The refreshed database, if open in Domino or Notes at the time of refresh, must be closed and
+	 * reopened to view any changes.<br>
+	 * <br>
+	 * Convenience function that calls {@link #refreshDesign(String, boolean, boolean, IBreakHandler)} with
+	 * force and errIfTemplateNotFound set to true and without break handler.
+	 * 
+	 * @param server name of the Lotus Domino Server on which the database template resides,  If you want to specify "no server" (the local machine), use ""
+	 */
+	public void refreshDesign(String server) {
+		refreshDesign(server, true, true, null);
+	}
+	
+	/**
+	 * This function will refresh the database design, as allowed by the database/design properties and
+	 * access control of Domino, from a server's templates.<br>
+	 * <br>
+	 * The refreshed database, if open in Domino or Notes at the time of refresh, must be closed and
+	 * reopened to view any changes.
+	 * 
+	 * @param server name of the Lotus Domino Server on which the database template resides,  If you want to specify "no server" (the local machine), use ""
+	 * @param force true to force operation, even if destination "up to date"
+	 * @param errIfTemplateNotFound true to return an error if the template is not found
+	 * @param abortHandler optional break handler to abort the operation or null
+	 */
+	public void refreshDesign(String server, boolean force, boolean errIfTemplateNotFound, final IBreakHandler abortHandler) {
+		checkHandle();
+		
+		Memory serverMem = NotesStringUtils.toLMBCS(server, true);
+		
+		ABORTCHECKPROC abortProc = null;
+		if (abortHandler!=null) {
+			if (PlatformUtils.isWindows()) {
+				abortProc = new ABORTCHECKPROCWin() {
+
+					@Override
+					public short invoke() {
+						if (abortHandler.shouldInterrupt())
+							return INotesErrorConstants.ERR_CANCEL;
+						return 0;
+					}};
+			}
+			else {
+				abortProc = new ABORTCHECKPROC() {
+
+					@Override
+					public short invoke() {
+						if (abortHandler.shouldInterrupt())
+							return INotesErrorConstants.ERR_CANCEL;
+						return 0;
+					}};
+			}
+		}
+		int dwFlags = 0;
+		if (force) {
+			dwFlags |= NotesConstants.DESIGN_FORCE;
+		}
+		if (errIfTemplateNotFound) {
+			dwFlags |= NotesConstants.DESIGN_ERR_TMPL_NOT_FOUND;
+		}
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().DesignRefresh(serverMem, m_hDB64, dwFlags, abortProc, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().DesignRefresh(serverMem, m_hDB32, dwFlags, abortProc, null);
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 }

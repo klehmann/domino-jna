@@ -100,6 +100,13 @@ public interface NotesCallbacks {
 	}
 
 	/**
+	 * Callback used to abort design refresh
+	 */
+	interface ABORTCHECKPROC {
+		short invoke();
+	}
+	
+	/**
 	 * Callback used by progress signal handlers
 	 */
 	interface OSSIGPROGRESSPROC extends OSSIGPROC {
