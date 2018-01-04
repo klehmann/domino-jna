@@ -103,8 +103,10 @@ public class NotesNativeAPI {
 						libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
 
 						NativeLibrary library;
-						if (PlatformUtils.isWindows() && PlatformUtils.is32Bit()) {
-							libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
+						if (PlatformUtils.isWindows()) {
+							if (PlatformUtils.is32Bit()) {
+								libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
+							}
 					        library = NativeLibrary.getInstance("nnotes", libraryOptions);
 						}
 						else {

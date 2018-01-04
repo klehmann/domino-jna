@@ -69,6 +69,15 @@ public class PlatformUtils {
 	}
 
 	/**
+	 * Checks if the current JVM is running in 32 bit mode
+	 * 
+	 * @return true if 32 bit
+	 */
+	public static boolean is32Bit() {
+		return !m_is64Bit;
+	}
+
+	/**
 	 * Checks if the current JVM is running in 64 bit mode
 	 * 
 	 * @return true if 64 bit
