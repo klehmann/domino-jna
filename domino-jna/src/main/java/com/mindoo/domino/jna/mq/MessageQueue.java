@@ -13,7 +13,7 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.mq.MessageQueue.IMQCallback.Action;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -199,8 +199,8 @@ public class MessageQueue implements IRecyclableNotesObject {
 		}
 
 		final NotesCallbacks.MQScanCallback cCallback;
-		if (PlatformUtils.isWindows()) {
-			cCallback = new WinNotesCallbacks.MQScanCallbackWin() {
+		if (PlatformUtils.isWin32()) {
+			cCallback = new Win32NotesCallbacks.MQScanCallbackWin32() {
 
 				@Override
 				public short invoke(Pointer pBuffer, short length, short priority, Pointer ctx) {

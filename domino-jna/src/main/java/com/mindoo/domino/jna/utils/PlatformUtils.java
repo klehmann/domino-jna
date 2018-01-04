@@ -87,6 +87,15 @@ public class PlatformUtils {
 	}
 
 	/**
+	 * Checks if we are running in a Windows 32 bit environment
+	 * 
+	 * @return true if win32
+	 */
+	public static boolean isWin32() {
+		return isWindows() && is32Bit();
+	}
+	
+	/**
 	 * Method to check if we are running in a Windows environment
 	 * 
 	 * @return true if Windows

@@ -48,8 +48,8 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks.ABORTCHECKPROCWin;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
@@ -3074,8 +3074,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		final NotesCallbacks.NSFGetNotesCallback cGetNotesCallback;
 		
 		if (getNotesCallback!=null) {
-			if (PlatformUtils.isWindows()) {
-				cGetNotesCallback = new WinNotesCallbacks.NSFGetNotesCallbackWin() {
+			if (PlatformUtils.isWin32()) {
+				cGetNotesCallback = new Win32NotesCallbacks.NSFGetNotesCallbackWin32() {
 
 					@Override
 					public short invoke(Pointer param, int totalSizeLow, int totalSizeHigh) {
@@ -3120,8 +3120,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		final NotesCallbacks.NSFFolderAddCallback cFolderAddCallback;
 		
 		if (folderAddCallback!=null) {
-			if (PlatformUtils.isWindows()) {
-				cFolderAddCallback = new WinNotesCallbacks.NSFFolderAddCallbackWin() {
+			if (PlatformUtils.isWin32()) {
+				cFolderAddCallback = new Win32NotesCallbacks.NSFFolderAddCallbackWin32() {
 
 					@Override
 					public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUNID, int opBlock, int opBlockSize) {
@@ -3171,189 +3171,96 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			final NotesCallbacks.b64_NSFObjectWriteCallback cObjectWriteCallback;
 			
 			if (noteOpenCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cNoteOpenCallback = new WinNotesCallbacks.b64_NSFNoteOpenCallbackWin() {
+				cNoteOpenCallback = new NotesCallbacks.b64_NSFNoteOpenCallback() {
 
-						@Override
-						public short invoke(Pointer param, long hNote, int noteId, short status) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
-							
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								noteOpenCallback.noteOpened(note, noteId, status);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
+					@Override
+					public short invoke(Pointer param, long hNote, int noteId, short status) {
+						NotesNote note = new NotesNote(NotesDatabase.this, hNote);
+						note.setNoRecycle();
+
+						try {
+							NotesGC.__objectCreated(NotesNote.class, note);
+							noteOpenCallback.noteOpened(note, noteId, status);
+							return 0;
 						}
-					};
-				}
-				else {
-					cNoteOpenCallback = new NotesCallbacks.b64_NSFNoteOpenCallback() {
-
-						@Override
-						public short invoke(Pointer param, long hNote, int noteId, short status) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
-
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								noteOpenCallback.noteOpened(note, noteId, status);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
+						catch (RuntimeException e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
-						
-					};					
-				}
+						catch (Exception e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
+						}
+					}
+				};					
 			}
 			else {
 				cNoteOpenCallback=null;
 			}
 			
 			if (objectAllocCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cObjectAllocCallback = new WinNotesCallbacks.b64_NSFObjectAllocCallbackWin() {
+				cObjectAllocCallback = new NotesCallbacks.b64_NSFObjectAllocCallback() {
 
-						@Override
-						public short invoke(Pointer param, long hNote, int oldRRV, short status, int objectSize) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
+					@Override
+					public short invoke(Pointer param, long hNote, int oldRRV, short status, int objectSize) {
+						NotesNote note = new NotesNote(NotesDatabase.this, hNote);
+						note.setNoRecycle();
 
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
+						try {
+							NotesGC.__objectCreated(NotesNote.class, note);
+							objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
+							return 0;
 						}
-					};
-				}
-				else {
-					cObjectAllocCallback = new NotesCallbacks.b64_NSFObjectAllocCallback() {
-
-						@Override
-						public short invoke(Pointer param, long hNote, int oldRRV, short status, int objectSize) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
-
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								objectAllocCallback.objectAllocated(note, oldRRV, status, objectSize);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
+						catch (RuntimeException e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
 						}
-					};
-				}
+						catch (Exception e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
+						}
+					}
+				};
 			}
 			else {
 				cObjectAllocCallback=null;
 			}
 			
 			if (objectWriteCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cObjectWriteCallback = new WinNotesCallbacks.b64_NSFObjectWriteCallbackWin() {
+				cObjectWriteCallback = new NotesCallbacks.b64_NSFObjectWriteCallback() {
 
-						@Override
-						public short invoke(Pointer param, long hNote, int oldRRV, short status, Pointer buffer,
-								int bufferSize) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
+					@Override
+					public short invoke(Pointer param, long hNote, int oldRRV, short status, Pointer buffer,
+							int bufferSize) {
+						NotesNote note = new NotesNote(NotesDatabase.this, hNote);
+						note.setNoRecycle();
 
-							ByteBuffer byteBuf = buffer.getByteBuffer(0, bufferSize);
-							
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
-						}
+						ByteBuffer byteBuf = buffer.getByteBuffer(0, bufferSize);
 						
-					};
-				}
-				else {
-					cObjectWriteCallback = new NotesCallbacks.b64_NSFObjectWriteCallback() {
-
-						@Override
-						public short invoke(Pointer param, long hNote, int oldRRV, short status, Pointer buffer,
-								int bufferSize) {
-							NotesNote note = new NotesNote(NotesDatabase.this, hNote);
-							note.setNoRecycle();
-
-							ByteBuffer byteBuf = buffer.getByteBuffer(0, bufferSize);
-							
-							try {
-								NotesGC.__objectCreated(NotesNote.class, note);
-								objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
-								return 0;
-							}
-							catch (RuntimeException e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							catch (Exception e) {
-								exception[0] = e;
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							finally {
-								NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
-							}
+						try {
+							NotesGC.__objectCreated(NotesNote.class, note);
+							objectWriteCallback.objectChunkWritten(note, oldRRV, status, byteBuf);
+							return 0;
 						}
-						
-					};
-				}
+						catch (RuntimeException e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+						catch (Exception e) {
+							exception[0] = e;
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+						finally {
+							NotesGC.__objectBeeingBeRecycled(NotesNote.class, note);
+						}
+					}
+				};
 			}
 			else {
 				cObjectWriteCallback=null;
@@ -3390,8 +3297,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			final NotesCallbacks.b32_NSFObjectWriteCallback cObjectWriteCallback;
 			
 			if (noteOpenCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cNoteOpenCallback = new WinNotesCallbacks.b32_NSFNoteOpenCallbackWin() {
+				if (PlatformUtils.isWin32()) {
+					cNoteOpenCallback = new Win32NotesCallbacks.NSFNoteOpenCallbackWin32() {
 
 						@Override
 						public short invoke(Pointer param, int hNote, int noteId, short status) {
@@ -3452,8 +3359,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			if (objectAllocCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cObjectAllocCallback = new WinNotesCallbacks.b32_NSFObjectAllocCallbackWin() {
+				if (PlatformUtils.isWin32()) {
+					cObjectAllocCallback = new Win32NotesCallbacks.NSFObjectAllocCallbackWin32() {
 
 						@Override
 						public short invoke(Pointer param, int hNote, int oldRRV, short status, int objectSize) {
@@ -3512,8 +3419,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			
 			if (objectWriteCallback!=null) {
-				if (PlatformUtils.isWindows()) {
-					cObjectWriteCallback = new WinNotesCallbacks.b32_NSFObjectWriteCallbackWin() {
+				if (PlatformUtils.isWin32()) {
+					cObjectWriteCallback = new Win32NotesCallbacks.NSFObjectWriteCallbackWin32() {
 
 						@Override
 						public short invoke(Pointer param, int hNote, int oldRRV, short status, Pointer buffer,
@@ -4146,8 +4053,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		ABORTCHECKPROC abortProc = null;
 		if (abortHandler!=null) {
-			if (PlatformUtils.isWindows()) {
-				abortProc = new ABORTCHECKPROCWin() {
+			if (PlatformUtils.isWin32()) {
+				abortProc = new ABORTCHECKPROCWin32() {
 
 					@Override
 					public short invoke() {
@@ -4250,19 +4157,25 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 		
 		//as documented in NSFDbInfoSet, we need to update the icon note as well
-		NotesNote iconNote = openIconNote();
-		if (iconNote.hasItem("$TITLE")) {
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().NSFItemSetText(iconNote.getHandle64(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
-			}
-			else {
-				result = NotesNativeAPI32.get().NSFItemSetText(iconNote.getHandle32(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
-			}
-			NotesErrorUtils.checkResult(result);
+		try {
+			NotesNote iconNote = openIconNote();
+			if (iconNote.hasItem("$TITLE")) {
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().NSFItemSetText(iconNote.getHandle64(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
+				}
+				else {
+					result = NotesNativeAPI32.get().NSFItemSetText(iconNote.getHandle32(), NotesStringUtils.toLMBCS("$TITLE",  true), infoBuf, NotesConstants.MAXWORD);
+				}
+				NotesErrorUtils.checkResult(result);
 
-			iconNote.update();
+				iconNote.update();
+			}
+			iconNote.recycle();
 		}
-		iconNote.recycle();
+		catch (NotesError e) {
+			if (e.getId() != 578) // Special database object cannot be located
+				throw e;
+		}
 	}
 	
 	/**

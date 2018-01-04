@@ -22,7 +22,7 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
 import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
@@ -250,139 +250,70 @@ public class NotesSearch {
 		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(searchFlags);
 		
 		if (PlatformUtils.is64Bit()) {
-			final NotesCallbacks.b64_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
-			//not sure if this is necessary, but we had to use a special library extending StdCallLibrary
-			//for Windows and the documentation says this might be required for callbacks as well
-			//(StdCallCallback)
-			if (PlatformUtils.isWindows()) {
-				apiCallback = new WinNotesCallbacks.b64_NsfSearchProcWin() {
+			final NotesCallbacks.b64_NsfSearchProc apiCallback = new NotesCallbacks.b64_NsfSearchProc() {
 
-					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
-							NotesItemTableStruct summaryBuffer) {
+				@Override
+				public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
+						NotesItemTableStruct summaryBuffer) {
 
-						ItemTableData itemTableData=null;
-						try {
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
-											convertStringsLazily, false);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
-							
-							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
-							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
-							
-							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-							EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
-							
-							Action action;
-							if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
-							}
-							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
-									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
-								}
-								else {
-									action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
-								}
-							}
-
-							if (action==Action.Stop) {
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							else {
-								return 0;
+					ItemTableData itemTableData=null;
+					try {
+						if (searchFlags.contains(Search.SUMMARY)) {
+							if (summaryBuffer!=null) {
+								Pointer summaryBufferPtr = summaryBuffer.getPointer();
+								boolean convertStringsLazily = true;
+								itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+										convertStringsLazily, false);
 							}
 						}
-						catch (Throwable t) {
-							invocationEx[0] = t;
+
+						short noteClass = searchMatch.NoteClass;
+						int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
+						NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
+						
+						NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
+						NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+
+						NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
+						NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
+
+						EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
+						EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
+
+						Action action;
+						if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
+							action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
+						}
+						else {
+							if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
+								action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							}
+							else {
+								action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+							}
+						}
+						if (action==Action.Stop) {
 							return INotesErrorConstants.ERR_CANCEL;
 						}
-						finally {
-							if (itemTableData!=null) {
-								itemTableData.free();
-							}
+						else {
+							return 0;
 						}
 					}
-				};
-			}
-			else {
-				apiCallback = new NotesCallbacks.b64_NsfSearchProc() {
-
-					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
-							NotesItemTableStruct summaryBuffer) {
-
-						ItemTableData itemTableData=null;
-						try {
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
-									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
-											convertStringsLazily, false);
-								}
-							}
-
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
-							
-							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
-							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
-
-							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-							EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
-
-							Action action;
-							if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
-							}
-							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
-									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
-								}
-								else {
-									action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
-								}
-							}
-							if (action==Action.Stop) {
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							else {
-								return 0;
-							}
-						}
-						catch (Throwable t) {
-							invocationEx[0] = t;
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-						finally {
-							if (itemTableData!=null) {
-								itemTableData.free();
-							}
+					catch (Throwable t) {
+						invocationEx[0] = t;
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+					finally {
+						if (itemTableData!=null) {
+							itemTableData.free();
 						}
 					}
+				}
 
-				};
-			}
-
+			};
+		
 			long hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
 				//formulaName only required if formula is used for collection columns
@@ -539,8 +470,8 @@ public class NotesSearch {
 			final NotesCallbacks.b32_NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
-			if (PlatformUtils.isWindows()) {
-				apiCallback = new WinNotesCallbacks.b32_NsfSearchProcWin() {
+			if (PlatformUtils.isWin32()) {
+				apiCallback = new Win32NotesCallbacks.NsfSearchProcWin32() {
 					final Throwable invocationEx[] = new Throwable[1];
 
 					@Override

@@ -11,7 +11,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.sun.jna.Pointer;
 
 /**
@@ -25,7 +25,7 @@ public class SignalHandlerUtil {
 
 	private static volatile boolean m_breakHandlerInstalled = false;
 	private static volatile NotesCallbacks.OSSIGBREAKPROC prevBreakProc = null;
-	private static final NotesCallbacks.OSSIGBREAKPROC breakProcWin = new WinNotesCallbacks.OSSIGBREAKPROCWin() {
+	private static final NotesCallbacks.OSSIGBREAKPROC breakProcWin = new Win32NotesCallbacks.OSSIGBREAKPROCWin32() {
 
 		@Override
 		public short invoke() {
@@ -86,7 +86,7 @@ public class SignalHandlerUtil {
 
 					@Override
 					public NotesCallbacks.OSSIGBREAKPROC run() throws Exception {
-						if (PlatformUtils.isWindows()) {
+						if (PlatformUtils.isWin32()) {
 							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProcWin);
 						}
 						else {
@@ -168,8 +168,8 @@ public class SignalHandlerUtil {
 		//store a previously registered signal handler for this thread:
 		final NotesCallbacks.OSSIGPROGRESSPROC[] prevProc = new NotesCallbacks.OSSIGPROGRESSPROC[1];
 
-		if (PlatformUtils.isWindows()) {
-			progressProc = new WinNotesCallbacks.OSSIGPROGRESSPROCWin() {
+		if (PlatformUtils.isWin32()) {
+			progressProc = new Win32NotesCallbacks.OSSIGPROGRESSPROCWin32() {
 
 				@Override
 				public short invoke(short option, Pointer data1, Pointer data2) {
@@ -358,8 +358,8 @@ public class SignalHandlerUtil {
 		//store a previously registered signal handler for this thread:
 		final NotesCallbacks.OSSIGREPLPROC[] prevProc = new NotesCallbacks.OSSIGREPLPROC[1];
 
-		if (PlatformUtils.isWindows()) {
-			replProc = new WinNotesCallbacks.OSSIGREPLPROCWin() {
+		if (PlatformUtils.isWin32()) {
+			replProc = new Win32NotesCallbacks.OSSIGREPLPROCWin32() {
 
 				@Override
 				public void invoke(short state, Pointer pText1, Pointer pText2) {

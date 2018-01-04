@@ -47,7 +47,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
@@ -1987,90 +1987,50 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		if (PlatformUtils.is64Bit()) {
-			NotesCallbacks.b64_CWFErrorProc errorProc;
-			if (PlatformUtils.isWindows()) {
-				errorProc = new WinNotesCallbacks.b64_CWFErrorProcWin() {
+			NotesCallbacks.b64_CWFErrorProc errorProc = new NotesCallbacks.b64_CWFErrorProc() {
 
-					@Override
-					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
-							short wErrorTextSize, Pointer ctx) {
-						
-						String errorTxt;
-						if (hErrorText==0) {
-							errorTxt = "";
-						}
-						else {
-							Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
-							
-							try {
-								//TODO find out where this offset 6 comes from
-								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
-							}
-							finally {
-								NotesNativeAPI64.get().OSUnlockObject(hErrorText);
-							}
-						}
-
-						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
-						ValidationPhase phaseEnum = decodeValidationPhase(phase);
-
-						CWF_Action action;
-						if (callback==null) {
-							action = CWF_Action.CWF_ABORT;
-						}
-						else {
-							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
-						}
-						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
-					}
+				@Override
+				public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
+						short wErrorTextSize, Pointer ctx) {
 					
-				};
-			}
-			else {
-				errorProc = new NotesCallbacks.b64_CWFErrorProc() {
-
-					@Override
-					public short invoke(Pointer pCDField, short phase, short error, long hErrorText,
-							short wErrorTextSize, Pointer ctx) {
-						
-						String errorTxt;
-						if (hErrorText==0) {
-							errorTxt = "";
-						}
-						else {
-							Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
-							System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
-							try {
-								//TODO find out where this offset 6 comes from
-								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
-							}
-							finally {
-								NotesNativeAPI64.get().OSUnlockObject(hErrorText);
-							}
-						}
-
-						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
-						ValidationPhase phaseEnum = decodeValidationPhase(phase);
-
-						CWF_Action action;
-						if (callback==null) {
-							action = CWF_Action.CWF_ABORT;
-						}
-						else {
-							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
-						}
-						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					String errorTxt;
+					if (hErrorText==0) {
+						errorTxt = "";
 					}
-					
-				};
-			}
+					else {
+						Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
+						System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
+						try {
+							//TODO find out where this offset 6 comes from
+							errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
+						}
+						finally {
+							NotesNativeAPI64.get().OSUnlockObject(hErrorText);
+						}
+					}
+
+					FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+					ValidationPhase phaseEnum = decodeValidationPhase(phase);
+
+					CWF_Action action;
+					if (callback==null) {
+						action = CWF_Action.CWF_ABORT;
+					}
+					else {
+						action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+					}
+					return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+				}
+				
+			};
+		
 			short result = NotesNativeAPI64.get().NSFNoteComputeWithForm(m_hNote64, 0, dwFlags, errorProc, null);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
 			NotesCallbacks.b32_CWFErrorProc errorProc;
-			if (PlatformUtils.isWindows()) {
-				errorProc = new WinNotesCallbacks.b32_CWFErrorProcWin() {
+			if (PlatformUtils.isWin32()) {
+				errorProc = new Win32NotesCallbacks.CWFErrorProcWin32() {
 
 					@Override
 					public short invoke(Pointer pCDField, short phase, short error, int hErrorText,

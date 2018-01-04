@@ -14,7 +14,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -246,8 +246,8 @@ public class NotesAttachment {
 		final NotesCallbacks.NoteExtractCallback extractCallback;
 		final Throwable[] extractError = new Throwable[1];
 		
-		if (PlatformUtils.isWindows()) {
-			extractCallback = new WinNotesCallbacks.NoteExtractCallbackWin() {
+		if (PlatformUtils.isWin32()) {
+			extractCallback = new Win32NotesCallbacks.NoteExtractCallbackWin32() {
 				
 				@Override
 				public short invoke(Pointer data, int length, Pointer param) {

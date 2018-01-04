@@ -30,7 +30,7 @@ import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.internal.WinNotesCallbacks;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -842,8 +842,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		checkHandle();
 		
 		final NotesCallbacks.IdEnumerateProc proc;
-		if (PlatformUtils.isWindows()) {
-			proc = new WinNotesCallbacks.IdEnumerateProcWin() {
+		if (PlatformUtils.isWin32()) {
+			proc = new Win32NotesCallbacks.IdEnumerateProcWin32() {
 
 				@Override
 				public short invoke(Pointer parameter, int noteId) {
