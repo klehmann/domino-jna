@@ -159,7 +159,7 @@ public class NotesNativeAPI {
 		}
 		
 		if (m_instanceWithoutCrashLogging==null)
-			throw new NotesError(0, "API not initialized yet. Please call DominoAPI.initialize() first.");
+			throw new NotesError(0, "API not initialized yet. Please call NotesNativeAPI.initialize() first. The easiest way to do this is by wrapping your code in a NotesGC.runWithAutoGC block");
 		
 		if (NotesGC.isLogCrashingThreadStacktrace()) {
 			if (m_instanceWithCrashLogging==null) {
