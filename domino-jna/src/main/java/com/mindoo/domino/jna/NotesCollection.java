@@ -32,16 +32,16 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -2778,15 +2778,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Returns the programmatic column name for a column index
 	 * 
-	 * @param index index
-	 * @return column name or null if index is unknown / invalid
+	 * @param index index starting with 0
+	 * @return column name
 	 */
 	public String getColumnName(int index) {
-		if (m_columnNamesByIndex==null) {
-			scanColumns();
-		}
-		String colName = m_columnNamesByIndex.get(index);
-		return colName;
+		return getColumn(index).getItemName();
 	}
 	
 	/**
@@ -2796,10 +2792,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return number of columns
 	 */
 	public int getNumberOfColumns() {
-		if (m_columnIndicesByItemName==null) {
+		if (m_viewFormat==null) {
 			scanColumns();
 		}
-		return m_columnIndicesByItemName.size();
+		return m_viewFormat.getColumns().size();
 	}
 	
 	/**
@@ -2809,14 +2805,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return title
 	 */
 	public String getColumnTitle(int columnIndex) {
-		if (m_columnTitlesByIndex==null) {
-			scanColumns();
-		}
-		return m_columnTitlesByIndex.get(columnIndex);
-	}
-
-	private void scanColumns() {
-		scanColumnsNew();
+		return getColumn(columnIndex).getTitle();
 	}
 
 	private NotesNote getViewNote() {
@@ -2829,7 +2818,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * New method to read information about view columns and sortings using C methods
 	 */
-	private void scanColumnsNew() {
+	private void scanColumns() {
 		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
 		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
 		m_columnNamesByIndex = new TreeMap<Integer, String>();
@@ -2853,11 +2842,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 				NotesCollationInfo colInfo = (NotesCollationInfo) collationInfoList.get(0);
 				
 				List<NotesCollateDescriptor> collateDescList = colInfo.getDescriptors();
-				NotesCollateDescriptor firstCollateDesc = collateDescList.get(0);
-				String currItemName = firstCollateDesc.getName();
-				Direction currDirection = firstCollateDesc.getDirection();
-				
-				collationInfo.addCollation((short) colNo, currItemName, currDirection);
+				if (!collateDescList.isEmpty()) {
+					NotesCollateDescriptor firstCollateDesc = collateDescList.get(0);
+					String currItemName = firstCollateDesc.getName();
+					Direction currDirection = firstCollateDesc.getDirection();
+					
+					collationInfo.addCollation((short) colNo, currItemName, currDirection);
+				}
 			}
 			colNo++;
 		}
@@ -2890,15 +2881,26 @@ public class NotesCollection implements IRecyclableNotesObject {
 			m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
 			m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
 
-			if (!currCol.isConstant()) {
-				m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
-				m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
-				m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
-				
-				boolean isCategory = currCol.isCategory();
-				m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
-			}
+			m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+			m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
+			m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
+
+			boolean isCategory = currCol.isCategory();
+			m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
 		}
+	}
+	
+	/**
+	 * Returns the view column at the specified index
+	 * 
+	 * @param columnIndex index starting with 0
+	 * @return column
+	 */
+	public NotesViewColumn getColumn(int columnIndex) {
+		if (m_viewFormat==null) {
+			scanColumns();
+		}
+		return m_viewFormat.getColumns().get(columnIndex);
 	}
 	
 	/**
@@ -2908,7 +2910,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public List<NotesViewColumn> getColumns() {
 		if (m_viewFormat==null) {
-			scanColumnsNew();
+			scanColumns();
 		}
 		return Collections.unmodifiableList(m_viewFormat.getColumns());
 	}
