@@ -424,12 +424,6 @@ public class NotesSearch {
 									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
 									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
 
-//							return notesAPI.b64_NSFSearchExtended3(db.getHandle64(), hFormulaFinal,
-//									hFilterFinal, filterFlagsFinal,
-//									viewTitleBuf, searchFlagsBitMaskFinal, searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
-//									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
-//									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
-
 						}
 					});
 				} catch (PrivilegedActionException e) {
