@@ -324,6 +324,7 @@ public class NotesNativeAPI64 {
 	public native short NSFNoteHasComposite(long hNote);
 	public native short NSFNoteHasMIME(long hNote);
 	public native short NSFNoteHasMIMEPart(long hNote);
+	public native short NSFNoteHasReadersField(long hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public native short NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
 			NotesCallbacks.NoteExtractCallback pNoteExtractCallback, Pointer pParam,
@@ -619,6 +620,10 @@ public class NotesNativeAPI64 {
 			boolean fSelectionFormula,
 			LongByReference rethFormulaText,
 			ShortByReference retFormulaTextLength);
+	public native short NSFFormulaSummaryItem(long hFormula, Memory ItemName, short ItemNameLength);
+	public native short NSFFormulaMerge(
+			long hSrcFormula,
+			long hDestFormula);
 	public native short NSFComputeStart(
 			short Flags,
 			Pointer lpCompiledFormula,

@@ -699,7 +699,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * The function NSFNoteHasMIMEPart returns TRUE if the given note contains any TYPE_MIME_PART items.
+	 * The function returns TRUE if the given note contains any {@link NotesItem#TYPE_MIME_PART} items.
 	 * 
 	 * @return true if mime part
 	 */
@@ -711,6 +711,138 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else {
 			return NotesNativeAPI32.get().NSFNoteHasMIMEPart(m_hNote32) == 1;
+		}
+	}
+	
+	/**
+	 * The function returns TRUE if the given note contains any items with reader access flag
+	 * 
+	 * @return true if readers field
+	 */
+	public boolean hasReadersField() {
+		checkHandle();
+		
+		NotesBlockIdStruct blockId = NotesBlockIdStruct.newInstance();
+		boolean hasReaders;
+		
+		//use an optimized call to search for reader fields
+		if (PlatformUtils.is64Bit()) {
+			hasReaders = NotesNativeAPI64.get().NSFNoteHasReadersField(m_hNote64, blockId) == 1;
+		}
+		else {
+			hasReaders = NotesNativeAPI32.get().NSFNoteHasReadersField(m_hNote32, blockId) == 1;
+		}
+		
+		return hasReaders;
+	}
+	
+	/**
+	 * The function returns all the readers items of the note
+	 * 
+	 * @return array with readers fields
+	 */
+	public List<NotesItem> getReadersFields() {
+		checkHandle();
+		
+		NotesBlockIdStruct blockId = NotesBlockIdStruct.newInstance();
+		boolean hasReaders;
+		
+		//use an optimized call to find the first readers field
+		if (PlatformUtils.is64Bit()) {
+			hasReaders = NotesNativeAPI64.get().NSFNoteHasReadersField(m_hNote64, blockId) == 1;
+		}
+		else {
+			hasReaders = NotesNativeAPI32.get().NSFNoteHasReadersField(m_hNote32, blockId) == 1;
+		}
+		
+		if (!hasReaders)
+			return Collections.emptyList();
+		
+		List<NotesItem> readerFields = new ArrayList<NotesItem>();
+		
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		itemBlockIdByVal.pool = blockId.pool;
+		itemBlockIdByVal.block = blockId.block;
+		
+		ByteByReference retSeqByte = new ByteByReference();
+		ByteByReference retDupItemID = new ByteByReference();
+
+		Memory item_name = new Memory(NotesConstants.MAXUSERNAME);
+		ShortByReference retName_len = new ShortByReference();
+		ShortByReference retItem_flags = new ShortByReference();
+		ShortByReference retDataType = new ShortByReference();
+		IntByReference retValueLen = new IntByReference();
+
+		NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			
+			NotesNativeAPI64.get().NSFItemQueryEx(m_hNote64,
+					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
+					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
+		}
+		else {
+			NotesNativeAPI32.get().NSFItemQueryEx(m_hNote32,
+					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
+					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
+		}
+
+		NotesBlockIdStruct itemBlockIdForItemCreation = NotesBlockIdStruct.newInstance();
+		itemBlockIdForItemCreation.pool = itemBlockIdByVal.pool;
+		itemBlockIdForItemCreation.block = itemBlockIdByVal.block;
+		itemBlockIdForItemCreation.write();
+		
+		if ((retItem_flags.getValue() & NotesConstants.ITEM_READERS) == NotesConstants.ITEM_READERS) {
+			NotesItem firstItem = new NotesItem(this, itemBlockIdForItemCreation, (int) (retDataType.getValue() & 0xffff),
+					retValueBid);
+			readerFields.add(firstItem);
+		}
+
+		//now search for more items with readers flag
+		while (true) {
+			IntByReference retNextValueLen = new IntByReference();
+			
+			NotesBlockIdStruct retItemBlockId = NotesBlockIdStruct.newInstance();
+			
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NSFItemInfoNext(m_hNote64, itemBlockIdByVal,
+						null, (short) 0, retItemBlockId, retDataType,
+						retValueBid, retNextValueLen);
+			}
+			else {
+				result = NotesNativeAPI32.get().NSFItemInfoNext(m_hNote32, itemBlockIdByVal,
+						null, (short) 0, retItemBlockId, retDataType,
+						retValueBid, retNextValueLen);
+			}
+
+			if (result == INotesErrorConstants.ERR_ITEM_NOT_FOUND) {
+				return readerFields;
+			}
+
+			NotesErrorUtils.checkResult(result);
+
+			itemBlockIdForItemCreation = NotesBlockIdStruct.newInstance();
+			itemBlockIdForItemCreation.pool = retItemBlockId.pool;
+			itemBlockIdForItemCreation.block = retItemBlockId.block;
+			itemBlockIdForItemCreation.write();
+			
+			NotesBlockIdStruct valueBlockIdClone = NotesBlockIdStruct.newInstance();
+			valueBlockIdClone.pool = retValueBid.pool;
+			valueBlockIdClone.block = retValueBid.block;
+			valueBlockIdClone.write();
+			
+			short dataType = retDataType.getValue();
+
+			NotesItem newItem = new NotesItem(this, itemBlockIdForItemCreation, dataType,
+					valueBlockIdClone);
+			if (newItem.isReaders()) {
+				readerFields.add(newItem);
+			}
+			
+			itemBlockIdByVal.pool = retItemBlockId.pool;
+			itemBlockIdByVal.block = retItemBlockId.block;
+			itemBlockIdByVal.write();
 		}
 	}
 	
