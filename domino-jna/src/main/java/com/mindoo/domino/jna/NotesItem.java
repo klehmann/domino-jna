@@ -770,6 +770,17 @@ public class NotesItem {
 		}
 	}
 	
+	@Override
+	public String toString() {
+		if (m_parentNote.isRecycled()) {
+			return "NotesItem [recycled]";
+		}
+		else {
+			return "NotesItem [name="+getName()+", type="+getType()+", isauthors="+isAuthors()+", isreaders="+isReaders()+", isnames="+isNames()+
+					", issummary="+isSummary()+"]";
+		}
+	}
+	
 	/**
 	 * Extracts all text from the item
 	 * 
