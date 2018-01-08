@@ -1544,7 +1544,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * of view index changes while reading view data and restarts reading if such a change has been
 	 * detected.
 	 * 
-	 * @param startPosStr start position; use "0" or null to start before the first entry
+	 * @param startPosStr start position; use "0" or null to start before the first entry; in that case set <code>skipCount</code> to 1 to start reading at the first view row
 	 * @param skipCount number entries to skip before reading
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
