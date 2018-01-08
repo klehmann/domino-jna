@@ -113,7 +113,9 @@ public interface ISyncTarget {
 
 	/**
 	 * The method is called for every note that changed since the last sync end date and
-	 * that currently does not match the selection formula.
+	 * that currently does not match the selection formula. Add code here to remove the note's data
+	 * from the sync target if it existed there before (or an older version with the same UNID, but lower
+	 * sequence number).
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
@@ -122,7 +124,10 @@ public interface ISyncTarget {
 	public TargetResult noteChangedNotMatchingFormula(Object ctx, NotesOriginatorIdData oid);
 
 	/**
-	 * The method is called for every note that got deleted since the last sync end date.
+	 * The method is called for every note that got deleted since the last sync end date. Add code here
+	 * to remove the note's data
+	 * from the sync target if it existed there before (or an older version with the same UNID, but lower
+	 * sequence number).
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
