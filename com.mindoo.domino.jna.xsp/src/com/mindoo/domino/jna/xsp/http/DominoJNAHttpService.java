@@ -40,7 +40,7 @@ public class DominoJNAHttpService extends HttpService {
 	public void destroyService() {
 		// here you can put code that runs when the Http-Task will shut down.
 	}
-
+	  
 	/*
 	 * (non-Javadoc)
 	 *
@@ -104,6 +104,12 @@ public class DominoJNAHttpService extends HttpService {
 			}
 			else if (exception[0] instanceof Error) {
 				throw (Error) exception[0];
+			}
+			else if (exception[0] instanceof ServletException) {
+				throw (ServletException) exception[0];
+			}
+			else if (exception[0] instanceof IOException) {
+				throw (IOException) exception[0];
 			}
 			else {
 				throw new ServletException(exception[0]);
