@@ -69,6 +69,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 	
 	//use lock to prevent parallel indexing in multiple threads
 	private ReentrantLock m_indexLock = new ReentrantLock();
+	private volatile boolean m_initialSync = true;
 	
 	public AbstractCQEngineSyncTarget() {
 		m_lastSyncEndDates = new HashMap<String, NotesTimeDate>();
@@ -180,9 +181,9 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 	public abstract EnumSet<DataToRead> getWhichDataToRead();
 
 	private T findObject(NotesOriginatorIdData oid) {
-		if (Boolean.TRUE.equals(m_wiped.get()))
+		if (m_initialSync)
 			return null;
-		if (m_indexCollection.isEmpty())
+		if (Boolean.TRUE.equals(m_wiped.get()))
 			return null;
 		
 		Query<T> query = (Query<T>) equal(OBJ_UNID, oid.getUNID());
@@ -311,6 +312,16 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 		m_indexLock.unlock();
 	}
 
+	/**
+	 * Method to check whether this sync target has received the first set of
+	 * sync data
+	 * 
+	 * @return true if done
+	 */
+	public boolean isInitialSyncDone() {
+		return !m_initialSync;
+	}
+	
 	@Override
 	public void endingSync(Object ctx, String selectionFormulaForNextSync, String dbInstanceId,
 			NotesTimeDate startingDateForNextSync) {
@@ -326,6 +337,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 		m_objectsToAdd.set(null);
 		m_objectsToRemove.set(null);
 		m_wiped.set(null);
+		m_initialSync = false;
 		
 		log(Level.FINE, "Sync done in CQEngine sync target");
 		
