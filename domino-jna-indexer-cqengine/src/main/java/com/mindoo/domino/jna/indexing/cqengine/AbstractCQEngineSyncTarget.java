@@ -354,7 +354,19 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 	public ResultSet<T> retrieve(Query<T> query) {
 		return m_indexCollection.retrieve(query);
 	}
-	
+
+	/**
+	 * Method to filter the internal CQEngine index collection using any indices
+	 * you defined in {@link #addIndices(IndexedCollection)}.
+	 * 
+	 * @param query CQEngine query
+	 * @param queryOptions query options
+	 * @return result set
+	 */
+	public ResultSet<T> retrieve(Query<T> query, QueryOptions queryOptions) {
+		return m_indexCollection.retrieve(query, queryOptions);
+	}
+
 	/**
 	 * Returns the an unmodifiable version of the internal CQEngine index collection
 	 * 
