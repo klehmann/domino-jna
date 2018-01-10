@@ -96,6 +96,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	NotesNamesList m_namesList;
 	private Database m_legacyDbRef;
 	private Integer m_openDatabaseId;
+	private NotesACL m_acl;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -408,6 +409,91 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Convenience method to look up the roles for a user from the database {@link NotesACL}.<br>
+	 * Use {@link NotesACL#lookupAccess(NotesNamesList)} if you need other access information
+	 * for the same user as well.
+	 * 
+	 * @param userName username, either canonical or abbreviated
+	 * @return list of roles, not null
+	 */
+	public List<String> queryAccessRoles(String userName) {
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(userName);
+		try {
+			List<String> roles = getACL().lookupAccess(namesList).getRoles();
+			return roles;
+		}
+		finally {
+			namesList.free();
+		}
+	}
+	
+	/**
+	 * Convenience method to look up the access level for a user from the database {@link NotesACL}<br>
+	 * Use {@link NotesACL#lookupAccess(NotesNamesList)} if you need other access information
+	 * for the same user as well.
+	 * 
+	 * @param userName username, either canonical or abbreviated
+	 * @return access level
+	 */
+	public AclLevel queryAccess(String userName) {
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(userName);
+		try {
+			AclLevel level = getACL().lookupAccess(namesList).getAclLevel();
+			return level;
+		}
+		finally {
+			namesList.free();
+		}
+	}
+	
+	/**
+	 * Convenience method to look up the access flags for a user from the database {@link NotesACL}<br>
+	 * Use {@link NotesACL#lookupAccess(NotesNamesList)} if you need other access information
+	 * for the same user as well.
+	 * 
+	 * @param userName username, either canonical or abbreviated
+	 * @return flags
+	 */
+	public EnumSet<AclFlag> queryAccessFlags(String userName) {
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(userName);
+		try {
+			EnumSet<AclFlag> flags = getACL().lookupAccess(namesList).getAclFlags();
+			return flags;
+		}
+		finally {
+			namesList.free();
+		}
+	}
+	
+	/**
+	 * This function reads the access control list of the database.<br>
+	 * If you modify this copy of the access control list, use {link {@link NotesACL#save()}}
+	 * to store it in the database.
+	 * 
+	 * @return acl
+	 */
+	public NotesACL getACL() {
+		if (m_acl==null || m_acl.isFreed()) {
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				LongByReference rethACL = new LongByReference();
+				result = NotesNativeAPI64.get().NSFDbReadACL(m_hDB64, rethACL);
+				NotesErrorUtils.checkResult(result);
+				m_acl = new NotesACL(this, rethACL.getValue());
+				NotesGC.__memoryAllocated(m_acl);
+			}
+			else {
+				IntByReference rethACL = new IntByReference();
+				result = NotesNativeAPI32.get().NSFDbReadACL(m_hDB32, rethACL);
+				NotesErrorUtils.checkResult(result);
+				m_acl = new NotesACL(this, rethACL.getValue());
+				NotesGC.__memoryAllocated(m_acl);
+			}
+		}
+		return m_acl;
+	}
+	
 	/**
 	 * Searches for a database by its replica id in the data directory (and subdirectories) specified by this
 	 * scanner instance. The method only uses the server specified for this scanner instance, not the directory.
@@ -730,11 +816,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			
-			if (m_namesList!=null) {
-				if (!m_namesList.isFreed()) {
-					m_namesList.free();
-					m_namesList = null;
-				}
+			if (m_acl!=null && !m_acl.isFreed()) {
+				m_acl.free();
+				m_acl = null;
+			}
+
+			if (m_namesList!=null && !m_namesList.isFreed()) {
+				m_namesList.free();
+				m_namesList = null;
 			}
 		}
 	}

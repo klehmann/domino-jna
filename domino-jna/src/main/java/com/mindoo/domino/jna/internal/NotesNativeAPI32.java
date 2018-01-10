@@ -140,12 +140,6 @@ public class NotesNativeAPI32 {
 			Memory Text,
 			short TextSize);
 
-	public native short ListGetSize(
-			Pointer pList,
-			int fPrefixDataType);
-
-	public native short ListGetNumEntries(Pointer vList, int noteItem);
-
 	public native short NSFItemInfo(
 			int  note_handle,
 			Memory item_name,
@@ -940,4 +934,27 @@ public class NotesNativeAPI32 {
 			int dwFlags,
 			ABORTCHECKPROC AbortCheck,
 			OSSIGMSGPROC MessageProc);
+	
+	public native short NSFDbReadACL(
+			int hDB,
+			IntByReference rethACL);
+	
+	public native short NSFDbStoreACL(
+			int hDB,
+			int hACL,
+			int ObjectID,
+			short Method);
+	
+	public native short ACLLookupAccess(
+			int hACL,
+			Pointer pNamesList,
+			ShortByReference retAccessLevel,
+			Memory retPrivileges,
+			ShortByReference retAccessFlags,
+			IntByReference rethPrivNames);
+	
+	public native short ACLSetAdminServer(
+			int hList,
+			Memory ServerName);
+
 }
