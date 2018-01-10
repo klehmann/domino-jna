@@ -468,8 +468,6 @@ public class NotesSearch {
 
 			if (PlatformUtils.isWin32()) {
 				apiCallback = new Win32NotesCallbacks.NsfSearchProcWin32() {
-					final Throwable invocationEx[] = new Throwable[1];
-
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
 							NotesItemTableStruct summaryBuffer) {
