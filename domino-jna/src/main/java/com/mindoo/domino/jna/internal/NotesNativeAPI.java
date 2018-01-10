@@ -227,11 +227,17 @@ public class NotesNativeAPI {
 			short maxLength,
 			NotesTimeDateStruct retTIMEDATE);
 
+	public native short ListGetNumEntries(Pointer vList, int noteItem);
+
 	public native short ListGetText (Pointer pList,
 			boolean fPrefixDataType,
 			short entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
+
+	public native short ListGetSize(
+			Pointer pList,
+			int fPrefixDataType);
 
 	public native short IDTableFlags (Pointer pIDTable);
 	public native void IDTableSetFlags (Pointer pIDTable, short Flags);
