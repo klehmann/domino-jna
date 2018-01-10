@@ -30,7 +30,8 @@ public enum Search {
 	NOABSTRACTS(NotesConstants.SEARCH_NOABSTRACTS),
 	/** Search formula applies only to data notes, i.e., others match */
 	DATAONLY_FORMULA(NotesConstants.SEARCH_DATAONLY_FORMULA),
-	
+	/** INCLUDE notes with non-replicatable OID flag */
+	NONREPLICATABLE(NotesConstants.SEARCH_NONREPLICATABLE),
 	/** Full search (as if Since was "1") but exclude DATA notes prior to passed-in Since time */
 	FULL_DATACUTOFF(NotesConstants.SEARCH_FULL_DATACUTOFF),
 	
