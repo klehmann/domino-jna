@@ -445,7 +445,9 @@ public class NotesSearch {
 				if (result!=INotesErrorConstants.ERR_CANCEL) {
 					NotesErrorUtils.checkResult(result);
 				}
-
+				else {
+					return null;
+				}
 				NotesTimeDate retUntilWrap = retUntil==null ? null : new  NotesTimeDate(retUntil);
 				return retUntilWrap;
 			}
@@ -714,7 +716,9 @@ public class NotesSearch {
 				if (result!=INotesErrorConstants.ERR_CANCEL) {
 					NotesErrorUtils.checkResult(result);
 				}
-
+				else {
+					return null;
+				}
 				NotesTimeDate retUntilWrap = retUntil==null ? null : new NotesTimeDate(retUntil);
 				return retUntilWrap;
 			}
