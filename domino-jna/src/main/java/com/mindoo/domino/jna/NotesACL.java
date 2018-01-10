@@ -11,7 +11,6 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -25,6 +24,11 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
+/**
+ * Access control list of a {@link NotesDatabase}
+ * 
+ * @author Karsten Lehmann
+ */
 public class NotesACL implements IAllocatedMemory {
 	private NotesDatabase m_parentDb;
 	private long m_hACL64;
@@ -144,7 +148,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * Looks up the access level for a user and his groups
 	 * 
 	 * @param userName username, either canonical or abbreviated
-	 * @return acl access info
+	 * @return acl access info, with access level, flags and roles
 	 */
 	public NotesACLAccess lookupAccess(String userName) {
 		NotesNamesList namesList = NotesNamingUtils.buildNamesList(userName);
@@ -160,7 +164,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * Looks up the access level for a {@link NotesNamesList}
 	 * 
 	 * @param namesList names list for a user
-	 * @return acl access info
+	 * @return acl access info, with access level, flags and roles
 	 */
 	public NotesACLAccess lookupAccess(NotesNamesList namesList) {
 		if (namesList.isFreed())
