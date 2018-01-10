@@ -425,6 +425,16 @@ public class NotesGC {
 	}
 	
 	/**
+	 * Method to check whether the current thread is already running in
+	 * an auto GC block
+	 * 
+	 * @return true if in auto GC
+	 */
+	public static boolean isAutoGCActive() {
+		return Boolean.TRUE.equals(m_activeAutoGC.get());
+	}
+	
+	/**
 	 * Runs a piece of code and automatically disposes any allocated Notes objects at the end.
 	 * The method supported nested calls.
 	 * 
