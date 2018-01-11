@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.test;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SearchCallback;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesOriginatorId;
+import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.FileType;
@@ -158,29 +160,37 @@ public class TestDbSearch extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbData = getFakeNamesDb();
+				
 				final Database dbLegacyAPI = session.getDatabase(dbData.getServer(), dbData.getRelativeFilePath());
 				
 				//example prefix string to read some data
-				final String searchPrefix = "Tyso";
+//				final String searchPrefix = "Tyso";
+				final String searchPrefix = "Hidden";
 				//example view title returned by @ViewTitle when formula is evaluated
 				final String viewTitle = "MyView";
 				
 				//use DEFAULT statements to add our own field values to the summary buffer data
 				//to be returned in the search callback
-				String formula = "DEFAULT _docLength := @DocLength;\n" + 
-				"DEFAULT _viewTitle := @ViewTitle;\n" +
-				"SELECT Form=\"Person\" & @Begins(Lastname;\""+searchPrefix+"\")";
+				String formula = "SELECT Form=\"Person\" & @Begins(Lastname;\""+searchPrefix+"\")";
 				
-				EnumSet<Search> searchFlags = EnumSet.of(Search.NOABSTRACTS,
-						Search.SESSION_USERNAME, Search.SUMMARY);
+				EnumSet<Search> searchFlags = EnumSet.of(
+						Search.SESSION_USERNAME, Search.NONREPLICATABLE, Search.SUMMARY, Search.NOITEMNAMES);
 				
 				long t0=System.currentTimeMillis();
 				System.out.println("Running database search with formula: "+formula);
 				final int[] cnt = new int[1];
 				
+				//let Domino compute values just like in views:
+				LinkedHashMap<String, String> colValues = new LinkedHashMap<String, String>();
+				colValues.put("Lastname", "");
+				colValues.put("_docLength", "@DocLength");
+				colValues.put("_viewTitle", "@ViewTitle");
+				//use special value "$C1$" to let Notes return the readers list for the note
+				colValues.put("$C1$", "");
+
 				//since = null to search in all documents
 				NotesTimeDate since = null;
-				NotesTimeDate endTimeDate = dbData.search(formula, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new SearchCallback() {
+				NotesTimeDate endTimeDate = NotesSearch.search(dbData, null, formula, colValues, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new SearchCallback() {
 
 					@Override
 					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
@@ -189,7 +199,7 @@ public class TestDbSearch extends BaseJNATestClass {
 						
 						cnt[0]++;
 						Map<String,Object> summaryData = summaryBufferData.asMap();
-						Assert.assertTrue("Default value computed", summaryData.containsKey("_docLength"));
+						Assert.assertTrue("Doclength was computed", summaryData.containsKey("_docLength"));
 						Assert.assertTrue("@ViewTitle returns correct value", viewTitle.equals(summaryData.get("_viewTitle")));
 						
 						System.out.println("#"+cnt[0]+"\tnoteid="+noteId+", noteclass="+noteClass+", dbCreated="+dbCreated+", noteModified="+noteModified+", summary buffer="+summaryData);
@@ -199,7 +209,7 @@ public class TestDbSearch extends BaseJNATestClass {
 							Document doc = dbLegacyAPI.getDocumentByID(Integer.toString(noteId, 16));
 							String lastName = doc.getItemValueString("Lastname");
 							doc.recycle();
-							Assert.assertTrue("Lastname "+lastName+" starts with 'Tyso'", lastName!=null && lastName.startsWith(searchPrefix));
+							Assert.assertTrue("Lastname "+lastName+" starts with '"+searchPrefix+"'", lastName!=null && lastName.startsWith(searchPrefix));
 						} catch (NotesException e) {
 							e.printStackTrace();
 						}
@@ -254,7 +264,7 @@ public class TestDbSearch extends BaseJNATestClass {
 	 * Tests the {@link DirectoryScanner} class which internally also uses the database
 	 * search function (NSFSearch) to read directory data
 	 */
-	@Test
+//	@Test
 	public void testDbSearch_directoryScan() {
 		runWithSession(new IDominoCallable<Object>() {
 
