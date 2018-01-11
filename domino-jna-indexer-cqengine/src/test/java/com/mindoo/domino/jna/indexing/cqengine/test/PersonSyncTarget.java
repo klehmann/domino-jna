@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna.indexing.cqengine.test;
 
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
@@ -53,10 +55,22 @@ public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person> impleme
 	}
 
 	@Override
+	public Map<String, String> getSummaryBufferItemsAndFormulas() {
+		//only read the following items:
+		Map<String,String> map = new LinkedHashMap<String,String>();
+		map.put("companyname", "");
+		map.put("fullname", "");
+		map.put("lastname", "");
+		map.put("firstname", "");
+		return map;
+	}
+	
+	@Override
 	public EnumSet<DataToRead> getWhichDataToRead() {
 //		return EnumSet.of(DataToRead.NoteWithAllItems);
 //		return EnumSet.of(DataToRead.NoteWithSummaryItems);
-		return EnumSet.of(DataToRead.SummaryBuffer);
+//		return EnumSet.of(DataToRead.SummaryBufferAllItems);
+		return EnumSet.of(DataToRead.SummaryBufferSelectedItems);
 	}
 
 	@Override

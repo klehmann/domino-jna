@@ -957,4 +957,18 @@ public class NotesNativeAPI32 {
 			int hList,
 			Memory ServerName);
 
+	public native short NSFSearchStartExtended(int hDB, int formula, int filter,
+			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
+			int queue, int flags, int flags1, int flags2, int flags3, int flags4, 
+			short noteClass, short auxclass, short granularity, 
+			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
+			IntByReference rtnhandle);
+
+	public native short QueueCreate(int qhandle);
+	
+	public native short QueueGet(int qhandle, IntByReference sehandle);
+
+	public native short NSFSearchStop(int shandle);
+	
+	public native short QueueDelete(int qhandle);
 }

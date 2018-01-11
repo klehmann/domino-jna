@@ -22,6 +22,11 @@ public enum Search {
 	FILETYPE(NotesConstants.SEARCH_FILETYPE),
 	/** Set {@link NotesConstants#NOTE_CLASS_NOTIFYDELETION} bit of NoteClass for deleted notes */
 	NOTIFYDELETIONS(NotesConstants.SEARCH_NOTIFYDELETIONS),
+	/** by using this search option combined with a map of (key=programmatic column name, value=column formula)
+	 * entries, the NSF search function just returns these specified column values instead of the
+	 * whole note's summary buffer. This speeds up indexing, as Notes has to copy less data and
+	 * less data needs to be parsed. */
+	NOITEMNAMES(NotesConstants.SEARCH_NOITEMNAMES),
 	/** return error if we don't have full privileges */
 	ALLPRIVS(NotesConstants.SEARCH_ALLPRIVS),
 	/** Use current session's user name, not server's */

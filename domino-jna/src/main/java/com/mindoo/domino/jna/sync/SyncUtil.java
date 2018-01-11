@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.sync;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -235,9 +236,16 @@ public class SyncUtil {
 			}
 			
 			final EnumSet<DataToRead> dataToRead = target.getWhichDataToRead();
-			if (dataToRead.contains(DataToRead.SummaryBuffer)) {
+			if (dataToRead.contains(DataToRead.SummaryBufferAllItems) || dataToRead.contains(DataToRead.SummaryBufferSelectedItems)) {
 				searchFlags.add(Search.SUMMARY);
 			}
+			if (dataToRead.contains(DataToRead.SummaryBufferSelectedItems)) {
+				searchFlags.add(Search.NOITEMNAMES);
+			}
+			searchFlags.add(Search.NONREPLICATABLE);
+			
+			Map<String,String> additionalComputedSummaryBufferEntries = target.getSummaryBufferItemsAndFormulas();
+			final LinkedHashMap<String,String> additionalComputedSummaryBufferEntriesSorted = additionalComputedSummaryBufferEntries==null ? null : new LinkedHashMap<String, String>(additionalComputedSummaryBufferEntries);
 			
 			final int[] addedToTarget = new int[1];
 			final int[] updatedInTarget = new int[1];
@@ -262,7 +270,7 @@ public class SyncUtil {
 			
 			//the actual lookup and copy operation
 			if (!skipSearchAndCopy && (searchFilter==null || !searchFilter.isEmpty())) {
-				NotesTimeDate copyOpEndDate = NotesSearch.search(dbSource, searchFilter, selectionFormula, "-", searchFlags, EnumSet.of(NoteClass.DOCUMENT),
+				NotesTimeDate copyOpEndDate = NotesSearch.search(dbSource, searchFilter, selectionFormula, additionalComputedSummaryBufferEntriesSorted, "-", searchFlags, EnumSet.of(NoteClass.DOCUMENT),
 						sinceDateForSearch, new SearchCallback() {
 
 					@Override

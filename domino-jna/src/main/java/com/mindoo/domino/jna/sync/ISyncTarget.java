@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.sync;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 import com.mindoo.domino.jna.NotesNote;
@@ -89,8 +90,14 @@ public interface ISyncTarget {
 	public EnumSet<DataToRead> getWhichDataToRead();
 	
 	public enum DataToRead {
-		/** read just the summary buffer returned my the NSFSearch call, which is faster than opening the note */
-		SummaryBuffer,
+		/** read all the items of the note's summary buffer and optionally add computed values
+		 * specified by {@link ISyncTarget#getSummaryBufferItemsAndFormulas()}. Reading
+		 * the summary buffer is faster than opening the whole note */
+		SummaryBufferAllItems,
+		/** only return computed items specified by {@link ISyncTarget#getSummaryBufferItemsAndFormulas()}
+		 * from the summary buffer (not all summary buffer items,
+		 * which is faster than reading the whole summary buffer */
+		SummaryBufferSelectedItems,
 		/** the note needs to be opened with all items, because non-summary items need to be read */
 		NoteWithAllItems,
 		/** the note should only be opened with summary items (faster) */
@@ -98,6 +105,15 @@ public interface ISyncTarget {
 	}
 
 	public enum TargetResult {Added, Removed, Updated, None}
+	
+	/**
+	 * If {@link #getWhichDataToRead()} returns either {@link DataToRead#SummaryBufferAllItems}
+	 * or {@link DataToRead#SummaryBufferSelectedItems}, the map returned by this method
+	 * adds additional 
+	 * 
+	 * @return map with (programmatic column name, column formula) entries or null if no additional values should be computed; you can use an empty string for the formula to just return the item value
+	 */
+	public Map<String,String> getSummaryBufferItemsAndFormulas();
 	
 	/**
 	 * The method is called for every note that has changed since the last sync end date and

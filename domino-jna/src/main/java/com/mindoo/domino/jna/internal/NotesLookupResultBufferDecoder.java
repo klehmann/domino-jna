@@ -464,17 +464,17 @@ public class NotesLookupResultBufferDecoder {
 	 * @author Karsten Lehmann
 	 */
 	public static class ItemValueTableData {
-		private Pointer[] m_itemValueBufferPointers;
-		private int[] m_itemValueBufferSizes;
-		private Object[] m_itemValues;
-		private int[] m_itemDataTypes;
+		protected Pointer[] m_itemValueBufferPointers;
+		protected int[] m_itemValueBufferSizes;
+		protected Object[] m_itemValues;
+		protected int[] m_itemDataTypes;
 		protected int m_totalBufferLength;
 		protected int m_itemsCount;
-		private int[] m_itemValueLengthsInBytes;
-		private int m_gmtOffset;
-		private boolean m_isDST;
-		private boolean m_convertStringsLazily;
-		private boolean m_freed;
+		protected int[] m_itemValueLengthsInBytes;
+		protected int m_gmtOffset;
+		protected boolean m_isDST;
+		protected boolean m_convertStringsLazily;
+		protected boolean m_freed;
 		
 		public ItemValueTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
 			m_gmtOffset = gmtOffset;
@@ -595,6 +595,22 @@ public class NotesLookupResultBufferDecoder {
 	 */
 	public static class ItemTableData extends ItemValueTableData {
 		protected String[] m_itemNames;
+		private ItemValueTableData m_wrappedValueTable;
+		
+		public ItemTableData(String[] itemNames, ItemValueTableData valueTable) {
+			super(valueTable.m_gmtOffset, valueTable.m_isDST, valueTable.m_convertStringsLazily);
+			
+			m_itemNames = itemNames;
+			
+			m_wrappedValueTable = valueTable;
+			m_itemValueBufferPointers = valueTable.m_itemValueBufferPointers;
+			m_itemValueBufferSizes = valueTable.m_itemValueBufferSizes;
+			m_itemValues = valueTable.m_itemValues;
+			m_itemDataTypes = valueTable.m_itemDataTypes;
+			m_totalBufferLength = valueTable.m_totalBufferLength;
+			m_itemsCount = valueTable.m_itemsCount;
+			m_itemValueLengthsInBytes = valueTable.m_itemValueLengthsInBytes;
+		}
 		
 		public ItemTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
 			super(gmtOffset, isDST, convertStringsLazily);
@@ -616,6 +632,10 @@ public class NotesLookupResultBufferDecoder {
 		 * @return value or null
 		 */
 		public Object get(String itemName) {
+			if (m_wrappedValueTable!=null && m_wrappedValueTable.isFreed()) {
+				throw new NotesError(0, "Buffer already freed");
+			}
+			
 			for (int i=0; i<m_itemNames.length; i++) {
 				if (m_itemNames[i].equalsIgnoreCase(itemName)) {
 					Object val = getItemValue(i);
