@@ -128,7 +128,7 @@ public interface ISyncTarget {
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
-	 * @param summaryBufferData summary buffer if {@link #getWhichDataToRead()} returned {@link DataToRead#SummaryBuffer}, null otherwse
+	 * @param summaryBufferData summary buffer if {@link #getWhichDataToRead()} returned {@link DataToRead#SummaryBufferAllItems} or {@link DataToRead#SummaryBufferSelectedItems}, null otherwise
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
