@@ -160,7 +160,9 @@ public abstract class SizeLimitedLRUCache<K,V> {
 			
 			CacheEntry<K,V> tailPredecessor = m_tail.getPrev();
 			m_tail = tailPredecessor;
-			tailPredecessor.setNext(null);
+			if (tailPredecessor!=null) {
+				tailPredecessor.setNext(null);
+			}
 			oldTail.setPrev(null);
 			m_cacheSizeInUnits -= tailSizeUnits;
 			
