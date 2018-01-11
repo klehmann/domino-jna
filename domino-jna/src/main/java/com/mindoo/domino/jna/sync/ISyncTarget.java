@@ -109,7 +109,7 @@ public interface ISyncTarget {
 	/**
 	 * If {@link #getWhichDataToRead()} returns either {@link DataToRead#SummaryBufferAllItems}
 	 * or {@link DataToRead#SummaryBufferSelectedItems}, the map returned by this method
-	 * adds additional 
+	 * adds additional.
 	 * 
 	 * @return map with (programmatic column name, column formula) entries or null if no additional values should be computed; you can use an empty string for the formula to just return the item value
 	 */
@@ -117,7 +117,14 @@ public interface ISyncTarget {
 	
 	/**
 	 * The method is called for every note that has changed since the last sync end date and
-	 * that currently matches the selection formula.
+	 * that currently matches the selection formula.<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * To get all readers and authors of a note returned quickly without the need to traverse
+	 * all the items yourself, return {@link DataToRead#SummaryBufferSelectedItems}
+	 * in method {@link #getWhichDataToRead()} and add the special item "$C1$" to the map returned by
+	 * {@link #getSummaryBufferItemsAndFormulas()}.<br>
+	 * The combined list of readers and authors will then be added to the <code>summaryBufferData</code>.</b>
 	 * 
 	 * @param ctx sync context
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
