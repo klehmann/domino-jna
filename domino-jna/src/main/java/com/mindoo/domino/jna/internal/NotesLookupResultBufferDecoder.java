@@ -692,10 +692,21 @@ public class NotesLookupResultBufferDecoder {
 		 * @return name or null
 		 */
 		public String getAsNameAbbreviated(String itemName) {
-			String nameStr = getAsString(itemName, null);
-			return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
+			return getAsNameAbbreviated(itemName, null);
 		}
 		
+		/**
+		 * Convenience function that converts a summary value to an abbreviated name
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue value to be used of item not found
+		 * @return name or default value
+		 */
+		public String getAsNameAbbreviated(String itemName, String defaultValue) {
+			String nameStr = getAsString(itemName, null);
+			return nameStr==null ? defaultValue : NotesNamingUtils.toAbbreviatedName(nameStr);
+		}
+
 		/**
 		 * Convenience function that converts a summary value to a list of abbreviated names
 		 * 
@@ -703,6 +714,17 @@ public class NotesLookupResultBufferDecoder {
 		 * @return names or null
 		 */
 		public List<String> getAsNamesListAbbreviated(String itemName) {
+			return getAsNamesListAbbreviated(itemName, null);
+		}
+		
+		/**
+		 * Convenience function that converts a summary value to a list of abbreviated names
+		 * 
+		 * @param itemName item name, case insensitive
+		 * @param defaultValue default value if column is empty or is not a string or string list
+		 * @return names or default value if not found
+		 */
+		public List<String> getAsNamesListAbbreviated(String itemName, List<String> defaultValue) {
 			List<String> strList = getAsStringList(itemName, null);
 			if (strList!=null) {
 				List<String> namesAbbr = new ArrayList<String>(strList.size());
@@ -712,14 +734,14 @@ public class NotesLookupResultBufferDecoder {
 				return namesAbbr;
 			}
 			else
-				return null;
+				return defaultValue;
 		}
 		
 		/**
 		 * Convenience function that converts a summary value to a string list
 		 * 
 		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
+		 * @param defaultValue default value if column is empty or is not a string or string list
 		 * @return string list value or null
 		 */
 		public List<String> getAsStringList(String itemName, List<String> defaultValue) {
