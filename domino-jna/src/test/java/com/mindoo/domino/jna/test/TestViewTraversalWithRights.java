@@ -66,6 +66,9 @@ public class TestViewTraversalWithRights extends BaseJNATestClass {
 					hiddenDoc.replaceItemValue("Readerfield",
 							EnumSet.of(ItemType.NAMES, ItemType.READERS, ItemType.SUMMARY),
 							readers);
+					hiddenDoc.replaceItemValue("Authorfield",
+							EnumSet.of(ItemType.NAMES, ItemType.READWRITERS, ItemType.SUMMARY),
+							"CN=An Author/O=Mindoo");
 					hiddenDoc.replaceItemValue("Firstname", "Hidden1-firstname_"+timestamp);
 					hiddenDoc.replaceItemValue("Lastname", "Hidden1-lastname_"+timestamp);
 					hiddenDoc.update();
