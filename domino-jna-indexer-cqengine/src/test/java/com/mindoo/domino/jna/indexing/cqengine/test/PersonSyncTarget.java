@@ -62,6 +62,10 @@ public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person> impleme
 		map.put("fullname", "");
 		map.put("lastname", "");
 		map.put("firstname", "");
+		//add this special item combined with DataToRead.SummaryBufferSelectedItems to let
+		//Domino return the readers and authors list of a note as special item "$C1$" in the summary buffer,
+		//in case the note has any reader item
+		map.put("$C1$", "");
 		return map;
 	}
 	
