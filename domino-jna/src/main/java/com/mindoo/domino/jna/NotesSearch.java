@@ -668,8 +668,19 @@ public class NotesSearch {
 								if (summaryBuffer!=null) {
 									Pointer summaryBufferPtr = summaryBuffer.getPointer();
 									boolean convertStringsLazily = true;
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
-											convertStringsLazily, false);
+									if (searchFlags.contains(Search.NOITEMNAMES)) {
+										//flag to just return the column values is used; so the
+										//buffer contains an ITEM_VALUE_TABLE with column values
+										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
+										//pairs
+										ItemValueTableData itemValueTableData = NotesLookupResultBufferDecoder.decodeItemValueTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily, false);
+										//create an ItemTableData by adding the column names to make this invisible to callers
+										itemTableData = new ItemTableData(columnItemNames, itemValueTableData);
+									}
+									else {
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+												convertStringsLazily, false);
+									}
 								}
 							}
 
