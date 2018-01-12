@@ -133,6 +133,19 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 				}
 			});
 		}
+		
+		public static NotesTimeDateStruct.ByValue newInstance(final int[] innards) {
+			return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct.ByValue>() {
+
+				@Override
+				public NotesTimeDateStruct.ByValue run() {
+					NotesTimeDateStruct.ByValue newObj = new NotesTimeDateStruct.ByValue();
+					newObj.Innards[0] = innards[0];
+					newObj.Innards[1] = innards[1];
+					return newObj;
+				}
+			});
+		}
 	};
 	
 	/**
