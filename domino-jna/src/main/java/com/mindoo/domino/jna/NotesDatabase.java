@@ -397,12 +397,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
 
-			//compute usernames list used
-			NotesNote note = createNote();
-			List userNamesList = FormulaExecution.evaluate("@UserNamesList", note);
-			note.recycle();
-			
-			m_namesList = NotesNamingUtils.writeNewNamesList(userNamesList);
+			Session session;
+			try {
+				session = legacyDB.getParent();
+				String effUserName = session.getEffectiveUserName();
+				m_asUserCanonical = effUserName;
+				
+				List<String> names = NotesNamingUtils.getUserNamesList(m_asUserCanonical);
+				m_namesList = NotesNamingUtils.writeNewNamesList(names);
+
+				//setting authenticated flag for the user is required when running on the server
+				NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
+
+			} catch (NotesException e) {
+				throw new NotesError(e.id, e.getLocalizedMessage());
+			}
 		}
 		else {
 			throw new NotesError(0, "Unsupported adaptable parameter");
