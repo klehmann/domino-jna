@@ -59,7 +59,7 @@ public class NotesNativeAPI {
 	/**
 	 * Initializes the Domino API
 	 */
-	public static void initialize() {
+	public static synchronized void initialize() {
 		if (m_instanceWithoutCrashLogging==null && m_initError==null) {
 			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<NotesNativeAPI>() {
 
