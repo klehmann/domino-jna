@@ -146,7 +146,7 @@ public interface NotesCallbacks {
 	 */
 	interface b32_NsfSearchProc extends Callback {
 		short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
-				NotesItemTableStruct summaryBuffer);
+				Pointer summaryBufferPtr);
 	}
 
 	/**
@@ -182,7 +182,7 @@ public interface NotesCallbacks {
 	 */
 	interface b64_NsfSearchProc extends Callback {
 		short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
-				NotesItemTableStruct summaryBuffer);
+				Pointer summaryBuffer);
 	}
 
 	/**

@@ -390,13 +390,14 @@ public class NotesSearch {
 
 				@Override
 				public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
-						NotesItemTableStruct summaryBuffer) {
+						Pointer summaryBufferPtr) {
 
 					ItemTableData itemTableData=null;
 					try {
-						if (searchFlags.contains(Search.SUMMARY)) {
-							if (summaryBuffer!=null) {
-								Pointer summaryBufferPtr = summaryBuffer.getPointer();
+						boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+						
+						if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
 								if (searchFlags.contains(Search.NOITEMNAMES)) {
 									//flag to just return the column values is used; so the
@@ -432,7 +433,7 @@ public class NotesSearch {
 							action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 						}
 						else {
-							if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
+							if (!isMatch) {
 								action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							}
 							else {
@@ -586,13 +587,14 @@ public class NotesSearch {
 				apiCallback = new Win32NotesCallbacks.NsfSearchProcWin32() {
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
-							NotesItemTableStruct summaryBuffer) {
+							Pointer summaryBufferPtr) {
 
 						ItemTableData itemTableData=null;
 						try {
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
+							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+							
+							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									if (searchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
@@ -628,7 +630,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
+								if (!isMatch) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -660,13 +662,14 @@ public class NotesSearch {
 
 					@Override
 					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
-							NotesItemTableStruct summaryBuffer) {
+							Pointer summaryBufferPtr) {
 
 						ItemTableData itemTableData=null;
 						try {
-							if (searchFlags.contains(Search.SUMMARY)) {
-								if (summaryBuffer!=null) {
-									Pointer summaryBufferPtr = summaryBuffer.getPointer();
+							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+							
+							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									if (searchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
@@ -702,7 +705,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
+								if (!isMatch) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
