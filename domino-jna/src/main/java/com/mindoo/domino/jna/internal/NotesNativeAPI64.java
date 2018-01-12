@@ -955,7 +955,7 @@ public class NotesNativeAPI64 {
 	public native short ACLSetAdminServer(
 			long hList,
 			Memory ServerName);
-
+	
 	public native short NSFSearchStartExtended(long hDB, long formula, long filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			long queue, int flags, int flags1, int flags2, int flags3, int flags4, 
@@ -963,7 +963,7 @@ public class NotesNativeAPI64 {
 			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
 			LongByReference rtnhandle);
 
-	public native short QueueCreate(long qhandle);
+	public native short QueueCreate(LongByReference qhandle);
 
 	public native short QueueGet(long qhandle, LongByReference sehandle);
 	

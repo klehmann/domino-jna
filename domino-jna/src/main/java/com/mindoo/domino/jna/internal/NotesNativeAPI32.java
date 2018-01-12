@@ -964,7 +964,7 @@ public class NotesNativeAPI32 {
 			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
 			IntByReference rtnhandle);
 
-	public native short QueueCreate(int qhandle);
+	public native short QueueCreate(IntByReference qhandle);
 	
 	public native short QueueGet(int qhandle, IntByReference sehandle);
 
