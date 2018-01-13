@@ -32,16 +32,16 @@ import com.sun.jna.ptr.ShortByReference;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNativeAPI64 {
-	private static volatile NotesNativeAPI64 m_instanceWithoutCrashLogging;
-	private static volatile NotesNativeAPI64 m_instanceWithCrashLogging;
+public class NotesNativeAPI64 implements INotesNativeAPI64 {
+	private static volatile INotesNativeAPI64 m_instanceWithoutCrashLogging;
+	private static volatile INotesNativeAPI64 m_instanceWithCrashLogging;
 
 	/**
 	 * Gets called from {@link NotesNativeAPI#initialize()}
 	 * 
 	 * @param instance
 	 */
-	static void set(NotesNativeAPI64 instance) {
+	static void set(INotesNativeAPI64 instance) {
 		m_instanceWithoutCrashLogging = instance;
 	}
 	
@@ -50,7 +50,7 @@ public class NotesNativeAPI64 {
 	 * 
 	 * @return API
 	 */
-	public static NotesNativeAPI64 get() {
+	public static INotesNativeAPI64 get() {
 		NotesGC.ensureRunningInAutoGC();
 		
 		if (NotesNativeAPI.m_initError!=null) {
@@ -65,7 +65,7 @@ public class NotesNativeAPI64 {
 
 		if (NotesGC.isLogCrashingThreadStacktrace()) {
 			if (m_instanceWithCrashLogging==null) {
-				m_instanceWithCrashLogging = NotesNativeAPI.wrapWithCrashStackLogging(NotesNativeAPI64.class, m_instanceWithoutCrashLogging);
+				m_instanceWithCrashLogging = NotesNativeAPI.wrapWithCrashStackLogging(INotesNativeAPI64.class, m_instanceWithoutCrashLogging);
 			}
 			return m_instanceWithCrashLogging;
 		}

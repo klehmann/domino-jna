@@ -48,23 +48,54 @@ import net.sf.cglib.proxy.MethodProxy;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNativeAPI {
-	private static volatile NotesNativeAPI m_instanceWithoutCrashLogging;
-	private static volatile NotesNativeAPI m_instanceWithCrashLogging;
+public class NotesNativeAPI implements INotesNativeAPI {
+	private static volatile INotesNativeAPI m_instanceWithoutCrashLogging;
+	private static volatile INotesNativeAPI m_instanceWithCrashLogging;
 	private static Class m_nativeClazz;
 	
 	private static int m_platformAlignment;
 	static Throwable m_initError;
 
+	public static enum Mode {Classic, Direct}
+	private static Mode m_activeMode;
+
+	/**
+	 * Returns the mode that JNA uses to call native code
+	 * 
+	 * @return mode
+	 */
+	public Mode getActiveJNAMode() {
+		return m_activeMode;
+	}
+	
 	/**
 	 * Initializes the Domino API
 	 */
 	public static synchronized void initialize() {
+		String modeStr = System.getProperty("dominojna.jnamode");
+		Mode mode = null;
+		if ("direct".equalsIgnoreCase(modeStr)) {
+			mode = Mode.Direct;
+		}
+		else if ("classic".equalsIgnoreCase(modeStr)) {
+			mode = Mode.Classic;
+		}
+		
+		if (mode==null) {
+			mode = Mode.Direct;
+		}
+		initialize(mode);
+	}
+
+	/**
+	 * Initializes the Domino API
+	 */
+	public static synchronized void initialize(final Mode mode) {
 		if (m_instanceWithoutCrashLogging==null && m_initError==null) {
-			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<NotesNativeAPI>() {
+			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<INotesNativeAPI>() {
 
 				@Override
-				public NotesNativeAPI run() {
+				public INotesNativeAPI run() {
 					try {
 						//keep reference to Native as described here: https://github.com/java-native-access/jna/blob/master/www/FrequentlyAskedQuestions.md#why-does-the-vm-sometimes-crash-in-my-shutdown-hook-on-windows
 						m_nativeClazz = Native.class;
@@ -97,40 +128,74 @@ public class NotesNativeAPI {
 							return null;
 						}
 
-						NotesNativeAPI instance = new NotesNativeAPI();
-						
 						Map<String, Object> libraryOptions = new HashMap<String, Object>();
 						libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
-
-						NativeLibrary library;
-						if (PlatformUtils.isWindows()) {
-							if (PlatformUtils.is32Bit()) {
-								libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
+						
+						if (PlatformUtils.isWin32()) {
+							libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
+						}
+						
+						if (mode==Mode.Direct) {
+							NativeLibrary library;
+							if (PlatformUtils.isWindows()) {
+						        library = NativeLibrary.getInstance("nnotes", libraryOptions);
 							}
-					        library = NativeLibrary.getInstance("nnotes", libraryOptions);
+							else {
+						        library = NativeLibrary.getInstance("notes", libraryOptions);
+							}
+
+							Native.register(NotesNativeAPI.class, library);
+
+							if (PlatformUtils.is64Bit()) {
+								NotesNativeAPI64 instance64 = new NotesNativeAPI64();
+								Native.register(NotesNativeAPI64.class, library);
+								NotesNativeAPI64.set(instance64);
+							}
+							else {
+								NotesNativeAPI32 instance32 = new NotesNativeAPI32();
+								Native.register(NotesNativeAPI32.class, library);
+								NotesNativeAPI32.set(instance32);
+							}
+
+							NotesNativeAPI instance = new NotesNativeAPI();
+							return instance;
 						}
 						else {
-					        library = NativeLibrary.getInstance("notes", libraryOptions);
-						}
+							INotesNativeAPI api;
+							if (PlatformUtils.isWindows()) {
+								api = Native.loadLibrary("nnotes", INotesNativeAPI.class, libraryOptions);
 
-						Native.register(NotesNativeAPI.class, library);
+								if (PlatformUtils.is64Bit()) {
+									INotesNativeAPI64 api64 = Native.loadLibrary("nnotes", INotesNativeAPI64.class, libraryOptions);
+									NotesNativeAPI64.set(api64);
+								}
+								else {
+									INotesNativeAPI32 api32 = Native.loadLibrary("nnotes", INotesNativeAPI32.class, libraryOptions);
+									NotesNativeAPI32.set(api32);
+								}
+							}
+							else {
+								api = Native.loadLibrary("notes", INotesNativeAPI.class, libraryOptions);
+								
+								if (PlatformUtils.is64Bit()) {
+									INotesNativeAPI64 api64 = Native.loadLibrary("notes", INotesNativeAPI64.class, libraryOptions);
+									NotesNativeAPI64.set(api64);
+								}
+								else {
+									INotesNativeAPI32 api32 = Native.loadLibrary("notes", INotesNativeAPI32.class, libraryOptions);
+									NotesNativeAPI32.set(api32);
+								}
+							}
 
-						if (PlatformUtils.is64Bit()) {
-							NotesNativeAPI64 instance64 = new NotesNativeAPI64();
-							Native.register(NotesNativeAPI64.class, library);
-							NotesNativeAPI64.set(instance64);
+							return api;
 						}
-						else {
-							NotesNativeAPI32 instance32 = new NotesNativeAPI32();
-							Native.register(NotesNativeAPI32.class, library);
-							NotesNativeAPI32.set(instance32);
-						}
-
-						return instance;
 					}
 					catch (Throwable t) {
 						m_initError = t;
 						return null;
+					}
+					finally {
+						m_activeMode = mode;
 					}
 				}
 			});
@@ -142,7 +207,7 @@ public class NotesNativeAPI {
 	 * 
 	 * @return API
 	 */
-	public static NotesNativeAPI get() {
+	public static INotesNativeAPI get() {
 		//check if this failed the last time
 		if (m_initError!=null) {
 			if (m_initError instanceof RuntimeException)
@@ -164,7 +229,7 @@ public class NotesNativeAPI {
 
 		if (NotesGC.isLogCrashingThreadStacktrace()) {
 			if (m_instanceWithCrashLogging==null) {
-				m_instanceWithCrashLogging = wrapWithCrashStackLogging(NotesNativeAPI.class, m_instanceWithoutCrashLogging);
+				m_instanceWithCrashLogging = wrapWithCrashStackLogging(INotesNativeAPI.class, m_instanceWithoutCrashLogging);
 			}
 			return m_instanceWithCrashLogging;
 		}
@@ -173,6 +238,136 @@ public class NotesNativeAPI {
 		}
 	}
 
+	/**
+	 * Returns the alignment to be used for the current platform
+	 * @return alignment
+	 */
+	public static int getPlatformAlignment() {
+		return m_platformAlignment;
+	}
+
+
+	/**
+	 * {@link MethodInterceptor} that writes the caller stacktrace to a file before invoking
+	 * the wrapped methods in order to improve crash cause detection.
+	 * 
+	 * @author Karsten Lehmann
+	 *
+	 * @param <T> class of wrapped API
+	 */
+	private static class MethodInterceptorWithStacktraceLogging<T> implements MethodInterceptor {
+		private final T original;
+
+		public MethodInterceptorWithStacktraceLogging(T original) {
+			this.original = original;
+		}
+
+		public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+			Exception e = new Exception();
+			e.fillInStackTrace();
+
+			File stFile = createStackTraceFile(e);
+			try {
+				return method.invoke(original, args);
+			}
+			finally {
+				if (stFile!=null)
+					deleteStackTraceFile(stFile);
+			}
+		}
+
+		private void deleteStackTraceFile(final File stFile) {
+			AccessController.doPrivileged(new PrivilegedAction<Object>() {
+
+				@Override
+				public Object run() {
+					if (stFile.exists() && !stFile.delete()) {
+						stFile.deleteOnExit();
+					}
+					return null;
+				}
+			});
+		}
+
+		private File createStackTraceFile(final Exception e) {
+			return AccessController.doPrivileged(new PrivilegedAction<File>() {
+
+				@Override
+				public File run() {
+					String tmpDirPath = System.getProperty("java.io.tmpdir");
+					File tmpDir = new File(tmpDirPath);
+					File stFile = new File(tmpDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
+					if (stFile.exists()) {
+						if (!stFile.delete()) {
+							stFile.deleteOnExit();
+							return null;
+						}
+					}
+					FileOutputStream fOut=null;
+					Writer fWriter=null;
+					PrintWriter pWriter=null;
+					try {
+						fOut = new FileOutputStream(stFile);
+						fWriter = new OutputStreamWriter(fOut, Charset.forName("UTF-8"));
+						pWriter = new PrintWriter(fWriter);
+						e.printStackTrace(pWriter);
+						pWriter.flush();
+						FileChannel channel = fOut.getChannel();
+						channel.force(true);
+						return stFile;
+					} catch (IOException e1) {
+						e.printStackTrace();
+						return null;
+					}
+					finally {
+						if (fOut!=null) {
+							try {
+								fOut.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+						if (pWriter!=null) {
+							pWriter.close();
+						}
+						if (fWriter!=null) {
+							try {
+								fWriter.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 * Wraps the specified API object to dump caller stacktraces right before invoking
+	 * native methods
+	 * 
+	 * @param api API
+	 * @return wrapped API
+	 */
+	static <T> T wrapWithCrashStackLogging(final Class<T> apiClazz, final T api) {
+
+		try {
+			return AccessController.doPrivileged(new PrivilegedExceptionAction<T>() {
+
+				@Override
+				public T run() throws Exception {
+					MethodInterceptor handler = new MethodInterceptorWithStacktraceLogging<T>(api);
+					T wrapperWithStacktraceLogging = (T) Enhancer.create(apiClazz, handler);
+					return wrapperWithStacktraceLogging;
+				}
+			});
+		} catch (PrivilegedActionException e) {
+			e.printStackTrace();
+			return api;
+		}
+	}
+	
 	public native short NotesInitExtended(int argc, Memory argvPtr);
 	public native void NotesTerm();
 
@@ -376,133 +571,4 @@ public class NotesNativeAPI {
 			short What,
 			Pointer Buffer);
 
-	/**
-	 * Returns the alignment to be used for the current platform
-	 * @return alignment
-	 */
-	public static int getPlatformAlignment() {
-		return m_platformAlignment;
-	}
-
-
-	/**
-	 * {@link MethodInterceptor} that writes the caller stacktrace to a file before invoking
-	 * the wrapped methods in order to improve crash cause detection.
-	 * 
-	 * @author Karsten Lehmann
-	 *
-	 * @param <T> class of wrapped API
-	 */
-	private static class MethodInterceptorWithStacktraceLogging<T> implements MethodInterceptor {
-		private final T original;
-
-		public MethodInterceptorWithStacktraceLogging(T original) {
-			this.original = original;
-		}
-
-		public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-			Exception e = new Exception();
-			e.fillInStackTrace();
-
-			File stFile = createStackTraceFile(e);
-			try {
-				return method.invoke(original, args);
-			}
-			finally {
-				if (stFile!=null)
-					deleteStackTraceFile(stFile);
-			}
-		}
-
-		private void deleteStackTraceFile(final File stFile) {
-			AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-				@Override
-				public Object run() {
-					if (stFile.exists() && !stFile.delete()) {
-						stFile.deleteOnExit();
-					}
-					return null;
-				}
-			});
-		}
-
-		private File createStackTraceFile(final Exception e) {
-			return AccessController.doPrivileged(new PrivilegedAction<File>() {
-
-				@Override
-				public File run() {
-					String tmpDirPath = System.getProperty("java.io.tmpdir");
-					File tmpDir = new File(tmpDirPath);
-					File stFile = new File(tmpDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
-					if (stFile.exists()) {
-						if (!stFile.delete()) {
-							stFile.deleteOnExit();
-							return null;
-						}
-					}
-					FileOutputStream fOut=null;
-					Writer fWriter=null;
-					PrintWriter pWriter=null;
-					try {
-						fOut = new FileOutputStream(stFile);
-						fWriter = new OutputStreamWriter(fOut, Charset.forName("UTF-8"));
-						pWriter = new PrintWriter(fWriter);
-						e.printStackTrace(pWriter);
-						pWriter.flush();
-						FileChannel channel = fOut.getChannel();
-						channel.force(true);
-						return stFile;
-					} catch (IOException e1) {
-						e.printStackTrace();
-						return null;
-					}
-					finally {
-						if (fOut!=null) {
-							try {
-								fOut.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-						if (pWriter!=null) {
-							pWriter.close();
-						}
-						if (fWriter!=null) {
-							try {
-								fWriter.close();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-					}
-				}
-			});
-		}
-	}
-
-	/**
-	 * Wraps the specified API object to dump caller stacktraces right before invoking
-	 * native methods
-	 * 
-	 * @param api API
-	 * @return wrapped API
-	 */
-	static <T> T wrapWithCrashStackLogging(final Class<T> apiClazz, final T api) {
-
-		try {
-			return AccessController.doPrivileged(new PrivilegedExceptionAction<T>() {
-
-				@Override
-				public T run() throws Exception {
-					MethodInterceptor handler = new MethodInterceptorWithStacktraceLogging<T>(api);
-					T wrapperWithStacktraceLogging = (T) Enhancer.create(apiClazz, handler);
-					return wrapperWithStacktraceLogging;
-				}
-			});
-		} catch (PrivilegedActionException e) {
-			e.printStackTrace();
-			return api;
-		}
-	}
 }
