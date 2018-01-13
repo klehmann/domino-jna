@@ -128,6 +128,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 							return null;
 						}
 
+						System.out.println("Initializing Domino JNA with mode "+mode);
+						
 						Map<String, Object> libraryOptions = new HashMap<String, Object>();
 						libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
 						
