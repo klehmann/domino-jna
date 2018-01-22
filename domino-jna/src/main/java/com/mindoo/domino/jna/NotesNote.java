@@ -4898,8 +4898,9 @@ public class NotesNote implements IRecyclableNotesObject {
 						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 					
 					byte[] cdRecordDataArr = cdRecordPtr.getByteArray(0, cdRecordLength);
-					Memory cdRecordDataCopied = new Memory(cdRecordLength);
+					ReadOnlyMemory cdRecordDataCopied = new ReadOnlyMemory(cdRecordLength);
 					cdRecordDataCopied.write(0, cdRecordDataArr, 0, cdRecordLength);
+					cdRecordDataCopied.seal();
 					
 					CDRecordMemory cdRecordMem = new CDRecordMemory(cdRecordDataCopied, parsedSignature, signature,
 							dataLength, cdRecordLength);
@@ -5199,13 +5200,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		 * @author Karsten Lehmann
 		 */
 		private class CDRecordMemory {
-			private Memory m_cdRecordMemory;
+			private ReadOnlyMemory m_cdRecordMemory;
 			private CDRecordType m_type;
 			private short m_typeAsShort;
 			private int m_dataSize;
 			private int m_cdRecordLength;
 			
-			public CDRecordMemory(Memory cdRecordMem, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
+			public CDRecordMemory(ReadOnlyMemory cdRecordMem, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
 				m_cdRecordMemory = cdRecordMem;
 				m_type = type;
 				m_typeAsShort = typeAsShort;
@@ -5214,11 +5215,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 			
 			public Memory getRecordDataWithHeader() {
-				return new ReadOnlyMemory(m_cdRecordMemory);
+				return m_cdRecordMemory;
 			}
 			
 			public Memory getRecordDataWithoutHeader() {
-				return new ReadOnlyMemory(m_cdRecordMemory, m_cdRecordLength - m_dataSize);
+				return (Memory) m_cdRecordMemory.share(m_cdRecordLength - m_dataSize);
 			}
 			
 			public CDRecordType getType() {

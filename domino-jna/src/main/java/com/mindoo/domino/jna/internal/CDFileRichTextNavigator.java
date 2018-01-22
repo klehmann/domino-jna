@@ -124,11 +124,12 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		//file channel position points to the start of data, so reset it to the CD record start
 		m_fileChannel.position(m_position);
 		int cdRecordTotalLength = dwLength;
-		Memory cdRecordMem = new Memory(cdRecordTotalLength);
+		ReadOnlyMemory cdRecordMem = new ReadOnlyMemory(cdRecordTotalLength);
 		int bytesRead = m_fileChannel.read(cdRecordMem.getByteBuffer(0, cdRecordMem.size()));
 		if (bytesRead != cdRecordTotalLength) {
 			throw new IllegalStateException("Bytes read from CD record file for CD record at index "+m_currentCDRecordIndex+" is expected to be "+cdRecordTotalLength+" but we only could read "+bytesRead+" bytes");
 		}
+		cdRecordMem.seal();
 		
 		CDRecordMemory record = new CDRecordMemory(cdRecordMem, type, typeAsShort, dwLength-fixedSize, dwLength);
 		//remember the length of the CD records
@@ -373,13 +374,13 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	 * @author Karsten Lehmann
 	 */
 	private class CDRecordMemory {
-		private Memory m_cdRecordBuf;
+		private ReadOnlyMemory m_cdRecordBuf;
 		private CDRecordType m_type;
 		private short m_typeAsShort;
 		private int m_dataSize;
 		private int m_cdRecordLength;
 		
-		public CDRecordMemory(Memory recordBuf, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
+		public CDRecordMemory(ReadOnlyMemory recordBuf, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
 			m_cdRecordBuf = recordBuf;
 			m_type = type;
 			m_typeAsShort = typeAsShort;
@@ -388,11 +389,11 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		}
 		
 		public Memory getRecordDataWithHeader() {
-			return new ReadOnlyMemory(m_cdRecordBuf);
+			return m_cdRecordBuf;
 		}
 		
 		public Memory getRecordDataWithoutHeader() {
-			return new ReadOnlyMemory(m_cdRecordBuf, m_cdRecordLength - m_dataSize);
+			return (Memory) m_cdRecordBuf.share(m_cdRecordLength - m_dataSize);
 		}
 		
 		public CDRecordType getType() {

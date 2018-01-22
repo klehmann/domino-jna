@@ -279,12 +279,12 @@ public class NotesStringUtils {
 			byte[] asciiBytes = inStr.getBytes(Charset.forName("ASCII"));
 			
 			if (addNull) {
-				Memory m = new Memory(asciiBytes.length + 1);
+				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length + 1);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
 				m.setByte(asciiBytes.length, (byte) 0);
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m = new ReadOnlyMemory(m);
+					m.seal();
 					
 					m_string2LMBCSCache_withnull.put(inStr, m);
 					m_string2LMBCSLastKeys_withnull.add(inStr);
@@ -300,11 +300,11 @@ public class NotesStringUtils {
 				return m;
 			}
 			else {
-				Memory m = new Memory(asciiBytes.length);
+				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m = new ReadOnlyMemory(m);
+					m.seal();
 					
 					m_string2LMBCSCache_withoutnull.put(inStr, m);
 					m_string2LMBCSLastKeys_withoutnull.add(inStr);
@@ -377,13 +377,13 @@ public class NotesStringUtils {
 		}
 		
 		if (addNull) {
-			Memory all = new Memory(bOut.size()+1);
+			ReadOnlyMemory all = new ReadOnlyMemory(bOut.size()+1);
 			byte[] allAsBytes = bOut.toByteArray();
 			all.write(0, allAsBytes, 0, bOut.size());
 			all.setByte(all.size()-1, (byte) 0); 
 			
 			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-				all = new ReadOnlyMemory(all);
+				all.seal();
 				
 				m_string2LMBCSCache_withnull.put(inStr, all);
 				m_string2LMBCSLastKeys_withnull.add(inStr);
@@ -399,12 +399,12 @@ public class NotesStringUtils {
 			return all;			
 		}
 		else {
-			Memory all = new Memory(bOut.size());
+			ReadOnlyMemory all = new ReadOnlyMemory(bOut.size());
 			byte[] allAsBytes = bOut.toByteArray();
 			all.write(0, allAsBytes, 0, bOut.size());
 			
 			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-				all = new ReadOnlyMemory(all);
+				all.seal();
 				
 				m_string2LMBCSCache_withoutnull.put(inStr, all);
 				m_string2LMBCSLastKeys_withoutnull.add(inStr);
