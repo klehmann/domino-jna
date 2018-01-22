@@ -8,8 +8,8 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
-import com.mindoo.domino.jna.NotesSearch.SearchCallback.Action;
-import com.mindoo.domino.jna.NotesSearch.SearchCallback.NoteFlags;
+import com.mindoo.domino.jna.NotesSearchNew.SearchCallback.Action;
+import com.mindoo.domino.jna.NotesSearchNew.SearchCallback.NoteFlags;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
@@ -31,19 +31,21 @@ import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
 import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.LongByReference;
 
 /**
  * Utility class to search Notes data
  * 
  * @author Karsten Lehmann
  */
-public class NotesSearch {
+public class NotesSearchNew {
 
 	/**
 	 * This function scans all the notes in a database, ID table or files in a directory.<br>
@@ -392,9 +394,7 @@ public class NotesSearch {
 
 					ItemTableData itemTableData=null;
 					try {
-						boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
-						
-						if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+						if (searchFlags.contains(Search.SUMMARY)) {
 							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
 								if (searchFlags.contains(Search.NOITEMNAMES)) {
@@ -431,7 +431,7 @@ public class NotesSearch {
 							action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 						}
 						else {
-							if (!isMatch) {
+							if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 								action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 							}
 							else {
@@ -525,8 +525,106 @@ public class NotesSearch {
 				final int searchFlags3Final = searchFlags3;
 				final int searchFlags4Final = searchFlags4;
 				final int noteClassMaskFinal = noteClassMask;
+				final short noteClassMaskShort = (short) (noteClassMask & 0xffff);
+				
+				LongByReference retQHandle = new LongByReference();
+				short result = NotesNativeAPI64.get().QueueCreate(retQHandle);
+				NotesErrorUtils.checkResult(result);
+				long hQueue = retQHandle.getValue();
+				
+				NotesTimeDateStruct.ByValue sinceStructByVal = sinceStruct==null ? null : NotesTimeDateStruct.ByValue.newInstance(sinceStruct.Innards);
+				
+				try {
+					LongByReference rtnhandle = new LongByReference();
+					
+					result = NotesNativeAPI64.get().NSFSearchStartExtended(db.getHandle64(), hFormulaFinal,
+							hFilterFinal, filterFlagsFinal, null, viewTitleBuf, hQueue, searchFlagsBitMaskFinal,
+							searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
+							noteClassMaskShort, (short) 0, (short) 5000, sinceStructByVal, retUntil, rtnhandle);
+					NotesErrorUtils.checkResult(result);
+					long hSearch = rtnhandle.getValue();
+					try {
+						LongByReference retSeHandle = new LongByReference();
+						
+						while ((result = NotesNativeAPI64.get().QueueGet(hQueue, retSeHandle)) == 0) {
+							long hSeHandle = retSeHandle.getValue();
+							Pointer searchEntryPtr = Mem64.OSLockObject(hSeHandle);
+							
+//							typedef struct {
+//								QUEUE_ENTRY_HEADER hdr;
+//								DWORD Length; /* total length of this structure */
+//								WORD Matches; /* number of search queue entry notes */
+//								STATUS Status; /* NSF error status of this entry */
+//								WORD Progress; /* Search Progress (0-1000) in 134+ if
+//								SEARCH_CALC_PROGRESS is specified.
+//								Otherwise it will be 0. */
+//								/* now come the Matches */
+//								} SEARCH_ENTRY;
+								
+//							typedef struct
+//							{
+//							DHANDLE NextEntry;
+//							DHANDLE PrevEntry;
+//							} QUEUE_ENTRY_HEADER;
 
-				short result;
+							System.out.println(DumpUtil.dumpAsAscii(searchEntryPtr, 15));
+							try {
+								Pointer summaryBufferPtr = searchEntryPtr.getPointer(0);
+								Pointer searchMatchPtr = searchEntryPtr.getPointer(1);
+								NotesSearchMatch64Struct searchMatch = NotesSearchMatch64Struct.newInstance(searchMatchPtr);
+								result = apiCallback.invoke(null, searchMatch, summaryBufferPtr);
+								NotesErrorUtils.checkResult(result);
+							}
+							finally {
+								Mem64.OSUnlockObject(hSeHandle);
+							}
+						}
+						if (result!=0) {
+							System.out.println(NotesErrorUtils.errToString(result));
+							
+						}
+					}
+					finally {
+						if (hSearch!=0) {
+							result = NotesNativeAPI64.get().NSFSearchStop(hSearch);
+							NotesErrorUtils.checkResult(result);
+						}
+					}
+				}
+				finally {
+					if (hQueue!=0) {
+						result = NotesNativeAPI64.get().QueueDelete(hQueue);
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+
+//				err = NSFSearchStartExtended( DbSearchHandle,
+//				fhandle,
+//				NULLHANDLE,
+//				0,
+//				NULL,
+//				NULL,
+//				qhandle,
+//				SEARCH_SUMMARY | SEARCH_NONREPLICATABLE,//SEARCH_SUMMARY | SEARCH_NOITEMNAMES | SEARCH_NONREPLICATABLE,
+//				SEARCH1_SKIM_SUMMARY_BUFFER_TOO_BIG,0,0,0,
+//				noteclass,
+//				0,
+//				5000,
+//				since,
+//				&until,
+//				&shandle);
+//
+//				while:
+//				QueueGet(qhandle,&sehandle);
+//				seaddr = (SEARCH_ENTRY *) OSLockObject(sehandle);
+//				pmatch = (SEARCH_MATCH *) (&seaddr[1]);
+//
+//				OSUnlockObject(sehandle);
+//				OSMemFree(sehandle);
+//
+//				NSFSearchStop(shandle);
+//				QueueDelete(qhandle);
+				
 				try {
 					//AccessController call required to prevent SecurityException when running in XPages
 					result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
@@ -590,9 +688,7 @@ public class NotesSearch {
 
 						ItemTableData itemTableData=null;
 						try {
-							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
-							
-							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									if (searchFlags.contains(Search.NOITEMNAMES)) {
@@ -629,7 +725,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (!isMatch) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {
@@ -665,9 +761,7 @@ public class NotesSearch {
 
 						ItemTableData itemTableData=null;
 						try {
-							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
-							
-							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+							if (searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									if (searchFlags.contains(Search.NOITEMNAMES)) {
@@ -704,7 +798,7 @@ public class NotesSearch {
 								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
 							}
 							else {
-								if (!isMatch) {
+								if (formula!=null && (searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==0) {
 									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
 								}
 								else {

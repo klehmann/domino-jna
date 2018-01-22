@@ -7,10 +7,12 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -124,14 +126,14 @@ public class ECL {
 				if (handle64==0)
 					throw new IllegalStateException("Names list already recycled");
 				
-				pNamesList = NotesNativeAPI64.get().OSLockObject(handle64);
+				pNamesList = Mem64.OSLockObject(handle64);
 			}
 			else {
 				handle32 = m_namesList.getHandle32();
 				if (handle32==0)
 					throw new IllegalStateException("Names list already recycled");
 				
-				pNamesList = NotesNativeAPI32.get().OSLockObject(handle32);
+				pNamesList = Mem32.OSLockObject(handle32);
 			}
 			try {
 				short result = NotesNativeAPI.get().ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities2, retwCapabilities2, retfUserCanModifyECL);
@@ -140,11 +142,11 @@ public class ECL {
 			finally {
 				if (PlatformUtils.is64Bit()) {
 					if (handle64!=0)
-						NotesNativeAPI64.get().OSUnlockObject(handle64);
+						Mem64.OSUnlockObject(handle64);
 				}
 				else {
 					if (handle32!=0)
-						NotesNativeAPI32.get().OSUnlockObject(handle32);
+						Mem32.OSUnlockObject(handle32);
 				}
 			}
 		}
@@ -154,10 +156,10 @@ public class ECL {
 			
 			try {
 				if (PlatformUtils.is64Bit()) {
-					pNamesList = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
+					pNamesList = Mem64.OSLockObject(namesList.getHandle64());
 				}
 				else {
-					pNamesList = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
+					pNamesList = Mem32.OSLockObject(namesList.getHandle32());
 				}
 				
 				short result = NotesNativeAPI.get().ECLGetListCapabilities(pNamesList, m_eclType.getTypeAsShort(), retwCapabilities, retwCapabilities2, retfUserCanModifyECL);
@@ -166,10 +168,10 @@ public class ECL {
 			finally {
 				if (pNamesList!=null) {
 					if (PlatformUtils.is64Bit()) {
-						NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
+						Mem64.OSUnlockObject(namesList.getHandle64());
 					}
 					else {
-						NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
+						Mem32.OSUnlockObject(namesList.getHandle32());
 					}
 				}
 				

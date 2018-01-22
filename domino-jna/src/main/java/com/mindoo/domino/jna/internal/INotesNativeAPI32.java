@@ -57,15 +57,55 @@ public interface INotesNativeAPI32 extends Library {
 
 	public short NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, IntByReference Filter);
 
+	/**
+	 * @deprecated use {@link Mem32#OSLockObject(int)} instead
+	 */
+	@Deprecated
 	public Pointer OSLockObject(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSUnlockObject(int)} instead
+	 */
+	@Deprecated
 	public boolean OSUnlockObject(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemFree(int)} instead
+	 */
+	@Deprecated
 	public short OSMemFree(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemGetSize(int, IntByReference)} instead
+	 */
+	@Deprecated
 	public short OSMemGetSize(int handle, IntByReference retSize);
+	/**
+	 * @deprecated use {@link Mem32#OSMemGetSize(int, IntByReference)} instead
+	 */
+	@Deprecated
 	public int OSMemoryGetSize(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemoryFree(int)} instead
+	 */
+	@Deprecated
 	public void OSMemoryFree(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemoryReallocate(int, int)} instead
+	 */
+	@Deprecated
 	public short OSMemoryReallocate(int handle, int size);
+	/**
+	 * @deprecated use {@link Mem32#OSMemoryLock(int)} instead
+	 */
+	@Deprecated
 	public Pointer OSMemoryLock(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemoryUnlock(int)} instead
+	 */
+	@Deprecated
 	public boolean OSMemoryUnlock(int handle);
+	/**
+	 * @deprecated use {@link Mem32#OSMemAlloc(short, int, IntByReference)} instead
+	 */
+	@Deprecated
 	public short OSMemAlloc(
 			short  BlkType,
 			int  dwSize,

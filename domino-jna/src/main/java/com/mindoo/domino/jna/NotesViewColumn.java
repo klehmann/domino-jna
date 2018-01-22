@@ -1,9 +1,11 @@
 package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat2Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewColumnFormat3Struct;
@@ -106,13 +108,14 @@ public class NotesViewColumn {
 					
 					long hFormulaText = rethFormulaText.getValue();
 					if (hFormulaText!=0) {
-						Pointer ptr = NotesNativeAPI64.get().OSLockObject(hFormulaText);
+						Pointer ptr = Mem64.OSLockObject(hFormulaText);
 						try {
 							m_formula = NotesStringUtils.fromLMBCS(ptr, iFormulaTextLength);
 						}
 						finally {
-							NotesNativeAPI64.get().OSUnlockObject(hFormulaText);
-							NotesNativeAPI64.get().OSMemFree(hFormulaText);
+							Mem64.OSUnlockObject(hFormulaText);
+							result = Mem64.OSMemFree(hFormulaText);
+							NotesErrorUtils.checkResult(result);
 						}
 					}
 				}
@@ -127,13 +130,14 @@ public class NotesViewColumn {
 					
 					int hFormulaText = rethFormulaText.getValue();
 					if (hFormulaText!=0) {
-						Pointer ptr = NotesNativeAPI32.get().OSLockObject(hFormulaText);
+						Pointer ptr = Mem32.OSLockObject(hFormulaText);
 						try {
 							m_formula = NotesStringUtils.fromLMBCS(ptr, iFormulaTextLength);
 						}
 						finally {
-							NotesNativeAPI32.get().OSUnlockObject(hFormulaText);
-							NotesNativeAPI32.get().OSMemFree(hFormulaText);
+							Mem32.OSUnlockObject(hFormulaText);
+							result = Mem32.OSMemFree(hFormulaText);
+							NotesErrorUtils.checkResult(result);
 						}
 					}
 				}

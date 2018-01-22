@@ -14,9 +14,11 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -89,7 +91,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			LongByReference rethCompute = new LongByReference();
 			
-			m_ptrCompiledFormula = NotesNativeAPI64.get().OSLockObject(m_hFormula64);
+			m_ptrCompiledFormula = Mem64.OSLockObject(m_hFormula64);
 			
 			result = NotesNativeAPI64.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
 			NotesErrorUtils.checkResult(result);
@@ -128,7 +130,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			IntByReference rethCompute = new IntByReference();
 			
-			m_ptrCompiledFormula = NotesNativeAPI32.get().OSLockObject(m_hFormula32);
+			m_ptrCompiledFormula = Mem32.OSLockObject(m_hFormula32);
 			
 			result = NotesNativeAPI32.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
 			NotesErrorUtils.checkResult(result);
@@ -364,16 +366,20 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			long hResult = rethResult.getValue();
 			if (hResult!=0) {
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hResult);
+				Pointer valuePtr = Mem64.OSLockObject(hResult);
 				int valueLength = retResultLength.getValue() & 0xffff;
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(hResult);
-					NotesNativeAPI64.get().OSMemFree(hResult);
+					Mem64.OSUnlockObject(hResult);
+					result = Mem64.OSMemFree(hResult);
+					NotesErrorUtils.checkResult(result);
 				}
+			}
+			else {
+				throw new IllegalStateException("got a null handle as computation result");
 			}
 			
 			return new FormulaExecutionResult(formulaResult, retNoteMatchesFormula.getValue()==1,
@@ -394,16 +400,20 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			int hResult = rethResult.getValue();
 			if (hResult!=0) {
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hResult);
+				Pointer valuePtr = Mem32.OSLockObject(hResult);
 				int valueLength = retResultLength.getValue() & 0xffff;
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(hResult);
-					NotesNativeAPI32.get().OSMemFree(hResult);
+					Mem32.OSUnlockObject(hResult);
+					result = Mem32.OSMemFree(hResult);
+					NotesErrorUtils.checkResult(result);
 				}
+			}
+			else {
+				throw new IllegalStateException("got a null handle as computation result");
 			}
 			
 			return new FormulaExecutionResult(formulaResult, retNoteMatchesFormula.getValue()==1,
@@ -459,8 +469,9 @@ public class FormulaExecution implements IRecyclableNotesObject {
 				m_hCompute64=0;
 			}
 			if (m_hFormula64!=0) {
-				NotesNativeAPI64.get().OSUnlockObject(m_hFormula64);
-				NotesNativeAPI64.get().OSMemFree(m_hFormula64);
+				Mem64.OSUnlockObject(m_hFormula64);
+				short result = Mem64.OSMemFree(m_hFormula64);
+				NotesErrorUtils.checkResult(result);
 				
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula64 = 0;
@@ -473,8 +484,10 @@ public class FormulaExecution implements IRecyclableNotesObject {
 				m_hCompute32=0;
 			}
 			if (m_hFormula32!=0) {
-				NotesNativeAPI32.get().OSUnlockObject(m_hFormula32);
-				NotesNativeAPI32.get().OSMemFree(m_hFormula32);
+				Mem32.OSUnlockObject(m_hFormula32);
+				short result = Mem32.OSMemFree(m_hFormula32);
+				NotesErrorUtils.checkResult(result);
+				
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula32 = 0;
 			}

@@ -8,9 +8,12 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryExtStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleListStruct;
@@ -18,7 +21,6 @@ import com.mindoo.domino.jna.internal.structs.NotesScheduleStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -224,7 +226,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			hasMoreData = rethMoreCtx.getValue()!=0;
 			long hRange = rethRange.getValue();
 			if (hRange!=0) {
-				Pointer rangePtr = NotesNativeAPI64.get().OSLockObject(hRange);
+				Pointer rangePtr = Mem64.OSLockObject(hRange);
 				try {
 					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					for (Object currObj : currentRange) {
@@ -234,8 +236,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(hRange);
-					NotesNativeAPI64.get().OSMemFree(hRange);
+					Mem64.OSUnlockObject(hRange);
+					result = Mem64.OSMemFree(hRange);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -249,7 +252,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			hasMoreData = rethMoreCtx.getValue()!=0;
 			int hRange = rethRange.getValue();
 			if (hRange!=0) {
-				Pointer rangePtr = NotesNativeAPI32.get().OSLockObject(hRange);
+				Pointer rangePtr = Mem32.OSLockObject(hRange);
 				try {
 					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					for (Object currObj : currentRange) {
@@ -259,8 +262,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(hRange);
-					NotesNativeAPI32.get().OSMemFree(hRange);
+					Mem32.OSUnlockObject(hRange);
+					result = Mem32.OSMemFree(hRange);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -277,7 +281,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				hasMoreData = rethMoreCtx.getValue()!=0;
 				long hRange = rethRange.getValue();
 				if (hRange!=0) {
-					Pointer rangePtr = NotesNativeAPI64.get().OSLockObject(hRange);
+					Pointer rangePtr = Mem64.OSLockObject(hRange);
 					try {
 						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 						for (Object currObj : currentRange) {
@@ -287,8 +291,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 						}
 					}
 					finally {
-						NotesNativeAPI64.get().OSUnlockObject(hRange);
-						NotesNativeAPI64.get().OSMemFree(hRange);
+						Mem64.OSUnlockObject(hRange);
+						result = Mem64.OSMemFree(hRange);
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}
@@ -301,7 +306,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				hasMoreData = rethMoreCtx.getValue()!=0;
 				int hRange = rethRange.getValue();
 				if (hRange!=0) {
-					Pointer rangePtr = NotesNativeAPI32.get().OSLockObject(hRange);
+					Pointer rangePtr = Mem32.OSLockObject(hRange);
 					try {
 						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 						for (Object currObj : currentRange) {
@@ -311,8 +316,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 						}
 					}
 					finally {
-						NotesNativeAPI32.get().OSUnlockObject(hRange);
-						NotesNativeAPI32.get().OSMemFree(hRange);
+						Mem32.OSUnlockObject(hRange);
+						result = Mem32.OSMemFree(hRange);
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}
@@ -375,7 +381,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			
 			long hRange = rethRange.getValue();
 			if (hRange!=0) {
-				Pointer rangePtr = NotesNativeAPI64.get().OSLockObject(hRange);
+				Pointer rangePtr = Mem64.OSLockObject(hRange);
 				try {
 					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					for (Object currObj : currentRange) {
@@ -385,8 +391,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(hRange);
-					NotesNativeAPI64.get().OSMemFree(hRange);
+					Mem64.OSUnlockObject(hRange);
+					result = Mem64.OSMemFree(hRange);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -399,7 +406,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			
 			int hRange = rethRange.getValue();
 			if (hRange!=0) {
-				Pointer rangePtr = NotesNativeAPI32.get().OSLockObject(hRange);
+				Pointer rangePtr = Mem32.OSLockObject(hRange);
 				try {
 					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					for (Object currObj : currentRange) {
@@ -409,8 +416,9 @@ public class NotesSchedule implements IRecyclableNotesObject {
 					}
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(hRange);
-					NotesNativeAPI32.get().OSMemFree(hRange);
+					Mem32.OSUnlockObject(hRange);
+					result = Mem32.OSMemFree(hRange);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -501,14 +509,15 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			hasMoreData = rethMore.getValue()!=0;
 			long hSchedList = rethSchedList.getValue();
 			if (hSchedList!=0) {
-				Pointer schedListPtr = NotesNativeAPI64.get().OSLockObject(hSchedList);
+				Pointer schedListPtr = Mem64.OSLockObject(hSchedList);
 				try {
 					List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
 					allSchedEntries.addAll(currSchedList);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(hSchedList);
-					NotesNativeAPI64.get().OSMemFree(hSchedList);
+					Mem64.OSUnlockObject(hSchedList);
+					result = Mem64.OSMemFree(hSchedList);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -521,14 +530,15 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			hasMoreData = rethMore.getValue()!=0;
 			int hSchedList = rethSchedList.getValue();
 			if (hSchedList!=0) {
-				Pointer schedListPtr = NotesNativeAPI32.get().OSLockObject(hSchedList);
+				Pointer schedListPtr = Mem32.OSLockObject(hSchedList);
 				try {
 					List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
 					allSchedEntries.addAll(currSchedList);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(hSchedList);
-					NotesNativeAPI32.get().OSMemFree(hSchedList);
+					Mem32.OSUnlockObject(hSchedList);
+					result = Mem32.OSMemFree(hSchedList);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -544,14 +554,15 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				hasMoreData = rethMore.getValue()!=0;
 				long hSchedList = rethSchedList.getValue();
 				if (hSchedList!=0) {
-					Pointer schedListPtr = NotesNativeAPI64.get().OSLockObject(hSchedList);
+					Pointer schedListPtr = Mem64.OSLockObject(hSchedList);
 					try {
 						List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
 						allSchedEntries.addAll(currSchedList);
 					}
 					finally {
-						NotesNativeAPI64.get().OSUnlockObject(hSchedList);
-						NotesNativeAPI64.get().OSMemFree(hSchedList);
+						Mem64.OSUnlockObject(hSchedList);
+						result = Mem64.OSMemFree(hSchedList);
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}
@@ -564,14 +575,15 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				hasMoreData = rethMore.getValue()!=0;
 				int hSchedList = rethSchedList.getValue();
 				if (hSchedList!=0) {
-					Pointer schedListPtr = NotesNativeAPI32.get().OSLockObject(hSchedList);
+					Pointer schedListPtr = Mem32.OSLockObject(hSchedList);
 					try {
 						List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
 						allSchedEntries.addAll(currSchedList);
 					}
 					finally {
-						NotesNativeAPI32.get().OSUnlockObject(hSchedList);
-						NotesNativeAPI32.get().OSMemFree(hSchedList);
+						Mem32.OSUnlockObject(hSchedList);
+						result = Mem32.OSMemFree(hSchedList);
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}

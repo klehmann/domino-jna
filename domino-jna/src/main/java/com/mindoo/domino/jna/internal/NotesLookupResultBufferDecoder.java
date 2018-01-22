@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
@@ -83,10 +84,10 @@ public class NotesLookupResultBufferDecoder {
 
 		Pointer bufferPtr;
 		if (PlatformUtils.is64Bit()) {
-			bufferPtr = NotesNativeAPI64.get().OSLockObject(bufferHandle);
+			bufferPtr = Mem64.OSLockObject(bufferHandle);
 		}
 		else {
-			bufferPtr = NotesNativeAPI32.get().OSLockObject((int) bufferHandle);
+			bufferPtr = Mem32.OSLockObject((int) bufferHandle);
 		}
 		
 		int bufferPos = 0;
@@ -248,12 +249,14 @@ public class NotesLookupResultBufferDecoder {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(bufferHandle);
-				NotesNativeAPI64.get().OSMemFree(bufferHandle);
+				Mem64.OSUnlockObject(bufferHandle);
+				short result = Mem64.OSMemFree(bufferHandle);
+				NotesErrorUtils.checkResult(result);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject((int)bufferHandle);
-				NotesNativeAPI32.get().OSMemFree((int)bufferHandle);
+				Mem32.OSUnlockObject((int)bufferHandle);
+				short result = Mem32.OSMemFree((int)bufferHandle);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		

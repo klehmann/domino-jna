@@ -5,9 +5,11 @@ import java.util.List;
 
 import com.mindoo.domino.jna.constants.ClusterLookup;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -66,15 +68,16 @@ public class ServerUtils {
 			if (hList==0)
 				return Collections.emptyList();
 			
-			Pointer pList = NotesNativeAPI64.get().OSLockObject(hList);
+			Pointer pList = Mem64.OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
 				List clusterMates = ItemDecoder.decodeTextListValue(pList, false);
 				return clusterMates;
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(hList);
-				NotesNativeAPI64.get().OSMemFree(hList);
+				Mem64.OSUnlockObject(hList);
+				result = Mem64.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
@@ -89,15 +92,16 @@ public class ServerUtils {
 			if (hList==0)
 				return Collections.emptyList();
 
-			Pointer pList = NotesNativeAPI32.get().OSLockObject(hList);
+			Pointer pList = Mem32.OSLockObject(hList);
 			try {
 				@SuppressWarnings("rawtypes")
 				List clusterMates = ItemDecoder.decodeTextListValue(pList, false);
 				return clusterMates;
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(hList);
-				NotesNativeAPI32.get().OSMemFree(hList);
+				Mem32.OSUnlockObject(hList);
+				result = Mem32.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 	}

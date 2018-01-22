@@ -394,10 +394,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 						FileOutputStream fOut = null;
 						Pointer ptr;
 						if (PlatformUtils.is64Bit()) {
-							ptr = NotesNativeAPI64.get().OSLockObject(buffer.getHandle64());
+							ptr = Mem64.OSLockObject(buffer.getHandle64());
 						}
 						else {
-							ptr = NotesNativeAPI32.get().OSLockObject(buffer.getHandle32());
+							ptr = Mem32.OSLockObject(buffer.getHandle32());
 						}
 						try {
 							byte[] bufferData = ptr.getByteArray(0, bufferLength);
@@ -407,10 +407,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 						}
 						finally {
 							if (PlatformUtils.is64Bit()) {
-								NotesNativeAPI64.get().OSUnlockObject(buffer.getHandle64());
+								Mem64.OSUnlockObject(buffer.getHandle64());
 							}
 							else {
-								NotesNativeAPI32.get().OSUnlockObject(buffer.getHandle32());
+								Mem32.OSUnlockObject(buffer.getHandle32());
 							}
 							
 							if (fOut!=null)
@@ -1361,10 +1361,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 							FileOutputStream fOut = null;
 							Pointer ptr;
 							if (PlatformUtils.is64Bit()) {
-								ptr = NotesNativeAPI64.get().OSLockObject(m_handle64);
+								ptr = Mem64.OSLockObject(m_handle64);
 							}
 							else {
-								ptr = NotesNativeAPI32.get().OSLockObject(m_handle32);
+								ptr = Mem32.OSLockObject(m_handle32);
 							}
 							try {
 								byte[] bufferData = ptr.getByteArray(0, m_size);
@@ -1374,10 +1374,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 							}
 							finally {
 								if (PlatformUtils.is64Bit()) {
-									NotesNativeAPI64.get().OSUnlockObject(m_handle64);
+									Mem64.OSUnlockObject(m_handle64);
 								}
 								else {
-									NotesNativeAPI32.get().OSUnlockObject(m_handle32);
+									Mem32.OSUnlockObject(m_handle32);
 								}
 								
 								if (fOut!=null)
@@ -1413,13 +1413,13 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				return;
 			
 			if (PlatformUtils.is64Bit()) {
-				short result = NotesNativeAPI64.get().OSMemFree(m_handle64);
+				short result = Mem64.OSMemFree(m_handle64);
 				NotesErrorUtils.checkResult(result);
 				NotesGC.__memoryBeeingFreed(this);
 				m_handle64=0;
 			}
 			else {
-				short result = NotesNativeAPI32.get().OSMemFree(m_handle32);
+				short result = Mem32.OSMemFree(m_handle32);
 				NotesErrorUtils.checkResult(result);
 				NotesGC.__memoryBeeingFreed(this);
 				m_handle32=0;

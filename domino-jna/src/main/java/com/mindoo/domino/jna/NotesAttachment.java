@@ -10,10 +10,12 @@ import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -174,7 +176,7 @@ public class NotesAttachment {
 				short result = NotesNativeAPI64.get().NSFDbReadObject(m_parentNote.getParent().getHandle64(), m_rrv, currOffset, bytesToRead, rethBuffer);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer ptr = NotesNativeAPI64.get().OSLockObject(rethBuffer.getValue());
+				Pointer ptr = Mem64.OSLockObject(rethBuffer.getValue());
 				try {
 					byte[] buffer = ptr.getByteArray(0, bytesToRead);
 					Action action = callback.read(buffer);
@@ -183,8 +185,9 @@ public class NotesAttachment {
 					}
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethBuffer.getValue());
-					NotesNativeAPI64.get().OSMemFree(rethBuffer.getValue());
+					Mem64.OSUnlockObject(rethBuffer.getValue());
+					result = Mem64.OSMemFree(rethBuffer.getValue());
+					NotesErrorUtils.checkResult(result);
 				}
 				
 				currOffset += bytesToRead;
@@ -210,7 +213,7 @@ public class NotesAttachment {
 				short result = NotesNativeAPI32.get().NSFDbReadObject(m_parentNote.getParent().getHandle32(), m_rrv, currOffset, bytesToRead, rethBuffer);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer ptr = NotesNativeAPI32.get().OSLockObject(rethBuffer.getValue());
+				Pointer ptr = Mem32.OSLockObject(rethBuffer.getValue());
 				try {
 					byte[] buffer = ptr.getByteArray(0, bytesToRead);
 					Action action = callback.read(buffer);
@@ -219,8 +222,9 @@ public class NotesAttachment {
 					}
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethBuffer.getValue());
-					NotesNativeAPI32.get().OSMemFree(rethBuffer.getValue());
+					Mem32.OSUnlockObject(rethBuffer.getValue());
+					result = Mem32.OSMemFree(rethBuffer.getValue());
+					NotesErrorUtils.checkResult(result);
 				}
 				
 				currOffset += bytesToRead;

@@ -39,9 +39,10 @@ import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -2411,12 +2412,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference retHandle = new LongByReference();
-			short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
+			short result = Mem64.OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
 			NotesErrorUtils.checkResult(result);
 
+			boolean inMemHandleLocked = false;
+			
 			long retHandleLong = retHandle.getValue();
 			try {
-				Pointer inBufPtr = NotesNativeAPI64.get().OSLockObject(retHandleLong);
+				Pointer inBufPtr = Mem64.OSLockObject(retHandleLong);
+				inMemHandleLocked = true;
 				
 				Pointer currInBufPtr = inBufPtr;
 				int offset = 0;
@@ -2427,8 +2431,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					currInBufPtr = inBufPtr.share(offset);
 				}
 				
-				NotesNativeAPI64.get().OSUnlockObject(retHandleLong);
-
+				Mem64.OSUnlockObject(retHandleLong);
+				inMemHandleLocked = false;
+				
 				IntByReference retSize = new IntByReference();
 				LongByReference rethOutBuf = new LongByReference();
 				short options = NotesConstants.fINFO_OID | NotesConstants.fINFO_ALLOW_HUGE | NotesConstants.fINFO_NOTEID;
@@ -2437,6 +2442,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 
 				long rethOutBufLong = rethOutBuf.getValue();
+				if (rethOutBufLong==0)
+					throw new IllegalStateException("Returned result handle is 0");
 				
 				//decode return buffer
 				int entrySize = 4 /* note id */ + NotesConstants.oidSize;
@@ -2445,27 +2452,35 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					throw new IllegalStateException("Unexpected size of return data. Expected "+noteIds.length*entrySize+" bytes for data of "+noteIds.length+" ids, got "+retSizeLong+" bytes");
 				}
 				
-				Pointer outBufPtr = NotesNativeAPI64.get().OSLockObject(rethOutBuf.getValue());
+				Pointer outBufPtr = Mem64.OSLockObject(rethOutBuf.getValue());
 				try {
 					retNoteInfo = decodeMultiNoteLookupData(noteIds.length, outBufPtr);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethOutBufLong);
-					NotesNativeAPI64.get().OSMemFree(rethOutBufLong);
+					Mem64.OSUnlockObject(rethOutBufLong);
+					result = Mem64.OSMemFree(rethOutBufLong);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 			finally {
-				NotesNativeAPI64.get().OSMemFree(retHandleLong);
+				if (inMemHandleLocked) {
+					Mem64.OSUnlockObject(retHandleLong);
+				}
+				result = Mem64.OSMemFree(retHandleLong);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
 			IntByReference retHandle = new IntByReference();
-			short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
+			short result = Mem32.OSMemAlloc((short) 0, noteIds.length * 4, retHandle);
 			NotesErrorUtils.checkResult(result);
+
+			boolean inMemHandleLocked = false;
 
 			int retHandleInt = retHandle.getValue();
 			try {
-				Pointer inBufPtr = NotesNativeAPI32.get().OSLockObject(retHandleInt);
+				Pointer inBufPtr = Mem32.OSLockObject(retHandleInt);
+				inMemHandleLocked = true;
 				
 				Pointer currInBufPtr = inBufPtr;
 				int offset = 0;
@@ -2476,8 +2491,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					currInBufPtr = inBufPtr.share(offset);
 				}
 				
-				NotesNativeAPI32.get().OSUnlockObject(retHandleInt);
-
+				Mem32.OSUnlockObject(retHandleInt);
+				inMemHandleLocked = false;
+				
 				IntByReference retSize = new IntByReference();
 				IntByReference rethOutBuf = new IntByReference();
 				short options = NotesConstants.fINFO_OID | NotesConstants.fINFO_ALLOW_HUGE | NotesConstants.fINFO_NOTEID;
@@ -2486,7 +2502,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 
 				int rethOutBufInt = rethOutBuf.getValue();
-				
+				if (rethOutBufInt==0)
+					throw new IllegalStateException("Returned result handle is 0");
+
 				//decode return buffer
 				int entrySize = 4 /* note id */ + NotesConstants.oidSize;
 				long retSizeLong = retSize.getValue();
@@ -2494,17 +2512,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					throw new IllegalStateException("Unexpected size of return data. Expected "+noteIds.length*entrySize+" bytes for data of "+noteIds.length+" ids, got "+retSizeLong+" bytes");
 				}
 				
-				Pointer outBufPtr = NotesNativeAPI32.get().OSLockObject(rethOutBuf.getValue());
+				Pointer outBufPtr = Mem32.OSLockObject(rethOutBuf.getValue());
 				try {
 					retNoteInfo = decodeMultiNoteLookupData(noteIds.length, outBufPtr);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethOutBufInt);
-					NotesNativeAPI32.get().OSMemFree(rethOutBufInt);
+					Mem32.OSUnlockObject(rethOutBufInt);
+					result = Mem32.OSMemFree(rethOutBufInt);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 			finally {
-				NotesNativeAPI32.get().OSMemFree(retHandleInt);
+				if (inMemHandleLocked) {
+					Mem32.OSUnlockObject(retHandleInt);
+				}
+				result = Mem32.OSMemFree(retHandleInt);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 
@@ -2578,12 +2601,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference retHandle = new LongByReference();
-			short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
+			short result = Mem64.OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
 			NotesErrorUtils.checkResult(result);
 
+			boolean inMemHandleLocked = false;
+			
 			long retHandleLong = retHandle.getValue();
 			try {
-				Pointer inBufPtr = NotesNativeAPI64.get().OSLockObject(retHandleLong);
+				Pointer inBufPtr = Mem64.OSLockObject(retHandleLong);
+				inMemHandleLocked = true;
 				
 				Pointer currInBufPtr = inBufPtr;
 				int offset = 0;
@@ -2594,8 +2620,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					currInBufPtr = inBufPtr.share(offset);
 				}
 				
-				NotesNativeAPI64.get().OSUnlockObject(retHandleLong);
-
+				Mem64.OSUnlockObject(retHandleLong);
+				inMemHandleLocked = false;
+				
 				IntByReference retSize = new IntByReference();
 				LongByReference rethOutBuf = new LongByReference();
 				short options = NotesConstants.fINFO_OID | NotesConstants.fINFO_ALLOW_HUGE | NotesConstants.fINFO_NOTEID;
@@ -2614,27 +2641,35 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					throw new IllegalStateException("Unexpected size of return data. Expected "+noteUNIDs.length*entrySize+" bytes for data of "+noteUNIDs.length+" ids, got "+retSizeLong+" bytes");
 				}
 				
-				Pointer outBufPtr = NotesNativeAPI64.get().OSLockObject(rethOutBuf.getValue());
+				Pointer outBufPtr = Mem64.OSLockObject(rethOutBuf.getValue());
 				try {
 					retNoteInfo = decodeMultiNoteLookupData(noteUNIDs.length, outBufPtr);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethOutBufLong);
-					NotesNativeAPI64.get().OSMemFree(rethOutBufLong);
+					Mem64.OSUnlockObject(rethOutBufLong);
+					result = Mem64.OSMemFree(rethOutBufLong);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 			finally {
-				NotesNativeAPI64.get().OSMemFree(retHandleLong);
+				if (inMemHandleLocked) {
+					Mem64.OSUnlockObject(retHandleLong);
+				}
+				result = Mem64.OSMemFree(retHandleLong);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
 			IntByReference retHandle = new IntByReference();
-			short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
+			short result = Mem32.OSMemAlloc((short) 0, noteUNIDs.length * 16, retHandle);
 			NotesErrorUtils.checkResult(result);
+
+			boolean inMemHandleLocked = false;
 
 			int retHandleInt = retHandle.getValue();
 			try {
-				Pointer inBufPtr = NotesNativeAPI32.get().OSLockObject(retHandleInt);
+				Pointer inBufPtr = Mem32.OSLockObject(retHandleInt);
+				inMemHandleLocked = true;
 				
 				Pointer currInBufPtr = inBufPtr;
 				int offset = 0;
@@ -2645,8 +2680,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					currInBufPtr = inBufPtr.share(offset);
 				}
 				
-				NotesNativeAPI32.get().OSUnlockObject(retHandleInt);
-
+				Mem32.OSUnlockObject(retHandleInt);
+				inMemHandleLocked = false;
+				
 				IntByReference retSize = new IntByReference();
 				IntByReference rethOutBuf = new IntByReference();
 				short options = NotesConstants.fINFO_OID | NotesConstants.fINFO_ALLOW_HUGE | NotesConstants.fINFO_NOTEID;
@@ -2664,17 +2700,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					throw new IllegalStateException("Unexpected size of return data. Expected "+noteUNIDs.length*entrySize+" bytes for data of "+noteUNIDs.length+" ids, got "+retSizeLong+" bytes");
 				}
 				
-				Pointer outBufPtr = NotesNativeAPI32.get().OSLockObject(rethOutBuf.getValue());
+				Pointer outBufPtr = Mem32.OSLockObject(rethOutBuf.getValue());
 				try {
 					retNoteInfo = decodeMultiNoteLookupData(noteUNIDs.length, outBufPtr);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethOutBufInt);
-					NotesNativeAPI32.get().OSMemFree(rethOutBufInt);
+					Mem32.OSUnlockObject(rethOutBufInt);
+					result = Mem32.OSMemFree(rethOutBufInt);
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 			finally {
-				NotesNativeAPI32.get().OSMemFree(retHandleInt);
+				if (inMemHandleLocked) {
+					Mem32.OSUnlockObject(retHandleInt);
+				}
+				result = Mem32.OSMemFree(retHandleInt);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 

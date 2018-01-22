@@ -32,6 +32,8 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
@@ -3272,7 +3274,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			long hCollData = rethCollData.getValue();
-			Pointer ptrCollectionData = NotesNativeAPI64.get().OSLockObject(hCollData);
+			Pointer ptrCollectionData = Mem64.OSLockObject(hCollData);
 			try {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
@@ -3293,8 +3295,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				return data;
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(hCollData);
-				NotesNativeAPI64.get().OSMemFree(hCollData);
+				Mem64.OSUnlockObject(hCollData);
+				result = Mem64.OSMemFree(hCollData);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
@@ -3303,7 +3306,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			int hCollData = rethCollData.getValue();
-			Pointer ptrCollectionData = NotesNativeAPI32.get().OSLockObject(hCollData);
+			Pointer ptrCollectionData = Mem32.OSLockObject(hCollData);
 			try {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
@@ -3324,8 +3327,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				return data;
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(hCollData);
-				NotesNativeAPI32.get().OSMemFree(hCollData);
+				Mem32.OSUnlockObject(hCollData);
+				result = Mem32.OSMemFree(hCollData);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 	}

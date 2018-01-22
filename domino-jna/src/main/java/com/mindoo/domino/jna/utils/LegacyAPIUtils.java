@@ -242,8 +242,8 @@ public class LegacyAPIUtils {
 			long hList = PlatformUtils.is64Bit() ? namesList.getHandle64() : namesList.getHandle32();
 			final Session session = (Session) createXPageSession.invoke(null, namesList.getNames().get(0), hList, true, false);
 
-			final long[] longHandle = new long[1];
-			final int[] intHandle = new int[1];
+			long longHandle = 0;
+			int intHandle = 0;
 
 			if (PlatformUtils.is64Bit()) {
 				Long oldHandle = (Long) NotesGC.getCustomValue("FakeSessionHandle");
@@ -252,8 +252,7 @@ public class LegacyAPIUtils {
 				}
 				Long newHandle = oldHandle.longValue()+1;
 				NotesGC.setCustomValue("FakeSessionHandle", newHandle.longValue());
-				longHandle[0] = newHandle.longValue();
-
+				longHandle = newHandle.longValue();
 			}
 			else {
 				Integer oldHandle = (Integer) NotesGC.getCustomValue("FakeSessionHandle");
@@ -262,7 +261,7 @@ public class LegacyAPIUtils {
 				}
 				Integer newHandle = oldHandle.intValue()+1;
 				NotesGC.setCustomValue("FakeSessionHandle", newHandle.intValue());
-				intHandle[0] = newHandle.intValue();
+				intHandle = newHandle.intValue();
 			}
 
 			NotesGC.__objectCreated(Session.class, new DummySessionRecyclableNotesObject(intHandle, longHandle, namesList.getNames(), session));
@@ -280,12 +279,12 @@ public class LegacyAPIUtils {
 	 * @author Karsten Lehmann
 	 */
 	private static final class DummySessionRecyclableNotesObject implements IRecyclableNotesObject {
-		private final int[] intHandle;
-		private final long[] longHandle;
+		private final int intHandle;
+		private final long longHandle;
 		private final List<String> userNamesListCanonical;
 		private final Session session;
 
-		private DummySessionRecyclableNotesObject(int[] intHandle, long[] longHandle,
+		private DummySessionRecyclableNotesObject(int intHandle, long longHandle,
 				List<String> userNamesListCanonical, Session session) {
 			this.intHandle = intHandle;
 			this.longHandle = longHandle;
@@ -324,18 +323,18 @@ public class LegacyAPIUtils {
 		
 		@Override
 		public long getHandle64() {
-			return longHandle[0];
+			return longHandle;
 		}
 
 		@Override
 		public int getHandle32() {
-			return intHandle[0];
+			return intHandle;
 		}
 
 		@Override
 		public String toString() {
 			if (isRecycled()) {
-				return "Session [recycled]";
+				return "Session [recycled, names="+userNamesListCanonical.toString()+"]";
 			}
 			else {
 				return "Session [names="+userNamesListCanonical.toString()+"]";

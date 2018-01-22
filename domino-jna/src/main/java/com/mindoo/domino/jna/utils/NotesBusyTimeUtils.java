@@ -11,9 +11,11 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.ScheduleOptions;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
@@ -86,7 +88,7 @@ public class NotesBusyTimeUtils {
 			NotesErrorUtils.checkResult(result);
 
 			long hList = rethList.getValue();
-			NotesNativeAPI64.get().OSUnlockObject(hList);
+			Mem64.OSUnlockObject(hList);
 			
 			for (int i=0; i<namesCanonical.size(); i++) {
 				String currName = namesCanonical.get(i);
@@ -99,7 +101,7 @@ public class NotesBusyTimeUtils {
 			
 			int listSize = retListSize.getValue() & 0xffff;
 			
-			Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hList);
+			Pointer valuePtr = Mem64.OSLockObject(hList);
 			LongByReference rethRange = new LongByReference();
 			try {
 				result = NotesNativeAPI64.get().SchFreeTimeSearch(unidStruct, apptOrigDateStruct, (short) (findFirstFit ? 1 : 0), 0, intervalPair,
@@ -109,21 +111,23 @@ public class NotesBusyTimeUtils {
 				
 				long hRange = rethRange.getValue();
 				if (hRange!=0) {
-					Pointer rangePtr = NotesNativeAPI64.get().OSLockObject(hRange);
+					Pointer rangePtr = Mem64.OSLockObject(hRange);
 					try {
 						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					}
 					finally {
-						NotesNativeAPI64.get().OSUnlockObject(rethRange.getValue());
-						NotesNativeAPI64.get().OSMemFree(rethRange.getValue());
+						Mem64.OSUnlockObject(rethRange.getValue());
+						result = Mem64.OSMemFree(rethRange.getValue());
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(hList);
-				NotesNativeAPI64.get().OSMemFree(hList);
+				Mem64.OSUnlockObject(hList);
+				result = Mem64.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
@@ -137,7 +141,7 @@ public class NotesBusyTimeUtils {
 			NotesErrorUtils.checkResult(result);
 
 			int hList = rethList.getValue();
-			NotesNativeAPI32.get().OSUnlockObject(hList);
+			Mem32.OSUnlockObject(hList);
 			
 			for (int i=0; i<namesCanonical.size(); i++) {
 				String currName = namesCanonical.get(i);
@@ -150,7 +154,7 @@ public class NotesBusyTimeUtils {
 			
 			int listSize = retListSize.getValue() & 0xffff;
 			
-			Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hList);
+			Pointer valuePtr = Mem32.OSLockObject(hList);
 			IntByReference rethRange = new IntByReference();
 			try {
 				result = NotesNativeAPI32.get().SchFreeTimeSearch(unidStruct, apptOrigDateStruct, (short) (findFirstFit ? 1 : 0), 0, intervalPair,
@@ -159,21 +163,23 @@ public class NotesBusyTimeUtils {
 				
 				int hRange = rethRange.getValue();
 				if (hRange!=0) {
-					Pointer rangePtr = NotesNativeAPI32.get().OSLockObject(hRange);
+					Pointer rangePtr = Mem32.OSLockObject(hRange);
 					try {
 						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
 					}
 					finally {
-						NotesNativeAPI32.get().OSUnlockObject(rethRange.getValue());
-						NotesNativeAPI32.get().OSMemFree(rethRange.getValue());
+						Mem32.OSUnlockObject(rethRange.getValue());
+						result = Mem32.OSMemFree(rethRange.getValue());
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(hList);
-				NotesNativeAPI32.get().OSMemFree(hList);
+				Mem32.OSUnlockObject(hList);
+				result = Mem32.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		
@@ -245,7 +251,7 @@ public class NotesBusyTimeUtils {
 			NotesErrorUtils.checkResult(result);
 
 			long hList = rethList.getValue();
-			NotesNativeAPI64.get().OSUnlockObject(hList);
+			Mem64.OSUnlockObject(hList);
 			
 			for (int i=0; i<namesCanonical.size(); i++) {
 				String currName = namesCanonical.get(i);
@@ -258,7 +264,7 @@ public class NotesBusyTimeUtils {
 			
 			int listSize = retListSize.getValue() & 0xffff;
 			
-			Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hList);
+			Pointer valuePtr = Mem64.OSLockObject(hList);
 			LongByReference rethCntnr = new LongByReference();
 			try {
 				result = NotesNativeAPI64.get().SchRetrieve(unidStruct, null, optionsAsInt, intervalPair, valuePtr, rethCntnr,
@@ -272,8 +278,9 @@ public class NotesBusyTimeUtils {
 				return scheduleContainer;
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(hList);
-				NotesNativeAPI64.get().OSMemFree(hList);
+				Mem64.OSUnlockObject(hList);
+				result = Mem64.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		else {
@@ -287,7 +294,7 @@ public class NotesBusyTimeUtils {
 			NotesErrorUtils.checkResult(result);
 
 			int hList = rethList.getValue();
-			NotesNativeAPI32.get().OSUnlockObject(hList);
+			Mem32.OSUnlockObject(hList);
 			
 			for (int i=0; i<namesCanonical.size(); i++) {
 				String currName = namesCanonical.get(i);
@@ -300,7 +307,7 @@ public class NotesBusyTimeUtils {
 			
 			int listSize = retListSize.getValue() & 0xffff;
 			
-			Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hList);
+			Pointer valuePtr = Mem32.OSLockObject(hList);
 			IntByReference rethCntnr = new IntByReference();
 			try {
 				result = NotesNativeAPI32.get().SchRetrieve(unidStruct, null, optionsAsInt, intervalPair, valuePtr, rethCntnr, null, null,null);
@@ -313,8 +320,9 @@ public class NotesBusyTimeUtils {
 				return scheduleContainer;
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(hList);
-				NotesNativeAPI32.get().OSMemFree(hList);
+				Mem32.OSUnlockObject(hList);
+				result = Mem32.OSMemFree(hList);
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 	}

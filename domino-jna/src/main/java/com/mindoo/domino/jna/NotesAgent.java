@@ -10,9 +10,11 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -290,14 +292,14 @@ public class NotesAgent implements IRecyclableNotesObject {
 					NotesNativeAPI64.get().AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
 					int iRetSize = retSize.getValue();
 					if (iRetSize!=0) {
-						Pointer bufPtr = NotesNativeAPI64.get().OSLockObject(retBufHandle.getValue());
+						Pointer bufPtr = Mem64.OSLockObject(retBufHandle.getValue());
 						try {
 							//decode std out buffer content
 							String bufContentUnicode = NotesStringUtils.fromLMBCS(bufPtr, iRetSize);
 							stdOut.write(bufContentUnicode);
 						}
 						finally {
-							NotesNativeAPI64.get().OSUnlockObject(retBufHandle.getValue());
+							Mem64.OSUnlockObject(retBufHandle.getValue());
 						}
 					}
 				}
@@ -365,14 +367,14 @@ public class NotesAgent implements IRecyclableNotesObject {
 					NotesNativeAPI32.get().AgentQueryStdoutBuffer(rethContext.getValue(), retBufHandle, retSize);
 					int iRetSize = retSize.getValue();
 					if (iRetSize!=0) {
-						Pointer bufPtr = NotesNativeAPI32.get().OSLockObject(retBufHandle.getValue());
+						Pointer bufPtr = Mem32.OSLockObject(retBufHandle.getValue());
 						try {
 							//decode std out buffer content
 							String bufContentUnicode = NotesStringUtils.fromLMBCS(bufPtr, iRetSize);
 							stdOut.write(bufContentUnicode);
 						}
 						finally {
-							NotesNativeAPI32.get().OSUnlockObject(retBufHandle.getValue());
+							Mem32.OSUnlockObject(retBufHandle.getValue());
 						}
 					}
 				}

@@ -41,6 +41,8 @@ import com.mindoo.domino.jna.html.TargetType;
 import com.mindoo.domino.jna.internal.CollationDecoder;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
 import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
@@ -1314,10 +1316,10 @@ public class NotesNote implements IRecyclableNotesObject {
 	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, NotesBlockIdStruct valueBlockId, int valueLength) {
 		Pointer poolPtr;
 		if (PlatformUtils.is64Bit()) {
-			poolPtr = NotesNativeAPI64.get().OSLockObject((long) valueBlockId.pool);
+			poolPtr = Mem64.OSLockObject((long) valueBlockId.pool);
 		}
 		else {
-			poolPtr = NotesNativeAPI32.get().OSLockObject(valueBlockId.pool);
+			poolPtr = Mem32.OSLockObject(valueBlockId.pool);
 		}
 		
 		int block = (valueBlockId.block & 0xffff);
@@ -1330,10 +1332,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject((long) valueBlockId.pool);
+				Mem64.OSUnlockObject((long) valueBlockId.pool);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(valueBlockId.pool);
+				Mem32.OSUnlockObject(valueBlockId.pool);
 			}
 		}
 	}
@@ -1496,15 +1498,16 @@ public class NotesNote implements IRecyclableNotesObject {
 				short result = NotesNativeAPI64.get().NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
 				NotesErrorUtils.checkResult(result);
 
-				Pointer formulaPtr = NotesNativeAPI64.get().OSLockObject(rethFormulaText.getValue());
+				Pointer formulaPtr = Mem64.OSLockObject(rethFormulaText.getValue());
 				try {
 					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
 					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
 					return Arrays.asList((Object) formula);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethFormulaText.getValue());
-					NotesNativeAPI64.get().OSMemFree(rethFormulaText.getValue());
+					Mem64.OSUnlockObject(rethFormulaText.getValue());
+					result = Mem64.OSMemFree(rethFormulaText.getValue());
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 			else {
@@ -1513,15 +1516,16 @@ public class NotesNote implements IRecyclableNotesObject {
 				short result = NotesNativeAPI32.get().NSFFormulaDecompile(valueDataPtr, isSelectionFormula, rethFormulaText, retFormulaTextLength);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer formulaPtr = NotesNativeAPI32.get().OSLockObject(rethFormulaText.getValue());
+				Pointer formulaPtr = Mem32.OSLockObject(rethFormulaText.getValue());
 				try {
 					int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
 					String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
 					return Arrays.asList((Object) formula);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethFormulaText.getValue());
-					NotesNativeAPI32.get().OSMemFree(rethFormulaText.getValue());
+					Mem32.OSUnlockObject(rethFormulaText.getValue());
+					result = Mem32.OSMemFree(rethFormulaText.getValue());
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -1644,10 +1648,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		Pointer poolPtr;
 		if (PlatformUtils.is64Bit()) {
-			poolPtr = NotesNativeAPI64.get().OSLockObject((long) valueBlockId.pool);
+			poolPtr = Mem64.OSLockObject((long) valueBlockId.pool);
 		}
 		else {
-			poolPtr = NotesNativeAPI32.get().OSLockObject(valueBlockId.pool);
+			poolPtr = Mem32.OSLockObject(valueBlockId.pool);
 		}
 		
 		int block = (int) (valueBlockId.block & 0xffff);
@@ -1660,11 +1664,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject((long) valueBlockId.pool);
+				Mem64.OSUnlockObject((long) valueBlockId.pool);
 				
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(valueBlockId.pool);
+				Mem32.OSUnlockObject(valueBlockId.pool);
 			}
 		}
 	}
@@ -2130,14 +2134,14 @@ public class NotesNote implements IRecyclableNotesObject {
 						errorTxt = "";
 					}
 					else {
-						Pointer errorTextPtr = NotesNativeAPI64.get().OSLockObject(hErrorText);
+						Pointer errorTextPtr = Mem64.OSLockObject(hErrorText);
 						System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
 						try {
 							//TODO find out where this offset 6 comes from
 							errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 						}
 						finally {
-							NotesNativeAPI64.get().OSUnlockObject(hErrorText);
+							Mem64.OSUnlockObject(hErrorText);
 						}
 					}
 
@@ -2173,13 +2177,13 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = NotesNativeAPI32.get().OSLockObject(hErrorText);
+							Pointer errorTextPtr = Mem32.OSLockObject(hErrorText);
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								NotesNativeAPI32.get().OSUnlockObject(hErrorText);
+								Mem32.OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2210,13 +2214,13 @@ public class NotesNote implements IRecyclableNotesObject {
 							errorTxt = "";
 						}
 						else {
-							Pointer errorTextPtr = NotesNativeAPI32.get().OSLockObject(hErrorText);
+							Pointer errorTextPtr = Mem32.OSLockObject(hErrorText);
 							try {
 								//TODO find out where this offset 6 comes from
 								errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
 							}
 							finally {
-								NotesNativeAPI32.get().OSUnlockObject(hErrorText);
+								Mem32.OSUnlockObject(hErrorText);
 							}
 						}
 
@@ -2664,10 +2668,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
@@ -2679,15 +2683,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
@@ -2699,7 +2703,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		
@@ -2709,10 +2713,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
@@ -2722,15 +2726,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
@@ -2740,7 +2744,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -2768,10 +2772,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
@@ -2786,15 +2790,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
@@ -2809,7 +2813,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -2832,7 +2836,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 
 				long hList = rethList.getValue();
-				NotesNativeAPI64.get().OSUnlockObject(hList);
+				Mem64.OSUnlockObject(hList);
 				
 				for (int i=0; i<strList.size(); i++) {
 					String currStr = strList.get(i);
@@ -2846,13 +2850,13 @@ public class NotesNote implements IRecyclableNotesObject {
 				int listSize = retListSize.getValue() & 0xffff;
 				
 				@SuppressWarnings("unused")
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(hList);
+				Pointer valuePtr = Mem64.OSLockObject(hList);
 				try {
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(hList);
+					Mem64.OSUnlockObject(hList);
 				}
 			}
 			else {
@@ -2866,7 +2870,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 
 				int hList = rethList.getValue();
-				NotesNativeAPI32.get().OSUnlockObject(hList);
+				Mem32.OSUnlockObject(hList);
 				
 				for (int i=0; i<strList.size(); i++) {
 					String currStr = strList.get(i);
@@ -2880,13 +2884,13 @@ public class NotesNote implements IRecyclableNotesObject {
 				int listSize = retListSize.getValue() & 0xffff;
 				
 				@SuppressWarnings("unused")
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(hList);
+				Pointer valuePtr = Mem32.OSLockObject(hList);
 				try {
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(hList);
+					Mem32.OSUnlockObject(hList);
 				}
 			}
 		}
@@ -2920,10 +2924,10 @@ public class NotesNote implements IRecyclableNotesObject {
 
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
@@ -2960,15 +2964,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
@@ -3005,7 +3009,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -3047,10 +3051,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
@@ -3103,15 +3107,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
@@ -3164,7 +3168,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -3203,10 +3207,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
-				short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI64.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
@@ -3223,15 +3227,15 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(rethItem.getValue());
+					Mem64.OSUnlockObject(rethItem.getValue());
 				}
 			}
 			else {
 				IntByReference rethItem = new IntByReference();
-				short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, valueSize, rethItem);
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
 				NotesErrorUtils.checkResult(result);
 				
-				Pointer valuePtr = NotesNativeAPI32.get().OSLockObject(rethItem.getValue());
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
 				
 				try {
 					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
@@ -3248,7 +3252,7 @@ public class NotesNote implements IRecyclableNotesObject {
 					return item;
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(rethItem.getValue());
+					Mem32.OSUnlockObject(rethItem.getValue());
 				}
 			}
 		}
@@ -4586,14 +4590,14 @@ public class NotesNote implements IRecyclableNotesObject {
 				finally {
 					if (PlatformUtils.is64Bit()) {
 						if (hRef64!=0) {
-							NotesNativeAPI64.get().OSMemoryUnlock(hRef64);
-							NotesNativeAPI64.get().OSMemoryFree(hRef64);
+							Mem64.OSMemoryUnlock(hRef64);
+							Mem64.OSMemoryFree(hRef64);
 						}
 					}
 					else {
 						if (hRef32!=0) {
-							NotesNativeAPI32.get().OSMemoryUnlock(hRef32);
-							NotesNativeAPI32.get().OSMemoryFree(hRef32);
+							Mem32.OSMemoryUnlock(hRef32);
+							Mem32.OSMemoryFree(hRef32);
 						}
 					}
 				}

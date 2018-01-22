@@ -23,14 +23,16 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -538,10 +540,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		
 		try {
@@ -557,10 +559,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 	}
@@ -589,10 +591,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		
 		try {
@@ -611,10 +613,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 	}
@@ -628,10 +630,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		
 		try {
@@ -651,10 +653,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 
@@ -672,10 +674,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		
 		try {
@@ -695,10 +697,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 
@@ -715,10 +717,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		short newFlags = (short) ((isInverted() ? NotesConstants.IDTABLE_INVERTED : 0) + (modified ? NotesConstants.IDTABLE_MODIFIED : 0));
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		
 		try {
@@ -734,10 +736,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 	}
@@ -753,10 +755,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		short newFlags = (short) ((isModified() ? NotesConstants.IDTABLE_MODIFIED : 0) + (inverted ? NotesConstants.IDTABLE_INVERTED : 0));
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
-			ptr = NotesNativeAPI64.get().OSLockObject(m_idTableHandle64);
+			ptr = Mem64.OSLockObject(m_idTableHandle64);
 		}
 		else {
-			ptr = NotesNativeAPI32.get().OSLockObject(m_idTableHandle32);
+			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		try {
 //			int sizeInBytes;
@@ -772,10 +774,10 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject(m_idTableHandle64);
+				Mem64.OSUnlockObject(m_idTableHandle64);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_idTableHandle32);
+				Mem32.OSUnlockObject(m_idTableHandle32);
 			}
 		}
 	}

@@ -12,10 +12,12 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
@@ -293,13 +295,13 @@ public class NotesNamingUtils {
 		}
 		
 		IntByReference retHandle = new IntByReference();
-		short result = NotesNativeAPI32.get().OSMemAlloc((short) 0, NotesConstants.namesListHeaderSize32 + bOut.size(), retHandle);
+		short result = Mem32.OSMemAlloc((short) 0, NotesConstants.namesListHeaderSize32 + bOut.size(), retHandle);
 		NotesErrorUtils.checkResult(result);
 		
 		final int retHandleAsInt = retHandle.getValue();
 		
 		//write the data
-		Pointer ptr = NotesNativeAPI32.get().OSLockObject(retHandleAsInt);
+		Pointer ptr = Mem32.OSLockObject(retHandleAsInt);
 		try {
 			byte[] namesListByteArr = namesListMem.getByteArray(0, (int) namesListMem.size());
 			ptr.write(0, namesListByteArr, 0, namesListByteArr.length);
@@ -308,7 +310,7 @@ public class NotesNamingUtils {
 			ptr.write(namesListByteArr.length, namesDataArr, 0, namesDataArr.length);
 		}
 		finally {
-			NotesNativeAPI32.get().OSUnlockObject(retHandleAsInt);
+			Mem32.OSUnlockObject(retHandleAsInt);
 		}
 
 		return retHandleAsInt;
@@ -350,13 +352,13 @@ public class NotesNamingUtils {
 		}
 
 		LongByReference retHandle = new LongByReference();
-		short result = NotesNativeAPI64.get().OSMemAlloc((short) 0, (int) namesListMem.size() + bOut.size(), retHandle);
+		short result = Mem64.OSMemAlloc((short) 0, (int) namesListMem.size() + bOut.size(), retHandle);
 		NotesErrorUtils.checkResult(result);
 		
 		long retHandleAsLong = retHandle.getValue();
 		
 		//write the data
-		Pointer ptr = NotesNativeAPI64.get().OSLockObject(retHandleAsLong);
+		Pointer ptr = Mem64.OSLockObject(retHandleAsLong);
 		try {
 			byte[] namesListByteArr = namesListMem.getByteArray(0, (int) namesListMem.size());
 			ptr.write(0, namesListByteArr, 0, namesListByteArr.length);
@@ -365,7 +367,7 @@ public class NotesNamingUtils {
 			ptr.write(namesListByteArr.length, namesDataArr, 0, namesDataArr.length);
 		}
 		finally {
-			NotesNativeAPI64.get().OSUnlockObject(retHandleAsLong);
+			Mem64.OSUnlockObject(retHandleAsLong);
 		}
 		
 		return retHandleAsLong;
@@ -506,7 +508,7 @@ public class NotesNamingUtils {
 		*/
 		
 		if (PlatformUtils.is64Bit()) {
-			Pointer namesListBufferPtr = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
+			Pointer namesListBufferPtr = Mem64.OSLockObject(namesList.getHandle64());
 			
 			try {
 				if (PlatformUtils.isWindows()) {
@@ -535,11 +537,11 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
+				Mem64.OSUnlockObject(namesList.getHandle64());
 			}
 		}
 		else {
-			Pointer namesListBufferPtr = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
+			Pointer namesListBufferPtr = Mem32.OSLockObject(namesList.getHandle32());
 			
 			try {
 				//setting authenticated flag for the user is required when running on the server
@@ -559,7 +561,7 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
+				Mem32.OSUnlockObject(namesList.getHandle32());
 			}
 		}
 	}
@@ -590,7 +592,7 @@ public class NotesNamingUtils {
 		int authenticated;
 		
 		if (PlatformUtils.is64Bit()) {
-			Pointer namesListBufferPtr = NotesNativeAPI64.get().OSLockObject(namesList.getHandle64());
+			Pointer namesListBufferPtr = Mem64.OSLockObject(namesList.getHandle64());
 			
 			try {
 				if (PlatformUtils.isWindows()) {
@@ -613,11 +615,11 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(namesList.getHandle64());
+				Mem64.OSUnlockObject(namesList.getHandle64());
 			}
 		}
 		else {
-			Pointer namesListBufferPtr = NotesNativeAPI32.get().OSLockObject(namesList.getHandle32());
+			Pointer namesListBufferPtr = Mem32.OSLockObject(namesList.getHandle32());
 			
 			try {
 				//setting authenticated flag for the user is required when running on the server
@@ -633,7 +635,7 @@ public class NotesNamingUtils {
 				}
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(namesList.getHandle32());
+				Mem32.OSUnlockObject(namesList.getHandle32());
 			}
 		}
 		

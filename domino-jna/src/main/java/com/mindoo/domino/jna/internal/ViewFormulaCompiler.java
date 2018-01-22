@@ -95,9 +95,13 @@ public class ViewFormulaCompiler {
 		
 		if (PlatformUtils.is64Bit()) {
 			hViewFormula64 = rethViewFormula64.getValue();
+			if (hViewFormula64==0)
+				throw new IllegalStateException("Selection formula handle is null");
 		}
 		else {
 			hViewFormula32 = rethViewFormula32.getValue();
+			if (hViewFormula32==0)
+				throw new IllegalStateException("Selection formula handle is null");
 		}
 
 		if (columnItemNamesAndFormulas!=null) {
@@ -201,31 +205,44 @@ public class ViewFormulaCompiler {
 				//in any case free the compiled column memory
 				if (PlatformUtils.is64Bit()) {
 					for (Long currColumnFormulaHandle : columnFormulaHandlesToDisposeOnError64) {
-						NotesNativeAPI64.get().OSMemFree(currColumnFormulaHandle.longValue());
+						result = Mem64.OSMemFree(currColumnFormulaHandle.longValue());
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 				else {
 					for (Integer currColumnFormulaHandle : columnFormulaHandlesToDisposeOnError32) {
-						NotesNativeAPI32.get().OSMemFree(currColumnFormulaHandle.intValue());
+						result = Mem32.OSMemFree(currColumnFormulaHandle.intValue());
+						NotesErrorUtils.checkResult(result);
 					}
 				}
 				
 				//and if errors occurred compiling the columns, free the view formula memory as well
 				if (errorCompilingColumns) {
 					if (PlatformUtils.is64Bit()) {
-						NotesNativeAPI64.get().OSMemFree(hViewFormula64);
+						result = Mem64.OSMemFree(hViewFormula64);
+						NotesErrorUtils.checkResult(result);
 					}
 					else {
-						NotesNativeAPI32.get().OSMemFree(hViewFormula32);
+						result = Mem32.OSMemFree(hViewFormula32);
+						NotesErrorUtils.checkResult(result);
 					}
 				}
+			}
+			
+			if (errorCompilingColumns) {
+				//should not happen; just avoiding to return a null handle in case of programming error
+				throw new IllegalStateException("Unexpected state. There were unreported errors compiling the column formulas");
 			}
 		}
 		
 		if (PlatformUtils.is64Bit()) {
+			if (hViewFormula64==0)
+				throw new IllegalStateException("Unexpected state. Formula handle to be returned is null");
 			return hViewFormula64;
 		}
 		else {
+			if (hViewFormula32==0)
+				throw new IllegalStateException("Unexpected state. Formula handle to be returned is null");
 			return hViewFormula32;
 		}
 	}

@@ -10,9 +10,11 @@ import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -496,10 +498,10 @@ public class NotesItem {
 
 		Pointer poolPtr;
 		if (PlatformUtils.is64Bit()) {
-			poolPtr = NotesNativeAPI64.get().OSLockObject((long) m_itemBlockId.pool);
+			poolPtr = Mem64.OSLockObject((long) m_itemBlockId.pool);
 		}
 		else {
-			poolPtr = NotesNativeAPI32.get().OSLockObject(m_itemBlockId.pool);
+			poolPtr = Mem32.OSLockObject(m_itemBlockId.pool);
 		}
 		
 		int block = (int) (m_itemBlockId.block & 0xffff);
@@ -515,10 +517,10 @@ public class NotesItem {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject((long) m_itemBlockId.pool);
+				Mem64.OSUnlockObject((long) m_itemBlockId.pool);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_itemBlockId.pool);
+				Mem32.OSUnlockObject(m_itemBlockId.pool);
 			}
 		}
 	}
@@ -660,10 +662,10 @@ public class NotesItem {
 
 		Pointer poolPtr;
 		if (PlatformUtils.is64Bit()) {
-			poolPtr = NotesNativeAPI64.get().OSLockObject((long) m_valueBlockId.pool);
+			poolPtr = Mem64.OSLockObject((long) m_valueBlockId.pool);
 		}
 		else {
-			poolPtr = NotesNativeAPI32.get().OSLockObject(m_valueBlockId.pool);
+			poolPtr = Mem32.OSLockObject(m_valueBlockId.pool);
 		}
 		
 		int block = (m_valueBlockId.block & 0xffff);
@@ -762,10 +764,10 @@ public class NotesItem {
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().OSUnlockObject((long) m_valueBlockId.pool);
+				Mem64.OSUnlockObject((long) m_valueBlockId.pool);
 			}
 			else {
-				NotesNativeAPI32.get().OSUnlockObject(m_valueBlockId.pool);
+				Mem32.OSUnlockObject(m_valueBlockId.pool);
 			}
 		}
 	}

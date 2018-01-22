@@ -11,6 +11,8 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -58,13 +60,13 @@ public class NotesACL implements IAllocatedMemory {
 			return;
 
 		if (PlatformUtils.is64Bit()) {
-			short result = NotesNativeAPI64.get().OSMemFree(m_hACL64);
+			short result = Mem64.OSMemFree(m_hACL64);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_hACL64=0;
 		}
 		else {
-			short result = NotesNativeAPI32.get().OSMemFree(m_hACL32);
+			short result = Mem32.OSMemFree(m_hACL32);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_hACL32=0;
@@ -179,7 +181,7 @@ public class NotesACL implements IAllocatedMemory {
 			LongByReference rethPrivNames = new LongByReference();
 			
 			long hNamesList = namesList.getHandle64();
-			Pointer pNamesList = NotesNativeAPI64.get().OSLockObject(hNamesList);
+			Pointer pNamesList = Mem64.OSLockObject(hNamesList);
 			try {
 				result = NotesNativeAPI64.get().ACLLookupAccess(m_hACL64, pNamesList, retAccessLevel,
 						retPrivileges, retAccessFlags, rethPrivNames);
@@ -190,7 +192,7 @@ public class NotesACL implements IAllocatedMemory {
 				if (hPrivNames==0)
 					roles = Collections.emptyList();
 				else {
-					Pointer pPrivNames = NotesNativeAPI64.get().OSLockObject(hPrivNames);
+					Pointer pPrivNames = Mem64.OSLockObject(hPrivNames);
 					ShortByReference retTextLength = new ShortByReference();
 					Memory retTextPointer = new Memory(Pointer.SIZE);
 					try {
@@ -205,7 +207,7 @@ public class NotesACL implements IAllocatedMemory {
 						}
 					}
 					finally {
-						NotesNativeAPI64.get().OSUnlockObject(hPrivNames);
+						Mem64.OSUnlockObject(hPrivNames);
 					}
 				}
 
@@ -224,14 +226,14 @@ public class NotesACL implements IAllocatedMemory {
 				return access;
 			}
 			finally {
-				NotesNativeAPI64.get().OSUnlockObject(hNamesList);
+				Mem64.OSUnlockObject(hNamesList);
 			}
 		}
 		else {
 			IntByReference rethPrivNames = new IntByReference();
 			
 			int hNamesList = namesList.getHandle32();
-			Pointer pNamesList = NotesNativeAPI32.get().OSLockObject(hNamesList);
+			Pointer pNamesList = Mem32.OSLockObject(hNamesList);
 			try {
 				result = NotesNativeAPI32.get().ACLLookupAccess(m_hACL32, pNamesList, retAccessLevel,
 						retPrivileges, retAccessFlags, rethPrivNames);
@@ -242,7 +244,7 @@ public class NotesACL implements IAllocatedMemory {
 				if (hPrivNames==0)
 					roles = Collections.emptyList();
 				else {
-					Pointer pPrivNames = NotesNativeAPI32.get().OSLockObject(hPrivNames);
+					Pointer pPrivNames = Mem32.OSLockObject(hPrivNames);
 					ShortByReference retTextLength = new ShortByReference();
 					Memory retTextPointer = new Memory(Pointer.SIZE);
 					try {
@@ -257,7 +259,7 @@ public class NotesACL implements IAllocatedMemory {
 						}
 					}
 					finally {
-						NotesNativeAPI32.get().OSUnlockObject(hPrivNames);
+						Mem32.OSUnlockObject(hPrivNames);
 					}
 				}
 				
@@ -276,7 +278,7 @@ public class NotesACL implements IAllocatedMemory {
 				return access;
 			}
 			finally {
-				NotesNativeAPI32.get().OSUnlockObject(hNamesList);
+				Mem32.OSUnlockObject(hNamesList);
 			}
 			
 		}

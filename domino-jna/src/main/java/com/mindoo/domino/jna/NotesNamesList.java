@@ -9,8 +9,8 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
@@ -56,13 +56,13 @@ public class NotesNamesList implements IAllocatedMemory {
 			return;
 
 		if (PlatformUtils.is64Bit()) {
-			short result = NotesNativeAPI64.get().OSMemFree(m_handle64);
+			short result = Mem64.OSMemFree(m_handle64);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_handle64=0;
 		}
 		else {
-			short result = NotesNativeAPI32.get().OSMemFree(m_handle32);
+			short result = Mem32.OSMemFree(m_handle32);
 			NotesErrorUtils.checkResult(result);
 			NotesGC.__memoryBeeingFreed(this);
 			m_handle32=0;
@@ -125,21 +125,21 @@ public class NotesNamesList implements IAllocatedMemory {
 		
 		if (m_names==null) {
 			if (PlatformUtils.is64Bit()) {
-				Pointer ptr = NotesNativeAPI64.get().OSLockObject(m_handle64);
+				Pointer ptr = Mem64.OSLockObject(m_handle64);
 				try {
 					m_names = readNamesList(ptr);
 				}
 				finally {
-					NotesNativeAPI64.get().OSUnlockObject(m_handle64);
+					Mem64.OSUnlockObject(m_handle64);
 				}
 			}
 			else {
-				Pointer ptr = NotesNativeAPI32.get().OSLockObject(m_handle32);
+				Pointer ptr = Mem32.OSLockObject(m_handle32);
 				try {
 					m_names = readNamesList(ptr);
 				}
 				finally {
-					NotesNativeAPI32.get().OSUnlockObject(m_handle32);
+					Mem32.OSUnlockObject(m_handle32);
 				}
 			}
 		}
