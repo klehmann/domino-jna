@@ -22,9 +22,11 @@ import com.sun.jna.Pointer;
 public class DumpUtil {
 
 	/**
-	 * Creates a log file in the temp directory and ensures its content is
+	 * Creates a log file and ensures its content is
 	 * written to disk when the method is done (e.g. to write something to disk before
-	 * a crash).
+	 * a crash).<br>
+	 * By default we use the temp directory (system property "java.io.tmpdir").
+	 * By setting the system property "dominojna.dumpdir", the output directory can be changed.
 	 * 
 	 * @param suffix filename will be "domino-jnalog-" + suffix + uniquenr + ".txt"
 	 * @param content file content
@@ -38,8 +40,14 @@ public class DumpUtil {
 				FileOutputStream fOut = null;
 				Writer fWriter = null;
 				try {
-					File tmpDir = new File(System.getProperty("java.io.tmpdir"));
-					File dmpFile = File.createTempFile("domino-jnalog-"+suffix+"-", ".txt", tmpDir);
+					String outDirPath = System.getProperty("dominojna.dumpdir");
+					if (StringUtil.isEmpty(outDirPath)) {
+						outDirPath = System.getProperty("java.io.tmpdir");
+					}
+					File outDir = new File(outDirPath);
+					if (!outDir.exists())
+						outDir.mkdirs();
+					File dmpFile = File.createTempFile("domino-jnalog-"+suffix+"-", ".txt", outDir);
 					
 					fOut = new FileOutputStream(dmpFile);
 					fWriter = new OutputStreamWriter(fOut, Charset.forName("UTF-8"));
