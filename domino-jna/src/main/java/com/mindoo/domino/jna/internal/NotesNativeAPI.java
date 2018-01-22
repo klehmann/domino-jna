@@ -28,6 +28,7 @@ import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Function;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
@@ -296,9 +297,15 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 				@Override
 				public File run() {
-					String tmpDirPath = System.getProperty("java.io.tmpdir");
-					File tmpDir = new File(tmpDirPath);
-					File stFile = new File(tmpDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
+					String outDirPath = System.getProperty("dominojna.dumpdir");
+					if (StringUtil.isEmpty(outDirPath)) {
+						outDirPath = System.getProperty("java.io.tmpdir");
+					}
+					File outDir = new File(outDirPath);
+					if (!outDir.exists())
+						outDir.mkdirs();
+					
+					File stFile = new File(outDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
 					if (stFile.exists()) {
 						if (!stFile.delete()) {
 							stFile.deleteOnExit();
