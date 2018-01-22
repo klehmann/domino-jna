@@ -59,6 +59,10 @@ public class ReadOnlyMemory extends Memory {
 	}
 
 	@Override
+	protected void finalize() {
+	}
+	
+	@Override
 	public void write(long bOff, byte[] buf, int index, int length) {
 		if (m_sealed)
 			throw new UnsupportedOperationException();
