@@ -24,7 +24,7 @@ public class DominoJNAActivator extends Plugin {
 					//enforce using the extracted JNA .dll/.so file instead of what we find on the PATH
 					System.setProperty("jna.nosys", "true");
 					//change the library name from the default "jnidispatch" to our own name, so that
-					//JNA does not load an jnidispatcher.dll from the Server's program directory
+					//JNA does not load an jnidispatch.dll from the Server's program directory
 					String oldLibName = System.getProperty("jna.boot.library.name", "jnidispatch");
 					System.setProperty("jna.boot.library.name", "dominojnadispatch");
 					try {
