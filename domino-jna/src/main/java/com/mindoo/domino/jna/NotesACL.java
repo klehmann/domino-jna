@@ -60,15 +60,15 @@ public class NotesACL implements IAllocatedMemory {
 			return;
 
 		if (PlatformUtils.is64Bit()) {
+			NotesGC.__memoryBeeingFreed(this);
 			short result = Mem64.OSMemFree(m_hACL64);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__memoryBeeingFreed(this);
 			m_hACL64=0;
 		}
 		else {
+			NotesGC.__memoryBeeingFreed(this);
 			short result = Mem32.OSMemFree(m_hACL32);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__memoryBeeingFreed(this);
 			m_hACL32=0;
 		}
 	}

@@ -56,15 +56,15 @@ public class NotesNamesList implements IAllocatedMemory {
 			return;
 
 		if (PlatformUtils.is64Bit()) {
+			NotesGC.__memoryBeeingFreed(this);
 			short result = Mem64.OSMemFree(m_handle64);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__memoryBeeingFreed(this);
 			m_handle64=0;
 		}
 		else {
+			NotesGC.__memoryBeeingFreed(this);
 			short result = Mem32.OSMemFree(m_handle32);
 			NotesErrorUtils.checkResult(result);
-			NotesGC.__memoryBeeingFreed(this);
 			m_handle32=0;
 		}
 	}
