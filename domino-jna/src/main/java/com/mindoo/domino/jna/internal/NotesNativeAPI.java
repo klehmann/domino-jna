@@ -130,6 +130,12 @@ public class NotesNativeAPI implements INotesNativeAPI {
 						}
 
 						System.out.println("Initializing Domino JNA with mode "+mode);
+						if (!"true".equals(System.getProperty("dominojna.keepprotectedmode"))) {
+							//since this crashes in multithreaded and Linux environments, we
+							//prefer not to use protected mode
+							Native.setProtected(false);
+						}
+						
 						if (Native.isProtected()) {
 							System.out.println("WARNING: JNA protected mode should not be active on production systems!");
 						}
