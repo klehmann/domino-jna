@@ -248,7 +248,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			List<String> names = NotesNamingUtils.getUserNamesList(m_asUserCanonical);
 			m_namesList = NotesNamingUtils.writeNewNamesList(names);
 		}
-		m_namesList.setNoRecycle();
 		
 		//setting authenticated flag for the user is required when running on the server
 		NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
@@ -264,6 +263,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//this might produce ERR 22507: You are not listed as a trusted server
 				m_passNamesListToDbAndViewOpen = true;
 			}
+		}
+		if (m_passNamesListToDbAndViewOpen) {
+			m_namesList.setNoRecycle();
 		}
 		
 		if (PlatformUtils.is64Bit()) {
