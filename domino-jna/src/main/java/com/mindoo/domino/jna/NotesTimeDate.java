@@ -5,6 +5,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -213,10 +215,25 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return calendar or null if data is invalid
 	 */
 	public Calendar toCalendar() {
-		return NotesDateTimeUtils.innardsToCalendar(
+		Calendar cal = NotesDateTimeUtils.innardsToCalendar(
 				NotesDateTimeUtils.isDaylightTime(),
 				NotesDateTimeUtils.getGMTOffset(),
 				m_struct.Innards);
+		
+		if (cal==null) {
+			//invalid innards
+			Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+			nullCal.set(Calendar.DAY_OF_MONTH, 1);
+			nullCal.set(Calendar.MONTH, 1);
+			nullCal.set(Calendar.YEAR, 0);
+			nullCal.set(Calendar.HOUR, 0);
+			nullCal.set(Calendar.MINUTE, 0);
+			nullCal.set(Calendar.SECOND, 0);
+			nullCal.set(Calendar.MILLISECOND, 0);
+			return nullCal;
+		}
+		else
+			return cal;
 	}
 	
 	/**

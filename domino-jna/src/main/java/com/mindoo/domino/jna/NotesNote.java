@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
@@ -1424,7 +1425,18 @@ public class NotesNote implements IRecyclableNotesObject {
 			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 			
 			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
-			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
+			if (cal==null) {
+				Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+				nullCal.set(Calendar.YEAR, 1);
+				nullCal.set(Calendar.MONTH, 1);
+				nullCal.set(Calendar.DAY_OF_MONTH, 1);
+				nullCal.set(Calendar.HOUR, 0);
+				nullCal.set(Calendar.MINUTE, 0);
+				nullCal.set(Calendar.SECOND, 0);
+				nullCal.set(Calendar.MILLISECOND, 0);
+				return Arrays.asList((Object) nullCal);
+			}
+			return Arrays.asList((Object) cal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
 			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();

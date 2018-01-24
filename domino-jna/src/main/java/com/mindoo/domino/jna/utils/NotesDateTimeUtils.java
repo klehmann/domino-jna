@@ -50,7 +50,7 @@ public class NotesDateTimeUtils {
 	 * @param useDayLight true to use daylight savings time
 	 * @param gmtOffset GMT offset
 	 * @param timeDate time date to convert
-	 * @return calendar
+	 * @return calendar or null if timedate contains invalid innards
 	 */
 	public static Calendar timeDateToCalendar(boolean useDayLight, int gmtOffset, NotesTimeDate timeDate) {
 		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
@@ -249,7 +249,7 @@ public class NotesDateTimeUtils {
 	 * @param useDayLight true to use daylight savings time for the calendar object
 	 * @param gmtOffset GMT offset for the calendar object
 	 * @param innards array with 2 innard values
-	 * @return calendar
+	 * @return calendar or null if invalid innards
 	 */
 	public static Calendar innardsToCalendar(boolean useDayLight, int gmtOffset, int[] innards) {
 		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
@@ -276,15 +276,12 @@ public class NotesDateTimeUtils {
 		}
 
 		if (convRet) {
-			String msg = "Error converting date/time value from GMT to local zone: ";
-			msg+="[";
-			for (int i=0; i<innards.length; i++) {
-				if (i>0)
-					msg+=", ";
-				msg+=innards[i];
-			}
-			msg+="]";
-			throw new NotesError(0, msg);
+			//C API doc says:
+			//Returns FALSE if successful and TRUE if not.
+			
+			//not throwing an exception here anymore, but returning null, because legacy Domino API
+			//also ignores the value silently when reading these innards from a document
+			return null;
 		}
 
 		int year = time.year;
@@ -386,6 +383,9 @@ public class NotesDateTimeUtils {
 
 		ShortByReference retTextLength = new ShortByReference();
 		short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+		if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
+			return "";
+		}
 		NotesErrorUtils.checkResult(result);
 
 		if (retTextLength.getValue() > retTextBuffer.size()) {

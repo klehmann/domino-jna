@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.internal;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -144,6 +145,18 @@ public class ItemDecoder {
 			if (calDate!=null) {
 				calendarValues.add(calDate);
 			}
+			else {
+				//invalid TimeDate detected; we produce a "null" value to be able to detect this error
+				Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+				nullCal.set(Calendar.YEAR, 1);
+				nullCal.set(Calendar.MONTH, 1);
+				nullCal.set(Calendar.DAY_OF_MONTH, 1);
+				nullCal.set(Calendar.HOUR, 0);
+				nullCal.set(Calendar.MINUTE, 0);
+				nullCal.set(Calendar.SECOND, 0);
+				nullCal.set(Calendar.MILLISECOND, 0);
+				calendarValues.add(nullCal);
+			}
 		}
 		
 		//move position to the range data
@@ -158,7 +171,29 @@ public class ItemDecoder {
 			NotesTimeDateStruct upperTimeDate = timeDatePair.Upper;
 			
 			Calendar lowerCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(lowerTimeDate));
+			if (lowerCalDate==null) {
+				//invalid TimeDate detected; we produce a "null" value to be able to detect this error
+				lowerCalDate = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+				lowerCalDate.set(Calendar.YEAR, 1);
+				lowerCalDate.set(Calendar.MONTH, 1);
+				lowerCalDate.set(Calendar.DAY_OF_MONTH, 1);
+				lowerCalDate.set(Calendar.HOUR, 0);
+				lowerCalDate.set(Calendar.MINUTE, 0);
+				lowerCalDate.set(Calendar.SECOND, 0);
+				lowerCalDate.set(Calendar.MILLISECOND, 0);
+			}
 			Calendar upperCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(upperTimeDate));
+			if (upperCalDate==null) {
+				//invalid TimeDate detected; we produce a "null" value to be able to detect this error
+				upperCalDate = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+				upperCalDate.set(Calendar.YEAR, 0);
+				upperCalDate.set(Calendar.MONTH, 0);
+				upperCalDate.set(Calendar.DAY_OF_MONTH, 0);
+				upperCalDate.set(Calendar.HOUR, 0);
+				upperCalDate.set(Calendar.MINUTE, 0);
+				upperCalDate.set(Calendar.SECOND, 0);
+				upperCalDate.set(Calendar.MILLISECOND, 0);
+			}
 			
 			calendarValues.add(new Calendar[] {lowerCalDate, upperCalDate});
 		}
