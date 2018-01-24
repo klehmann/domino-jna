@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
@@ -76,7 +77,8 @@ public class TestViewTraversalWithRights extends BaseJNATestClass {
 					hiddenDocId = hiddenDoc.getNoteId();
 					System.out.println("Created hidden doc with UNID "+hiddenDocUnid+" and note id "+hiddenDocId);
 				}
-
+				List<String> readersAndAuthors = new ArrayList<String>(readers);
+				readersAndAuthors.add("CN=An Author/O=Mindoo");
 				{
 					//search the view to check if we find the document when we use
 					//the fake user access identity
@@ -93,8 +95,8 @@ public class TestViewTraversalWithRights extends BaseJNATestClass {
 					System.out.println("Entries lookup #1: "+entries);
 					Assert.assertTrue("Document with reader field has been found by fake user", !entries.isEmpty());
 					
-					List<String> noteReaders = entries.get(0).getReadersList();
-					Assert.assertEquals("View lookup returned special readers column", readers, noteReaders);
+					List<String> noteReadersAndAuthors = entries.get(0).getReadersList();
+					Assert.assertEquals("View lookup returned special readers column", readersAndAuthors, noteReadersAndAuthors);
 					
 				}
 //
