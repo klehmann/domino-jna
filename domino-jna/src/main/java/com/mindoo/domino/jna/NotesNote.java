@@ -2749,24 +2749,36 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		}
 		else if (value instanceof Calendar || value instanceof NotesTimeDate || value instanceof Date) {
-			Calendar calValue;
-			if (value instanceof Calendar) {
-				calValue = (Calendar) value;
-			}
-			else if (value instanceof NotesTimeDate) {
-				calValue = ((NotesTimeDate)value).toCalendar();
-			}
-			else if (value instanceof Date) {
-				calValue = Calendar.getInstance();
-				calValue.setTime((Date) value);
+			int[] innards;
+			boolean hasDate;
+			boolean hasTime;
+			
+			if (value instanceof NotesTimeDate) {
+				//no date conversion to innards needing, we already have them
+				innards = ((NotesTimeDate)value).getInnards();
+				hasTime = innards[0] != NotesConstants.ALLDAY;
+				hasDate = innards[1] != NotesConstants.ANYDAY;
 			}
 			else {
-				throw new IllegalArgumentException("Unsupported date value type: "+(value==null ? "null" : value.getClass().getName()));
+				Calendar calValue;
+				if (value instanceof Calendar) {
+					calValue = (Calendar) value;
+				}
+				else if (value instanceof NotesTimeDate) {
+					calValue = ((NotesTimeDate)value).toCalendar();
+				}
+				else if (value instanceof Date) {
+					calValue = Calendar.getInstance();
+					calValue.setTime((Date) value);
+				}
+				else {
+					throw new IllegalArgumentException("Unsupported date value type: "+(value==null ? "null" : value.getClass().getName()));
+				}
+				
+				hasDate = NotesDateTimeUtils.hasDate(calValue);
+				hasTime = NotesDateTimeUtils.hasTime(calValue);
+				innards = NotesDateTimeUtils.calendarToInnards(calValue, hasDate, hasTime);
 			}
-			
-			boolean hasDate = NotesDateTimeUtils.hasDate(calValue);
-			boolean hasTime = NotesDateTimeUtils.hasTime(calValue);
-			int[] innards = NotesDateTimeUtils.calendarToInnards(calValue, hasDate, hasTime);
 
 			int valueSize = 2 + 8;
 			
