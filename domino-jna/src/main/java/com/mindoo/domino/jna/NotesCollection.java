@@ -1309,7 +1309,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Very fast scan function that populates a {@link NotesIDTable} with note ids in the
 	 * collection. Uses an undocumented C API call internally. Since the {@link NotesIDTable}
 	 * is sorted in ascending note id order, this method does not keep the original view order.
-	 * Use {@link NotesCollection#getAllIds(Navigate)} to get an ID list sorted in view order.
+	 * Use {@link NotesCollection#getAllIds(Navigate)} to get an ID list sorted in view order.<br>
+	 * <br>
+	 * Please note:<br>
+	 * With <code>filterTable</code> set to <code>false</code> and by using the navigator {@link Navigate#NEXT},
+	 * it is more likely for the used C API function to reuse a cached ID table of all the note ids in
+	 * the view, resulting in much better performance.
 	 * 
 	 * @param navigator use {@link Navigate#NEXT} to read documents and categories, {@link Navigate#NEXT_CATEGORY} to only read categories and {@link Navigate#NEXT_NONCATEGORY} to only read documents
 	 * @param filterTable true to filter the ID table to entries visible for the current user

@@ -571,7 +571,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * This function returns the {@link NotesTimeDate} structure that is stored in an ID Table,
 	 * converted to {@link Calendar}
 	 * 
-	 * @return time
+	 * @return time or null if there is no stored time
 	 */
 	public Calendar getTimeAsCalendar() {
 		NotesTimeDate time = getTime();
