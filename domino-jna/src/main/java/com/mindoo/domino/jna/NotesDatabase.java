@@ -97,7 +97,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private Database m_legacyDbRef;
 	private Integer m_openDatabaseId;
 	private NotesACL m_acl;
-	private boolean m_passNamesListToDbAndViewOpen;
+	private boolean m_passNamesListToDbOpen;
+	private boolean m_passNamesListToViewOpen;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -245,26 +246,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			m_namesList = NotesNamingUtils.writeNewNamesList(namesForNamesList);
 		}
 		else {
-			List<String> names = NotesNamingUtils.getUserNamesList(m_asUserCanonical);
-			m_namesList = NotesNamingUtils.writeNewNamesList(names);
+			m_namesList = NotesNamingUtils.buildNamesList("m_asUserCanonical");
 		}
 		
 		//setting authenticated flag for the user is required when running on the server
 		NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
 
-		m_passNamesListToDbAndViewOpen = false;
+		m_passNamesListToViewOpen = false;
+		m_passNamesListToDbOpen = false;
 		if (m_namesList!=null) {
 			if ("".equals(server)) {
 				//locally, we can open the DB as any user/group/role
-				m_passNamesListToDbAndViewOpen = true;
+				m_passNamesListToDbOpen = true;
 			}
 			else if (!m_loginAsIdOwner) {
 				//if we should be opening the DB as another user, we need to pass the names ist;
 				//this might produce ERR 22507: You are not listed as a trusted server
-				m_passNamesListToDbAndViewOpen = true;
+				m_passNamesListToDbOpen = true;
 			}
 		}
-		if (m_passNamesListToDbAndViewOpen) {
+		if (m_passNamesListToDbOpen || m_passNamesListToViewOpen) {
 			m_namesList.setNoRecycle();
 		}
 		
@@ -280,7 +281,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			do {
 				//try opening the database multiple times; we had issues here when opening
 				//many dbs remotely that could be solved by retrying
-				if (m_passNamesListToDbAndViewOpen) {
+				if (m_passNamesListToDbOpen) {
 					result = NotesNativeAPI64.get().NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(),
 							modifiedTime, hDB, retDataModified, retNonDataModified);
 				}
@@ -316,7 +317,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			do {
 				//try opening the database multiple times; we had issues here when opening
 				//many dbs remotely that could be solved by retrying
-				if (m_passNamesListToDbAndViewOpen) {
+				if (m_passNamesListToDbOpen) {
 					result = NotesNativeAPI32.get().NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
 				}
 				else {
@@ -964,7 +965,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			LongByReference selectedList = new LongByReference();
 			selectedList.setValue(0);
 			
-			if (!m_passNamesListToDbAndViewOpen) {
+			if (!m_passNamesListToViewOpen) {
 				//open view as server
 				result = NotesNativeAPI64.get().NIFOpenCollection(m_hDB64, dataDb.m_hDB64, viewNoteId, (short) openFlags, unreadTable.getHandle64(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
@@ -1001,7 +1002,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			IntByReference selectedList = new IntByReference();
 			selectedList.setValue(0);
 			
-			if (!m_passNamesListToDbAndViewOpen) {
+			if (!m_passNamesListToViewOpen) {
 				result = NotesNativeAPI32.get().NIFOpenCollection(m_hDB32, dataDb.m_hDB32, viewNoteId, (short) openFlags, unreadTable.getHandle32(), hCollection, null, viewUNID, collapsedList, selectedList);
 				NotesErrorUtils.checkResult(result);
 			}
