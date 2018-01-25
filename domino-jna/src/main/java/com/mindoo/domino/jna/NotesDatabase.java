@@ -246,7 +246,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			m_namesList = NotesNamingUtils.writeNewNamesList(namesForNamesList);
 		}
 		else {
-			m_namesList = NotesNamingUtils.buildNamesList("m_asUserCanonical");
+			m_namesList = NotesNamingUtils.buildNamesList(m_asUserCanonical);
 		}
 		
 		//setting authenticated flag for the user is required when running on the server
