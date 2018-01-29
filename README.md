@@ -275,10 +275,10 @@ Copyright by [Mindoo GmbH](http://www.mindoo.com)
 ## Dependencies
 The code uses the following open source projects:
 
-[metadata-extractor|https://github.com/drewnoakes/metadata-extractor]
+[metadata-extractor](https://github.com/drewnoakes/metadata-extractor)
 available under Apache 2.0 license
 
-[Apache Commons Collections 4|https://commons.apache.org/proper/commons-collections/]
+[Apache Commons Collections 4](https://commons.apache.org/proper/commons-collections/)
 available under Apache 2.0 license
 
 
