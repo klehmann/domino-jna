@@ -547,14 +547,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			NotesNativeAPI.get().IDTableSetTime(ptr, timeStruct);
 		}
 		finally {
@@ -598,16 +590,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-			
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
-			
 			NotesTimeDateStruct timeStruct = NotesNativeAPI.get().IDTableTime(ptr);
 			return timeStruct==null ? null : new NotesTimeDate(timeStruct);
 		}
@@ -637,15 +619,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-			
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			short flags = NotesNativeAPI.get().IDTableFlags(ptr);
 			if ((flags & NotesConstants.IDTABLE_MODIFIED)==NotesConstants.IDTABLE_MODIFIED) {
 				return true;
@@ -681,15 +654,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-			
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			short flags = NotesNativeAPI.get().IDTableFlags(ptr);
 			if ((flags & NotesConstants.IDTABLE_INVERTED)==NotesConstants.IDTABLE_INVERTED) {
 				return true;
@@ -724,14 +688,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 		
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			NotesNativeAPI.get().IDTableSetFlags(ptr, newFlags);
 		}
 		finally {
@@ -761,15 +717,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			ptr = Mem32.OSLockObject(m_idTableHandle32);
 		}
 		try {
-//			int sizeInBytes;
-//			if (NotesJNAContext.is64Bit()) {
-//				sizeInBytes = DominoAPI64.get().IDTableSizeP(ptr);
-//			}
-//			else {
-//				sizeInBytes = DominoAPI32.get().IDTableSizeP(ptr);
-//			}
-			
-//			ByteBuffer buf = ptr.getByteBuffer(0, sizeInBytes);
 			NotesNativeAPI.get().IDTableSetFlags(ptr, newFlags);
 		}
 		finally {

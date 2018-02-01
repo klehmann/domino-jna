@@ -112,14 +112,6 @@ public class NotesLookupResultBufferDecoder {
             final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			final boolean decodeAllValues = true;
 
-            Memory sharedCollectionPositionMem = null;
-			NotesCollectionPositionStruct sharedPosition = null;
-			if (returnMask.contains(ReadMask.INDEXPOSITION)) {
-				//allocate memory for a position
-				sharedCollectionPositionMem = new Memory(NotesConstants.collectionPositionSize);
-				sharedPosition = NotesCollectionPositionStruct.newInstance(sharedCollectionPositionMem);
-			}
-			
 			for (int i=0; i<numEntriesReturned; i++) {
 				NotesViewEntryData newData = new NotesViewEntryData(parentCollection);
 				viewEntries.add(newData);
