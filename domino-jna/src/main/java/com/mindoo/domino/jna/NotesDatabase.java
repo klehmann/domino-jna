@@ -2729,12 +2729,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			offsetInEntry += 4;
 			
 			Pointer sequenceTimePtr = entryBufPtr.share(offsetInEntry);
-			NotesTimeDateStruct sequenceTimeDate = NotesTimeDateStruct.newInstance(sequenceTimePtr);
-			sequenceTimeDate.read();
+			int[] sequenceTimeInnards = sequenceTimePtr.getIntArray(0, 2);
+			NotesTimeDate sequenceTime = new NotesTimeDate(sequenceTimeInnards);
 			
 			offsetInEntry += 8;
-
-			NotesTimeDate sequenceTime = new NotesTimeDate(sequenceTimeDate.getPointer());
 			
 			entryBufPtr = entryBufPtr.share(offsetInEntry);
 			
