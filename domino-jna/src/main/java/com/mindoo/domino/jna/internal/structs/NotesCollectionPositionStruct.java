@@ -192,7 +192,7 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 			}
 		}
 		
-		NotesCollectionPositionStruct pos = new NotesCollectionPositionStruct();
+		NotesCollectionPositionStruct pos = NotesCollectionPositionStruct.newInstance();
 		pos.Level = level;
 		pos.MinLevel = minLevel;
 		pos.MaxLevel = maxLevel;
