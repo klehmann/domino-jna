@@ -2309,7 +2309,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		String unid = retNoteOID.getUNIDAsString();
-		NotesTimeDate sequenceTime = new NotesTimeDate(retNoteOID.Sequence);
+		NotesTimeDate sequenceTime = new NotesTimeDate(retNoteOID.SequenceTime.Innards);
 		int sequence = retNoteOID.Sequence;
 		
 		NoteInfoExt info = new NoteInfoExt(noteId, unid, sequenceTime, sequence,
