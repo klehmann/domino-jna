@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
@@ -142,6 +143,8 @@ public class NotesStringUtils {
 		return fromLMBCS(inPtr, textLen, false);
 	}
 	
+	private static final Charset ASCII = Charset.forName("ASCII");
+	
 	/**
 	 * Converts an LMBCS string to a Java String
 	 * 
@@ -180,7 +183,7 @@ public class NotesStringUtils {
 			}
 			
 			if (isPureAscii) {
-				String asciiStr = new String(data, Charset.forName("ASCII"));
+				String asciiStr = new String(data, ASCII);
 				return asciiStr;
 			}
 		}
@@ -188,15 +191,19 @@ public class NotesStringUtils {
 		Pointer pText = inPtr;
 		boolean useOSLineBreak = isUseOSLineDelimiter();
 		
-		Memory pBuf_utf8 = null;
+		DisposableMemory pBuf_utf8 = null;
 		
 		StringBuilder result = new StringBuilder(textLen + 5);
 		while (textLen > 0) {
 			long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
 			long outLen=2*len;
 			
-			if (pBuf_utf8==null || pBuf_utf8.size()!=(outLen+1)) {
-				pBuf_utf8 = new Memory(outLen+1);
+			if (pBuf_utf8==null) {
+				pBuf_utf8 = new DisposableMemory(outLen+1);
+			}
+			else if (pBuf_utf8.size()!=(outLen+1)) {
+				pBuf_utf8.dispose();
+				pBuf_utf8 = new DisposableMemory(outLen+1);
 			}
 
 			//convert text from LMBCS to utf8
@@ -207,6 +214,7 @@ public class NotesStringUtils {
 			String currConvertedStr;
 			try {
 				currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
+				pBuf_utf8.dispose();
 				if (currConvertedStr.contains("\0")) {
 					//Notes uses \0 for multiline strings
 					if (PlatformUtils.isWindows() && useOSLineBreak) {
@@ -278,16 +286,15 @@ public class NotesStringUtils {
 		}
 		
 		if (isPureAscii) {
-			byte[] asciiBytes = inStr.getBytes(Charset.forName("ASCII"));
+			byte[] asciiBytes = inStr.getBytes(ASCII);
 			
 			if (addNull) {
 				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length + 1);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
 				m.setByte(asciiBytes.length, (byte) 0);
+				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m.seal();
-					
 					m_string2LMBCSCache_withnull.put(inStr, m);
 					m_string2LMBCSLastKeys_withnull.add(inStr);
 					
@@ -304,9 +311,9 @@ public class NotesStringUtils {
 			else {
 				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length);
 				m.write(0, asciiBytes, 0, asciiBytes.length);
+				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m.seal();
 					
 					m_string2LMBCSCache_withoutnull.put(inStr, m);
 					m_string2LMBCSLastKeys_withoutnull.add(inStr);
@@ -356,17 +363,16 @@ public class NotesStringUtils {
 			String currWorkStr = currRemainingStr.substring(0, numWorkCharacters);
 			currRemainingStr = currRemainingStr.substring(numWorkCharacters);
 			
-			
 			byte[] currWorkStrAsBytes;
 			try {
 				currWorkStrAsBytes = currWorkStr.getBytes("UTF-8");
 			} catch (UnsupportedEncodingException e) {
 				throw new RuntimeException("Unknown encoding UTF-8", e);
 			}
-			Memory in = new Memory(currWorkStrAsBytes.length);
+			DisposableMemory in = new DisposableMemory(currWorkStrAsBytes.length);
 			in.write(0, currWorkStrAsBytes, 0, currWorkStrAsBytes.length);
 
-			Memory out = new Memory(in.size() * 2);
+			DisposableMemory out = new DisposableMemory(in.size() * 2);
 			if (out.size() >= 65535) {
 				throw new IllegalStateException("out buffer is expected to be in WORD range. "+out.size()+" >= 65535");
 			}
@@ -376,6 +382,9 @@ public class NotesStringUtils {
 			
 			out.read(0, outAsBytes, 0, outContentLength);
 			bOut.write(outAsBytes, 0, outContentLength);
+			
+			in.dispose();
+			out.dispose();
 		}
 		
 		if (addNull) {
@@ -498,11 +507,12 @@ public class NotesStringUtils {
 		Memory serverNameMem = toLMBCS(serverName, true);
 		Memory fileNameMem = toLMBCS(fileName, true);
 		
-		Memory retPathMem = new Memory(NotesConstants.MAXPATH);
+		DisposableMemory retPathMem = new DisposableMemory(NotesConstants.MAXPATH);
 		
 		short result = NotesNativeAPI.get().OSPathNetConstruct(portNameMem, serverNameMem, fileNameMem, retPathMem);
 		NotesErrorUtils.checkResult(result);
 		String retPath = fromLMBCS(retPathMem, getNullTerminatedLength(retPathMem));
+		retPathMem.dispose();
 		return retPath;
 	}
 
@@ -525,9 +535,9 @@ public class NotesStringUtils {
 	 * @return String array of portname, servername, filename
 	 */
 	public static String[] osPathNetParse(String pathName) {
-		Memory retPortNameMem = new Memory(NotesConstants.MAXPATH);
-		Memory retServerNameMem = new Memory(NotesConstants.MAXPATH);
-		Memory retFileNameMem = new Memory(NotesConstants.MAXPATH);
+		DisposableMemory retPortNameMem = new DisposableMemory(NotesConstants.MAXPATH);
+		DisposableMemory retServerNameMem = new DisposableMemory(NotesConstants.MAXPATH);
+		DisposableMemory retFileNameMem = new DisposableMemory(NotesConstants.MAXPATH);
 		
 		Memory pathNameMem = toLMBCS(pathName, true);
 		short result = NotesNativeAPI.get().OSPathNetParse(pathNameMem, retPortNameMem, retServerNameMem, retFileNameMem);
@@ -536,6 +546,11 @@ public class NotesStringUtils {
 		String portName = fromLMBCS(retPortNameMem, getNullTerminatedLength(retPortNameMem));
 		String serverName = fromLMBCS(retServerNameMem, getNullTerminatedLength(retServerNameMem));
 		String fileName = fromLMBCS(retFileNameMem, getNullTerminatedLength(retFileNameMem));
+		
+		retPortNameMem.dispose();
+		retServerNameMem.dispose();
+		retFileNameMem.dispose();
+		
 		return new String[] {portName, serverName, fileName};
 	}
 

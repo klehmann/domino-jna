@@ -17,6 +17,8 @@ import com.mindoo.domino.jna.internal.structs.NotesSchedEntryExtStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleListStruct;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleStruct;
+import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
+import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesTableItemStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -104,7 +106,9 @@ public interface NotesConstants {
 	public final int notesViewColumnFormat3Size = NotesViewColumnFormat3Struct.newInstance().size();
 	public final int notesViewColumnFormat4Size = NotesViewColumnFormat4Struct.newInstance().size();
 	public final int notesViewColumnFormat5Size = NotesViewColumnFormat5Struct.newInstance().size();
-
+	public final int notesSearchMatch32Size = NotesSearchMatch32Struct.newInstance().size();
+	public final int notesSearchMatch64Size = NotesSearchMatch64Struct.newInstance().size();
+	
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;

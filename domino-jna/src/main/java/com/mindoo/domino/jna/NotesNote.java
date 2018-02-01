@@ -1460,8 +1460,8 @@ public class NotesNote implements IRecyclableNotesObject {
 				short compressionType = fileObject.CompressionType;
 				NotesTimeDateStruct fileCreated = fileObject.FileCreated;
 				NotesTimeDateStruct fileModified = fileObject.FileModified;
-				NotesTimeDate fileCreatedWrap = fileCreated==null ? null : new NotesTimeDate(fileCreated);
-				NotesTimeDate fileModifiedWrap = fileModified==null ? null : new NotesTimeDate(fileModified);
+				NotesTimeDate fileCreatedWrap = fileCreated==null ? null : new NotesTimeDate(fileCreated.Innards);
+				NotesTimeDate fileModifiedWrap = fileModified==null ? null : new NotesTimeDate(fileModified.Innards);
 				
 				short fileNameLength = fileObject.FileNameLength;
 				int fileSize = fileObject.FileSize;
@@ -1485,11 +1485,19 @@ public class NotesNote implements IRecyclableNotesObject {
 				return Arrays.asList((Object) attInfo);
 			}
 			//TODO add support for other object types
-			return Arrays.asList((Object) objDescriptor);
+			
+			//clone values because value data gets unlocked, preventing invalid memory access
+			NotesObjectDescriptorStruct clonedObjDescriptor = NotesObjectDescriptorStruct.newInstance();
+			clonedObjDescriptor.ObjectType = objDescriptor.ObjectType;
+			clonedObjDescriptor.RRV = objDescriptor.RRV;
+			return Arrays.asList((Object) clonedObjDescriptor);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
-			//skip LIST structure
-			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(valueDataPtr.share(2));
+			//skip LIST structure, clone data to prevent invalid memory access when buffer gets disposed
+			byte[] unidBytes = valueDataPtr.share(2).getByteArray(0, NotesConstants.notesUniversalNoteIdSize);
+			Memory unidMem = new Memory(NotesConstants.notesUniversalNoteIdSize);
+			unidMem.write(0, unidBytes, 0, unidBytes.length);
+			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(unidMem);
 			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
 			return Arrays.asList((Object) unid);
 		}

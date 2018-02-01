@@ -393,9 +393,16 @@ public class NotesSearch {
 				public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
 						Pointer summaryBufferPtr) {
 
+					//clone search match to not have any memory issues if memory of searchMatchOrig is disposed
+					byte[] searchMatchMem = searchMatch.getPointer().getByteArray(0, NotesConstants.notesSearchMatch64Size);
+					Memory clonedSearchMatchMem = new Memory(NotesConstants.notesSearchMatch64Size);
+					clonedSearchMatchMem.write(0, searchMatchMem, 0, searchMatchMem.length);
+					NotesSearchMatch64Struct clonedSearchMatch = NotesSearchMatch64Struct.newInstance(clonedSearchMatchMem);
+					clonedSearchMatch.read();
+					
 					ItemTableData itemTableData=null;
 					try {
-						boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+						boolean isMatch = formula==null || ((clonedSearchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
 						
 						if (isMatch && searchFlags.contains(Search.SUMMARY)) {
 							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
@@ -416,18 +423,18 @@ public class NotesSearch {
 							}
 						}
 
-						short noteClass = searchMatch.NoteClass;
-						int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-						NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
+						short noteClass = clonedSearchMatch.NoteClass;
+						int noteId = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.NoteID : 0;
+						NotesOriginatorId oid = clonedSearchMatch.OriginatorID==null ? null : new NotesOriginatorId(clonedSearchMatch.OriginatorID);
 						
-						NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
-						NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+						NotesTimeDateStruct dbCreatedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.File : null;
+						NotesTimeDateStruct noteModifiedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.Note : null;
 
 						NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
 						NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
 
 						EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-						EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
+						EnumSet<NoteFlags> flags = toNoteFlags(clonedSearchMatch.SERetFlags);
 
 						Action action;
 						if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
@@ -676,12 +683,19 @@ public class NotesSearch {
 				apiCallback = new NotesCallbacks.b32_NsfSearchProc() {
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
+					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatchOrig,
 							Pointer summaryBufferPtr) {
 
+						//clone search match to not have any memory issues if memory of searchMatchOrig is disposed
+						byte[] searchMatchMem = searchMatchOrig.getPointer().getByteArray(0, NotesConstants.notesSearchMatch32Size);
+						Memory clonedSearchMatchMem = new Memory(NotesConstants.notesSearchMatch32Size);
+						clonedSearchMatchMem.write(0, searchMatchMem, 0, searchMatchMem.length);
+						NotesSearchMatch32Struct clonedSearchMatch = NotesSearchMatch32Struct.newInstance(clonedSearchMatchMem);
+						clonedSearchMatch.read();
+						
 						ItemTableData itemTableData=null;
 						try {
-							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+							boolean isMatch = formula==null || ((clonedSearchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
 							
 							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
@@ -702,18 +716,18 @@ public class NotesSearch {
 								}
 							}
 
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
+							short noteClass = clonedSearchMatch.NoteClass;
+							int noteId = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.NoteID : 0;
+							NotesOriginatorId oid = clonedSearchMatch.OriginatorID==null ? null : new NotesOriginatorId(clonedSearchMatch.OriginatorID);
 							
-							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
+							NotesTimeDateStruct dbCreatedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.File : null;
+							NotesTimeDateStruct noteModifiedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.Note : null;
 
 							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
 							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
 
 							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-							EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
+							EnumSet<NoteFlags> flags = toNoteFlags(clonedSearchMatch.SERetFlags);
 
 							Action action;
 							if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {

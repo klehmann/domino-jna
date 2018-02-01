@@ -8,6 +8,7 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
@@ -291,7 +292,7 @@ public class NotesDateTimeUtils {
 		int hour = time.hour;
 		int minute = time.minute;
 		int second = time.second;
-		int millisecond = (short) (time.hundredth * 10);
+		int millisecond = time.hundredth * 10;
 
 		Calendar cal = Calendar.getInstance();
 
@@ -379,8 +380,8 @@ public class NotesDateTimeUtils {
 		if (struct.Innards[0]==0 && struct.Innards[1]==0xffffff)
 			return "MAXIMUM";
 		
-		Memory retTextBuffer = new Memory(100);
-
+		DisposableMemory retTextBuffer = new DisposableMemory(100);
+		
 		ShortByReference retTextLength = new ShortByReference();
 		short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
 		if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
@@ -389,13 +390,16 @@ public class NotesDateTimeUtils {
 		NotesErrorUtils.checkResult(result);
 
 		if (retTextLength.getValue() > retTextBuffer.size()) {
-			retTextBuffer = new Memory(retTextLength.getValue());
+			retTextBuffer.dispose();
+			retTextBuffer = new DisposableMemory(retTextLength.getValue());
 
 			result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
 			NotesErrorUtils.checkResult(result);
 		}
 
-		return NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
+		String txt = NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
+		retTextBuffer.dispose();
+		return txt;
 	}
 	
 	/**

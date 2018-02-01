@@ -82,10 +82,8 @@ public class ItemDecoder {
 	}
 	
 	public static Calendar decodeTimeDate(final Pointer ptr, int valueLength, boolean useDayLight, int gmtOffset) {
-		NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptr);
-		NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
-		
-		Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
+		int[] innards = ptr.getIntArray(0, 2);
+		Calendar calDate = NotesDateTimeUtils.innardsToCalendar(useDayLight, gmtOffset, innards);
 		return calDate;
 	}
 	
@@ -138,10 +136,8 @@ public class ItemDecoder {
 		
 		for (int t=0; t<listEntriesAsInt; t++) {
 			Pointer ptrListEntry = ptrAfterRange.share(t * NotesConstants.timeDateSize);
-			NotesTimeDateStruct timeDateStruct = NotesTimeDateStruct.newInstance(ptrListEntry);
-			NotesTimeDate timeDate = new NotesTimeDate(timeDateStruct);
-			
-			Calendar calDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, timeDate);
+			int[] innards = ptrListEntry.getIntArray(0, 2);
+			Calendar calDate = NotesDateTimeUtils.innardsToCalendar(useDayLight, gmtOffset, innards);
 			if (calDate!=null) {
 				calendarValues.add(calDate);
 			}
@@ -170,7 +166,10 @@ public class ItemDecoder {
 			NotesTimeDateStruct lowerTimeDate = timeDatePair.Lower;
 			NotesTimeDateStruct upperTimeDate = timeDatePair.Upper;
 			
-			Calendar lowerCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(lowerTimeDate));
+			int[] lowerTimeDateInnards = lowerTimeDate.Innards;
+			int[] upperTimeDateInnards = upperTimeDate.Innards;
+			
+			Calendar lowerCalDate = NotesDateTimeUtils.innardsToCalendar(useDayLight, gmtOffset, lowerTimeDateInnards);
 			if (lowerCalDate==null) {
 				//invalid TimeDate detected; we produce a "null" value to be able to detect this error
 				lowerCalDate = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
@@ -182,7 +181,7 @@ public class ItemDecoder {
 				lowerCalDate.set(Calendar.SECOND, 0);
 				lowerCalDate.set(Calendar.MILLISECOND, 0);
 			}
-			Calendar upperCalDate = NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, new NotesTimeDate(upperTimeDate));
+			Calendar upperCalDate = NotesDateTimeUtils.innardsToCalendar(useDayLight, gmtOffset, upperTimeDateInnards);
 			if (upperCalDate==null) {
 				//invalid TimeDate detected; we produce a "null" value to be able to detect this error
 				upperCalDate = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
