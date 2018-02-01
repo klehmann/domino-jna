@@ -2076,14 +2076,19 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public static class NoteInfo {
 		private int m_noteId;
-		private NotesOriginatorIdStruct m_oid;
-		private NotesOriginatorId m_oidWrap;
+		private int m_sequence;
+		private NotesTimeDate m_sequenceTime;
+		private String m_unid;
 		private boolean m_isDeleted;
 		private boolean m_notPresent;
 		
-		private NoteInfo(int noteId, NotesOriginatorIdStruct oid, boolean isDeleted, boolean notPresent) {
+		private NoteInfo(int noteId, String unid, NotesTimeDate sequenceTime, int sequence,
+				boolean isDeleted, boolean notPresent) {
+			
 			m_noteId = noteId;
-			m_oid = oid;
+			m_unid = unid;
+			m_sequenceTime = sequenceTime;
+			m_sequence = sequence;
 			m_isDeleted = isDeleted;
 			m_notPresent = notPresent;
 		}
@@ -2098,25 +2103,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		/**
-		 * Returns the raw {@link NotesOriginatorId} object containing the
-		 * data we also provide via direct methods
-		 * 
-		 * @return OID or null if the note could not be found
-		 */
-		public NotesOriginatorId getOID() {
-			if (m_oidWrap==null) {
-				m_oidWrap = m_oid==null ? null : new NotesOriginatorId(m_oid);
-			}
-			return m_oidWrap;
-		}
-		
-		/**
 		 * Returns the sequence number
 		 * 
 		 * @return sequence number or 0 if the note could not be found
 		 */
 		public int getSequence() {
-			return m_oid==null ? 0 : m_oid.Sequence;
+			return m_sequence;
 		}
 		
 		/**
@@ -2125,11 +2117,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return sequence time or null if the note could not be found
 		 */
 		public NotesTimeDate getSequenceTime() {
-			NotesOriginatorId oidWrap = getOID();
-			if (oidWrap!=null) {
-				return oidWrap.getSequenceTime();
-			}
-			return null;
+			return m_sequenceTime;
 		}
 		
 		/**
@@ -2138,7 +2126,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		 * @return UNID or null if the note could not be found
 		 */
 		public String getUnid() {
-			return m_oid!=null ? m_oid.getUNIDAsString() : null;
+			return m_unid;
 		}
 		
 		/**
@@ -2172,11 +2160,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		private short m_responseCount;
 		private int m_parentNoteId;
 		
-		private NoteInfoExt(int noteId, NotesOriginatorIdStruct oid, boolean isDeleted, boolean notPresent,
+		private NoteInfoExt(int noteId, String unid, NotesTimeDate sequenceTime, int sequence,
+				boolean isDeleted, boolean notPresent,
 				NotesTimeDateStruct modified, short noteClass, NotesTimeDateStruct addedToFile, short responseCount,
 				int parentNoteId) {
 			
-			super(noteId, oid, isDeleted, notPresent);
+			super(noteId, unid, sequenceTime, sequence, isDeleted, notPresent);
+			
 			m_modified = modified;
 			m_noteClass = noteClass;
 			m_addedToFile = addedToFile;
@@ -2318,7 +2308,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 		}
 		
-		NoteInfoExt info = new NoteInfoExt(noteId, retNoteOID, isDeleted, notPresent, retModified,
+		String unid = retNoteOID.getUNIDAsString();
+		NotesTimeDate sequenceTime = new NotesTimeDate(retNoteOID.Sequence);
+		int sequence = retNoteOID.Sequence;
+		
+		NoteInfoExt info = new NoteInfoExt(noteId, unid, sequenceTime, sequence,
+				isDeleted, notPresent, retModified,
 				retNoteClass.getValue(), retAddedToFile, retResponseCount.getValue(), retParentNoteID.getValue());
 		
 		return info;
@@ -2722,7 +2717,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 			offsetInEntry += 4;
 
+			
 			Pointer fileTimeDatePtr = entryBufPtr.share(offsetInEntry);
+			
+			String unid = NotesStringUtils.pointerToUnid(fileTimeDatePtr);
+
 			NotesTimeDateStruct fileTimeDate = NotesTimeDateStruct.newInstance(fileTimeDatePtr);
 			fileTimeDate.read();
 			
@@ -2744,17 +2743,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			offsetInEntry += 8;
 
-			NotesOriginatorIdStruct oid = NotesOriginatorIdStruct.newInstance();
-			oid.File = fileTimeDate;
-			oid.Note = noteTimeDate;
-			oid.Sequence = sequence;
-			oid.SequenceTime = sequenceTimeDate;
+			NotesTimeDate sequenceTime = new NotesTimeDate(sequenceTimeDate);
 			
 			entryBufPtr = entryBufPtr.share(offsetInEntry);
 			
 			boolean isDeleted = (currNoteId & NotesConstants.NOTEID_RESERVED) == NotesConstants.NOTEID_RESERVED;
 			boolean isNotPresent = currNoteId==0;
-			retNoteInfo[i] = new NoteInfo(currNoteId, oid, isDeleted, isNotPresent);
+			retNoteInfo[i] = new NoteInfo(currNoteId, unid, sequenceTime, sequence, isDeleted, isNotPresent);
 		}
 		return retNoteInfo;
 	}
