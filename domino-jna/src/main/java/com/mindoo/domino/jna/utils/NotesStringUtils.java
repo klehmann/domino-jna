@@ -2,6 +2,8 @@ package com.mindoo.domino.jna.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Formatter;
@@ -438,6 +440,22 @@ public class NotesStringUtils {
 		return unid;
 	}
 
+	/**
+	 * Reads a UNID from memory
+	 * 
+	 * @param ptr memory
+	 * @return UNID as string
+	 */
+	public static String pointerToUnid(Pointer ptr) {
+		Formatter formatter = new Formatter();
+		ByteBuffer data = ptr.getByteBuffer(0, 16).order(ByteOrder.LITTLE_ENDIAN);
+		formatter.format("%016x", data.getLong());
+		formatter.format("%016x", data.getLong());
+		String unidStr = formatter.toString().toUpperCase();
+		formatter.close();
+		return unidStr;
+	}
+	
 	/**
 	 * Writes a UNID string to memory
 	 * 
