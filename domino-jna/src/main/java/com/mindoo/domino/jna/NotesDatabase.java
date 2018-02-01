@@ -2717,21 +2717,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 			offsetInEntry += 4;
 
-			
 			Pointer fileTimeDatePtr = entryBufPtr.share(offsetInEntry);
 			
 			String unid = NotesStringUtils.pointerToUnid(fileTimeDatePtr);
-
-			NotesTimeDateStruct fileTimeDate = NotesTimeDateStruct.newInstance(fileTimeDatePtr);
-			fileTimeDate.read();
 			
-			offsetInEntry += 8;
-			
-			Pointer noteTimeDatePtr = entryBufPtr.share(offsetInEntry);
-			NotesTimeDateStruct noteTimeDate = NotesTimeDateStruct.newInstance(noteTimeDatePtr);
-			noteTimeDate.read();
-			
-			offsetInEntry += 8;
+			offsetInEntry += 8; //skip "file" field
+			offsetInEntry += 8; // skip "note" field
 			
 			int sequence = entryBufPtr.getInt(offsetInEntry);
 
@@ -2743,7 +2734,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			offsetInEntry += 8;
 
-			NotesTimeDate sequenceTime = new NotesTimeDate(sequenceTimeDate);
+			NotesTimeDate sequenceTime = new NotesTimeDate(sequenceTimeDate.getPointer());
 			
 			entryBufPtr = entryBufPtr.share(offsetInEntry);
 			

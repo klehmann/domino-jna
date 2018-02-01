@@ -163,7 +163,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 		m_struct = struct;
 	}
 	
-	private NotesTimeDate(Pointer peer) {
+	NotesTimeDate(Pointer peer) {
 		m_struct = NotesTimeDateStruct.newInstance(peer);
 	}
 
