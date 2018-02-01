@@ -971,4 +971,6 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFSearchStop(int shandle);
 	
 	public native short QueueDelete(int qhandle);
+	
+	public native short NSFDbModeGet(int hDB, ShortByReference retMode);
 }

@@ -14,6 +14,8 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
@@ -97,8 +99,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private Database m_legacyDbRef;
 	private Integer m_openDatabaseId;
 	private NotesACL m_acl;
-	private boolean m_passNamesListToDbOpen;
+	boolean m_passNamesListToDbOpen;
 	private boolean m_passNamesListToViewOpen;
+	private DbMode m_dbMode;
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -199,8 +202,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param openFlags flags to specify how to open the database
 	 */
 	private NotesDatabase(String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
+		String idUserName = IDUtils.getCurrentUsername();
+		if (StringUtil.isEmpty(asUserCanonical)) {
+			asUserCanonical = idUserName;
+		}
 		//make sure server and username are in canonical format
-		m_asUserCanonical = StringUtil.isEmpty(asUserCanonical) ? null : NotesNamingUtils.toCanonicalName(asUserCanonical);
+		m_asUserCanonical = NotesNamingUtils.toCanonicalName(asUserCanonical);
 		
 		if (server==null)
 			server = "";
@@ -209,7 +216,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		server = NotesNamingUtils.toCanonicalName(server);
 		
-		String idUserName = IDUtils.getCurrentUsername();
 		boolean isOnServer = IDUtils.isOnServer();
 		
 		if (!"".equals(server)) {
@@ -289,7 +295,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					result = NotesNativeAPI64.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB,
 							retDataModified, retNonDataModified);
 				}
-
+			
 				retries--;
 				if (result!=0) {
 					try {
@@ -323,7 +329,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				else {
 					result = NotesNativeAPI32.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
 				}
-
+			
 				retries--;
 				if (result!=0) {
 					try {
@@ -1098,6 +1104,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					retNumDocs,
 					new Memory(Pointer.SIZE), // Reserved field
 					rethResults);
+			if (result==3874) { //no documents found
+				result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
+				NotesErrorUtils.checkResult(result);
+				return new SearchResult(new NotesIDTable(), 0);
+			}
 			NotesErrorUtils.checkResult(result);
 
 			result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
@@ -1126,6 +1137,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					retNumDocs,
 					new Memory(Pointer.SIZE), // Reserved field
 					rethResults);
+			if (result==3874) { //no documents found
+				result = NotesNativeAPI32.get().FTCloseSearch(rethSearch.getValue());
+				NotesErrorUtils.checkResult(result);
+				return new SearchResult(new NotesIDTable(), 0);
+			}
 			NotesErrorUtils.checkResult(result);
 
 			result = NotesNativeAPI32.get().FTCloseSearch(rethSearch.getValue());
@@ -4403,4 +4419,74 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		writeDbInfoBuffer(infoBuf);
 	}
 
+	public static enum DbMode {
+		/** internal db handle refers to a "directory" and not a file */
+		DIRECTORY,
+		/** internal db handle refers to a normal database file */
+		DATABASE
+		}
+
+	/**
+	 * Use this function to find out whether the {@link NotesDatabase} is a database or a directory.
+	 * (The C API uses the db handle also to scan directory contents)
+	 * 
+	 * @return mode
+	 */
+	public DbMode getMode() {
+		if (m_dbMode==null) {
+			checkHandle();
+
+			ShortByReference retMode = new ShortByReference();
+			short result;
+
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NSFDbModeGet(m_hDB64, retMode);
+			}
+			else {
+				result = NotesNativeAPI32.get().NSFDbModeGet(m_hDB32, retMode);
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			if (retMode.getValue() == NotesConstants.DB_LOADED) {
+				m_dbMode = DbMode.DATABASE;
+			}
+			else {
+				m_dbMode = DbMode.DIRECTORY;
+			}
+		}
+		return m_dbMode;
+	}
+	
+	private static final Pattern[] dbFilenamePatterns = new Pattern[] {
+			//old NSF versions
+			Pattern.compile("^.+\\.ns\\d$", Pattern.CASE_INSENSITIVE),
+			Pattern.compile("^.+\\.nt\\\\d$", Pattern.CASE_INSENSITIVE),
+			//standard db and template name
+			Pattern.compile("^.+\\.nsf$", Pattern.CASE_INSENSITIVE),
+			Pattern.compile("^.+\\.ntf$", Pattern.CASE_INSENSITIVE),
+			//not sure what this is, coming from osfile.h
+			Pattern.compile("^.+\\.nsh$", Pattern.CASE_INSENSITIVE),
+			Pattern.compile("^.+\\.nsg$", Pattern.CASE_INSENSITIVE),
+			//cache.ndk and other internal databases
+			Pattern.compile("^.+\\.ndk$", Pattern.CASE_INSENSITIVE),
+			//mailbox db
+			Pattern.compile("^.+\\.box$", Pattern.CASE_INSENSITIVE)
+	};
+	
+	/**
+	 * The method compares a path against a list of known file extensions
+	 * for NSF databases like .ns9, .nsf, .ntf or .box
+	 * 
+	 * @param path filepath
+	 * @return true of NSF database format
+	 */
+	public static boolean isDatabasePath(String path) {
+		for (Pattern currPattern : dbFilenamePatterns) {
+			Matcher matcher = currPattern.matcher(path);
+			if (matcher.matches()) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

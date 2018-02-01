@@ -471,6 +471,9 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFDbInfoSet(
 			int hDB,
 			Pointer Buffer);
+	public short NSFDbModeGet(
+			int hDB,
+			ShortByReference retMode);
 	
 	public short NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
 

@@ -472,6 +472,9 @@ public interface INotesNativeAPI64 extends Library {
 	public short NSFDbInfoSet(
 			long hDB,
 			Pointer Buffer);
+	public short NSFDbModeGet(
+			long  hDB,
+			ShortByReference retMode);
 
 	public short NSFBuildNamesList(Memory UserName, int dwFlags, LongByReference rethNamesList);
 

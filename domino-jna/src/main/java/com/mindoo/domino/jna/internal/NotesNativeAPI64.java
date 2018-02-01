@@ -970,4 +970,6 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NSFSearchStop(long shandle);
 
 	public native short QueueDelete(long qhandle);
+	
+	public native short NSFDbModeGet(long hDB, ShortByReference retMode);
 }

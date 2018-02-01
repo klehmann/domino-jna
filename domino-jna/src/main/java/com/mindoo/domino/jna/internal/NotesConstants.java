@@ -2817,4 +2817,11 @@ This allows an Editor to assume some Designer-level access */
 	/** inherited template name (for a database that inherited its design from a design template) */
 	public short INFOPARSE_DESIGN_CLASS = 3;
 
+	/*	Define NSF DB open modes */
+
+	/** hDB refers to a normal database file */
+	public short DB_LOADED = 1;
+	/** hDB refers to a "directory" and not a file */
+	public short DB_DIRECTORY = 2;
+
 }

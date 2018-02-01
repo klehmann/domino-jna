@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
+import com.mindoo.domino.jna.NotesDatabase.DbMode;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.Action;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.NoteFlags;
 import com.mindoo.domino.jna.constants.FileType;
@@ -381,6 +382,8 @@ public class NotesSearch {
 		
 		final String[] columnItemNames = columnFormulas==null ? new String[0] : columnFormulas.keySet().toArray(new String[0]);
 		
+		DbMode mode = db.getMode();
+
 		if (PlatformUtils.is64Bit()) {
 			final Throwable invocationEx[] = new Throwable[1];
 
@@ -526,6 +529,19 @@ public class NotesSearch {
 				final int searchFlags4Final = searchFlags4;
 				final int noteClassMaskFinal = noteClassMask;
 
+				final long hNamesList;
+				if (mode == DbMode.DIRECTORY) {
+					hNamesList = 0;
+				}
+				else {
+					if (db.m_passNamesListToDbOpen && db.m_namesList!=null) {
+						hNamesList = db.m_namesList.getHandle64();
+					}
+					else {
+						hNamesList = 0;
+					}
+				}
+				
 				short result;
 				try {
 					//AccessController call required to prevent SecurityException when running in XPages
@@ -537,7 +553,7 @@ public class NotesSearch {
 									hFilterFinal, filterFlagsFinal,
 									viewTitleBuf, searchFlagsBitMaskFinal, searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
 									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil,
-									db.m_namesList==null ? 0 : db.m_namesList.getHandle64());
+									hNamesList);
 
 						}
 					});
@@ -796,6 +812,19 @@ public class NotesSearch {
 				final int searchFlags4Final = 0;
 				final int noteClassMaskFinal = noteClassMask;
 				
+				final int hNamesList;
+				if (mode == DbMode.DIRECTORY) {
+					hNamesList = 0;
+				}
+				else {
+					if (db.m_passNamesListToDbOpen && db.m_namesList!=null) {
+						hNamesList = db.m_namesList.getHandle32();
+					}
+					else {
+						hNamesList = 0;
+					}
+				}
+
 				short result;
 				try {
 					//AccessController call required to prevent SecurityException when running in XPages
@@ -805,7 +834,8 @@ public class NotesSearch {
 						public Short run() throws Exception {
 							return NotesNativeAPI32.get().NSFSearchExtended3(db.getHandle32(), hFormulaFinal, hFilterFinal, filterFlagsFinal,
 									viewTitleBuf, (int) (searchFlagsBitMaskFinal & 0xffff), searchFlags1Final, searchFlags2Final, searchFlags3Final, searchFlags4Final,
-									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil, db.m_namesList==null ? 0 : db.m_namesList.getHandle32());
+									(short) (noteClassMaskFinal & 0xffff), sinceStruct, apiCallback, null, retUntil, 
+									hNamesList);
 						}
 					});
 				} catch (PrivilegedActionException e) {
