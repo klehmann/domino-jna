@@ -43,7 +43,7 @@
 
 	<scm>
 		<connection>scm:git:git://github.com/klehmann/domino-jna.git</connection>
-  		<developerConnection>scm:git:ssh://github.com:klehmann/domino-jna.git</developerConnection>	
+		<developerConnection>scm:git:ssh://github.com:klehmann/domino-jna.git</developerConnection>
 		<url>https://github.com/klehmann/domino-jna.git</url>
 	</scm>
 
@@ -147,10 +147,10 @@
 	<dependencies>
 		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
 		<dependency>
-		    <groupId>org.elasticsearch</groupId>
-		    <artifactId>jna</artifactId>
-		    <version>4.4.0</version>
-		</dependency>		
+			<groupId>org.elasticsearch</groupId>
+			<artifactId>jna</artifactId>
+			<version>4.4.0</version>
+		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
@@ -169,9 +169,9 @@
 			<version>4.0</version>
 		</dependency>
 		<dependency>
-		    <groupId>org.apache.maven.plugins</groupId>
-		    <artifactId>maven-gpg-plugin</artifactId>
-		    <version>1.6</version>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-gpg-plugin</artifactId>
+			<version>1.6</version>
 		</dependency>
 		<dependency>
 			<groupId>com.drewnoakes</groupId>
@@ -182,7 +182,12 @@
 			<groupId>cglib</groupId>
 			<artifactId>cglib</artifactId>
 			<version>3.2.5</version>
-		</dependency>		
+		</dependency>
+		<dependency>
+			<groupId>com.googlecode.concurrentlinkedhashmap</groupId>
+			<artifactId>concurrentlinkedhashmap-lru</artifactId>
+			<version>1.4.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>

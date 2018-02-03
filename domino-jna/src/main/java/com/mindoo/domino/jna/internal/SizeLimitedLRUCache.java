@@ -1,11 +1,15 @@
 package com.mindoo.domino.jna.internal;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.commons.collections4.map.HashedMap;
+import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
+import com.googlecode.concurrentlinkedhashmap.EntryWeigher;
+import com.googlecode.concurrentlinkedhashmap.EvictionListener;
 
 /**
- * Abstract cache class that implements an LRU algorithm
+ * Abstract cache class that implements an LRU algorithm. Uses RW lock
+ * internally to support concurrent access across threads.
  * 
  * @author Karsten Lehmann
  *
@@ -13,244 +17,91 @@ import org.apache.commons.collections4.map.HashedMap;
  * @param <V> value type
  */
 public abstract class SizeLimitedLRUCache<K,V> {
-	private Map<K, CacheEntry<K,V>> m_cache;
-	private CacheEntry<K,V> m_head;
-	private CacheEntry<K,V> m_tail;
+	private ConcurrentLinkedHashMap<K, V> m_cache;
 	
-	private int m_maxSizeUnits;
-	private int m_cacheSizeInUnits;
-
 	public SizeLimitedLRUCache(int maxSizeUnits) {
-		m_cache = new HashedMap<K, CacheEntry<K,V>>();
-		m_maxSizeUnits = maxSizeUnits;
-	}
-	
-	public CacheEntry<K,V> getHead() {
-		return m_head;
-	}
-	
-	public CacheEntry<K,V> getTail() {
-		return m_tail;
-	}
-	
-	private enum Type {Added,Moved,NoChange}
-	
-	public final int getMaxSizeInUnits() {
-		return m_maxSizeUnits;
-	}
-	
-	public final int getCurrentCacheSizeInUnits() {
-		return m_cacheSizeInUnits;
-	}
-	
-	private Type addOrMoveToHead(CacheEntry<K,V> entry) {
-		int entrySizeUnits = computeSize(entry);
-		
-		if (m_head==null) {
-			//first entry, so head and tail
-			m_head = entry;
-			m_tail = entry;
-			entry.setPrev(null);
-			entry.setNext(null);
-			m_cacheSizeInUnits = entrySizeUnits;
-			entryAdded(entry);
-			return Type.Added;
-		}
-		else {
-			CacheEntry<K,V> oldHead = m_head;
-			CacheEntry<K,V> oldEntryPrev = entry.getPrev();
-			CacheEntry<K,V> oldEntryNext = entry.getNext();
-			
-			if (!m_head.equals(entry)) {
-				if (oldEntryPrev==null && oldEntryNext==null) {
-					//new entry, insert at head
-					entry.setNext(oldHead);
-					oldHead.setPrev(entry);
-					m_head = entry;
-					m_cacheSizeInUnits += entrySizeUnits;
-					entryAdded(entry);
-					return Type.Added;
-				}
-				else {
-					//entry already in the list, not at head
-					
-					//remove entry from chain, connect neighbors
-					if (oldEntryPrev!=null) {
-						oldEntryPrev.setNext(oldEntryNext);
-					}
-					if (oldEntryNext!=null) {
-						oldEntryNext.setPrev(oldEntryPrev);
-					}
-					//move to head,
-					//before old head
-					entry.setPrev(null);
-					entry.setNext(oldHead);
-					oldHead.setPrev(entry);
-					m_head = entry;
-					
-					if (m_tail!=null && m_tail.equals(entry)) {
-						//entry was tail
-						m_tail = oldEntryPrev;
-					}
-					return Type.Moved;
-				}
+		EntryWeigher<K, V> customWeigher = new EntryWeigher<K, V>() {
+			@Override public int weightOf(K key, V value) {
+				return computeSize(key, value);
 			}
-			else {
-				//element was already in the list at head position
-				return Type.NoChange;
-			}
-		}
+		};
+		EvictionListener<K, V> listener = new EvictionListener<K, V>() {
+			  @Override public void onEviction(K key, V value) {
+			    System.out.println("Evicted key=" + key + ", value=" + value);
+			  }
+			};
+		m_cache = new ConcurrentLinkedHashMap.Builder<K, V>()
+			    .maximumWeightedCapacity(maxSizeUnits)
+			    .weigher(customWeigher)
+			    .listener(listener)
+			    .build();
 	}
 	
-	public boolean remove(K key) {
-		CacheEntry<K,V> entry = m_cache.get(key);
-		if (entry!=null) {
-			CacheEntry<K,V> oldEntryPrev = entry.getPrev();
-			CacheEntry<K,V> oldEntryNext = entry.getNext();
-			
-			int entrySize = computeSize(entry);
-			
-			if (m_head.equals(entry)) {
-				//entry is head
-				entry.setNext(null);
-				oldEntryNext.setPrev(null);
-				m_head = oldEntryNext;
-			}
-			else {
-				if (oldEntryPrev!=null) {
-					oldEntryPrev.setNext(oldEntryNext);
-				}
-				
-				if (oldEntryNext!=null) {
-					oldEntryNext.setPrev(oldEntryPrev);
-				}
-				entry.setPrev(null);
-				entry.setNext(null);
-			}
-			
-			if (m_tail!=null && m_tail.equals(entry)) {
-				//entry was tail
-				m_tail = oldEntryPrev;
-			}
-			
-			m_cacheSizeInUnits -= entrySize;
-			m_cache.remove(key);
-			return true;
-		}
-		else {
-			return false;
-		}
+	public List<K> getKeys() {
+		return new ArrayList<K>(m_cache.keySet());
 	}
 	
-	public V get(K key) {
-		CacheEntry<K,V> entry = m_cache.get(key);
-		if (entry!=null) {
-			//mark entry as recently used
-			addOrMoveToHead(entry);
-			
-			return entry.getValue();
-		}
-		return null;
+	public void clear() {
+		m_cache.clear();
 	}
 	
-	private void removeTail() {
-		if (m_tail!=null) {
-			CacheEntry<K,V> oldTail = m_tail;
-			int tailSizeUnits = computeSize(m_tail);
-			
-			CacheEntry<K,V> tailPredecessor = m_tail.getPrev();
-			m_tail = tailPredecessor;
-			if (tailPredecessor!=null) {
-				tailPredecessor.setNext(null);
-			}
-			oldTail.setPrev(null);
-			m_cacheSizeInUnits -= tailSizeUnits;
-			
-			entryRemoved(oldTail);
-			
-			if (oldTail.equals(m_head)) {
-				//entry was the only chain element (also head)
-				m_head = null;
-			}
-		}
+	public final long getCurrentCacheSizeInUnits() {
+		return m_cache.weightedSize();
 	}
 
-	protected void entryAdded(CacheEntry<K,V> entry) {
-		
-	}
-
-	protected void entryRemoved(CacheEntry<K,V> entry) {
-		
-	}
-
-	public void put(K key, V value) {
-		CacheEntry<K,V> oldEntry = m_cache.get(key);
-		if (oldEntry!=null) {
-			int oldEntrySize = computeSize(oldEntry);
-			m_cacheSizeInUnits -= oldEntrySize;
-			oldEntry.setValue(value);
-			int newEntrySize = computeSize(oldEntry);
-			m_cacheSizeInUnits += newEntrySize;
-			
-			addOrMoveToHead(oldEntry);
-		}
-		else {
-			CacheEntry<K,V> entry = new CacheEntry(key, value);
-			m_cache.put(key, entry);
-			addOrMoveToHead(entry);
-		}
-		
-		//remove cache elements that make the cache too big
-		while ((m_cacheSizeInUnits > m_maxSizeUnits) && m_cache.size()>1 && m_tail!=null) {
-			removeTail();
-		}
-	}
-	
 	/**
 	 * Implement this method to compute a size for the cache entry
 	 * 
-	 * @param entry entry
+	 * @param key key
+	 * @param value value
 	 * @return size in units
 	 */
-	protected abstract int computeSize(CacheEntry<K,V> entry);
+	protected abstract int computeSize(K key, V value);
 	
-	public static class CacheEntry<K,V> {
-		private K m_key;
-		private V m_value;
-		private CacheEntry<K,V> m_prev;
-		private CacheEntry<K,V> m_next;
-		
-		public CacheEntry(K key, V value) {
-			m_key = key;
-			m_value = value;
+	/**
+	 * Method to look up a cache entry
+	 * 
+	 * @param key key
+	 * @return value or null if not found
+	 */
+	public V get(K key) {
+		return m_cache.get(key);
+	}
+	
+	/**
+	 * Method to check whether the cache contains a key
+	 * 
+	 * @param key key
+	 * @return true if value exists
+	 */
+	public boolean containsKey(K key) {
+		return m_cache.containsKey(key);
+	}
+	
+	/**
+	 * Removes a key from the LRU cache
+	 * 
+	 * @param key key
+	 * @return previously stored value or null
+	 */
+	public V remove(K key) {
+		return m_cache.remove(key);
+	}
+	
+	/**
+	 * Adds an entry to the LRU cache
+	 * 
+	 * @param key key
+	 * @param newValue value, if null we remove the cache entry
+	 * @return previously stored value or null
+	 */
+	public V put(K key, V newValue) {
+		if (newValue==null) {
+			return remove(key);
 		}
-		
-		public K getKey() {
-			return m_key;
-		}
-		
-		public V getValue() {
-			return m_value;
-		}
-		
-		public void setValue(V value) {
-			m_value = value;
-		}
-		
-		public CacheEntry<K,V> getPrev() {
-			return m_prev;
-		}
-		
-		public CacheEntry<K,V> getNext() {
-			return m_next;
-		}
-		
-		public void setPrev(CacheEntry<K,V> prev) {
-			m_prev = prev;
-		}
-		
-		public void setNext(CacheEntry<K,V> next) {
-			m_next = next;
+		else {
+			return m_cache.put(key, newValue);
 		}
 	}
+	
 }

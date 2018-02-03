@@ -5,7 +5,6 @@ import java.nio.charset.Charset;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
-import com.sun.jna.Memory;
 
 /**
  * Cache to optimize performance of LMBCS String conversion to Java Strings.
@@ -13,35 +12,22 @@ import com.sun.jna.Memory;
  * @author Karsten Lehmann
  */
 public class LMBCSStringConversionCache {
-	private static final String CACHE_KEY = "LMBCSStringCache";
-	
-	private static final int MAX_STRINGCACHE_SIZE_SHARED = 100000;
-	private static final int MAX_STRINGCACHE_SIZE_PERTHREAD = 1000;
-	
-	private static final int MAX_STRINGCACHE_SIZE_SHARED_BYTES = 750000;
-	private static final int MAX_STRINGCACHE_SIZE_PERTHREAD_BYTES = 40000;
+	//use simple cache for lmbcs-string conversion of short string
+	private static final boolean USE_LMBCS2STRING_CACHE = true;
+	//max length of each lmbcs-string cache entry in bytes
+	private static final int MAX_LMBCS2STRING_KEY_LENGTH = 1000;
 
-	//switch to change cache scope for performance testing
-	private static final boolean USE_SHARED_CACHE = true;
-	private static LRULMBCCache SHAREDSTRINGCONVERSIONCACHE = new LRULMBCCache(MAX_STRINGCACHE_SIZE_SHARED_BYTES);
+	private static final int MAX_LMBCS2STRING_SIZE_BYTES = 1000000;
 
-	public static int getCacheSize() {
-		return getCache().getCurrentCacheSizeInUnits();
-	}
-
-	private static LRULMBCCache getCache() {
-		LRULMBCCache cache;
-		if (USE_SHARED_CACHE) {
-			cache = SHAREDSTRINGCONVERSIONCACHE;
+	private static SizeLimitedLRUCache<LMBCSString,String> LMBCS2STRINGCACHE = new SizeLimitedLRUCache<LMBCSString,String>(MAX_LMBCS2STRING_SIZE_BYTES) {
+		@Override
+		protected int computeSize(LMBCSString key, String value) {
+			return key.size() + value.length()*2;
 		}
-		else {
-			cache = (LRULMBCCache) NotesGC.getCustomValue(CACHE_KEY);
-			if (cache==null) {
-				cache = new LRULMBCCache(MAX_STRINGCACHE_SIZE_PERTHREAD_BYTES);
-				NotesGC.setCustomValue(CACHE_KEY, cache);
-			}
-		}
-		return cache;
+	};
+
+	public static long getCacheSize() {
+		return LMBCS2STRINGCACHE.getCurrentCacheSizeInUnits();
 	}
 
 	/**
@@ -51,9 +37,7 @@ public class LMBCSStringConversionCache {
 	 * @return converted string
 	 */
 	public static String get(LMBCSString lmbcsString) {
-		LRULMBCCache cache = getCache();
-		
-		String stringFromCache = cache.get(lmbcsString);
+		String stringFromCache = LMBCS2STRINGCACHE.get(lmbcsString);
 		String convertedString;
 		
 		if (stringFromCache==null) {
@@ -70,48 +54,25 @@ public class LMBCSStringConversionCache {
 			
 			if (isPureAscii) {
 				String asciiStr = new String(dataArr, Charset.forName("ASCII"));
-				cache.put(lmbcsString, asciiStr);
+				if (USE_LMBCS2STRING_CACHE && lmbcsString.size()<=MAX_LMBCS2STRING_KEY_LENGTH) {
+					LMBCS2STRINGCACHE.put(lmbcsString, asciiStr);
+				}
 				return asciiStr;
 			}
 			
-			Memory dataMem = new Memory(dataArr.length);
+			DisposableMemory dataMem = new DisposableMemory(dataArr.length);
 			dataMem.write(0, dataArr, 0, dataArr.length);
 			
 			boolean skipAsciiCheck = true;
 			convertedString = NotesStringUtils.fromLMBCS(dataMem, dataArr.length, skipAsciiCheck);
-			cache.put(lmbcsString, convertedString);
+			dataMem.dispose();
+			if (USE_LMBCS2STRING_CACHE && lmbcsString.size()<=MAX_LMBCS2STRING_KEY_LENGTH) {
+				LMBCS2STRINGCACHE.put(lmbcsString, convertedString);
+			}
 		}
 		else {
 			convertedString = stringFromCache;
 		}
 		return convertedString;
-	}
-	
-	public static class LRULMBCCache extends SizeLimitedLRUCache<LMBCSString,String> {
-
-		public LRULMBCCache(int maxSizeUnits) {
-			super(maxSizeUnits);
-		}
-
-		@Override
-		protected int computeSize(CacheEntry<LMBCSString,String> entry) {
-			LMBCSString key = entry.getKey();
-			String value = entry.getValue();
-			
-			return key.size() + value.length()*2;
-		}
-
-		@Override
-		protected void entryAdded(
-				com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
-
-//			System.out.println("Added to cache: "+entry.getValue());
-		}
-		
-		@Override
-		protected void entryRemoved(com.mindoo.domino.jna.internal.SizeLimitedLRUCache.CacheEntry<LMBCSString, String> entry) {
-//			System.out.println("Removed from cache: "+entry.getValue());
-		}
-		
 	}
 }
