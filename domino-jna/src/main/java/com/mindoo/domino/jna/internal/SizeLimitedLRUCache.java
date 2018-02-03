@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.googlecode.concurrentlinkedhashmap.ConcurrentLinkedHashMap;
 import com.googlecode.concurrentlinkedhashmap.EntryWeigher;
-import com.googlecode.concurrentlinkedhashmap.EvictionListener;
 
 /**
  * Abstract cache class that implements an LRU algorithm. Uses RW lock
@@ -25,15 +24,9 @@ public abstract class SizeLimitedLRUCache<K,V> {
 				return computeSize(key, value);
 			}
 		};
-		EvictionListener<K, V> listener = new EvictionListener<K, V>() {
-			  @Override public void onEviction(K key, V value) {
-			    System.out.println("Evicted key=" + key + ", value=" + value);
-			  }
-			};
 		m_cache = new ConcurrentLinkedHashMap.Builder<K, V>()
 			    .maximumWeightedCapacity(maxSizeUnits)
 			    .weigher(customWeigher)
-			    .listener(listener)
 			    .build();
 	}
 	
