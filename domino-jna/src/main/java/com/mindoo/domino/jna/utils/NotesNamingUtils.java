@@ -125,6 +125,11 @@ public class NotesNamingUtils {
 	 * @return abbreviated name
 	 */
 	public static String toAbbreviatedName(String name) {
+		if (name==null)
+			return null;
+		if (name.length()==0)
+			return name;
+		
 		final String cacheKey = name;
 		String abbrName = m_nameAbbrCache.get(cacheKey);
 		
