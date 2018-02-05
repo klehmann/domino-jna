@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ import com.mindoo.domino.jna.NotesNamesList;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -38,7 +40,7 @@ import com.sun.jna.ptr.ShortByReference;
 public class NotesNamingUtils {
 	private static final int MAX_STRINGCACHE_SIZE = 500;
 	
-	private static LinkedHashMap<String, String> m_nameAbbrCache = new LinkedHashMap<String, String>(16,0.75f, true) {
+	private static Map<String, String> m_nameAbbrCache = Collections.synchronizedMap(new LinkedHashMap<String, String>(16,0.75f, true) {
 		private static final long serialVersionUID = -5818239831757810895L;
 
 		@Override
@@ -50,8 +52,8 @@ public class NotesNamingUtils {
 				return false;
 			}
 		}
-	};
-	private static LinkedHashMap<String, String> m_nameCanonicalCache = new LinkedHashMap<String, String>(16,0.75f, true) {
+	});
+	private static Map<String, String> m_nameCanonicalCache = Collections.synchronizedMap(new LinkedHashMap<String, String>(16,0.75f, true) {
 		private static final long serialVersionUID = -5818239831757810895L;
 
 		@Override
@@ -63,8 +65,7 @@ public class NotesNamingUtils {
 				return false;
 			}
 		}
-	};
-
+	});
 	
 	/**
 	 * This function converts a distinguished name in abbreviated format to canonical format.
@@ -101,13 +102,14 @@ public class NotesNamingUtils {
 
 		Memory templateNameMem = templateName==null ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
-		Memory outNameMem = new Memory(NotesConstants.MAXUSERNAME);
+		DisposableMemory outNameMem = new DisposableMemory(NotesConstants.MAXUSERNAME);
 		ShortByReference outLength = new ShortByReference();
 		
 		short result = NotesNativeAPI.get().DNCanonicalize(0, templateNameMem, inNameMem, outNameMem, NotesConstants.MAXUSERNAME, outLength);
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
+		outNameMem.dispose();
 		
 		m_nameCanonicalCache.put(cacheKey, sOutName);
 		
@@ -123,7 +125,31 @@ public class NotesNamingUtils {
 	 * @return abbreviated name
 	 */
 	public static String toAbbreviatedName(String name) {
-		return toAbbreviatedName(name, null);
+		final String cacheKey = name;
+		String abbrName = m_nameAbbrCache.get(cacheKey);
+		
+		if (abbrName==null) {
+			StringTokenizerExt st=new StringTokenizerExt(name, "/");
+			StringBuilder sb=new StringBuilder();
+			while (st.hasMoreTokens()) {
+				String currToken=st.nextToken();
+				int iPos = currToken.indexOf("=");
+				if (sb.length()>0)
+					sb.append("/");
+				
+				if (iPos!=-1) {
+					sb.append(currToken.substring(iPos+1));
+				}
+				else {
+					sb.append(currToken);
+				}
+			}
+			
+			abbrName = sb.toString();
+			m_nameAbbrCache.put(cacheKey, abbrName);
+		}
+
+		return abbrName;
 	}
 
 	/**
@@ -227,13 +253,14 @@ public class NotesNamingUtils {
 		
 		Memory templateNameMem = templateName==null || templateName.length()==0 ? null : NotesStringUtils.toLMBCS(templateName, true); //used when abbrName is only a common name
 		Memory inNameMem = NotesStringUtils.toLMBCS(name, true);
-		Memory outNameMem = new Memory(NotesConstants.MAXUSERNAME);
+		DisposableMemory outNameMem = new DisposableMemory(NotesConstants.MAXUSERNAME);
 		ShortByReference outLength = new ShortByReference();
 		
 		short result = NotesNativeAPI.get().DNAbbreviate(0, templateNameMem, inNameMem, outNameMem, NotesConstants.MAXUSERNAME, outLength);
 		NotesErrorUtils.checkResult(result);
 		
 		String sOutName = NotesStringUtils.fromLMBCS(outNameMem, (int) (outLength.getValue() & 0xffff));
+		outNameMem.dispose();
 		
 		m_nameAbbrCache.put(cacheKey, sOutName);
 		
