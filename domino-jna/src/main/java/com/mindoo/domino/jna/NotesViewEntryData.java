@@ -715,7 +715,19 @@ public class NotesViewEntryData {
 		String nameStr = getAsString(columnName, null);
 		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
 	}
-	
+
+	/**
+	 * Convenience function that converts a column value to an abbreviated name
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a string
+	 * @return name or null
+	 */
+	public String getAsNameAbbreviated(String columnName, String defaultValue) {
+		String nameStr = getAsString(columnName, defaultValue);
+		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
+	}
+	 
 	/**
 	 * Convenience function that converts a column value to a list of abbreviated names
 	 * 
@@ -724,6 +736,26 @@ public class NotesViewEntryData {
 	 */
 	public List<String> getAsNamesListAbbreviated(String columnName) {
 		List<String> strList = getAsStringList(columnName, null);
+		if (strList!=null) {
+			List<String> namesAbbr = new ArrayList<String>(strList.size());
+			for (int i=0; i<strList.size(); i++) {
+				namesAbbr.add(NotesNamingUtils.toAbbreviatedName(strList.get(i)));
+			}
+			return namesAbbr;
+		}
+		else
+			return null;
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a list of abbreviated names
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a string
+	 * @return names or null
+	 */
+	public List<String> getAsNamesListAbbreviated(String columnName, List<String> defaultValue) {
+		List<String> strList = getAsStringList(columnName, defaultValue);
 		if (strList!=null) {
 			List<String> namesAbbr = new ArrayList<String>(strList.size());
 			for (int i=0; i<strList.size(); i++) {
