@@ -162,7 +162,7 @@ public class NotesStringUtils {
 		if (inPtr==null || textLen==0) {
 			return "";
 		}
-		
+
 		if (textLen==-1) {
 			int foundLen = 0;
 			int offset = 0;
@@ -175,7 +175,7 @@ public class NotesStringUtils {
 			}
 			textLen = foundLen;
 		}
-		
+
 		if (!skipAsciiCheck) {
 			boolean isPureAscii = true;
 			byte[] data = inPtr.getByteArray(0, textLen);
@@ -186,66 +186,61 @@ public class NotesStringUtils {
 					break;
 				}
 			}
-			
+
 			if (isPureAscii) {
 				String asciiStr = new String(data, ASCII);
 				return asciiStr;
 			}
 		}
-	
+
 		Pointer pText = inPtr;
 		boolean useOSLineBreak = isUseOSLineDelimiter();
-		
-		DisposableMemory pBuf_utf8 = null;
-		
-		StringBuilder result = new StringBuilder(textLen + 5);
-		while (textLen > 0) {
-			long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
-			long outLen=2*len;
-			
-			if (pBuf_utf8==null) {
-				pBuf_utf8 = new DisposableMemory(outLen+1);
-			}
-			else if (pBuf_utf8.size()!=(outLen+1)) {
-				pBuf_utf8.dispose();
-				pBuf_utf8 = new DisposableMemory(outLen+1);
-			}
 
-			//convert text from LMBCS to utf8
-			int len_utf8 = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8, pText, (short) (len & 0xffff), pBuf_utf8, (short) (outLen & 0xffff));
-			pBuf_utf8.setByte(len_utf8, (byte) 0);
-			
-			// copy 
-			String currConvertedStr;
-			try {
-				currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
-				pBuf_utf8.dispose();
-				if (currConvertedStr.contains("\0")) {
-					//Notes uses \0 for multiline strings
-					if (PlatformUtils.isWindows() && useOSLineBreak) {
-						currConvertedStr = currConvertedStr.replace("\0", "\r\n");
+		DisposableMemory pBuf_utf8 = new DisposableMemory(2*NotesConstants.MAXPATH+1);
+		StringBuilder result = new StringBuilder(textLen + 5);
+		try {
+			while (textLen > 0) {
+				long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
+				long outLen=2*len;
+
+				//convert text from LMBCS to utf8
+				int len_utf8 = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8, pText, (short) (len & 0xffff), pBuf_utf8, (short) (outLen & 0xffff));
+				pBuf_utf8.setByte(len_utf8, (byte) 0);
+
+				// copy 
+				String currConvertedStr;
+				try {
+					currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
+					if (currConvertedStr.contains("\0")) {
+						//Notes uses \0 for multiline strings
+						if (PlatformUtils.isWindows() && useOSLineBreak) {
+							currConvertedStr = currConvertedStr.replace("\0", "\r\n");
+						}
+						else {
+							currConvertedStr = currConvertedStr.replace("\0", "\n");
+						}
 					}
-					else {
-						currConvertedStr = currConvertedStr.replace("\0", "\n");
-					}
+				} catch (UnsupportedEncodingException e) {
+					throw new RuntimeException("Unknown encoding UTF-8", e);
 				}
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException("Unknown encoding UTF-8", e);
+
+				textLen -= len;
+
+				//shortcut for short strings
+				if (result==null && textLen<=0) {
+					return currConvertedStr;
+				}
+
+				if (result==null) {
+					result = new StringBuilder();
+				}
+				result.append(currConvertedStr);
+
+				pText = pText.share(len);
 			}
-			
-			textLen -= len;
-			
-			//shortcut for short strings
-			if (result==null && textLen<=0) {
-				return currConvertedStr;
-			}
-			
-			if (result==null) {
-				result = new StringBuilder();
-			}
-			result.append(currConvertedStr);
-			
-			pText = pText.share(len);
+		}
+		finally {
+			pBuf_utf8.dispose();
 		}
 		return result==null ? "" : result.toString();
 	}
