@@ -147,7 +147,7 @@
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
-			<version>0.9.15-SNAPSHOT</version>
+			<version>0.9.16-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
