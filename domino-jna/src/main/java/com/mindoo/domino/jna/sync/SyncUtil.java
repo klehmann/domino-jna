@@ -51,8 +51,10 @@ public class SyncUtil {
 	 * @param selectionFormula selection formula for content
 	 * @param target sync target
 	 * @return result statistics
+	 * 
+	 * @param <CTX> sync context type
 	 */
-	public static SyncResult sync(final NotesDatabase dbSource, String selectionFormula, final ISyncTarget target) {
+	public static <CTX> SyncResult sync(final NotesDatabase dbSource, String selectionFormula, final ISyncTarget<CTX> target) {
 		long t0=System.currentTimeMillis();
 		
 		String dbReplicaId = dbSource.getReplicaID();
@@ -72,7 +74,7 @@ public class SyncUtil {
 		String dbInstanceId = dbServerAbbr + "_" + dbFilePath + "_" + dbSource.getCreated().toDateInMillis();
 
 		NotesTimeDate lastSyncEndDate = target.getLastSyncEndDate(dbInstanceId);
-		final Object ctx = target.startingSync(dbReplicaId);
+		final CTX ctx = target.startingSync(dbReplicaId);
 		
 		NotesIDTable searchFilter = null;
 		

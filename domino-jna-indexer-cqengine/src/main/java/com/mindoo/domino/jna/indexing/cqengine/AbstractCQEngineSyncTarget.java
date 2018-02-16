@@ -35,8 +35,10 @@ import edu.emory.mathcs.backport.java.util.Collections;
  * CQEngine.
  * 
  * @author Karsten Lehmann
+ * @param <T> data object type
+ * @param <CTX> sync context type
  */
-public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> implements ISyncTarget {
+public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX> implements ISyncTarget<CTX> {
 	public final Attribute<BaseIndexObject, String> OBJ_UNID = new SimpleAttribute<BaseIndexObject, String>("unid") {
 		public String getValue(BaseIndexObject obj, QueryOptions queryOptions) {
 			return obj.getUNID();
@@ -149,7 +151,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 	}
 	
 	@Override
-	public Object startingSync(String dbReplicaId) {
+	public CTX startingSync(String dbReplicaId) {
 		m_indexLock.lock();
 		
 		setLastSyncDbReplicaId(dbReplicaId);
@@ -241,7 +243,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject> impl
 	 * to an index object.
 	 * 
 	 * @param oid originator id of Domino data
-	 * @param summaryBufferData summary buffer if {@link #getWhichDataToRead()} returned {@link DataToRead#SummaryBuffer}, null otherwise
+	 * @param summaryBufferData summary buffer if {@link #getWhichDataToRead()} returned {@link DataToRead#SummaryBufferAllItems} or {@link DataToRead#SummaryBufferSelectedItems}, null otherwise
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 * @return index object or null if unsupported / irrelevant data
 	 */

@@ -13,8 +13,10 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableDa
  * Interface for a sync target that receives source database changes incrementally.
  * 
  * @author Karsten Lehmann
+ * 
+ * @param <CTX> sync context type
  */
-public interface ISyncTarget {
+public interface ISyncTarget<CTX> {
 
 	/**
 	 * Return the replica id of the last sync run. Used to compare if it is safe
@@ -59,7 +61,7 @@ public interface ISyncTarget {
 	 * @param dbReplicaId replica id of source database, to be returned on the {@link #getLastSyncDbReplicaId()} call of the next sync run
 	 * @return sync context object or null
 	 */
-	public Object startingSync(String dbReplicaId);
+	public CTX startingSync(String dbReplicaId);
 	
 	/**
 	 * Method to quickly wipe the whole target datastore, used in case of changing source
@@ -67,7 +69,7 @@ public interface ISyncTarget {
 	 * 
 	 * @param ctx sync context
 	 */
-	public void clear(Object ctx);
+	public void clear(CTX ctx);
 	
 	/**
 	 * This expensive method to scan the existing target data is only used in case
@@ -132,7 +134,7 @@ public interface ISyncTarget {
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public TargetResult noteChangedMatchingFormula(Object ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
+	public TargetResult noteChangedMatchingFormula(CTX ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
 
 	/**
 	 * The method is called for every note that changed since the last sync end date and
@@ -144,7 +146,7 @@ public interface ISyncTarget {
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
 	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public TargetResult noteChangedNotMatchingFormula(Object ctx, NotesOriginatorIdData oid);
+	public TargetResult noteChangedNotMatchingFormula(CTX ctx, NotesOriginatorIdData oid);
 
 	/**
 	 * The method is called for every note that got deleted since the last sync end date. Add code here
@@ -156,7 +158,7 @@ public interface ISyncTarget {
 	 * @param oid originator id containing the UNID, sequence number and sequence date ("modified initially") of the note
 	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public TargetResult noteDeleted(Object ctx, NotesOriginatorIdData oid);
+	public TargetResult noteDeleted(CTX ctx, NotesOriginatorIdData oid);
 
 	/**
 	 * Method is called during the log process in case expensive log messages are
@@ -190,7 +192,7 @@ public interface ISyncTarget {
 	 * @param ctx sync context
 	 * @param t optional exception to be logged which occurred during sync or null
 	 */
-	public void abort(Object ctx, Throwable t);
+	public void abort(CTX ctx, Throwable t);
 
 	/**
 	 * Method is called when the whole sync process is done to commit pending writes.
@@ -200,5 +202,5 @@ public interface ISyncTarget {
 	 * @param dbInstanceId db instance id for which to store the <code>startingDateForNextSync</code>
 	 * @param startingDateForNextSync date to be returned by {@link #getLastSyncEndDate(String)} on the next sync run for incremental sync
 	 */
-	public void endingSync(Object ctx, String selectionFormulaForNextSync, String dbInstanceId, NotesTimeDate startingDateForNextSync);
+	public void endingSync(CTX ctx, String selectionFormulaForNextSync, String dbInstanceId, NotesTimeDate startingDateForNextSync);
 }
