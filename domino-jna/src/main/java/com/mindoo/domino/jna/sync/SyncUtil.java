@@ -1,10 +1,10 @@
 package com.mindoo.domino.jna.sync;
 
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -97,7 +97,7 @@ public class SyncUtil {
 				sinceDateForSearch = null;
 				
 				//no last sync date, so we need to do a one-time comparison of source and target content
-				List<NotesOriginatorIdData> targetOIDs = target.scanTargetData();
+				Collection<NotesOriginatorIdData> targetOIDs = target.scanTargetData();
 				if (!targetOIDs.isEmpty()) {
 					Map<String,NotesOriginatorIdData> targetOIDsByUNID = new HashMap<String,NotesOriginatorIdData>();
 					for (NotesOriginatorIdData currOID : targetOIDs) {

@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna.sync;
 
+import java.util.Collection;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -78,7 +78,7 @@ public interface ISyncTarget<CTX> {
 	 * 
 	 * @return list of originator ids in target (containing UNID / sequence no / sequence time of synced data) so that we can compare what is missing or outdated in the target
 	 */
-	public List<NotesOriginatorIdData> scanTargetData();
+	public Collection<NotesOriginatorIdData> scanTargetData();
 	
 	/**
 	 * Return here whether we should read just the summary buffer data for notes matching

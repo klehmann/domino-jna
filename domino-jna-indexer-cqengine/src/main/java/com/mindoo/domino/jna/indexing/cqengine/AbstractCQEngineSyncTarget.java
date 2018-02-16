@@ -171,7 +171,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 	}
 
 	@Override
-	public List<NotesOriginatorIdData> scanTargetData() {
+	public Collection<NotesOriginatorIdData> scanTargetData() {
 		List<NotesOriginatorIdData> oids = new ArrayList<NotesOriginatorIdData>();
 		for (BaseIndexObject currObj : m_indexCollection) {
 			oids.add(new NotesOriginatorIdData(currObj.getUNID(), currObj.getSequence(), currObj.getSequenceTime()));
