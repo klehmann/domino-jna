@@ -479,6 +479,20 @@ public interface INotesNativeAPI32 extends Library {
 
 	public short NSFBuildNamesList(Memory UserName, int dwFlags, IntByReference rethNamesList);
 
+	public short CreateNamesListFromGroupNameExtend(Memory pszServerName, Memory pTarget, IntByReference rethNames);
+	
+	public short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
+	
+	public short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
+	
+//	public short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, IntByReference rtnhNames);
+	
+	public short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
+			Pointer pLookupFlags, Memory pTarget, IntByReference rethNames);
+	
+	public short CreateNamesListUsingLookupName(Memory pszServerName,Pointer pLookupFlags, Memory pTarget,
+			IntByReference rethNames);
+	
 	public short NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
 	public short NIFReadEntriesExt(int hCollection,

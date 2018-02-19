@@ -14,6 +14,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.LMBCSStringArray;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -29,6 +30,7 @@ import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -426,9 +428,141 @@ public class NotesNamingUtils {
 		}
 	}
 	
+
 	/**
 	 * Computes a {@link NotesNamesList} structure with all name variants, wildcards and groups for
 	 * the specified user
+	 * 
+	 * @param server name of server, either abbreviated or canonical or null/empty string for local
+	 * @param userName username, either abbreviated or canonical
+	 * @return names list
+	 */
+	public static NotesNamesList buildNamesList(String server, String userName) {
+		if (userName==null)
+			throw new NullPointerException("Name cannot be null");
+		
+		//make sure that server and username are canonical
+		userName = toCanonicalName(userName);
+		server = toCanonicalName(server);
+		
+		Memory userNameLMBCS = NotesStringUtils.toLMBCS(userName, true);
+		Memory serverNameLMBCS = NotesStringUtils.toLMBCS(server, true);
+		
+		boolean bDontLookupAlternateNames = false;
+		short fDontLookupAlternateNames = (short) (bDontLookupAlternateNames ? 1 : 0);
+		Pointer pLookupFlags = null;
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethNamesList = new LongByReference();
+			short result = NotesNativeAPI64.get().CreateNamesListFromSingleName(serverNameLMBCS,
+					fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			long hUserNamesList64 = rethNamesList.getValue();
+			
+			NotesNamesList newList =  new NotesNamesList(hUserNamesList64);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+		else {
+			IntByReference rethNamesList = new IntByReference();
+			short result = NotesNativeAPI32.get().CreateNamesListFromSingleName(serverNameLMBCS,
+					fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			int hUserNamesList32 = rethNamesList.getValue();
+			
+			NotesNamesList newList = new NotesNamesList(hUserNamesList32);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+	}
+	
+	/**
+	 * Expand one or more target names (e.g., might contain an alternate name) into a list of
+	 * names (including any groups the target names belong to) by any given server name.
+	 * 
+	 * @param server name of server, either abbreviated or canonical or null/empty string for local
+	 * @param names names to expand
+	 * @return names list
+	 */
+	public static NotesNamesList createNamesListFromNames(String server, String[] names) {
+		server = toCanonicalName(server);
+		
+		Memory ptrArrMem = new Memory(Pointer.SIZE * names.length);
+		Memory[] namesMem = new Memory[names.length];
+		
+		for (int i=0; i<names.length; i++) {
+			namesMem[i] = NotesStringUtils.toLMBCS(names[i], true);
+			ptrArrMem.setPointer(i, namesMem[i]);
+		}
+		
+		Memory serverNameLMBCS = NotesStringUtils.toLMBCS(server, true);
+		
+		PointerByReference ptrRef = new PointerByReference();
+		ptrRef.setValue(ptrArrMem);
+		
+		LMBCSStringArray sArr = new LMBCSStringArray(names);
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethNamesList = new LongByReference();
+			short result = NotesNativeAPI64.get().CreateNamesListFromNamesExtend(serverNameLMBCS, (short) (names.length & 0xffff), sArr, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			long hUserNamesList64 = rethNamesList.getValue();
+			
+			NotesNamesList newList =  new NotesNamesList(hUserNamesList64);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+		else {
+			IntByReference rethNamesList = new IntByReference();
+			short result = NotesNativeAPI32.get().CreateNamesListFromNamesExtend(serverNameLMBCS, (short) (names.length & 0xffff), sArr, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			int hUserNamesList32 = rethNamesList.getValue();
+			
+			NotesNamesList newList = new NotesNamesList(hUserNamesList32);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+	}
+	
+	/**
+	 * Expand a target group/subtree name into a list of names (including any groups
+	 * or subtrees the target names belong to) by any given server name
+	 * 
+	 * @param server name of server, either abbreviated or canonical or null/empty string for local
+	 * @param group group name
+	 * @return names list
+	 */
+	public static NotesNamesList createNamesListFromGroupName(String server, String group) {
+		server = toCanonicalName(server);
+		
+		Memory groupLMBCS = NotesStringUtils.toLMBCS(group, true);
+		Memory serverNameLMBCS = NotesStringUtils.toLMBCS(server, true);
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethNamesList = new LongByReference();
+			short result = NotesNativeAPI64.get().CreateNamesListFromGroupNameExtend(serverNameLMBCS, groupLMBCS, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			long hUserNamesList64 = rethNamesList.getValue();
+			
+			NotesNamesList newList =  new NotesNamesList(hUserNamesList64);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+		else {
+			IntByReference rethNamesList = new IntByReference();
+			short result = NotesNativeAPI32.get().CreateNamesListFromGroupNameExtend(serverNameLMBCS, groupLMBCS, rethNamesList);
+			NotesErrorUtils.checkResult(result);
+			int hUserNamesList32 = rethNamesList.getValue();
+			
+			NotesNamesList newList = new NotesNamesList(hUserNamesList32);
+			NotesGC.__memoryAllocated(newList);
+			return newList;
+		}
+	}
+	
+	/**
+	 * Computes a {@link NotesNamesList} structure with all name variants, wildcards and groups for
+	 * the specified user on a remote server
 	 * 
 	 * @param userName username, either abbreviated or canonical
 	 * @return names list
@@ -468,6 +602,22 @@ public class NotesNamingUtils {
 	 * Computes the usernames list for the specified user, which is his name, name wildcards
 	 * and all his groups and nested groups
 	 * 
+	 * @param server name of server, either abbreviated or canonical or null/empty string for local
+	 * @param userName username in canonical format
+	 * @return usernames list
+	 */
+	public static List<String> getUserNamesList(String server, String userName) {
+		NotesNamesList namesList = buildNamesList(server, userName);
+		List<String> names = namesList.getNames();
+		namesList.free();
+		
+		return names;
+	}
+
+	/**
+	 * Computes the usernames list for the specified user, which is his name, name wildcards
+	 * and all his groups and nested groups
+	 * 
 	 * @param userName username in canonical format
 	 * @return usernames list
 	 */
@@ -478,7 +628,7 @@ public class NotesNamingUtils {
 		
 		return names;
 	}
-
+	
 	/**
 	 * Enum of available user privileges
 	 * 

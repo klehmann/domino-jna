@@ -153,7 +153,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * @return acl access info, with access level, flags and roles
 	 */
 	public NotesACLAccess lookupAccess(String userName) {
-		NotesNamesList namesList = NotesNamingUtils.buildNamesList(userName);
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_parentDb.getServer(), userName);
 		try {
 			return lookupAccess(namesList);
 		}

@@ -481,6 +481,20 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 
 	public native short NSFBuildNamesList(Memory UserName, int dwFlags, LongByReference rethNamesList);
 
+	public native short CreateNamesListFromGroupNameExtend(Memory pszServerName, Memory pTarget, LongByReference rethNames);
+	
+	public native short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, LongByReference rethNames);
+	
+	public native short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, LongByReference rethNames);
+	
+//	public native short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, LongByReference rtnhNames);
+	
+	public native short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
+			Pointer pLookupFlags, Memory pTarget, LongByReference rethNames);
+	
+	public native short CreateNamesListUsingLookupName(Memory pszServerName,Pointer pLookupFlags, Memory pTarget,
+			LongByReference rethNames);
+
 	public native short NIFReadEntries(long hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, LongByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
 	public native short NIFReadEntriesExt(long hCollection,
