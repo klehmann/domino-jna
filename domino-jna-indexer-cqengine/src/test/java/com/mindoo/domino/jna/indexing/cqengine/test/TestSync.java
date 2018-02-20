@@ -190,7 +190,7 @@ public class TestSync extends BaseJNATestClass {
 					
 					Set<String> unidsInIndex = new HashSet<String>();
 					for (Person currPerson : target.getContent()) {
-						Assert.assertTrue("Person with UNID "+unidsOfLPersons+" was also found via NSFSearch", unidsOfLPersons.contains(currPerson.getUNID()));
+						Assert.assertTrue("Person with UNID "+currPerson.getUNID()+" was also found via NSFSearch", unidsOfLPersons.contains(currPerson.getUNID()));
 						Assert.assertTrue("Lastname "+currPerson.getLastName()+" starts with L", currPerson.getLastName().startsWith("L"));
 						unidsInIndex.add(currPerson.getUNID());
 					}
