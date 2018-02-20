@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
@@ -242,6 +243,109 @@ public class NotesDateTimeUtils {
 			innards[0] = NotesConstants.ALLDAY;
 		}
 		return innards;
+	}
+	
+	/**
+	 * Method to compare two date/time values and check whether the first is after the second
+	 * 
+	 * @param innards1 first date/time
+	 * @param innards2 second date/time
+	 * @return true if after
+	 */
+	public static boolean isAfter(int[] innards1, int[] innards2) {
+		return compareInnards(innards1, innards2) > 0;
+	}
+
+	/**
+	 * Method to compare two date/time values and check whether the first is before the second
+	 * 
+	 * @param innards1 first date/time
+	 * @param innards2 second date/time
+	 * @return true if before
+	 */
+	public static boolean isBefore(int[] innards1, int[] innards2) {
+		return compareInnards(innards1, innards2) < 0;
+	}
+
+	/**
+	 * Method to compare two date/time values and check whether both are equal
+	 * 
+	 * @param innards1 first date/time
+	 * @param innards2 second date/time
+	 * @return true if equal
+	 */
+	public static boolean isEqual(int[] innards1, int[] innards2) {
+		return compareInnards(innards1, innards2) == 0;
+	}
+
+	/**
+	 * Compares two date/time values and returns -1, if the first value is before
+	 * the second, 1 if the first value is after the second and 0 if both values are
+	 * equal.
+	 * 
+	 * @param innards1 first date/time
+	 * @param innards2 second date/time
+	 * @return compare result
+	 */
+	public static int compareInnards(int[] innards1, int[] innards2) {
+		if (!hasDate(innards1)) {
+			throw new IllegalArgumentException("Innard array #1 does not have a date part: "+Arrays.toString(innards1));
+		}
+		if (!hasDate(innards2)) {
+			throw new IllegalArgumentException("Innard array #1 does not have a date part: "+Arrays.toString(innards2));
+		}
+		if (!hasTime(innards1)) {
+			throw new IllegalArgumentException("Innard array #1 does not have a time part: "+Arrays.toString(innards1));
+		}
+		if (!hasTime(innards2)) {
+			throw new IllegalArgumentException("Innard array #1 does not have a time part: "+Arrays.toString(innards2));
+		}
+		
+		//compare date part
+		if (innards1[1] > innards2[1]) {
+			return 1;
+		}
+		else if (innards1[1] < innards2[1]) {
+			return -1;
+		}
+		else {
+			//compare time part
+			if (innards1[0] > innards2[0]) {
+				return 1;
+			}
+			else if (innards1[0] < innards2[0]){
+				return -1;
+			}
+			else {
+				return 0;
+			}
+		}
+	}
+	
+	/**
+	 * Method to check whether a date/time represented as an innard array has
+	 * a time part
+	 * 
+	 * @param innards innards
+	 * @return true if it has time
+	 */
+	public static boolean hasTime(int[] innards) {
+		if (innards.length!=2)
+			throw new IllegalArgumentException("Invalid innard size: "+innards.length+", expected 2");
+		return (innards[0]!=NotesConstants.ALLDAY);
+	}
+	
+	/**
+	 * Method to check whether a date/time represented as an innard array has
+	 * a date part
+	 * 
+	 * @param innards innards
+	 * @return true if it has date
+	 */
+	public static boolean hasDate(int[] innards) {
+		if (innards.length!=2)
+			throw new IllegalArgumentException("Invalid innard size: "+innards.length+", expected 2");
+		return (innards[1]!=NotesConstants.ANYDAY);
 	}
 	
 	/**
