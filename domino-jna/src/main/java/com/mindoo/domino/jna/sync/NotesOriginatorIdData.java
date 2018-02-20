@@ -13,18 +13,18 @@ import com.mindoo.domino.jna.NotesTimeDate;
 public class NotesOriginatorIdData {
 	private String m_unid;
 	private int m_seq;
-	private NotesTimeDate m_seqTime;
+	private int[] m_seqTimeInnards;
 	
-	public NotesOriginatorIdData(String unid, int seq, NotesTimeDate seqTime) {
+	public NotesOriginatorIdData(String unid, int seq, int[] seqTimeInnards) {
 		m_unid = unid;
 		m_seq = seq;
-		m_seqTime = seqTime;
+		m_seqTimeInnards = seqTimeInnards;
 	}
 	
 	public NotesOriginatorIdData(NotesOriginatorId oid) {
 		m_unid = oid.getUNIDAsString();
 		m_seq = oid.getSequence();
-		m_seqTime = oid.getSequenceTime();
+		m_seqTimeInnards = oid.getSequenceTime().getInnards();
 	}
 	
 	public String getUNID() {
@@ -35,7 +35,7 @@ public class NotesOriginatorIdData {
 		return m_seq;
 	}
 	
-	public NotesTimeDate getSequenceTime() {
-		return m_seqTime;
+	public int[] getSequenceTimeInnards() {
+		return m_seqTimeInnards;
 	}
 }

@@ -24,6 +24,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget.DataToRead;
 import com.mindoo.domino.jna.sync.ISyncTarget.TargetResult;
+import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 
 /**
@@ -120,6 +121,7 @@ public class SyncUtil {
 									return Action.Continue;
 								}
 					});
+					startDateForNextSync = sourceOIDSearchEndDate;
 					
 					//find out which data we need to transfer
 					Map<String, NotesOriginatorIdData> missingUNIDsInTarget = new HashMap<String, NotesOriginatorIdData>();
@@ -140,7 +142,7 @@ public class SyncUtil {
 						}
 						else if (currSourceOID.getSequence()==matchingOIDInTarget.getSequence()) {
 							//se	quence time is expected to be the same, otherwise we have a conflict
-							if (currSourceOID.getSequenceTime().equals(matchingOIDInTarget.getSequenceTime())) {
+							if (currSourceOID.getSequenceTimeInnards().equals(matchingOIDInTarget.getSequenceTimeInnards())) {
 								equalInSourceAndTarget.put(currUNID, currSourceOID);
 							}
 							else {
@@ -184,7 +186,10 @@ public class SyncUtil {
 					for (Entry<String,NotesOriginatorIdData[]> currEntry : conflicts.entrySet()) {
 						String currUNID = currEntry.getKey();
 						NotesOriginatorIdData[] sourceTargetOIDs = currEntry.getValue();
-						if (sourceTargetOIDs[0].getSequenceTime().isAfter(sourceTargetOIDs[1].getSequenceTime())) {
+						int[] sourceTargetOID0SeqTimeInnards = sourceTargetOIDs[0].getSequenceTimeInnards();
+						int[] sourceTargetOID1SeqTimeInnards = sourceTargetOIDs[1].getSequenceTimeInnards();
+						
+						if (NotesDateTimeUtils.isAfter(sourceTargetOID0SeqTimeInnards, sourceTargetOID1SeqTimeInnards)) {
 							unidsToTransfer.add(currUNID);
 						}
 					}

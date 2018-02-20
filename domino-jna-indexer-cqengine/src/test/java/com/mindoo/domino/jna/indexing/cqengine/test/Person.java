@@ -2,7 +2,6 @@ package com.mindoo.domino.jna.indexing.cqengine.test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.indexing.cqengine.BaseIndexObject;
 
 public class Person extends BaseIndexObject {
@@ -15,9 +14,9 @@ public class Person extends BaseIndexObject {
 	private String m_firstName;
 	private String m_fullName;
 	
-	public Person(String unid, int sequence, NotesTimeDate sequenceTime,
+	public Person(String unid, int sequence, int[] seqTimeInnards,
 			String companyName, String fullName, String lastName, String firstName) {
-		super(unid, sequence, sequenceTime);
+		super(unid, sequence, seqTimeInnards);
 		
 		m_companyName = companyName;
 		m_fullName = fullName;
@@ -48,7 +47,7 @@ public class Person extends BaseIndexObject {
 		result = prime * result + ((m_firstName == null) ? 0 : m_firstName.hashCode());
 		result = prime * result + ((m_lastName == null) ? 0 : m_lastName.hashCode());
 		result = prime * result + getSequence();
-		result = prime * result + ((getSequenceTime() == null) ? 0 : getSequenceTime().hashCode());
+		result = prime * result + ((getSequenceTimeInnards() == null) ? 0 : getSequenceTimeInnards().hashCode());
 		result = prime * result + ((getUNID() == null) ? 0 : getUNID().hashCode());
 		result = prime * result + (int) (version ^ (version >>> 32));
 		return result;
@@ -67,10 +66,10 @@ public class Person extends BaseIndexObject {
 		if (getSequence() != other.getSequence())
 			return false;
 		
-		if (getSequenceTime() == null) {
-			if (other.getSequenceTime() != null)
+		if (getSequenceTimeInnards() == null) {
+			if (other.getSequenceTimeInnards() != null)
 				return false;
-		} else if (!getSequenceTime().equals(other.getSequenceTime()))
+		} else if (!getSequenceTimeInnards().equals(other.getSequenceTimeInnards()))
 			return false;
 		
 		if (getUNID() == null) {
@@ -111,7 +110,7 @@ public class Person extends BaseIndexObject {
 	
 	@Override
 	public String toString() {
-		return "Person [unid="+getUNID()+", seq="+getSequence()+", seqtime="+getSequenceTime()+", lastname="+getLastName()+", firstname="+getFirstName()+"]";
+		return "Person [unid="+getUNID()+", seq="+getSequence()+", seqtime="+getSequenceTimeInnards()+", lastname="+getLastName()+", firstname="+getFirstName()+"]";
 	}
 	
 }

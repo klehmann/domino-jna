@@ -10,7 +10,6 @@ import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.mindoo.domino.jna.NotesNote;
-import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.indexing.cqengine.AbstractCQEngineSyncTarget;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget;
@@ -22,7 +21,7 @@ import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
  * 
  * @author Karsten Lehmann
  */
-public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person> implements ISyncTarget {
+public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person, Object> implements ISyncTarget<Object> {
 	//our attributes we want to use for querying data
 	public static final Attribute<Person, String> PERSON_COMPANY = new SimpleAttribute<Person, String>("company") {
 		public String getValue(Person person, QueryOptions queryOptions) {
@@ -81,7 +80,7 @@ public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person> impleme
 	protected Person toObject(NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note) {
 		String unid = oid.getUNID();
 		int seq = oid.getSequence();
-		NotesTimeDate seqTime = oid.getSequenceTime();
+		int[] seqTimeInnards = oid.getSequenceTimeInnards();
 		
 		String companyName;
 		String fullName;
@@ -101,7 +100,7 @@ public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person> impleme
 			firstName = summaryBufferData.getAsString("Firstname", "");
 		}
 		
-		Person p = new Person(unid, seq, seqTime,
+		Person p = new Person(unid, seq, seqTimeInnards,
 				companyName, fullName, lastName, firstName);
 		return p;
 	}

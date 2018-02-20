@@ -50,12 +50,6 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 			return obj.getSequence();
 		}
 	};
-
-	public final Attribute<BaseIndexObject, Long> OBJ_SEQUENCETIME = new SimpleAttribute<BaseIndexObject, Long>("sequenceTime") {
-		public Long getValue(BaseIndexObject obj, QueryOptions queryOptions) {
-			return obj.getSequenceTime().toDateInMillis();
-		}
-	};
 	
 	private IndexedCollection<T> m_indexCollection;
 
@@ -174,7 +168,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 	public Collection<NotesOriginatorIdData> scanTargetData() {
 		List<NotesOriginatorIdData> oids = new ArrayList<NotesOriginatorIdData>();
 		for (BaseIndexObject currObj : m_indexCollection) {
-			oids.add(new NotesOriginatorIdData(currObj.getUNID(), currObj.getSequence(), currObj.getSequenceTime()));
+			oids.add(new NotesOriginatorIdData(currObj.getUNID(), currObj.getSequence(), currObj.getSequenceTimeInnards()));
 		}
 		return oids;
 	}
