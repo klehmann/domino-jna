@@ -13,6 +13,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 
 import javax.sql.DataSource;
@@ -546,6 +547,14 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		if (readers==null) {
 			readers = READERS_ALL;
 		}
+		else {
+			//convert to lowercase, because reader fields are case-insensitive
+			List<String> readersLC = new ArrayList<String>(readers.size());
+			for (String currReader : readers) {
+				readersLC.add(currReader.toLowerCase(Locale.ENGLISH));
+			}
+			readers = readersLC;
+		}
 		JSONArray readersJson = new JSONArray(readers);
 		stmt.setString(6, readersJson.toString());
 
@@ -602,6 +611,14 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		List<String> readers = getReaders(oid, summaryBufferData, note);
 		if (readers==null) {
 			readers = READERS_ALL;
+		}
+		else {
+			//convert to lowercase, because reader fields are case-insensitive
+			List<String> readersLC = new ArrayList<String>(readers.size());
+			for (String currReader : readers) {
+				readersLC.add(currReader.toLowerCase(Locale.ENGLISH));
+			}
+			readers = readersLC;
 		}
 		JSONArray readersJson = new JSONArray(readers);
 		stmt.setString(6, readersJson.toString());
