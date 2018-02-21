@@ -271,7 +271,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		// Force the creation of 'schema_version' table on existing database.
 		flyway.setBaselineOnMigrate(true);
 
-		flyway.setTarget(MigrationVersion.fromVersion(getDbVersion()));
+		flyway.setTarget(MigrationVersion.fromVersion(getDbMainVersion()+"."+getDbSubVersion()));
 
 		// migrate db schemas and data
 		flyway.migrate();
@@ -280,14 +280,31 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	}
 
 	/**
-	 * Returns the version of the SQL database for the Flyway DB migration.
+	 * Returns the main version of the SQL database for the Flyway DB migration.
+	 * This method is final because Domino JNA controls this part of the version so
+	 * that updates to this sync target implementation class can enforce a db schema
+	 * migration
 	 * 
-	 * @return version
+	 * @return version, currently "1"
 	 */
-	protected String getDbVersion() {
+	protected final String getDbMainVersion() {
 		return "1";
 	}
 
+	/**
+	 * Returns the sub version of the SQL database for the Flyway DB migration.
+	 * Add your own app specific sub versioning here so that you can run your own
+	 * DB migration scripts after the scripts of Domino JNA. The value 
+	 * returned by {@link #getDbMainVersion()} combined with the sub version produce
+	 * the version string to be passed to Flyway, e.g. "1.1", which let's Flyway
+	 * run the V1__...sql migration script and an app specific V1.1__..sql as well.
+	 * 
+	 * @return sub version, either a value like "1" (the default) or "1.2", "1.2.3" etc.
+	 */
+	protected String getDbSubVersion() {
+		return "1";
+	}
+	
 	public String getLastSyncDbReplicaId() {
 		PreparedStatement readDbidStmt = null;
 
@@ -572,7 +589,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(8, form);
+		stmt.setString(8, jsonStr);
 
 		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
 		if (binaryData!=null) {
