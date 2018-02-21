@@ -36,12 +36,12 @@ import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
  */
 public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSyncTarget.SyncContext> {
 	private static final String SQL_FLUSH_LASTSYNCDATA = "DELETE FROM syncdatainfo;";
-	private static final String SQL_FLUSH_DOMINODOCS = "DELETE FROM dominodocs;";
+	private static final String SQL_FLUSH_DOCS = "DELETE FROM docs;";
 	private String m_jdbcUrl;
 	private Connection m_conn;
 
-	private static final String SQL_REMOVE_DOC_BY_UNID = "DELETE from dominodocs where __unid = ?";
-	private static final String SQL_INSERT_DOMINODOC = "INSERT INTO dominodocs ("
+	private static final String SQL_REMOVE_DOC_BY_UNID = "DELETE from docs where __unid = ?";
+	private static final String SQL_INSERT_DOMINODOC = "INSERT INTO docs ("
 			+ "__unid, "
 			+ "__seq, "
 			+ "__seqtime_innard0, "
@@ -51,7 +51,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__form, "
 			+ "__json, "
 			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	private static final String SQL_UPDATE_DOMINODOC = "UPDATE dominodocs SET "
+	private static final String SQL_UPDATE_DOMINODOC = "UPDATE docs SET "
 			+ "__unid = ? , "
 			+ "__seq = ?, "
 			+ "__seqtime_innard0 = ?, "
@@ -83,13 +83,13 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__seq, "
 			+ "__seqtime_innard0, "
 			+ "__seqtime_innard1 "
-			+ "FROM dominodocs where __unid=? LIMIT 1;";
+			+ "FROM docs where __unid=? LIMIT 1;";
 	private static final String SQL_SCANDATABASE = "SELECT "
 			+ "__unid, "
 			+ "__seq, "
 			+ "__seqtime_innard0, "
 			+ "__seqtime_innard1 "
-			+ "FROM dominodocs;";
+			+ "FROM docs;";
 	private static final String SQL_GETLASTSYNCDBREPLICAID = "SELECT dbid "
 			+ "FROM syncdatainfo LIMIT 1;";
 	private static final String SQL_GETLASTSYNCSELECTIONFORMULA = "SELECT selectionformula "
@@ -431,9 +431,9 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		Statement stmt = null;
 		try {
 			stmt = getConnection().createStatement();
-			stmt.executeUpdate(SQL_FLUSH_DOMINODOCS);
+			stmt.executeUpdate(SQL_FLUSH_DOCS);
 		} catch (SQLException e) {
-			throw new SqlSyncException("Error deleting content of table dominodocs", e);
+			throw new SqlSyncException("Error deleting content of table docs", e);
 		}
 		finally {
 			if (stmt!=null) {
@@ -467,7 +467,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			}
 			return entries;
 		} catch (SQLException e) {
-			throw new SqlSyncException("Error scanning table dominodocs of database "+m_jdbcUrl, e);
+			throw new SqlSyncException("Error scanning table docs of database "+m_jdbcUrl, e);
 		}
 		finally {
 			try {
@@ -757,7 +757,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			}
 			return null;
 		} catch (SQLException e) {
-			throw new SqlSyncException("Error scanning table dominodocs of database "+m_jdbcUrl+" for document with UNID "+oid.getUNID(), e);
+			throw new SqlSyncException("Error scanning table docs of database "+m_jdbcUrl+" for document with UNID "+oid.getUNID(), e);
 		}
 	}
 

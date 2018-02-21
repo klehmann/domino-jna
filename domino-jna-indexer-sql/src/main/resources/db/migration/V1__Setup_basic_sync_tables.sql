@@ -10,7 +10,7 @@
  * The third block contains the actual document content, e.g. the "form" value for optimized
  * filtering of documents with a specific type, a JSON object with all relevant document data
  * and a BLOB that is currently not used. */
-CREATE TABLE IF NOT EXISTS dominodocs (
+CREATE TABLE IF NOT EXISTS docs (
 	__unid text UNIQUE NOT NULL PRIMARY KEY,
 	__seq integer,
 	__seqtime_innard0 integer,
@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS dominodocs (
 );
 
 /* Create indexes to speed up UNID and FORM based searches */
-CREATE INDEX IF NOT EXISTS dominodocs_unid ON dominodocs (__unid);
-CREATE INDEX IF NOT EXISTS dominodocs_form ON dominodocs (__form);
+CREATE INDEX IF NOT EXISTS docs_unid ON docs (__unid);
+CREATE INDEX IF NOT EXISTS docs_form ON docs (__form);
 
 /* This table will only contain a single line with the db replica id
  * and the selection fornula used for the last successful sync run */

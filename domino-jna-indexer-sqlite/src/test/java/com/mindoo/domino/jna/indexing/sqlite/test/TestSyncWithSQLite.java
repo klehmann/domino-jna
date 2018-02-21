@@ -89,7 +89,7 @@ public class TestSyncWithSQLite extends BaseJNATestClass {
 					{
 						Statement stmtGetAll = conn.createStatement();
 						try {
-							ResultSet rs = stmtGetAll.executeQuery("SELECT __unid FROM dominodocs LIMIT 1");
+							ResultSet rs = stmtGetAll.executeQuery("SELECT __unid FROM docs LIMIT 1");
 							dbIsEmpty = !rs.next();
 						}
 						finally {
@@ -114,7 +114,7 @@ public class TestSyncWithSQLite extends BaseJNATestClass {
 							ResultSet rs = stmtGetAll.executeQuery("SELECT __unid, "
 									+ "json_extract(__json, \"$.lastname\") as lastname, "
 									+ "json_extract(__json, \"$.firstname\") as firstname "
-									+ "FROM dominodocs");
+									+ "FROM docs");
 							while (rs.next()) {
 								dbIsEmpty = false;
 								String currUnid = rs.getString("__unid");
@@ -237,7 +237,7 @@ public class TestSyncWithSQLite extends BaseJNATestClass {
 							ResultSet rs = stmtGetAll.executeQuery("SELECT __unid, "
 									+ "json_extract(__json, \"$.lastname\") as lastname, "
 									+ "json_extract(__json, \"$.firstname\") as firstname "
-									+ "FROM dominodocs");
+									+ "FROM docs");
 							while (rs.next()) {
 								String currUnid = rs.getString("__unid");
 								String lastName = rs.getString("lastname");
@@ -284,7 +284,7 @@ public class TestSyncWithSQLite extends BaseJNATestClass {
 							ResultSet rs = stmtGetAll.executeQuery("SELECT __unid, "
 									+ "json_extract(__json, \"$.lastname\") as lastname, "
 									+ "json_extract(__json, \"$.firstname\") as firstname "
-									+ "FROM dominodocs");
+									+ "FROM docs");
 							while (rs.next()) {
 								String currUnid = rs.getString("__unid");
 								String lastName = rs.getString("lastname");
