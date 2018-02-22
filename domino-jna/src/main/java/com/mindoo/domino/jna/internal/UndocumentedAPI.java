@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.FIELD})
 
 /**
- * Marker interface for methods that are not yet part of the public C API (but should be)
+ * Annotation for methods that are not yet part of the public C API (but should be)
  */
 public @interface UndocumentedAPI {
 
