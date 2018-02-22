@@ -38,6 +38,7 @@ public interface INotesNativeAPI extends Library {
 	public void OSGetExecutableDirectory(Memory retPathName);
 	public void OSGetDataDirectory(Memory retPathName);
 	public short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
+	@UndocumentedAPI
 	public void OSPathAddTrailingPathSep(Memory retPathName);
 	public short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
 	public long OSGetEnvironmentLong(Memory variableName);
@@ -122,6 +123,7 @@ public interface INotesNativeAPI extends Library {
 	public short NSFDbMarkOutOfService(Memory dbPath);
 	public short NSFDbFTSizeGet(Memory dbPath, IntByReference retFTSize);
 	
+	@UndocumentedAPI
 	public short ECLGetListCapabilities(Pointer pNamesList, short ECLType, ShortByReference retwCapabilities,
 			ShortByReference retwCapabilities2, IntByReference retfUserCanModifyECL);
 
@@ -206,7 +208,9 @@ public interface INotesNativeAPI extends Library {
 			NotesCallbacks.ActionRoutinePtr  ActionRoutine,
 			Pointer vContext);
 
+	@UndocumentedAPI
 	public void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
+	@UndocumentedAPI
 	public void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
 	public void NSFDbInfoParse(

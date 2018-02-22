@@ -38,6 +38,7 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer EnumRoutineParameter,
 			NotesTimeDateStruct retUntil);
 
+	@UndocumentedAPI
 	public short NSFSearchExtended3 (int hDB, 
 			int hFormula, 
 			int hFilter, 
@@ -55,6 +56,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct retUntil, 
 			int namelist);
 
+	@UndocumentedAPI
 	public short NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, IntByReference Filter);
 
 	/**
@@ -262,7 +264,8 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct.ByValue value_bid,
 			int value_len,
 			NotesBlockIdStruct item_bid_ptr);
-	//valuePtr value without datatype WORD
+
+	@UndocumentedAPI
 	public short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
 			Pointer valuePtr, int valueLength);
 
@@ -312,6 +315,7 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFNoteHasComposite(int hNote);
 	public short NSFNoteHasMIME(int hNote);
 	public short NSFNoteHasMIMEPart(int hNote);
+	@UndocumentedAPI
 	public short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -354,6 +358,7 @@ public interface INotesNativeAPI32 extends Library {
 	public short IDInsert (int hTable, int id, IntByReference retfInserted);
 	public short IDDelete (int hTable, int id, IntByReference retfDeleted);
 	public boolean IDScan (int hTable, boolean fFirst, IntByReference retID);
+	@UndocumentedAPI
 	public boolean IDScanBack (int hTable, boolean fLast, IntByReference retID);
 	public int IDEntries (int hTable);
 	public boolean IDIsPresent (int hTable, int id);
@@ -366,8 +371,11 @@ public interface INotesNativeAPI32 extends Library {
 	public short IDDeleteTable(int hTable, int hIDsToDelete);
 	public short IDInsertTable  (int hTable, int hIDsToAdd);
 	public short IDEnumerate(int hTable, NotesCallbacks.IdEnumerateProc Routine, Pointer Parameter);
+	@UndocumentedAPI
 	public short IDInsertRange(int hTable, int IDFrom, int IDTo, boolean AddToEnd);
+	@UndocumentedAPI
 	public short IDTableDifferences(int idtable1, int idtable2, IntByReference outputidtableAdds, IntByReference outputidtableDeletes, IntByReference outputidtableSame);
+	@UndocumentedAPI
 	public short IDTableReplaceExtended(int idtableSrc, int idtableDest, byte flags);
 
 	public short NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
@@ -433,7 +441,9 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retSize,
 			IntByReference rethOutBuf);
 	public short NSFDbSign(int hDb, short noteclass);
+	@UndocumentedAPI
 	public short NSFDbGetOptionsExt(int hDB, Memory retDbOptions);
+	@UndocumentedAPI
 	public short NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
 	public void NSFDbAccessGet(int hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
 	public short NSFDbGetBuildVersion(int hDB, ShortByReference retVersion);
@@ -460,6 +470,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hDB,
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
+	@UndocumentedAPI
 	public short NSFDbIsRemote(int hDb);
 	public short NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	public short NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
@@ -474,27 +485,28 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFDbModeGet(
 			int hDB,
 			ShortByReference retMode);
-	
+	@UndocumentedAPI
 	public short NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
 
 	public short NSFBuildNamesList(Memory UserName, int dwFlags, IntByReference rethNamesList);
-
+	@UndocumentedAPI
 	public short CreateNamesListFromGroupNameExtend(Memory pszServerName, Memory pTarget, IntByReference rethNames);
-	
+	@UndocumentedAPI
 	public short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
-	
+	@UndocumentedAPI
 	public short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
-	
+//	@UndocumentedAPI
 //	public short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, IntByReference rtnhNames);
-	
+	@UndocumentedAPI
 	public short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
 			Pointer pLookupFlags, Memory pTarget, IntByReference rethNames);
-	
+	@UndocumentedAPI
 	public short CreateNamesListUsingLookupName(Memory pszServerName,Pointer pLookupFlags, Memory pTarget,
 			IntByReference rethNames);
 	
 	public short NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
+	@UndocumentedAPI
 	public short NIFReadEntriesExt(int hCollection,
 			NotesCollectionPositionStruct CollectionPos,
 			short SkipNavigator, int SkipCount,
@@ -513,6 +525,7 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retSignalFlags,
 			IntByReference rethBuffer,
 			IntByReference retSequence);
+	@UndocumentedAPI
 	public short NIFFindByKeyExtended3 (int hCollection,
 			Memory keyBuffer, int findFlags,
 			int returnFlags,
@@ -525,16 +538,24 @@ public interface INotesNativeAPI32 extends Library {
 	public short NIFGetCollation(int hCollection, ShortByReference retCollationNum);
 	public short NIFSetCollation(int hCollection, short CollationNum);
 	public short NIFUpdateCollection(int hCollection);
+	@UndocumentedAPI
 	public short NIFIsNoteInView(int hCollection, int noteID, IntByReference retIsInView);
+	@UndocumentedAPI
 	public boolean NIFIsUpdateInProgress(int hCollection);
+	@UndocumentedAPI
 	public short NIFGetIDTableExtended(int hCollection, short navigator, short Flags, int hIDTable);
+	@UndocumentedAPI
 	public boolean NIFCollectionUpToDate(int hCollection);
+	@UndocumentedAPI
     public boolean NIFSetCollectionInfo (int hCollection, Pointer SessionID,
             int hUnreadList, int hCollapsedList, int hSelectedList);
+	@UndocumentedAPI
     public short NIFUpdateFilters (int hCollection, short ModifyFlags);
+	@UndocumentedAPI
     public boolean NIFIsTimeVariantView(int hCollection);
 	public short NIFCloseCollection(int hCollection);
 	public short NIFLocateNote (int hCollection, NotesCollectionPositionStruct indexPos, int noteID);
+	@UndocumentedAPI
 	public short NIFFindDesignNoteExt(int hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntByReference retNoteID, int Options);
 	public short NIFOpenCollection(int hViewDB, int hDataDB, int ViewNoteID, short OpenFlags, int hUnreadList, IntByReference rethCollection, IntByReference rethViewNote, Memory retViewUNID,
 			IntByReference rethCollapsedList, IntByReference rethSelectedList);
@@ -550,8 +571,11 @@ public interface INotesNativeAPI32 extends Library {
 			int hCollection,
 			IntByReference rethCollData);
 
+	@UndocumentedAPI
 	public short NSFTransactionBegin(int hDB, int flags);
+	@UndocumentedAPI
 	public short NSFTransactionCommit(int hDB, int flags);
+	@UndocumentedAPI
 	public short NSFTransactionRollback(int hDB);
 
 	//backup APIs
@@ -571,6 +595,7 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFBackupEndApplyChangeInfo(int ApplyInfoContext, int Flags);
 
 	public short AgentDelete (int hAgent); /* delete agent */
+	@UndocumentedAPI
 	public boolean IsRunAsWebUser(int hAgent);
 	public short AgentOpen (int hDB, int AgentNoteID, IntByReference rethAgent);
 	public void AgentClose (int hAgent);
@@ -578,11 +603,14 @@ public interface INotesNativeAPI32 extends Library {
 			 Pointer pReserved,
 			 int dwFlags,
 			 IntByReference rethContext);
+	@UndocumentedAPI
 	public short AgentCreateRunContextExt (int hAgent, Pointer pReserved, int pOldContext, int dwFlags, IntByReference rethContext);
 	public short AgentSetDocumentContext(int hAgentCtx, int hNote);
 	public short AgentSetTimeExecutionLimit(int hAgentCtx, int timeLimit);
 	public boolean AgentIsEnabled(int hAgent);
+	@UndocumentedAPI
 	public void SetParamNoteID(int hAgentCtx, int noteId);
+	@UndocumentedAPI
 	public short AgentSetUserName(int hAgentCtx, int hNameList);
 	public short AgentRedirectStdout(int hAgentCtx, short redirType);
 	public void AgentQueryStdoutBuffer(int hAgentCtx, IntByReference retHdl, IntByReference retSize);
@@ -591,6 +619,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hAgentCtx,
 		    int hSelection,
 			int dwFlags);
+	@UndocumentedAPI
 	public short AgentSetHttpStatusCode(int hAgentCtx, int httpStatus);
 
 	public short FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
@@ -646,9 +675,13 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retNoteShouldBeDeleted,
 			IntByReference retNoteModified);
 
+	@UndocumentedAPI
 	public short CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
+	@UndocumentedAPI
 	public short CESGetNoSigCTX(IntByReference rethCESCTX);
+	@UndocumentedAPI
 	public short CESFreeCTX(int hCESCTX);
+	@UndocumentedAPI
 	public short ECLUserTrustSigner ( int hCESCtx, 
 			short ECLType,
 			short bSessionOnly,
@@ -919,6 +952,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hNote,
 			Memory pszItemName,
 			int dwFlags);
+	@UndocumentedAPI
 	public short CompoundTextAssimilateBuffer(int hBuffer, int bufferLength, int flags);
 	public short CompoundTextClose(
 			int hCompound,
@@ -967,6 +1001,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hList,
 			Memory ServerName);
 
+	@UndocumentedAPI
 	public short NSFSearchStartExtended(int hDB, int formula, int filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			int queue, int flags, int flags1, int flags2, int flags3, int flags4, 
@@ -974,11 +1009,15 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
 			IntByReference rtnhandle);
 
+	@UndocumentedAPI
 	public short QueueCreate(IntByReference qhandle);
 	
+	@UndocumentedAPI
 	public short QueueGet(int qhandle, IntByReference sehandle);
 
+	@UndocumentedAPI
 	public short NSFSearchStop(int shandle);
 	
+	@UndocumentedAPI
 	public short QueueDelete(int qhandle);
 }
