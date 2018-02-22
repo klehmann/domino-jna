@@ -262,7 +262,14 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	
 	protected Connection createConnection() throws SQLException {
 		//use Flyway to initialize the database and migrate it between versions
-		Flyway flyway = new Flyway();
+		Flyway flyway;
+		ClassLoader cl = getFlywayClassLoader();
+		if (cl!=null) {
+			flyway = new Flyway(cl);
+		}
+		else {
+			flyway = new Flyway();
+		}
 
 		DataSource ds = createDataSource(getJdbcUrl());
 		flyway.setDataSource(ds);
@@ -274,13 +281,24 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		flyway.setBaselineOnMigrate(true);
 
 		flyway.setTarget(MigrationVersion.fromVersion(getDbMainVersion()+"."+getDbSubVersion()));
-
+		
 		// migrate db schemas and data
 		flyway.migrate();
 
 		return ds.getConnection();
 	}
 
+	/**
+	 * Override this method to return a classloader that should be used by
+	 * Flyway to load the DB migrations. The default implementation returns null which
+	 * lets Flyway use <code>Thread.currentThread().getContextClassLoader()</code>.
+	 * 
+	 * @return classloader or null
+	 */
+	protected ClassLoader getFlywayClassLoader() {
+		return null;
+	}
+	
 	/**
 	 * Returns the main version of the SQL database for the Flyway DB migration.
 	 * This method is final because Domino JNA controls this part of the version so
