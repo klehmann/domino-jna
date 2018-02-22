@@ -98,7 +98,7 @@ public class SyncUtil {
 				sinceDateForSearch = null;
 				
 				//no last sync date, so we need to do a one-time comparison of source and target content
-				Collection<NotesOriginatorIdData> targetOIDs = target.scanTargetData();
+				Collection<NotesOriginatorIdData> targetOIDs = target.scanTargetData(ctx);
 				if (!targetOIDs.isEmpty()) {
 					Map<String,NotesOriginatorIdData> targetOIDsByUNID = new HashMap<String,NotesOriginatorIdData>();
 					for (NotesOriginatorIdData currOID : targetOIDs) {

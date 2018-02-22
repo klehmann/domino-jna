@@ -76,9 +76,10 @@ public interface ISyncTarget<CTX> {
 	 * of a first time sync with a db instance, which means that {@link #getLastSyncEndDate(String)} returned null
 	 * for the db instanceid of the current sync run.
 	 * 
+	 * @param ctx sync context
 	 * @return list of originator ids in target (containing UNID / sequence no / sequence time of synced data) so that we can compare what is missing or outdated in the target
 	 */
-	public Collection<NotesOriginatorIdData> scanTargetData();
+	public Collection<NotesOriginatorIdData> scanTargetData(CTX ctx);
 	
 	/**
 	 * Return here whether we should read just the summary buffer data for notes matching

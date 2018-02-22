@@ -466,7 +466,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 
-	public List<NotesOriginatorIdData> scanTargetData() {
+	public List<NotesOriginatorIdData> scanTargetData(SyncContext ctx) {
 		List<NotesOriginatorIdData> entries = new ArrayList<NotesOriginatorIdData>();
 
 		PreparedStatement readAllDocsStmt = null;
