@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS docs (
 	
 	__readers text,
 	
+	__flags text,
 	__form text,
 	__json text,
 	__binarydata BLOB

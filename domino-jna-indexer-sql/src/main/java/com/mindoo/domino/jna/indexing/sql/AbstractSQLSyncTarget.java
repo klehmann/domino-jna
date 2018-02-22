@@ -48,9 +48,10 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__seqtime_innard1, "
 			+ "__seqtime_millis, "
 			+ "__readers, "
+			+ "__flags, "
 			+ "__form, "
 			+ "__json, "
-			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String SQL_UPDATE_DOMINODOC = "UPDATE docs SET "
 			+ "__unid = ? , "
 			+ "__seq = ?, "
@@ -58,6 +59,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__seqtime_innard1 = ?, "
 			+ "__seqtime_millis = ?, "
 			+ "__readers = ?, "
+			+ "__flags = ?, "
 			+ "__form = ?, "
 			+ "__json = ?, "
 			+ "__binarydata = ? "
@@ -575,6 +577,11 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		JSONArray readersJson = new JSONArray(readers);
 		stmt.setString(6, readersJson.toString());
 
+		List<String> flags = getFlags(oid, summaryBufferData, note);
+		if (flags==null)
+			flags=Collections.emptyList();
+		stmt.setString(7, new JSONArray(flags).toString());
+
 		String form = null;
 		if (summaryBufferData!=null) {
 			form = summaryBufferData.getAsString("form", null);
@@ -584,19 +591,19 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(7, form);
+		stmt.setString(8, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(8, jsonStr);
+		stmt.setString(9, jsonStr);
 
 		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
 		if (binaryData!=null) {
-			stmt.setBytes(9, binaryData);
+			stmt.setBytes(10, binaryData);
 		}
 
-		stmt.setString(10, unid);
+		stmt.setString(11, unid);
 		return true;
 	}
 
@@ -640,6 +647,11 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		JSONArray readersJson = new JSONArray(readers);
 		stmt.setString(6, readersJson.toString());
 
+		List<String> flags = getFlags(oid, summaryBufferData, note);
+		if (flags==null)
+			flags=Collections.emptyList();
+		stmt.setString(7, new JSONArray(flags).toString());
+		
 		String form = null;
 		if (summaryBufferData!=null) {
 			form = summaryBufferData.getAsString("form", null);
@@ -649,16 +661,16 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(7, form);
+		stmt.setString(8, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(8, jsonStr);
+		stmt.setString(9, jsonStr);
 
 		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
 		if (binaryData!=null) {
-			stmt.setBytes(9, binaryData);
+			stmt.setBytes(10, binaryData);
 		}
 		return true;
 	}
@@ -685,6 +697,20 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		return null;
 	}
 
+	/**
+	 * The method currently just returns an empty list. The return value is stored in the
+	 * __flags column and is reserved for future use.
+	 * 
+	 * @param oid note originator id
+	 * @param summaryBufferData summary buffer if specified in {@link #getWhichDataToRead()}
+	 * @param note note  if specified in {@link #getWhichDataToRead()}
+	 * @return flags (empty list)
+	 */
+	protected List<String> getFlags(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+			NotesNote note) {
+		return Collections.emptyList();
+	}
+	
 	/**
 	 * Override this method and return binary data to be stored for a document. The
 	 * default implementation returns null
