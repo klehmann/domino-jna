@@ -1068,9 +1068,17 @@ public class NotesCollection implements IRecyclableNotesObject {
 		public abstract Action entryRead(T result, NotesViewEntryData entryData);
 		
 		/**
-		 * Override this empty method to get notified about view index changes
+		 * This method gets called when a view index change has been detected
+		 * during a view read operation which would cause the operation to be restarted.
+		 * Add your own code to log these retries or decide to stop reading when too
+		 * much time has passed
+		 * 
+		 * @param nrOfRetries number of retries already made (0 = first retry is about to begin)
+		 * @param durationSinceStart number of milliseconds elapsed since starting the lookup
+		 * @return action, whether to continue (default) or stop the lookup; if stop, the lookup method returns null; as an alternative, throw a {@link RuntimeException} here to jump out of the lookup function without return value
 		 */
-		public void viewIndexChangeDetected() {
+		public Action retryingReadBecauseViewIndexChanged(int nrOfRetries, long durationSinceStart) {
+			return Action.Continue;
 		}
 		
 		/**
@@ -1183,8 +1191,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		}
 		
 		@Override
-		public void viewIndexChangeDetected() {
-			m_innerCallback.viewIndexChangeDetected();
+		public Action retryingReadBecauseViewIndexChanged(int nrOfRetries, long durationSinceStart) {
+			return m_innerCallback.retryingReadBecauseViewIndexChanged(nrOfRetries, durationSinceStart);
 		}
 	}
 	
@@ -1646,7 +1654,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 		}
 
+		long t0 = System.currentTimeMillis();
+		int runs = -1;
+		
 		while (true) {
+			runs++;
 			int indexModifiedBeforeGettingStartPos = getIndexModifiedSequenceNo();
 			
 			String startPosStr = startPosRetriever.getStartPosition();
@@ -1660,7 +1672,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 			if (indexModifiedBeforeGettingStartPos != indexModifiedAfterGettingStartPos) {
 				//view index was changed while reading; restart scan
-				callback.viewIndexChangeDetected();
+				Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
+				if (retryAction==Action.Stop) {
+					return null;
+				}
 				update();
 				continue;
 			}
@@ -1753,7 +1768,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 				if (indexModifiedAfterGettingStartPos != indexModifiedAfterDataLookup) {
 					//view index was changed while reading; restart scan
-					callback.viewIndexChangeDetected();
+					Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
+					if (retryAction==Action.Stop) {
+						return null;
+					}
 					update();
 					continue;
 				}
@@ -1829,7 +1847,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			if (viewModified) {
 				//view index was changed while reading; restart scan
-				callback.viewIndexChangeDetected();
+				Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
+				if (retryAction==Action.Stop) {
+					return null;
+				}
 				update();
 				continue;
 			}
@@ -1855,7 +1876,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		//we are leaving the loop when there is no more data to be read;
 		//while(true) is here to rerun the query in case of view index changes while reading
 		
+		long t0=System.currentTimeMillis();
+		
+		int runs = -1;
+		
 		while (true) {
+			runs++;
+			
 			T result = callback.startingLookup();
 
 			NotesViewLookupResultData data;
@@ -1879,7 +1906,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 						//check for view index or design change
 						if (data.hasAnyNonDataConflicts()) {
 							//refresh the view and restart the lookup
-							callback.viewIndexChangeDetected();
+							Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
+							if (retryAction==Action.Stop) {
+								return null;
+							}
 							update();
 							continue;
 						}
@@ -1988,7 +2018,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				if (viewModified) {
 					//refresh view and redo the whole lookup
-					callback.viewIndexChangeDetected();
+					Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
+					if (retryAction==Action.Stop) {
+						return null;
+					}
 					update();
 					continue;
 				}
