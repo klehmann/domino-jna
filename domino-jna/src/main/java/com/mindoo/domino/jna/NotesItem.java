@@ -183,12 +183,12 @@ public class NotesItem {
 	/**
 	 * Returns the sequence number of the item
 	 * 
-	 * @return sequence number
+	 * @return sequence number (byte)
 	 */
 	public int getSeq() {
 		loadItemNameAndFlags();
 		
-		return m_seq;
+		return (int) (m_seq & 0xff);
 	}
 	
 	/**
