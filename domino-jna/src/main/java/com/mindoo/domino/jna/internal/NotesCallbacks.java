@@ -142,14 +142,6 @@ public interface NotesCallbacks {
 	}
 
 	/**
-	 * Callback used by NSFSearchExtended3
-	 */
-	interface b32_NsfSearchProc extends Callback {
-		short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
-				Pointer summaryBufferPtr);
-	}
-
-	/**
 	 * Callback used by NSFNoteComputeWithForm
 	 */
 	interface b32_CWFErrorProc extends Callback {
@@ -180,8 +172,8 @@ public interface NotesCallbacks {
 	/**
 	 * Callback used by NSFSearchExtended3
 	 */
-	interface b64_NsfSearchProc extends Callback {
-		short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
+	interface NsfSearchProc extends Callback {
+		short invoke(Pointer enumRoutineParameter, Pointer searchMatch,
 				Pointer summaryBuffer);
 	}
 

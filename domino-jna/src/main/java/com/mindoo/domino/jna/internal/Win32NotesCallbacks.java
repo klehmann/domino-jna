@@ -40,7 +40,7 @@ public interface Win32NotesCallbacks {
 
 	interface ActionRoutinePtrWin32 extends NotesCallbacks.ActionRoutinePtr, StdCallCallback {}
 
-	interface NsfSearchProcWin32 extends NotesCallbacks.b32_NsfSearchProc, StdCallCallback {}
+	interface NsfSearchProcWin32 extends NotesCallbacks.NsfSearchProc, StdCallCallback {}
 
 	interface CWFErrorProcWin32 extends NotesCallbacks.b32_CWFErrorProc, StdCallCallback {}
 

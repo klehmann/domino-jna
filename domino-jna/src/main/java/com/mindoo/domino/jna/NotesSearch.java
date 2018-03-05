@@ -27,11 +27,11 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableDa
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.SearchMatchDecoder;
 import com.mindoo.domino.jna.internal.ViewFormulaCompiler;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
-import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
-import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -351,7 +351,7 @@ public class NotesSearch {
 	 * @param db database to search in
 	 * @param searchFilter optional search scope as {@link NotesIDTable} or null
 	 * @param formula formula or null
-	 * @param columnFormulas map with programmatic column names (key) and formulas (value) with keys sorted in column order or null to output all items
+	 * @param columnFormulas map with programmatic column names (key) and formulas (value) with keys sorted in column order or null to output all items; automatically uses {@link Search#NOITEMNAMES} and {@link Search#SUMMARY} search flag
 	 * @param viewTitle optional view title that will be returned for "@ ViewTitle" within the formula or null
 	 * @param searchFlags flags to control searching ({@link Search})
 	 * @param noteClassMask bitmask of {@link NoteClass} or {@link FileType} to search
@@ -377,8 +377,14 @@ public class NotesSearch {
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 		final boolean isDST = NotesDateTimeUtils.isDaylightTime();
 
-		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(searchFlags);
-		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(searchFlags);
+		final EnumSet<Search> useSearchFlags = searchFlags.clone();
+		if (columnFormulas!=null) {
+			useSearchFlags.add(Search.SUMMARY);
+			useSearchFlags.add(Search.NOITEMNAMES);
+		}
+		
+		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(useSearchFlags);
+		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(useSearchFlags);
 		
 		final String[] columnItemNames = columnFormulas==null ? new String[0] : columnFormulas.keySet().toArray(new String[0]);
 		
@@ -387,27 +393,22 @@ public class NotesSearch {
 		if (PlatformUtils.is64Bit()) {
 			final Throwable invocationEx[] = new Throwable[1];
 
-			final NotesCallbacks.b64_NsfSearchProc apiCallback = new NotesCallbacks.b64_NsfSearchProc() {
+			final NotesCallbacks.NsfSearchProc apiCallback = new NotesCallbacks.NsfSearchProc() {
 
 				@Override
-				public short invoke(Pointer enumRoutineParameter, NotesSearchMatch64Struct searchMatch,
+				public short invoke(Pointer enumRoutineParameter, Pointer searchMatchPtr,
 						Pointer summaryBufferPtr) {
 
-					//clone search match to not have any memory issues if memory of searchMatchOrig is disposed
-					byte[] searchMatchMem = searchMatch.getPointer().getByteArray(0, NotesConstants.notesSearchMatch64Size);
-					Memory clonedSearchMatchMem = new Memory(NotesConstants.notesSearchMatch64Size);
-					clonedSearchMatchMem.write(0, searchMatchMem, 0, searchMatchMem.length);
-					NotesSearchMatch64Struct clonedSearchMatch = NotesSearchMatch64Struct.newInstance(clonedSearchMatchMem);
-					clonedSearchMatch.read();
+					ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 					
 					ItemTableData itemTableData=null;
 					try {
-						boolean isMatch = formula==null || ((clonedSearchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+						boolean isMatch = formula==null || searchMatch.matchesFormula();
 						
-						if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+						if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
-								if (searchFlags.contains(Search.NOITEMNAMES)) {
+								if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 									//flag to just return the column values is used; so the
 									//buffer contains an ITEM_VALUE_TABLE with column values
 									//in the column order instead of an ITEM_TABLE with columnname/columnvalue
@@ -423,29 +424,17 @@ public class NotesSearch {
 							}
 						}
 
-						short noteClass = clonedSearchMatch.NoteClass;
-						int noteId = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.NoteID : 0;
-						NotesOriginatorId oid = clonedSearchMatch.OriginatorID==null ? null : new NotesOriginatorId(clonedSearchMatch.OriginatorID);
-						
-						NotesTimeDateStruct dbCreatedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.File : null;
-						NotesTimeDateStruct noteModifiedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.Note : null;
-
-						NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
-						NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
-
-						EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-						EnumSet<NoteFlags> flags = toNoteFlags(clonedSearchMatch.SERetFlags);
 
 						Action action;
-						if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
-							action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
+						if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
+							action = callback.deletionStubFound(db, searchMatch);
 						}
 						else {
 							if (!isMatch) {
-								action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+								action = callback.noteFoundNotMatchingFormula(db, searchMatch, itemTableData);
 							}
 							else {
-								action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+								action = callback.noteFound(db, searchMatch, itemTableData);
 							}
 						}
 						if (action==Action.Stop) {
@@ -602,23 +591,25 @@ public class NotesSearch {
 
 		}
 		else {
-			final NotesCallbacks.b32_NsfSearchProc apiCallback;
+			final NotesCallbacks.NsfSearchProc apiCallback;
 			final Throwable invocationEx[] = new Throwable[1];
 
 			if (PlatformUtils.isWin32()) {
 				apiCallback = new Win32NotesCallbacks.NsfSearchProcWin32() {
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatch,
+					public short invoke(Pointer enumRoutineParameter, Pointer searchMatchPtr,
 							Pointer summaryBufferPtr) {
+
+						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 
 						ItemTableData itemTableData=null;
 						try {
-							boolean isMatch = formula==null || ((searchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
-							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
-									if (searchFlags.contains(Search.NOITEMNAMES)) {
+									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
@@ -634,29 +625,16 @@ public class NotesSearch {
 								}
 							}
 
-							short noteClass = searchMatch.NoteClass;
-							int noteId = searchMatch.ID!=null ? searchMatch.ID.NoteID : 0;
-							NotesOriginatorId oid = searchMatch.OriginatorID==null ? null : new NotesOriginatorId(searchMatch.OriginatorID);
-							
-							NotesTimeDateStruct dbCreatedStruct = searchMatch.ID!=null ? searchMatch.ID.File : null;
-							NotesTimeDateStruct noteModifiedStruct = searchMatch.ID!=null ? searchMatch.ID.Note : null;
-
-							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
-							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
-
-							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-							EnumSet<NoteFlags> flags = toNoteFlags(searchMatch.SERetFlags);
-
 							Action action;
-							if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
+							if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
+								action = callback.deletionStubFound(db, searchMatch);
 							}
 							else {
 								if (!isMatch) {
-									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+									action = callback.noteFoundNotMatchingFormula(db, searchMatch, itemTableData);
 								}
 								else {
-									action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+									action = callback.noteFound(db, searchMatch, itemTableData);
 								}
 							}
 							if (action==Action.Stop) {
@@ -680,27 +658,22 @@ public class NotesSearch {
 				};
 			}
 			else {
-				apiCallback = new NotesCallbacks.b32_NsfSearchProc() {
+				apiCallback = new NotesCallbacks.NsfSearchProc() {
 
 					@Override
-					public short invoke(Pointer enumRoutineParameter, NotesSearchMatch32Struct searchMatchOrig,
+					public short invoke(Pointer enumRoutineParameter, Pointer searchMatchPtr,
 							Pointer summaryBufferPtr) {
 
-						//clone search match to not have any memory issues if memory of searchMatchOrig is disposed
-						byte[] searchMatchMem = searchMatchOrig.getPointer().getByteArray(0, NotesConstants.notesSearchMatch32Size);
-						Memory clonedSearchMatchMem = new Memory(NotesConstants.notesSearchMatch32Size);
-						clonedSearchMatchMem.write(0, searchMatchMem, 0, searchMatchMem.length);
-						NotesSearchMatch32Struct clonedSearchMatch = NotesSearchMatch32Struct.newInstance(clonedSearchMatchMem);
-						clonedSearchMatch.read();
+						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 						
 						ItemTableData itemTableData=null;
 						try {
-							boolean isMatch = formula==null || ((clonedSearchMatch.SERetFlags & NotesConstants.SE_FMATCH)==NotesConstants.SE_FMATCH);
+							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
-							if (isMatch && searchFlags.contains(Search.SUMMARY)) {
+							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
-									if (searchFlags.contains(Search.NOITEMNAMES)) {
+									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
@@ -716,29 +689,16 @@ public class NotesSearch {
 								}
 							}
 
-							short noteClass = clonedSearchMatch.NoteClass;
-							int noteId = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.NoteID : 0;
-							NotesOriginatorId oid = clonedSearchMatch.OriginatorID==null ? null : new NotesOriginatorId(clonedSearchMatch.OriginatorID);
-							
-							NotesTimeDateStruct dbCreatedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.File : null;
-							NotesTimeDateStruct noteModifiedStruct = clonedSearchMatch.ID!=null ? clonedSearchMatch.ID.Note : null;
-
-							NotesTimeDate dbCreatedWrap = dbCreatedStruct==null ? null : new NotesTimeDate(dbCreatedStruct);
-							NotesTimeDate noteModifiedWrap = noteModifiedStruct==null ? null : new NotesTimeDate(noteModifiedStruct);
-
-							EnumSet<NoteClass> noteClassesEnum = NoteClass.toNoteClasses(noteClass);
-							EnumSet<NoteFlags> flags = toNoteFlags(clonedSearchMatch.SERetFlags);
-
 							Action action;
-							if (noteClassesEnum.contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap);
+							if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
+								action = callback.deletionStubFound(db, searchMatch);
 							}
 							else {
 								if (!isMatch) {
-									action = callback.noteFoundNotMatchingFormula(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+									action = callback.noteFoundNotMatchingFormula(db, searchMatch, itemTableData);
 								}
 								else {
-									action = callback.noteFound(db, noteId, oid, noteClassesEnum, flags, dbCreatedWrap, noteModifiedWrap, itemTableData);
+									action = callback.noteFound(db, searchMatch, itemTableData);
 								}
 							}
 							if (action==Action.Stop) {
@@ -889,35 +849,6 @@ public class NotesSearch {
 
 		}
 	}
-
-	private static EnumSet<NoteFlags> toNoteFlags(byte flagsAsByte) {
-		EnumSet<NoteFlags> flags = EnumSet.noneOf(NoteFlags.class);
-		boolean isTruncated = (flagsAsByte & NotesConstants.SE_FTRUNCATED) == NotesConstants.SE_FTRUNCATED;
-		if (isTruncated)
-			flags.add(NoteFlags.Truncated);
-		boolean isNoAccess = (flagsAsByte & NotesConstants.SE_FNOACCESS) == NotesConstants.SE_FNOACCESS;
-		if (isNoAccess)
-			flags.add(NoteFlags.NoAccess);
-		boolean isTruncatedAttachment = (flagsAsByte & NotesConstants.SE_FTRUNCATT) == NotesConstants.SE_FTRUNCATT;
-		if (isTruncatedAttachment)
-			flags.add(NoteFlags.TruncatedAttachments);
-		boolean isNoPurgeStatus = (flagsAsByte & NotesConstants.SE_FNOPURGE) == NotesConstants.SE_FNOPURGE;
-		if (isNoPurgeStatus)
-			flags.add(NoteFlags.NoPurgeStatus);
-		boolean isPurged = (flagsAsByte & NotesConstants.SE_FPURGED) == NotesConstants.SE_FPURGED;
-		if (isPurged)
-			flags.add(NoteFlags.Purged);
-		boolean isMatch = (flagsAsByte & NotesConstants.SE_FMATCH) == NotesConstants.SE_FMATCH;
-		if (isMatch)
-			flags.add(NoteFlags.Match);
-		else
-			flags.add(NoteFlags.NoMatch);
-		boolean isSoftDeleted = (flagsAsByte & NotesConstants.SE_FSOFTDELETED) == NotesConstants.SE_FSOFTDELETED;
-		if (isSoftDeleted)
-			flags.add(NoteFlags.SoftDeleted);
-		
-		return flags;
-	}
 	
 	/**
 	 * Callback interface to process database search results
@@ -949,31 +880,21 @@ public class NotesSearch {
 		 * Implement this method to receive search results
 		 * 
 		 * @param parentDb parent database
-		 * @param noteId note id within database
-		 * @param oid note originator id containing the UNID and the sequence number/date
-		 * @param noteClass class of the note
-		 * @param flags note flags
-		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
+		 * @param searchMatch data about search match
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public abstract Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData);
+		public abstract Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData);
 		
 		/**
 		 * Implement this method to read deletion stubs. Method
 		 * is only called when a <code>since</code> date is specified.
 		 * 
 		 * @param parentDb parent database
-		 * @param noteId note id within database
-		 * @param oid note originator id containing the UNID and the sequence number/date
-		 * @param noteClass class of the note
-		 * @param flags note flags
-		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
+		 * @param searchMatch data about search match
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public Action deletionStubFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified) {
+		public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch) {
 			return Action.Continue;
 		}
 		
@@ -982,16 +903,11 @@ public class NotesSearch {
 		 * is only called when a <code>since</code> date is specified.
 		 * 
 		 * @param parentDb parent database
-		 * @param noteId note id within database
-		 * @param oid note originator id containing the UNID and the sequence number/date
-		 * @param noteClass class of the note
-		 * @param flags note flags
-		 * @param dbCreated db replica id as timedate (part of Global Instance ID received from C API)
-		 * @param noteModified modified in this file (part of Global Instance ID received from C API), same as note info {@link NotesConstants#_NOTE_MODIFIED}
+		 * @param searchMatch data about search match
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+		public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
 			return Action.Continue;
 		}
 		
@@ -1026,6 +942,141 @@ public class NotesSearch {
 		 * @return true if freed
 		 */
 		public boolean isFreed();
+		
+	}
+	
+	/**
+	 * Container with information about each note received for an NSF search,
+	 * containing the global instance id (GID), originator id (OID) and
+	 * information about the note class and flags.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface ISearchMatch {
+
+		//global instance id properties
+		
+		/**
+		 * Gives raw access to the global instance id's file timedate data
+		 * 
+		 * @return file innards
+		 */
+		public int[] getGIDFileInnards();
+		
+		/**
+		 * Gives raw access to the global instance id's note timedate data
+		 * 
+		 * @return note innards
+		 */
+		public int[] getGIDNoteInnards();
+		
+		/**
+		 * Returns the note id
+		 * 
+		 * @return note id
+		 */
+		public int getNoteId();
+		
+		//originator id properties
+		
+		/**
+		 * Gives raw access to the originator id's file timedate data
+		 * 
+		 * @return file innards
+		 */
+		public int[] getOIDFileInnards();
+		
+		/**
+		 * Gives raw access to the originator id's note timedate data
+		 * 
+		 * @return note innards
+		 */
+		public int[] getOIDNoteInnards();
+		
+		/**
+		 * Returns the note's sequence number
+		 * 
+		 * @return sequence number
+		 */
+		public int getSeq();
+		
+		/**
+		 * Gives raw access to the note's sequence time data
+		 * 
+		 * @return sequence time innards
+		 */
+		public int[] getSeqTimeInnards();
+		
+		//other data
+		
+		/**
+		 * Returns information about the note's class
+		 * 
+		 * @return class info
+		 */
+		public EnumSet<NoteClass> getNoteClass();
+		
+		/**
+		 * Returns information about note flags
+		 * 
+		 * @return flags
+		 */
+		public EnumSet<NoteFlags> getFlags();
+	
+		/**
+		 * Convenience function that checks whether the result of {@link #getFlags()}
+		 * contains {@link NoteFlags#Match}. When a formula and a date is specified for an NSF
+		 * search, the search not only returns notes matching the formula, but also
+		 * deleted notes and notes not matching the formula.
+		 * 
+		 * @return true if matches formula
+		 */
+		public boolean matchesFormula();
+		
+		/**
+		 * Returns the length of the returned summary buffer
+		 * 
+		 * @return summary buffer
+		 */
+		public int getSummaryLength();
+	
+		//methods with the same content but different return types
+		
+		/**
+		 * Returns all the data of the originator id
+		 * 
+		 * @return originator id data
+		 */
+		public NotesOriginatorIdData getOIDData();
+		
+		/**
+		 * Returns the UNID of the note
+		 * 
+		 * @return UNID
+		 */
+		public String getUNID();
+		
+		/**
+		 * Returns the "file" part of the global instance id as a {@link NotesTimeDate}.
+		 * This is the creation date of the database.
+		 * 
+		 * @return db creation date
+		 */
+		public NotesTimeDate getDbCreated();
+		
+		/**
+		 * Returns the modified date of the note as an {@link NotesTimeDate}
+		 * 
+		 * @return modified date
+		 */
+		public NotesTimeDate getNoteModified();
+		
+		/**
+		 * Returns the sequence time of the note as a {@link NotesTimeDate}.
+		 * 
+		 * @return sequence time
+		 */
+		public NotesTimeDate getSeqTime();
 		
 	}
 }

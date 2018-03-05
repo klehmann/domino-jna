@@ -10,7 +10,7 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SearchCallback;
 import com.mindoo.domino.jna.NotesNote;
-import com.mindoo.domino.jna.NotesOriginatorId;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
@@ -57,10 +57,8 @@ public class TestSync extends BaseJNATestClass {
 							null, new SearchCallback() {
 
 						@Override
-						public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
-								EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified,
-								ItemTableData summaryBufferData) {
-							unidsOfAllPersons.add(oid.getUNIDAsString());
+						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+							unidsOfAllPersons.add(searchMatch.getUNID());
 							return Action.Continue;
 						}
 					});
@@ -164,10 +162,9 @@ public class TestSync extends BaseJNATestClass {
 							null, new SearchCallback() {
 
 						@Override
-						public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
-								EnumSet<NoteFlags> flags, NotesTimeDate dbCreated, NotesTimeDate noteModified,
+						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
 								ItemTableData summaryBufferData) {
-							unidsOfLPersons.add(oid.getUNIDAsString());
+							unidsOfLPersons.add(searchMatch.getUNID());
 							return Action.Continue;
 						}
 					});

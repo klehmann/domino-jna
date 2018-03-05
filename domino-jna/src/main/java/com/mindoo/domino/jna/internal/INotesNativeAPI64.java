@@ -34,7 +34,7 @@ public interface INotesNativeAPI64 extends Library {
 			short SearchFlags,
 			short NoteClassMask,
 			NotesTimeDateStruct Since,
-			NotesCallbacks.b64_NsfSearchProc enumRoutine,
+			NotesCallbacks.NsfSearchProc enumRoutine,
 			Pointer EnumRoutineParameter,
 			NotesTimeDateStruct retUntil);
 
@@ -51,7 +51,7 @@ public interface INotesNativeAPI64 extends Library {
 			int SearchFlags4, 
 			short NoteClassMask, 
 			NotesTimeDateStruct Since, 
-			NotesCallbacks.b64_NsfSearchProc EnumRoutine,
+			NotesCallbacks.NsfSearchProc EnumRoutine,
 			Pointer EnumRoutineParameter, 
 			NotesTimeDateStruct retUntil, 
 			long namelist);

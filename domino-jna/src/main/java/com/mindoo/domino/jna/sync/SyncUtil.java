@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.sync;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -13,8 +14,8 @@ import java.util.logging.Level;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
-import com.mindoo.domino.jna.NotesOriginatorId;
 import com.mindoo.domino.jna.NotesSearch;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
@@ -111,12 +112,9 @@ public class SyncUtil {
 							EnumSet.of(NoteClass.DOCUMENT), null, new SearchCallback() {
 
 								@Override
-								public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid,
-										EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-										NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+								public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
 									
-									NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
-									
+									NotesOriginatorIdData oidData = searchMatch.getOIDData();
 									sourceOIDsByUNID.put(oidData.getUNID(), oidData);
 									return Action.Continue;
 								}
@@ -126,7 +124,6 @@ public class SyncUtil {
 					//find out which data we need to transfer
 					Map<String, NotesOriginatorIdData> missingUNIDsInTarget = new HashMap<String, NotesOriginatorIdData>();
 					Map<String, NotesOriginatorIdData> additionalUNIDsInTarget = new HashMap<String, NotesOriginatorIdData>();
-					Map<String, NotesOriginatorIdData> equalInSourceAndTarget = new HashMap<String, NotesOriginatorIdData>();
 					
 					Map<String, NotesOriginatorIdData[]> outdatedUNIDsInTarget = new HashMap<String, NotesOriginatorIdData[]>();
 					Map<String, NotesOriginatorIdData[]> newerUNIDsInTarget = new HashMap<String, NotesOriginatorIdData[]>();
@@ -142,10 +139,7 @@ public class SyncUtil {
 						}
 						else if (currSourceOID.getSequence()==matchingOIDInTarget.getSequence()) {
 							//se	quence time is expected to be the same, otherwise we have a conflict
-							if (currSourceOID.getSequenceTimeInnards().equals(matchingOIDInTarget.getSequenceTimeInnards())) {
-								equalInSourceAndTarget.put(currUNID, currSourceOID);
-							}
-							else {
+							if (!Arrays.equals(currSourceOID.getSequenceTimeInnards(), matchingOIDInTarget.getSequenceTimeInnards())) {
 								conflicts.put(currUNID, new NotesOriginatorIdData[] {currSourceOID, matchingOIDInTarget});
 							}
 						}
@@ -281,11 +275,11 @@ public class SyncUtil {
 						sinceDateForSearch, new SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid,
-							EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
 
-						NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
+						NotesOriginatorIdData oidData = searchMatch.getOIDData();
+						int noteId = searchMatch.getNoteId();
+						String unid = searchMatch.getUNID();
 						
 						NotesNote note = null;
 						if (dataToRead.contains(DataToRead.NoteWithAllItems)) {
@@ -293,7 +287,7 @@ public class SyncUtil {
 								note = dbSource.openNoteById(noteId);
 							}
 							catch (Exception e) {
-								target.log(Level.WARNING, "Error loading document with note id "+noteId+" and UNID "+oid.getUNIDAsString()+". Seems to have been deleted in the meantime and gets ignored.", e);
+								target.log(Level.WARNING, "Error loading document with note id "+noteId+" and UNID "+unid+". Seems to have been deleted in the meantime and gets ignored.", e);
 								return Action.Continue;
 							}
 						}
@@ -302,7 +296,7 @@ public class SyncUtil {
 								note = dbSource.openNoteById(noteId, EnumSet.of(OpenNote.SUMMARY));
 							}
 							catch (Exception e) {
-								target.log(Level.WARNING, "Error loading document with note id "+noteId+" and UNID "+oid.getUNIDAsString()+". Seems to have been deleted in the meantime and gets ignored.", e);
+								target.log(Level.WARNING, "Error loading document with note id "+noteId+" and UNID "+unid+". Seems to have been deleted in the meantime and gets ignored.", e);
 								return Action.Continue;
 							}
 						}
@@ -325,11 +319,9 @@ public class SyncUtil {
 					}
 
 					@Override
-					public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, int noteId,
-							NotesOriginatorId oid, EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags,
-							NotesTimeDate dbCreated, NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+					public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
 						
-						NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
+						NotesOriginatorIdData oidData = searchMatch.getOIDData();
 						
 						TargetResult tResult = target.noteChangedNotMatchingFormula(ctx, oidData);
 						if (tResult==TargetResult.Added)
@@ -344,11 +336,9 @@ public class SyncUtil {
 					}
 
 					@Override
-					public Action deletionStubFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid,
-							EnumSet<NoteClass> noteClass, EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-							NotesTimeDate noteModified) {
+					public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch) {
 						
-						NotesOriginatorIdData oidData = new NotesOriginatorIdData(oid);
+						NotesOriginatorIdData oidData = searchMatch.getOIDData();
 						
 						TargetResult tResult = target.noteDeleted(ctx, oidData);
 						if (tResult==TargetResult.Added)

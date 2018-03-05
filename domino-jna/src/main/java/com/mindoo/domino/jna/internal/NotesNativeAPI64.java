@@ -81,7 +81,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			short SearchFlags,
 			short NoteClassMask,
 			NotesTimeDateStruct Since,
-			NotesCallbacks.b64_NsfSearchProc enumRoutine,
+			NotesCallbacks.NsfSearchProc enumRoutine,
 			Pointer EnumRoutineParameter,
 			NotesTimeDateStruct retUntil);
 
@@ -97,7 +97,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			int SearchFlags4, 
 			short NoteClassMask, 
 			NotesTimeDateStruct Since, 
-			NotesCallbacks.b64_NsfSearchProc EnumRoutine,
+			NotesCallbacks.NsfSearchProc EnumRoutine,
 			Pointer EnumRoutineParameter, 
 			NotesTimeDateStruct retUntil, 
 			long namelist);

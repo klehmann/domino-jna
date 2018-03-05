@@ -13,10 +13,9 @@ import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesDatabase.SearchCallback;
 import com.mindoo.domino.jna.NotesIDTable;
-import com.mindoo.domino.jna.NotesOriginatorId;
 import com.mindoo.domino.jna.NotesSearch;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.FileType;
@@ -190,12 +189,14 @@ public class TestDbSearch extends BaseJNATestClass {
 
 				//since = null to search in all documents
 				NotesTimeDate since = null;
-				NotesTimeDate endTimeDate = NotesSearch.search(dbData, null, formula, colValues, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new SearchCallback() {
+				NotesTimeDate endTimeDate = NotesSearch.search(dbData, null, formula, colValues, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
-							EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+						int noteId = searchMatch.getNoteId();
+						EnumSet<NoteClass> noteClass = searchMatch.getNoteClass();
+						NotesTimeDate dbCreated = searchMatch.getDbCreated();
+						NotesTimeDate noteModified = searchMatch.getNoteModified();
 						
 						cnt[0]++;
 						Map<String,Object> summaryData = summaryBufferData.asMap();

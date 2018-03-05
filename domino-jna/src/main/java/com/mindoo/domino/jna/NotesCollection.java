@@ -20,6 +20,7 @@ import java.util.TreeSet;
 
 import com.mindoo.domino.jna.CollectionDataCache.CacheState;
 import com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesViewEntryData.CacheableViewEntryData;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
@@ -3252,11 +3253,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 						
 						@Override
-						public Action noteFound(NotesDatabase parentDb, int noteId,
-								NotesOriginatorId oid, EnumSet<NoteClass> noteClass,
-								EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-								NotesTimeDate noteModified, ItemTableData summaryBufferData) {
-							retIds.add(noteId);
+						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+							retIds.add(searchMatch.getNoteId());
 							return Action.Continue;
 						}
 					});

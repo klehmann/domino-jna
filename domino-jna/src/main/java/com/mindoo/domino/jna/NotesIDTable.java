@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback.Action;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
@@ -1167,11 +1168,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 						EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid,
-							EnumSet<NoteClass> noteClass,
-							EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
-						retIds.add(noteId);
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+						retIds.add(searchMatch.getNoteId());
 						return Action.Continue;
 					}
 				});
@@ -1204,11 +1202,8 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				NotesSearch.search(db, NotesIDTable.this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, int noteId, NotesOriginatorId oid,
-							EnumSet<NoteClass> noteClass,
-							EnumSet<NoteFlags> flags, NotesTimeDate dbCreated,
-							NotesTimeDate noteModified, ItemTableData summaryBufferData) {
-						retIds.add(noteId);
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+						retIds.add(searchMatch.getNoteId());
 						return Action.Continue;
 					}
 				});
