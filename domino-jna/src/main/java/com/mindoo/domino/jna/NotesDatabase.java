@@ -2226,7 +2226,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param noteUnids note unids to look up
 	 * @param retNoteIdsByUnid map is populated with found note ids
-	 * @param retNoteUnidsNotFound set is populated with any note unid that could not be found
+	 * @param retNoteUnidsNotFound set is populated with any note unid that could not be found; can be null
 	 */
 	public void toNoteIds(String[] noteUnids, Map<String,Integer> retNoteIdsByUnid, Set<String> retNoteUnidsNotFound) {
 		NoteInfo[] infoArr = getMultiNoteInfo(noteUnids);
@@ -2236,7 +2236,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				retNoteIdsByUnid.put(noteUnids[i], currInfo.getNoteId());
 			}
 			else {
-				retNoteUnidsNotFound.add(noteUnids[i]);
+				if (retNoteUnidsNotFound!=null)
+					retNoteUnidsNotFound.add(noteUnids[i]);
 			}
 		}
 	}
