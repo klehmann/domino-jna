@@ -102,6 +102,29 @@ public class NotesStringUtils {
 	}
 	
 	/**
+	 * Scans the Pointer object for the first null value
+	 * 
+	 * @param in pointer
+	 * @return number of bytes before null byte found
+	 */
+	public static int getNullTerminatedLength(Pointer in) {
+		if(in == null) {
+			return 0;
+		}
+		
+		// Search for terminating null character
+		int offset = 0;
+		while(true) {
+			byte b = in.getByte(offset);
+			if(b == 0) {
+				return offset;
+			} else {
+				offset++;
+			}
+		}
+	}
+	
+	/**
 	 * Reads a list of null terminated strings in LMBCS format at the specified pointer
 	 * 
 	 * @param inPtr pointer
