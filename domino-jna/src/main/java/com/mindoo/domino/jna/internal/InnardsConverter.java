@@ -9,7 +9,54 @@ import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 
 /**
- * Utility class to convert date/time values between the Domino innard array and Java {@link Calendar}
+ * Utility class to convert date/time values between the Domino innard array and Java {@link Calendar}.<br>
+ * The Domino date format is documented in the C API:<br>
+ * <hr>
+ * <b>TIMEDATE</b><br>
+ * <br>
+ * <br>
+ * The Domino and Notes TIMEDATE structure consists of two long words that encode the time, the date,
+ * the time zone, and the Daylight Savings Time settings that were in effect when the structure was initialized.<br>
+ * <br>
+ * The TIMEDATE structure is designed to be accessed exclusively through the time and date subroutines defined in misc.h.<br>
+ * <br>
+ * This structure is subject to change; the description here is provided for debugging purposes.<br>
+ * <br>
+ * The first DWORD, Innards[0], contains the number of hundredths of seconds since midnight, Greenwich mean time.<br>
+ * <br>
+ * If only the date is important, not the time, this field may be set to ALLDAY.<br>
+ * <br>
+ * The date and the time zone and Daylight Savings Time settings are encoded in Innards[1].<br>
+ * <br>
+ * The 24 low-order bits contain the Julian Day, the number of days since January 1, 4713 BC.<br>
+ * <br>
+ * Note that this is NOT the same as the Julian calendar!<br>
+ * The Julian Day was originally devised as an aid to astronomers.<br>
+ * Since only days are counted, weeks, months, and years are ignored in calculations.<br>
+ * The Julian Day is defined to begin at noon;  for simplicity, Domino and Notes assume that the day begins at midnight.<br>
+ * <br>
+ * The high-order byte, bits 31-24, encodes the time zone and Daylight Savings Time information.<br>
+ * The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed.<br>
+ * Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.<br>
+ * Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean time, and bits
+ * 29-28 contain the number of 15-minute intervals in the difference.<br>
+ * <br>
+ * For example, 2:49:04 P. M., Eastern Standard Time, December 10, 1996 would be stored as:<br>
+ * <br>
+ * Innards[0]:	0x006CDCC0	19 hours, 49 minutes, 4 seconds GMT<br>
+ * Innards[1]:	0x852563FC	DST observed, zone +5, Julian Day  2,450,428<br>
+ * <br>
+ * If the time zone were set for Bombay, India, where Daylight Savings Time is not observed,
+ * 2:49:04 P. M., December 10, 1996 would be stored as:<br>
+ * <br>
+ * Innards[0]:	0x0032B864	9 hours, 19 minutes, 4 seconds GMT<br>
+ * Innards[1]:	0x652563FC	No DST, zone 5 1/2 hours east of GMT, Julian Day  2,450,428<br>
+ * <hr>
+ * Here is more documentation regarding date formats in Domino:<br>
+ * <a href="http://www-01.ibm.com/support/docview.wss?uid=swg27003019">How to interpret the Hexadecimal values in a Time/Date value</a><br>
+ * <br>
+ * And here is an interesting technote regarding specific dates in the year 1752:<br>
+ * <a href="http://www-01.ibm.com/support/docview.wss?uid=swg21098816">Error: 'Unable to interpret time or date' when entering specific dates from the year 1752</a>
  * 
  * @author Karsten Lehmann
  */
@@ -285,7 +332,7 @@ public class InnardsConverter {
 	public static boolean isDST(int[] innards) {
 		int dateInnard = innards[1];
 
-//		The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
+		//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
 		if (((dateInnard >> 31) & 1) == 1) {
 			return true;
 		}
@@ -297,7 +344,7 @@ public class InnardsConverter {
 	public static int getTimeZoneOffset(int[] innards) {
 		int dateInnard = innards[1];
 		
-//		Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time
+		//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time
 		int factor;
 		if (((dateInnard >> 30) & 1) == 1) {
 			factor = 1;
@@ -306,8 +353,8 @@ public class InnardsConverter {
 			factor = -1;
 		}
 		
-		//		Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean
-		//		time, and bits 29-28 contain the number of 15-minute intervals in the difference.
+		//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean
+		//time, and bits 29-28 contain the number of 15-minute intervals in the difference.
 		int hours = ((dateInnard >> 24) & 15);
 		int intervals15min = ((dateInnard >> 28) & 3);
 		return factor * (hours*60 + intervals15min*15);
@@ -330,30 +377,27 @@ public class InnardsConverter {
 		if (!hasDate && !hasTime)
 			return null;
 
-		//		//http://www-01.ibm.com/support/docview.wss?uid=swg27003019
-
-
-		//		The Domino and Notes TIMEDATE structure consists of two long words that encode the time, the date,
-		//		the time zone, and the Daylight Savings Time settings that were in effect when the structure was initialized.
-		//		The TIMEDATE structure is designed to be accessed exclusively through the time and date subroutines
-		//		defined in misc.h.  This structure is subject to change;  the description here is provided for debugging purposes.
+		//The Domino and Notes TIMEDATE structure consists of two long words that encode the time, the date,
+		//the time zone, and the Daylight Savings Time settings that were in effect when the structure was initialized.
+		//The TIMEDATE structure is designed to be accessed exclusively through the time and date subroutines
+		//defined in misc.h.  This structure is subject to change;  the description here is provided for debugging purposes.
 		//
-		//		The first DWORD, Innards[0], contains the number of hundredths of seconds since midnight,
-		//		Greenwich mean time.  If only the date is important, not the time, this field may be set to ALLDAY.
+		//The first DWORD, Innards[0], contains the number of hundredths of seconds since midnight,
+		//Greenwich mean time.  If only the date is important, not the time, this field may be set to ALLDAY.
 		//
-		//		The date and the time zone and Daylight Savings Time settings are encoded in Innards[1].
+		//The date and the time zone and Daylight Savings Time settings are encoded in Innards[1].
 		//		
-		//		The 24 low-order bits contain the Julian Day, the number of days since January 1, 4713 BC.
+		//The 24 low-order bits contain the Julian Day, the number of days since January 1, 4713 BC.
 		//		
-		//		Note that this is NOT the same as the Julian calendar!  The Julian Day was originally devised as an aid
-		//		to astronomers.  Since only days are counted, weeks, months, and years are ignored in calculations.
-		//		The Julian Day is defined to begin at noon;  for simplicity, Domino and Notes assume that the day
-		//		begins at midnight.  The high-order byte, bits 31-24, encodes the time zone and Daylight Savings
-		//		Time information.
-		//		The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed.
-		//		Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
-		//		Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean
-		//		time, and bits 29-28 contain the number of 15-minute intervals in the difference.
+		//Note that this is NOT the same as the Julian calendar!  The Julian Day was originally devised as an aid
+		//to astronomers.  Since only days are counted, weeks, months, and years are ignored in calculations.
+		//The Julian Day is defined to begin at noon;  for simplicity, Domino and Notes assume that the day
+		//begins at midnight.  The high-order byte, bits 31-24, encodes the time zone and Daylight Savings
+		//Time information.
+		//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed.
+		//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
+		//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean
+		//time, and bits 29-28 contain the number of 15-minute intervals in the difference.
 
 		int timeInnard = innards[0];
 		int dateInnard = innards[1];
