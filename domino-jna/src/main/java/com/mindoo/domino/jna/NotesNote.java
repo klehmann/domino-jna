@@ -77,6 +77,7 @@ import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.mindoo.domino.jna.utils.Ref;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -2142,7 +2143,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void compileLotusScript() {
 		checkHandle();
 		
-		final ThreadLocal<NotesError> exception = new ThreadLocal<NotesError>();
+		final Ref<NotesError> exception = new Ref<NotesError>();
 		NotesCallbacks.LSCOMPILERERRORPROC errorProc = new NotesCallbacks.LSCOMPILERERRORPROC() {
 			@Override public short invoke(Pointer pInfo, Pointer pCtx) {
 				NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
@@ -2153,7 +2154,6 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 				String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
 				String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
-				
 				
 				exception.set(new LotusScriptCompilationError(12051, errText, errFile));
 				return 0;
