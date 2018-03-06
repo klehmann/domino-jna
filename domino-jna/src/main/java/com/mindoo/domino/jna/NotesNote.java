@@ -26,6 +26,7 @@ import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.UpdateNote;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
+import com.mindoo.domino.jna.errors.LotusScriptCompilationError;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
@@ -55,6 +56,7 @@ import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
+import com.mindoo.domino.jna.internal.structs.NotesLSCompileErrorInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
@@ -130,7 +132,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Creates a new NotesDatabase
+	 * Creates a new NotesNote
 	 * 
 	 * @param adaptable adaptable providing enough information to create the database
 	 */
@@ -2132,6 +2134,42 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		}
 
+	}
+	
+	/**
+	 * Compiles all LotusScript code in this design note.
+	 */
+	public void compileLotusScript() {
+		checkHandle();
+		
+		final ThreadLocal<NotesError> exception = new ThreadLocal<NotesError>();
+		NotesCallbacks.LSCOMPILERERRORPROC errorProc = new NotesCallbacks.LSCOMPILERERRORPROC() {
+			@Override public short invoke(Pointer pInfo, Pointer pCtx) {
+				NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
+				errorInfo.read();
+				
+				int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
+				int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
+				
+				String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
+				String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
+				
+				
+				exception.set(new LotusScriptCompilationError(12051, errText, errFile));
+				return 0;
+			}
+		};
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFNoteLSCompileExt(this.getParent().getHandle64(), m_hNote64, 0, errorProc, null);
+		} else {
+			result = NotesNativeAPI32.get().NSFNoteLSCompileExt(this.getParent().getHandle32(), m_hNote32, 0, errorProc, null);
+		}
+		if(exception.get() != null) {
+			throw exception.get();
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	public void computeWithForm(boolean continueOnError, final ComputeWithFormCallback callback) {

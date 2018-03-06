@@ -351,6 +351,16 @@ public interface INotesNativeAPI64 extends Library {
 			long hNote,
 			int dwFlags,
 			IntByReference retfSigned);
+	public short NSFNoteLSCompile(
+			long hDb,
+			long hNote,
+			int dwFlags);
+	public short NSFNoteLSCompileExt(
+			long hDb,
+			long hNote,
+			int dwFlags,
+			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			Pointer pCtx);
 	
 	public short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	public short IDCreateTable (int alignment, LongByReference rethTable);

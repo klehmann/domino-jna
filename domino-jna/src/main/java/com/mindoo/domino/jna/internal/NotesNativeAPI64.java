@@ -353,6 +353,16 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long hNote,
 			int dwFlags,
 			IntByReference retfSigned);
+	public native short NSFNoteLSCompile(
+			long hDb,
+			long hNote,
+			int dwFlags);
+	public native short NSFNoteLSCompileExt(
+			long hDb,
+			long hNote,
+			int dwFlags,
+			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			Pointer pCtx);
 	
 	public native short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	public native short IDCreateTable (int alignment, LongByReference rethTable);
