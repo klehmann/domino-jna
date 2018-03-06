@@ -14,22 +14,37 @@ public class LotusScriptCompilationError extends NotesError {
 
 	private final String m_errorText;
 	private final String m_errorFile;
+	private final int m_line;
 	
-	public LotusScriptCompilationError(int id, String errorText, String errorFile) {
-		super(id, toDetailedErrorMessage(id, errorText, errorFile));
+	public LotusScriptCompilationError(int id, int line, String errorText, String errorFile) {
+		super(id, toDetailedErrorMessage(id, line, errorText, errorFile));
 		this.m_errorText = errorText;
 		this.m_errorFile = errorFile;
+		this.m_line = line;
 	}
 	
-	private static String toDetailedErrorMessage(int id, String errorText, String errorFile) {
-		return MessageFormat.format("{0}: errorText={1}, errorFile={2}", NotesErrorUtils.errToString((short)id), errorText, errorFile);
+	private static String toDetailedErrorMessage(int id, int line, String errorText, String errorFile) {
+		return MessageFormat.format("{0}: line={1}, errorText={2}, errorFile={3}", NotesErrorUtils.errToString((short)id), line, errorText, errorFile);
 	}
 	
+	/**
+	 * @return the LS file name, if applicable
+	 */
 	public String getErrorFile() {
 		return m_errorFile;
 	}
 	
+	/**
+	 * @return description of the error
+	 */
 	public String getErrorText() {
 		return m_errorText;
+	}
+	
+	/**
+	 * @return source line number of the error, relative to the module containing the error, if applicable
+	 */
+	public int getLine() {
+		return m_line;
 	}
 }

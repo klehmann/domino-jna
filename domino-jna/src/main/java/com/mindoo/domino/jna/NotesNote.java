@@ -2139,6 +2139,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	
 	/**
 	 * Compiles all LotusScript code in this design note.
+	 * 
+	 * @throws LotusScriptCompilationError when encountering descriptive compilation problem
+	 * @throws NotesError for other errors or compilation problems without further description
 	 */
 	public void compileLotusScript() {
 		checkHandle();
@@ -2155,7 +2158,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
 				String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
 				
-				exception.set(new LotusScriptCompilationError(12051, errText, errFile));
+				exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
 				return 0;
 			}
 		};
