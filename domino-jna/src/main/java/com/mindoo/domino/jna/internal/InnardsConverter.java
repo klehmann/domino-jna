@@ -112,37 +112,40 @@ public class InnardsConverter {
 	 * @return innard array
 	 */
 	public static int[] encodeInnardsWithCAPI(Calendar cal, boolean hasDate, boolean hasTime) {
-		Calendar calUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		calUTC.setTimeInMillis(cal.getTimeInMillis());
-		
-		int year = calUTC.get(Calendar.YEAR);
-		int month = calUTC.get(Calendar.MONTH)+1;
-		int day = calUTC.get(Calendar.DATE);
-
-		int hour = cal.get(Calendar.HOUR_OF_DAY);
-		int minute = cal.get(Calendar.MINUTE);
-		int second = cal.get(Calendar.SECOND);
-		int millis = cal.get(Calendar.MILLISECOND);
-
-		hour = calUTC.get(Calendar.HOUR_OF_DAY);
-		minute = calUTC.get(Calendar.MINUTE);
-		second = calUTC.get(Calendar.SECOND);
-		millis = calUTC.get(Calendar.MILLISECOND);
-
 		DisposableMemory m = new DisposableMemory(NotesConstants.timeSize);
 		NotesTimeStruct time = NotesTimeStruct.newInstance(m);
 
-		time.dst=0;//isDST ? 1 : 0;
-		time.zone=0; //-gmtOffset;
+		time.dst=0;
+		time.zone=0;
 
-		time.hour = hour;
-		time.minute = minute;
-		time.second = second;
-		time.hundredth = (short) (millis / 10);
+		if (!hasDate) {
+			//for time only items, use local time, since there is no timezone information to tell Domino we're using UTC
+			
+			Calendar calNow = Calendar.getInstance();
+			
+			time.hour = cal.get(Calendar.HOUR_OF_DAY);
+			time.minute = cal.get(Calendar.MINUTE);
+			time.second = cal.get(Calendar.SECOND);
+			time.hundredth = (int) ((cal.get(Calendar.MILLISECOND) / 10) & 0xffffffff);
+			
+			time.day = calNow.get(Calendar.DAY_OF_MONTH);
+			time.month = calNow.get(Calendar.MONTH)+1;
+			time.year = calNow.get(Calendar.YEAR);
+		}
+		else {
+			Calendar calUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+			calUTC.setTimeInMillis(cal.getTimeInMillis());
+			
+			time.hour = calUTC.get(Calendar.HOUR_OF_DAY);
+			time.minute = calUTC.get(Calendar.MINUTE);
+			time.second = calUTC.get(Calendar.SECOND);
+			time.hundredth = (int) ((calUTC.get(Calendar.MILLISECOND) / 10) & 0xffffffff);
+			
+			time.day = calUTC.get(Calendar.DAY_OF_MONTH);
+			time.month = calUTC.get(Calendar.MONTH)+1;
+			time.year = calUTC.get(Calendar.YEAR);
+		}
 
-		time.year = year;
-		time.month = month;
-		time.day = day;
 		time.write();
 
 		//convert day, month, year etc. to GM NotesTimeDate
@@ -188,33 +191,53 @@ public class InnardsConverter {
 	 * @return innard array
 	 */
 	public static int[] encodeInnards(Calendar cal, boolean hasDate, boolean hasTime) {
-		TimeZone tz = Calendar.getInstance().getTimeZone();
-
+		if (!hasDate && !hasTime) {
+			return new int[] {NotesConstants.ALLDAY, NotesConstants.ANYDAY};
+		}
+		
 		int[] innards = new int[2];
 
 		//The first DWORD, Innards[0], contains the number of hundredths of seconds since midnight,
-		long dtTimeMillisSince1970 = cal.getTimeInMillis();
-		long dtTimeDaysSince1970 = dtTimeMillisSince1970 / (24*60*60*1000);
-		long dtTimeMillisSince1970StartOfDay = dtTimeDaysSince1970 * 24*60*60*1000;
 		if (hasTime) {
-			innards[0] = (int) (((dtTimeMillisSince1970-dtTimeMillisSince1970StartOfDay) / 10) & 0xffffffff);
+			if (hasDate) {
+				long dtTimeMillisSince1970 = cal.getTimeInMillis();
+				long dtTimeDaysSince1970 = dtTimeMillisSince1970 / (24*60*60*1000);
+				long dtTimeMillisSince1970StartOfDay = dtTimeDaysSince1970 * 24*60*60*1000;
+				
+				innards[0] = (int) (((dtTimeMillisSince1970-dtTimeMillisSince1970StartOfDay) / 10) & 0xffffffff);
+			}
+			else {
+				int hour = cal.get(Calendar.HOUR_OF_DAY);
+				int minute = cal.get(Calendar.MINUTE);
+				int second = cal.get(Calendar.SECOND);
+				int millis = cal.get(Calendar.MILLISECOND);
+				int hundredth = millis / 10;
+				innards[0] = ((hour*60*60*100 + minute*60*100 + second*100 + hundredth)) & 0xffffffff;
+			}
 		}
 		else {
 			innards[0] = NotesConstants.ALLDAY;
 		}
 
+		if (!hasDate) {
+			innards[1] = NotesConstants.ANYDAY;
+			return innards;
+		}
+		
 		//The 24 low-order bits contain the Julian Day, the number of days since January 1, 4713 BC
 		Date dtTime = cal.getTime();
 		long julianDay = toJulianDay(dtTime);
 
 		long zoneMask = 0;
+		
+		TimeZone tz = Calendar.getInstance().getTimeZone();
 
-//		The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
+		//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
 		if (tz.useDaylightTime()) {
 			zoneMask |= 1l << 31;
 		}
 		
-//		Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
+		//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
 		if (tz.getRawOffset()>0) {
 			zoneMask |= 1l << 30;
 		}
@@ -233,12 +256,8 @@ public class InnardsConverter {
 
 		long resultLong = julianDay | zoneMask;
 		
-		if (hasDate) {
-			innards[1] = (int) (resultLong & 0xffffffff);
-		}
-		else {
-			innards[1] = NotesConstants.ANYDAY;
-		}
+		innards[1] = (int) (resultLong & 0xffffffff);
+		
 		return innards;
 	}
 
@@ -263,10 +282,18 @@ public class InnardsConverter {
 		time.GM.Innards[0] = innards[0];
 		time.GM.Innards[1] = innards[1];
 
-		//set desired daylight-saving time to appropriate value, here UTC
-		time.dst=0;
-		// set desired time zone to appropriate value, here UTC
-		time.zone=0;
+		if (!hasDate) {
+			//set desired daylight-saving time to appropriate value
+			time.dst=0;//NotesDateTimeUtils.isDaylightTime() ? 1 : 0;
+			// set desired time zone to appropriate value
+			time.zone=0; //NotesDateTimeUtils.getGMTOffset();
+		}
+		else {
+			//set desired daylight-saving time to appropriate value, here UTC
+			time.dst=0;
+			// set desired time zone to appropriate value, here UTC
+			time.zone=0;
+		}
 
 		boolean convRet;
 		if (hasDate && hasTime) {
@@ -294,37 +321,31 @@ public class InnardsConverter {
 		int second = time.second;
 		int millisecond = time.hundredth * 10;
 
-		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		Calendar cal;
 
 		if (hasTime && hasDate) {
 			// set date and time
+			cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 			cal.set((int) year,(int) month,(int) date,(int) hour,(int) minute,(int) second);
+			cal.set(Calendar.MILLISECOND, (int) millisecond);
 		}
 		else if (!hasTime) {
 			// set date only
+			cal = Calendar.getInstance();
 			NotesDateTimeUtils.setAnyTime(cal);
 
 			// set date
 			cal.set((int) year,(int) month,(int) date);
 		}
-		else if (!hasDate) {
+		else {
 			// set time only
-			NotesDateTimeUtils.setAnyTime(cal);
-
-			// set hour of the day
-			cal.set(Calendar.HOUR, (int) hour);
-
-			// set minute
-			cal.set(Calendar.MINUTE, (int) minute);
-
-			// set second
-			cal.set(Calendar.SECOND, (int) second);
-		}
-
-		if (hasTime) {
-			// set milliseconds
+			cal = Calendar.getInstance();
+			
+			cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE), hour, minute, second);
 			cal.set(Calendar.MILLISECOND, (int) millisecond);
-		}                
+
+			NotesDateTimeUtils.setAnyDate(cal);
+		}
 
 		return cal;
 	}
@@ -408,6 +429,21 @@ public class InnardsConverter {
 		}
 		else {
 			milliSecondsSinceMidnight = 0;
+		}
+		
+		if (!hasDate) {
+			int hour = (int) (milliSecondsSinceMidnight / (60*60*1000));
+			int minute = (int) ( (milliSecondsSinceMidnight - hour*(60*60*1000)) / (60*1000) );
+			int seconds = (int) ( (milliSecondsSinceMidnight - hour*(60*60*1000) - minute*(60*1000) ) / 1000);
+			int millis = (int) ( (milliSecondsSinceMidnight - hour*(60*60*1000) - minute*(60*1000) ) - seconds*1000);
+			
+			Calendar cal = Calendar.getInstance();
+			
+			cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE), hour, minute, seconds);
+			cal.set(Calendar.MILLISECOND, (int) millis);
+			
+			NotesDateTimeUtils.setAnyDate(cal);
+			return cal;
 		}
 		
 		long julianDayLong = dateInnard & 16777215;
