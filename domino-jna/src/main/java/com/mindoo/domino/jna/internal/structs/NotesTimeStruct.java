@@ -36,11 +36,6 @@ public class NotesTimeStruct extends BaseStructure {
 	public int dst;
 	/** -11 to +11 */
 	public int zone;
-//	public long timeDatePtr;
-//	public int Innard1;
-//	public int Innard2;
-	
-//	public int[] Innards = new int[2];
 	public NotesTimeDateStruct GM;
 	
 	/**
