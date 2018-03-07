@@ -115,14 +115,16 @@ public class InnardsConverter {
 		DisposableMemory m = new DisposableMemory(NotesConstants.timeSize);
 		NotesTimeStruct time = NotesTimeStruct.newInstance(m);
 
-		time.dst=0;
-		time.zone=0;
-
+		boolean isNZDTConversionNeeded = false;
+		
 		if (!hasDate) {
 			//for time only items, use local time, since there is no timezone information to tell Domino we're using UTC
 			
 			Calendar calNow = Calendar.getInstance();
 			
+			time.dst=0;
+			time.zone=0;
+
 			time.hour = cal.get(Calendar.HOUR_OF_DAY);
 			time.minute = cal.get(Calendar.MINUTE);
 			time.second = cal.get(Calendar.SECOND);
@@ -133,17 +135,39 @@ public class InnardsConverter {
 			time.year = calNow.get(Calendar.YEAR);
 		}
 		else {
-			Calendar calUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-			calUTC.setTimeInMillis(cal.getTimeInMillis());
+			TimeZone tz = cal.getTimeZone();
+			int tzRawOffset = tz.getRawOffset();
+			int tzOffsetHours = (int)(tzRawOffset / 3600000);
 			
-			time.hour = calUTC.get(Calendar.HOUR_OF_DAY);
-			time.minute = calUTC.get(Calendar.MINUTE);
-			time.second = calUTC.get(Calendar.SECOND);
-			time.hundredth = (int) ((calUTC.get(Calendar.MILLISECOND) / 10) & 0xffffffff);
+			time.hour = cal.get(Calendar.HOUR_OF_DAY);
+			time.minute = cal.get(Calendar.MINUTE);
+			time.second = cal.get(Calendar.SECOND);
+			time.hundredth = (int) ((cal.get(Calendar.MILLISECOND) / 10) & 0xffffffff);
+
+
+			time.dst=tz.useDaylightTime() ? 1 : 0;
 			
-			time.day = calUTC.get(Calendar.DAY_OF_MONTH);
-			time.month = calUTC.get(Calendar.MONTH)+1;
-			time.year = calUTC.get(Calendar.YEAR);
+			//valid values for time.zone: -11 - +11
+			if (tzOffsetHours == 12) {
+				//special case for e.g. NZDT (New Zealand) which is UTC+13, raw offset 12 hours; switch to -11 and add one day
+				isNZDTConversionNeeded = true;
+				
+				time.zone = 11;
+				
+				Calendar calNextDay = (Calendar) cal.clone();
+				calNextDay.add(Calendar.DAY_OF_MONTH, -1);
+				
+				time.day = calNextDay.get(Calendar.DAY_OF_MONTH);
+				time.month = calNextDay.get(Calendar.MONTH)+1;
+				time.year = calNextDay.get(Calendar.YEAR);
+			}
+			else {
+				time.zone=-1*tzOffsetHours;
+				
+				time.day = cal.get(Calendar.DAY_OF_MONTH);
+				time.month = cal.get(Calendar.MONTH)+1;
+				time.year = cal.get(Calendar.YEAR);
+			}
 		}
 
 		time.write();
@@ -158,6 +182,17 @@ public class InnardsConverter {
 
 		int[] innards = time.GM.Innards.clone();
 		m.dispose();
+
+		if (isNZDTConversionNeeded) {
+			//overwrite the wrong timezone info with the New Zealand timeout offset
+			
+			//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
+			innards[1] |= 0x40000000;
+			
+			//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean time
+			innards[1] &= ~0xF000000;
+			innards[1] |= ((long)12) << 24;
+		}
 		
 		if (!hasDate) {
 			innards[1] = NotesConstants.ANYDAY;
@@ -230,7 +265,7 @@ public class InnardsConverter {
 
 		long zoneMask = 0;
 		
-		TimeZone tz = Calendar.getInstance().getTimeZone();
+		TimeZone tz = cal.getTimeZone();
 
 		//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
 		if (tz.useDaylightTime()) {
@@ -238,19 +273,22 @@ public class InnardsConverter {
 		}
 		
 		//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
-		if (tz.getRawOffset()>0) {
+		int tzOffsetSeconds = (int)(tz.getRawOffset() / 1000);
+		
+		if (tzOffsetSeconds>0) {
 			zoneMask |= 1l << 30;
 		}
 		
-		int tzOffset = dtTime.getTimezoneOffset();
-		int tzOffsetHours = Math.abs(tzOffset / 60);
+		int tzOffsetHours = Math.abs(tzOffsetSeconds / (60*60));
+		
 		
 		//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean time
 		zoneMask |= ((long)tzOffsetHours) << 24;
 
 		//bits 29-28 contain the number of 15-minute intervals in the difference
 		
-		int tzOffsetFractionMinutes = tzOffset % 60;
+		int tzOffsetFractionSeconds = tzOffsetSeconds - tzOffsetHours*60*60; //  tzOffset % 60;
+		int tzOffsetFractionMinutes = tzOffsetFractionSeconds % 60;
 		int tzOffsetFraction15MinuteIntervalls = tzOffsetFractionMinutes / 15;
 		zoneMask |= ((long)tzOffsetFraction15MinuteIntervalls) << 28;
 
