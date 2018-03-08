@@ -20,15 +20,14 @@ import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 /**
@@ -470,11 +469,13 @@ public class NotesLookupResultBufferDecoder {
 		protected boolean m_isDST;
 		protected boolean m_convertStringsLazily;
 		protected boolean m_freed;
+		private NotesTimeStruct m_timeStruct;
 		
 		public ItemValueTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
 			m_gmtOffset = gmtOffset;
 			m_isDST = isDST;
 			m_convertStringsLazily = convertStringsLazily;
+			m_timeStruct = NotesTimeStruct.newInstance();
 		}
 		
 		public void free() {
@@ -517,7 +518,7 @@ public class NotesLookupResultBufferDecoder {
 					m_itemValues[index] = ItemDecoder.decodeNumber(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_isDST, m_gmtOffset);
+					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_isDST, m_gmtOffset, m_timeStruct);
 				}
 				else if (type == NotesItem.TYPE_NUMBER_RANGE) {
 					m_itemValues[index] = ItemDecoder.decodeNumberList(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));

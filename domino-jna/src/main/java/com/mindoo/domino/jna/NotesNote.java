@@ -105,6 +105,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private Document m_legacyDocRef;
 	private EnumSet<NoteClass> m_noteClass;
+	private boolean m_preferNotesTimeDates;
 	
 	/**
 	 * Creates a new instance
@@ -1310,6 +1311,38 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Use this function to read the value of a timedate item as {@link NotesTimeDate}.<br>
+	 * <br>
+	 * If the item does not exist, the method returns null.
+	 * 
+	 * @param itemName item name
+	 * @return time date value or null if not found
+	 */
+	public NotesTimeDate getItemValueAsTimeDate(String itemName) {
+		checkHandle();
+
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+		
+		NotesTimeDateStruct td_item_value = NotesTimeDateStruct.newInstance();
+		
+		if (PlatformUtils.is64Bit()) {
+			boolean exists = NotesNativeAPI64.get().NSFItemGetTime(m_hNote64, itemNameMem, td_item_value);
+			if (!exists) {
+				return null;
+			}
+		}
+		else {
+			boolean exists = NotesNativeAPI32.get().NSFItemGetTime(m_hNote32, itemNameMem, td_item_value);
+			if (!exists) {
+				return null;
+			}
+		}
+		td_item_value.read();
+		int[] innards = td_item_value.Innards;
+		return new NotesTimeDate(innards);
+	}
+	
+	/**
 	 * Decodes an item value
 	 * 
 	 * @param itemName item name (for logging purpose)
@@ -1342,6 +1375,26 @@ public class NotesNote implements IRecyclableNotesObject {
 				Mem32.OSUnlockObject(valueBlockId.pool);
 			}
 		}
+	}
+	
+	/**
+	 * Sets whether methods like {@link #getItemValue(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @param useNotesTimeDate true to prefer NotesTimeDate (false by default)
+	 */
+	public void setPreferNotesTimeDates(boolean b) {
+		m_preferNotesTimeDates = b;
+	}
+	
+	/**
+	 * Returns whether methods like {@link #getItemValue(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @return true to prefer NotesTimeDate
+	 */
+	public boolean isPreferNotesTimeDates() {
+		return m_preferNotesTimeDates;
 	}
 	
 	/**
@@ -1424,29 +1477,43 @@ public class NotesNote implements IRecyclableNotesObject {
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
-			if (cal==null) {
-				Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-				nullCal.set(Calendar.YEAR, 1);
-				nullCal.set(Calendar.MONTH, 1);
-				nullCal.set(Calendar.DAY_OF_MONTH, 1);
-				nullCal.set(Calendar.HOUR, 0);
-				nullCal.set(Calendar.MINUTE, 0);
-				nullCal.set(Calendar.SECOND, 0);
-				nullCal.set(Calendar.MILLISECOND, 0);
-				return Arrays.asList((Object) nullCal);
+			if (isPreferNotesTimeDates()) {
+				NotesTimeDate td = ItemDecoder.decodeTimeDateAsNotesTimeDate(valueDataPtr, valueDataLength);
+				return Arrays.asList((Object) td);
 			}
-			return Arrays.asList((Object) cal);
+			else {
+				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				
+				Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
+				if (cal==null) {
+					Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+					nullCal.set(Calendar.YEAR, 1);
+					nullCal.set(Calendar.MONTH, 1);
+					nullCal.set(Calendar.DAY_OF_MONTH, 1);
+					nullCal.set(Calendar.HOUR, 0);
+					nullCal.set(Calendar.MINUTE, 0);
+					nullCal.set(Calendar.SECOND, 0);
+					nullCal.set(Calendar.MILLISECOND, 0);
+					return Arrays.asList((Object) nullCal);
+				}
+				else {
+					return Arrays.asList((Object) cal);
+				}
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
-			return calendarValues==null ? Collections.emptyList() : calendarValues;
+			if (isPreferNotesTimeDates()) {
+				List<Object> tdValues = ItemDecoder.decodeTimeDateListAsNotesTimeDate(valueDataPtr);
+				return tdValues==null ? Collections.emptyList() : tdValues;
+			}
+			else {
+				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
+				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
+				
+				List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
+				return calendarValues==null ? Collections.emptyList() : calendarValues;
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_OBJECT) {
 			NotesObjectDescriptorStruct objDescriptor = NotesObjectDescriptorStruct.newInstance(valueDataPtr);

@@ -30,7 +30,7 @@ public class NotesDateTimeUtils {
 	 * @return true if DST
 	 */
 	public static boolean isDaylightTime() {
-		TimeZone tz = Calendar.getInstance().getTimeZone();
+		TimeZone tz = TimeZone.getDefault();
 		
 	    return tz.useDaylightTime();
 	}
@@ -41,7 +41,7 @@ public class NotesDateTimeUtils {
 	 * @return offset
 	 */
 	public static int getGMTOffset() {
-		TimeZone tz = Calendar.getInstance().getTimeZone();
+		TimeZone tz = TimeZone.getDefault();
 		
 		return (int)(tz.getRawOffset() / 3600000);
 	}
@@ -360,10 +360,25 @@ public class NotesDateTimeUtils {
 		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
 			return null;
 
+		NotesTimeStruct time = NotesTimeStruct.newInstance();
+		return innardsToCalendar(useDayLight, gmtOffset, innards, time);
+	}
+	
+	/**
+	 * Converts C API innard values to Java {@link Calendar}
+	 * 
+	 * @param useDayLight true to use daylight savings time for the calendar object
+	 * @param gmtOffset GMT offset for the calendar object
+	 * @param innards array with 2 innard values
+	 * @param time time structure to be used for conversion; used for performance optimization to reuse the same instance
+	 * @return calendar or null if invalid innards
+	 */
+	public static Calendar innardsToCalendar(boolean useDayLight, int gmtOffset, int[] innards, NotesTimeStruct time) {
+		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
+			return null;
+
 		boolean hasTime=(innards[0]!=NotesConstants.ALLDAY);
 		boolean hasDate=(innards[1]!=NotesConstants.ANYDAY);
-
-		NotesTimeStruct time = NotesTimeStruct.newInstance();
 		time.GM.Innards[0] = innards[0];
 		time.GM.Innards[1] = innards[1];
 
