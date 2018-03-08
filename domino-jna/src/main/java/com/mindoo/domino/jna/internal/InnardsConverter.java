@@ -11,6 +11,9 @@ import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 
 /**
  * Utility class to convert date/time values between the Domino innard array and Java {@link Calendar}.<br>
+ * <br>
+ * This class contains both methods using the C API and methods using a manual conversion.
+ * 
  * The Domino date format is documented in the C API:<br>
  * <hr>
  * <b>TIMEDATE</b><br>
@@ -811,21 +814,27 @@ public class InnardsConverter {
 			baseTime = System.currentTimeMillis();
 			baseTime = baseTime - (baseTime % (24*60*60*1000));
 		}
-		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		cal.setTimeInMillis(baseTime + milliSecondsSinceMidnight);
 		
 		if (hasTime) {
+			Calendar cal = Calendar.getInstance();
+			cal.setTimeInMillis(baseTime + milliSecondsSinceMidnight);
 			return cal;
 		}
-		
-		Calendar resultCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		
-		// set date only
-		NotesDateTimeUtils.setAnyTime(resultCal);
+		else {
+			Calendar calUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+			calUTC.setTimeInMillis(baseTime + milliSecondsSinceMidnight);
+			
+			Calendar resultCalUTCDateOnly = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+			
+			// set date only
+			NotesDateTimeUtils.setAnyTime(resultCalUTCDateOnly);
 
-		// set date
-		resultCal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+			// set date
+			resultCalUTCDateOnly.set(calUTC.get(Calendar.YEAR), calUTC.get(Calendar.MONTH), calUTC.get(Calendar.DATE));
 
-		return resultCal;
+			return resultCalUTCDateOnly;
+		}
+		
+		
 	}
 }
