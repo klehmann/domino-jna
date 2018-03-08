@@ -66,7 +66,7 @@ public class NotesOriginatorId implements IAdaptable {
 		m_struct = NotesOriginatorIdStruct.newInstance();
 		m_struct.setUNID(unid);
 		m_struct.Sequence = sequence;
-		m_struct.SequenceTime = sequenceTime.getAdapter(NotesTimeDateStruct.class);
+		m_struct.SequenceTime = NotesTimeDateStruct.newInstance(sequenceTime.getInnards());
 		m_struct.write();
 	}
 	

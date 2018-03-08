@@ -290,7 +290,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public int getIndexModifiedSequenceNo() {
 		NotesTimeDate ndtModified = getLastModifiedTime();
-		return ndtModified.getAdapter(NotesTimeDateStruct.class).Innards[0];
+		return ndtModified.getInnardsNoClone()[0];
 	}
 	
 	/**
@@ -2613,7 +2613,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 		String singleColumnLookupName = columnNumber == null ? null : getColumnName(columnNumber);
 		
-		NotesTimeDateStruct diffTimeStruct = diffTime==null ? null : diffTime.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct diffTimeStruct = diffTime==null ? null : NotesTimeDateStruct.newInstance(diffTime.getInnards());
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {

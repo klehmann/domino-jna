@@ -1296,12 +1296,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (retUntil==null)
 			retUntil = new NotesTimeDate();
 		
-		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct sinceStruct = NotesTimeDateStruct.newInstance(since.getInnards());
 		NotesTimeDateStruct.ByValue sinceStructByVal = NotesTimeDateStruct.ByValue.newInstance();
 		sinceStructByVal.Innards[0] = sinceStruct.Innards[0];
 		sinceStructByVal.Innards[1] = sinceStruct.Innards[1];
 		sinceStructByVal.write();
-		NotesTimeDateStruct retUntilStruct = retUntil.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance(retUntil.getInnards());
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
@@ -3160,7 +3160,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NotesError(0, "Size of sinceSeqNum array does not match note ids array ("+sinceSeqNum.length+"!="+noteIds.length+")");
 		}
 		
-		final NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : folderSinceTime.getAdapter(NotesTimeDateStruct.class);
+		final NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : NotesTimeDateStruct.newInstance(folderSinceTime.getInnards());
 		
 		final Memory arrNoteIdsMem = new Memory(4 * noteIds.length);
 		for (int i=0; i<noteIds.length; i++) {

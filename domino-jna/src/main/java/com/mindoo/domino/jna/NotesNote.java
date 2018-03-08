@@ -1049,7 +1049,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		NotesTimeDate timeDate = NotesDateTimeUtils.calendarToTimeDate(cal);
-		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : timeDate.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : NotesTimeDateStruct.newInstance(timeDate.getInnards());
 		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().NSFItemSetTime(m_hNote64, itemNameMem, timeDateStruct);
@@ -1482,10 +1482,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				return Arrays.asList((Object) td);
 			}
 			else {
-				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				
-				Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
+				Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength);
 				if (cal==null) {
 					Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
 					nullCal.set(Calendar.YEAR, 1);

@@ -372,7 +372,7 @@ public class NotesSearch {
 			since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
 		}
 
-		final NotesTimeDateStruct sinceStruct = since==null ? null : since.getAdapter(NotesTimeDateStruct.class);
+		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
 
 		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 		final boolean isDST = NotesDateTimeUtils.isDaylightTime();

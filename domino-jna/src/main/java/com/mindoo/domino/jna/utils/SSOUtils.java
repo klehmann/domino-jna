@@ -42,8 +42,8 @@ public class SSOUtils {
 	public static NotesSSOToken generateSSOToken(String orgName, String configName,
 			String userName, NotesTimeDate creationDate, NotesTimeDate expirationDate, boolean enableRenewal) {
 
-		NotesTimeDateStruct creationDateStruct = creationDate==null ? null : creationDate.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct expirationDateStruct = expirationDate==null ? null : expirationDate.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct creationDateStruct = creationDate==null ? null : NotesTimeDateStruct.newInstance(creationDate.getInnards());
+		NotesTimeDateStruct expirationDateStruct = expirationDate==null ? null : NotesTimeDateStruct.newInstance(expirationDate.getInnards());
 		
 		Memory orgNameMem = NotesStringUtils.toLMBCS(orgName, true);
 		Memory configNameMem = NotesStringUtils.toLMBCS(configName, true);

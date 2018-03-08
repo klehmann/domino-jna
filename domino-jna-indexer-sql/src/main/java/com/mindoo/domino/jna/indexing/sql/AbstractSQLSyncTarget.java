@@ -99,9 +99,6 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	private static final String SQL_GETLASTSYNCENDDATE = "SELECT newcutoffdate_innard0, "
 			+ "newcutoffdate_innard1 "
 			+ "FROM synchistory WHERE dbinstanceid=? LIMIT 1;";
-
-	private boolean m_useDayLight;
-	private int m_gmtOffset;
 	
 	/**
 	 * Context class that captures all relevant data for a single sync run
@@ -211,8 +208,6 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 */
 	public AbstractSQLSyncTarget(String jdbcUrl) {
 		m_jdbcUrl = jdbcUrl;
-		m_useDayLight = NotesDateTimeUtils.isDaylightTime();
-		m_gmtOffset = NotesDateTimeUtils.getGMTOffset();
 	}
 
 	protected PreparedStatement createStatementRemoveDominoDocByUnid() throws SQLException {
@@ -577,7 +572,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setInt(2, seq);
 		stmt.setLong(3, seqTimeInnards[0]);
 		stmt.setLong(4, seqTimeInnards[1]);
-		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(m_useDayLight, m_gmtOffset, seqTimeInnards);
+		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
 
 		List<String> readers = getReaders(oid, summaryBufferData, note);
@@ -647,7 +642,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setInt(2, seq);
 		stmt.setLong(3, seqTimeInnards[0]);
 		stmt.setLong(4, seqTimeInnards[1]);
-		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(m_useDayLight, m_gmtOffset, seqTimeInnards);
+		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
 
 		List<String> readers = getReaders(oid, summaryBufferData, note);

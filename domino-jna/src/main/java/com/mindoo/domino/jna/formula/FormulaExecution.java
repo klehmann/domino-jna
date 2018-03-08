@@ -300,10 +300,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
+			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength);
 			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {

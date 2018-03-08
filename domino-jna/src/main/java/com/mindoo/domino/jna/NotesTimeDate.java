@@ -5,26 +5,32 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.InnardsConverter;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
-import com.sun.jna.Structure;
+import com.sun.jna.ptr.ShortByReference;
 
 /**
  * Wrapper class for the TIMEDATE C API data structure
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
-	private NotesTimeDateStruct m_struct;
+public class NotesTimeDate implements Comparable<NotesTimeDate> {
 	private int[] m_innards = new int[2];
+	private NotesTimeDateStruct m_structReused;
 	
 	/**
 	 * Creates a new date/time object and sets it to the current date/time
 	 */
 	public NotesTimeDate() {
-		this(NotesTimeDateStruct.newInstance(NotesDateTimeUtils.calendarToInnards(Calendar.getInstance())));
+		this(NotesDateTimeUtils.calendarToInnards(Calendar.getInstance()));
 	}
 	
 	/**
@@ -34,7 +40,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @param innards innards array
 	 */
 	public NotesTimeDate(int innards[]) {
-		this(NotesTimeDateStruct.newInstance(innards));
+		m_innards = innards.clone();
 	}
 	
 	/**
@@ -43,7 +49,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @param dt date object
 	 */
 	public NotesTimeDate(Date dt) {
-		this(NotesTimeDateStruct.newInstance(dt));
+		this(NotesDateTimeUtils.dateToInnards(dt));
 	}
 
 	/**
@@ -52,7 +58,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @param cal calendar object
 	 */
 	public NotesTimeDate(Calendar cal) {
-		this(NotesTimeDateStruct.newInstance(cal));
+		this(NotesDateTimeUtils.calendarToInnards(cal));
 	}
 
 	/**
@@ -62,7 +68,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @param timeMs the milliseconds since January 1, 1970, 00:00:00 GMT
 	 */
 	public NotesTimeDate(long timeMs) {
-		this(NotesTimeDateStruct.newInstance(timeMs));
+		this(new Date(timeMs));
 	}
 	
 	/**
@@ -144,49 +150,35 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	public NotesTimeDate(IAdaptable adaptable) {
 		NotesTimeDateStruct struct = adaptable.getAdapter(NotesTimeDateStruct.class);
 		if (struct!=null) {
-			m_struct = struct;
+			m_innards = struct.Innards.clone();
 			return;
 		}
 		
 		Pointer p = adaptable.getAdapter(Pointer.class);
 		if (p!=null) {
-			m_struct = NotesTimeDateStruct.newInstance(p);
+			struct = NotesTimeDateStruct.newInstance(p);
+			struct.read();
+			m_innards = struct.Innards.clone();
 			return;
 		}
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
 	
 	private NotesTimeDate(NotesTimeDateStruct struct) {
-		m_struct = struct;
+		m_innards = struct.Innards.clone();
 	}
 	
 	NotesTimeDate(Pointer peer) {
-		m_struct = NotesTimeDateStruct.newInstance(peer);
+		m_innards = peer.getIntArray(0, 2);
 	}
 
 	private NotesTimeDateStruct lazilyCreateStruct() {
-		if (m_struct==null) {
-			if (m_innards!=null) {
-				m_struct = NotesTimeDateStruct.newInstance(m_innards);
-			}
-			else {
-				m_struct = NotesTimeDateStruct.newInstance();
-			}
+		if (m_structReused==null) {
+			m_structReused = NotesTimeDateStruct.newInstance();
 		}
-		return m_struct;
-	}
-	
-	@Override
-	public <T> T getAdapter(Class<T> clazz) {
-		if (clazz == NotesTimeDateStruct.class || clazz == Structure.class) {
-			return (T) lazilyCreateStruct();
-		}
-		return null;
-	}
-	
-	@Override
-	public String toString() {
-		return NotesDateTimeUtils.toString(this);
+		m_structReused.Innards = m_innards;
+		m_structReused.write();
+		return m_structReused;
 	}
 	
 	/**
@@ -195,21 +187,15 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * @return innards
 	 */
 	public int[] getInnards() {
-		if (m_struct!=null) {
-			return Arrays.copyOf(m_struct.Innards, m_struct.Innards.length);
-		}
-		else if (m_innards!=null) {
+		if (m_innards!=null) {
 			return m_innards.clone();
 		}
 		else
 			return new int[] {NotesConstants.ALLDAY,NotesConstants.ANYDAY};
 	}
 	
-	private int[] getInnardsNoClone() {
-		if (m_struct!=null) {
-			return m_struct.Innards;
-		}
-		else if (m_innards!=null) {
+	int[] getInnardsNoClone() {
+		if (m_innards!=null) {
 			return m_innards;
 		}
 		else
@@ -247,11 +233,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 */
 	public Calendar toCalendar() {
 		int[] innards = getInnardsNoClone();
-		
-		Calendar cal = NotesDateTimeUtils.innardsToCalendar(
-				NotesDateTimeUtils.isDaylightTime(),
-				NotesDateTimeUtils.getGMTOffset(),
-				innards);
+		Calendar cal = InnardsConverter.decodeInnards(innards);
 		
 		if (cal==null) {
 			//invalid innards
@@ -348,10 +330,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 */
 	public void setNow() {
 		m_innards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, true);
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
-		}
 	}
 
 	/**
@@ -372,10 +350,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 */
 	public void setTime(Calendar cal) {
 		m_innards = NotesDateTimeUtils.calendarToInnards(cal);
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
-		}
 	}
 	
 	/**
@@ -383,10 +357,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 */
 	public void setToday() {
 		m_innards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, false);
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
-		}
 	}
 
 	/**
@@ -396,10 +366,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.DATE, 1);
 		m_innards = NotesDateTimeUtils.calendarToInnards(cal, true, false);
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
-		}
 	}
 
 	/**
@@ -411,10 +377,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 		}
 		else {
 			m_innards = new int[] {NotesConstants.ALLDAY, NotesConstants.ANYDAY};
-		}
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
 		}
 	}
 	
@@ -438,10 +400,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 		else {
 			m_innards = new int[] {NotesConstants.ALLDAY, NotesConstants.ANYDAY};
 		}
-		if (m_struct!=null) {
-			m_struct.Innards = m_innards.clone();
-			m_struct.write();
-		}
 	}
 	
 	/**
@@ -458,7 +416,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 * Creates a new {@link NotesTimeDate} instance with the same data as this one
 	 */
 	public NotesTimeDate clone() {
-		return new NotesTimeDate(getInnards());
+		return new NotesTimeDate(getInnardsNoClone());
 	}
 	
 	/**
@@ -473,8 +431,7 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 	 */
 	public void adjust(int year, int month, int day, int hours, int minutes, int seconds) {
 		int[] innards = getInnardsNoClone();
-		Calendar cal = NotesDateTimeUtils.innardsToCalendar(NotesDateTimeUtils.isDaylightTime(),
-				NotesDateTimeUtils.getGMTOffset(), innards);
+		Calendar cal = NotesDateTimeUtils.innardsToCalendar(innards);
 		if (cal!=null) {
 			boolean modified = false;
 			
@@ -509,10 +466,6 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 			
 			if (modified) {
 				m_innards = NotesDateTimeUtils.calendarToInnards(cal);
-				if (m_struct!=null) {
-					m_struct.Innards = m_innards.clone();
-					m_struct.write();
-				}
 			}
 		}
 	}
@@ -548,5 +501,96 @@ public class NotesTimeDate implements IAdaptable, Comparable<NotesTimeDate> {
 		else {
 			return 0;
 		}
+	}
+	
+	/**
+	 * Method to clear the {@link NotesTimeDate} value
+	 */
+	public void setMinimum() {
+		NotesTimeDateStruct struct = lazilyCreateStruct();
+		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MINIMUM, struct);
+		struct.read();
+		m_innards = struct.Innards.clone();
+	}
+	
+	/**
+	 * Method to set the {@link NotesTimeDate} value to the maximum value.
+	 */
+	public void setMaximum() {
+		NotesTimeDateStruct struct = lazilyCreateStruct();
+		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MAXIMUM, struct);
+		struct.read();
+		m_innards = struct.Innards.clone();
+	}
+	
+	/**
+	 * Method to set the {@link NotesTimeDate} value to ANYDAY/ALLDAY
+	 */
+	public void setWildcard() {
+		NotesTimeDateStruct struct = lazilyCreateStruct();
+		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_WILDCARD, struct);
+		struct.read();
+		m_innards = struct.Innards.clone();
+	}
+	
+	/**
+	 * Converts a {@link NotesTimeDate} to string
+	 * 
+	 * @return string with formatted timedate
+	 */
+	public String toString() {
+		NotesTimeDateStruct struct = lazilyCreateStruct();
+		
+		if (struct.Innards==null || struct.Innards.length<2)
+			return "";
+		if (struct.Innards[0]==0 && struct.Innards[1]==0)
+			return "MINIMUM";
+		if (struct.Innards[0]==0 && struct.Innards[1]==0xffffff)
+			return "MAXIMUM";
+		
+		DisposableMemory retTextBuffer = new DisposableMemory(100);
+		
+		ShortByReference retTextLength = new ShortByReference();
+		short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+		if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
+			return "";
+		}
+		NotesErrorUtils.checkResult(result);
+
+		if (retTextLength.getValue() > retTextBuffer.size()) {
+			retTextBuffer.dispose();
+			retTextBuffer = new DisposableMemory(retTextLength.getValue());
+
+			result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		String txt = NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
+		retTextBuffer.dispose();
+		return txt;
+	}
+	
+	/**
+	 * Parses a timedate string to a {@link NotesTimeDate}
+	 * 
+	 * @param dateTimeStr timedate string
+	 * @return timedate
+	 */
+	public static NotesTimeDate fromString(String dateTimeStr) {
+		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr, true);
+		//convert method expects a pointer to the date string in memory
+		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
+		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);
+		
+		DisposableMemory retTimeDateMem = new DisposableMemory(NotesConstants.timeDateSize);
+		NotesTimeDateStruct retTimeDate = NotesTimeDateStruct.newInstance(retTimeDateMem);
+		
+		short result = NotesNativeAPI.get().ConvertTextToTIMEDATE(null, null, dateTimeStrLMBCSPtr, NotesConstants.MAXALPHATIMEDATE, retTimeDate);
+		NotesErrorUtils.checkResult(result);
+		retTimeDate.read();
+		int[] innards = retTimeDate.Innards;
+		NotesTimeDate td = new NotesTimeDate(innards);
+		retTimeDateMem.dispose();
+		return td;
 	}
 }

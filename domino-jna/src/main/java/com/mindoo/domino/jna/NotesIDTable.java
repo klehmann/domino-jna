@@ -537,7 +537,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void setTime(NotesTimeDate time) {
 		checkHandle();
 		
-		NotesTimeDateStruct timeStruct = time==null ? null : time.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct timeStruct = time==null ? null : NotesTimeDateStruct.newInstance(time.getInnards());
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {

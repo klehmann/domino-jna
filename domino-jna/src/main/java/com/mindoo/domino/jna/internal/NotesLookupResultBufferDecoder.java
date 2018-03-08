@@ -376,7 +376,7 @@ public class NotesLookupResultBufferDecoder {
 						decodedItemValues[j] = numVal;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
-						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
+						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
 						decodedItemValues[j]  = cal;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
@@ -469,13 +469,11 @@ public class NotesLookupResultBufferDecoder {
 		protected boolean m_isDST;
 		protected boolean m_convertStringsLazily;
 		protected boolean m_freed;
-		private NotesTimeStruct m_timeStruct;
 		
 		public ItemValueTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
 			m_gmtOffset = gmtOffset;
 			m_isDST = isDST;
 			m_convertStringsLazily = convertStringsLazily;
-			m_timeStruct = NotesTimeStruct.newInstance();
 		}
 		
 		public void free() {
@@ -518,7 +516,7 @@ public class NotesLookupResultBufferDecoder {
 					m_itemValues[index] = ItemDecoder.decodeNumber(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_isDST, m_gmtOffset, m_timeStruct);
+					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_NUMBER_RANGE) {
 					m_itemValues[index] = ItemDecoder.decodeNumberList(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));

@@ -196,8 +196,8 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		if (until==null)
 			throw new IllegalArgumentException("until date cannot be null");
 		
-		NotesTimeDateStruct fromStruct = from.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct untilStruct = until.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct fromStruct = NotesTimeDateStruct.newInstance(from.getInnards());
+		NotesTimeDateStruct untilStruct = NotesTimeDateStruct.newInstance(until.getInnards());
 		
 		NotesTimeDatePairStruct intervalPair = NotesTimeDatePairStruct.newInstance();
 		intervalPair.Lower = fromStruct;
@@ -350,8 +350,8 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		if (until==null)
 			throw new IllegalArgumentException("until date cannot be null");
 		
-		NotesTimeDateStruct fromStruct = from.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct untilStruct = until.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct fromStruct = NotesTimeDateStruct.newInstance(from.getInnards());
+		NotesTimeDateStruct untilStruct = NotesTimeDateStruct.newInstance(until.getInnards());
 		
 		NotesTimeDatePairStruct intervalPair = NotesTimeDatePairStruct.newInstance();
 		intervalPair.Lower = fromStruct;
@@ -482,8 +482,8 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		if (until==null)
 			throw new IllegalArgumentException("until date cannot be null");
 		
-		NotesTimeDateStruct fromStruct = from.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct untilStruct = until.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct fromStruct = NotesTimeDateStruct.newInstance(from.getInnards());
+		NotesTimeDateStruct untilStruct = NotesTimeDateStruct.newInstance(until.getInnards());
 		
 		NotesTimeDatePairStruct intervalPair = NotesTimeDatePairStruct.newInstance();
 		intervalPair.Lower = fromStruct;
