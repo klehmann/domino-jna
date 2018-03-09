@@ -5,6 +5,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -1381,7 +1384,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * Sets whether methods like {@link #getItemValue(String)} should return {@link NotesTimeDate}
 	 * instead of {@link Calendar}.
 	 * 
-	 * @param useNotesTimeDate true to prefer NotesTimeDate (false by default)
+	 * @param b true to prefer NotesTimeDate (false by default)
 	 */
 	public void setPreferNotesTimeDates(boolean b) {
 		m_preferNotesTimeDates = b;
@@ -2211,27 +2214,67 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 		
 		final Ref<NotesError> exception = new Ref<NotesError>();
-		NotesCallbacks.LSCOMPILERERRORPROC errorProc = new NotesCallbacks.LSCOMPILERERRORPROC() {
-			@Override public short invoke(Pointer pInfo, Pointer pCtx) {
-				NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
-				errorInfo.read();
-				
-				int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
-				int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
-				
-				String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
-				String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
-				
-				exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
-				return 0;
-			}
-		};
-		
+		final NotesCallbacks.LSCompilerErrorProc errorProc;
+		if (PlatformUtils.isWin32()) {
+			errorProc = new Win32NotesCallbacks.LSCompilerErrorProcWin32() {
+				@Override public short invoke(Pointer pInfo, Pointer pCtx) {
+					NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
+					errorInfo.read();
+					
+					int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
+					int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
+					
+					String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
+					String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
+					
+					exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
+					return 0;
+				}
+			};
+		}
+		else {
+			errorProc = new NotesCallbacks.LSCompilerErrorProc() {
+				@Override public short invoke(Pointer pInfo, Pointer pCtx) {
+					NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
+					errorInfo.read();
+					
+					int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
+					int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
+					
+					String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
+					String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
+					
+					exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
+					return 0;
+				}
+			};
+		}
+
 		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NSFNoteLSCompileExt(this.getParent().getHandle64(), m_hNote64, 0, errorProc, null);
-		} else {
-			result = NotesNativeAPI32.get().NSFNoteLSCompileExt(this.getParent().getHandle32(), m_hNote32, 0, errorProc, null);
+		try {
+			if (PlatformUtils.is64Bit()) {
+				//AccessController call required to prevent SecurityException when running in XPages
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI64.get().NSFNoteLSCompileExt(NotesNote.this.getParent().getHandle64(), m_hNote64, 0, errorProc, null);
+					}
+				});
+			} else {
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI32.get().NSFNoteLSCompileExt(NotesNote.this.getParent().getHandle32(), m_hNote32, 0, errorProc, null);
+					}
+				});
+			}
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error getting notes from database", e);
 		}
 		if(exception.get() != null) {
 			throw exception.get();

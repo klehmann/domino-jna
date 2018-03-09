@@ -359,7 +359,7 @@ public interface INotesNativeAPI64 extends Library {
 			long hDb,
 			long hNote,
 			int dwFlags,
-			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			NotesCallbacks.LSCompilerErrorProc pfnErrProc,
 			Pointer pCtx);
 	
 	public short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);

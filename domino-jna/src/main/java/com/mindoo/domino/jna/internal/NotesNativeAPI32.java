@@ -361,7 +361,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int hDb,
 			int hNote,
 			int dwFlags,
-			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			NotesCallbacks.LSCompilerErrorProc pfnErrProc,
 			Pointer pCtx);
 
 	public native short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
