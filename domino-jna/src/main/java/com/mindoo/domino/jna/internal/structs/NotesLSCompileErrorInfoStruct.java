@@ -38,6 +38,11 @@ public class NotesLSCompileErrorInfoStruct extends BaseStructure {
 	
 	/**
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
+	 * 
+	 * @param version allows for future expansion - currently always 1
+	 * @param line source line number of error, relative to LotusScript module containing the error, if applicable
+	 * @param pErrText error text
+	 * @param pErrFile file name, if applicable
 	 */
 	public NotesLSCompileErrorInfoStruct(short version, short line, Pointer pErrText, Pointer pErrFile) {
 		super();
