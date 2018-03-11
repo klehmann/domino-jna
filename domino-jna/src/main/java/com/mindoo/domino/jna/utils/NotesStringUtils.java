@@ -1,14 +1,16 @@
 package com.mindoo.domino.jna.utils;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
+import com.ibm.icu.charset.CharsetICU;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
@@ -37,6 +39,8 @@ public class NotesStringUtils {
 	
 	private static LRUStringLMBCSCache m_string2LMBCSCacheWithNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
 	private static LRUStringLMBCSCache m_string2LMBCSCacheWithoutNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	//shared CharsetLMBCS instance
+	private static Charset LMBCSCharset = CharsetICU.forNameICU("LMBCS");
 	
 	/**
 	 * Method to control the LMBCS / Java String conversion for newline characters. By default
@@ -163,111 +167,90 @@ public class NotesStringUtils {
 	/**
 	 * Converts an LMBCS string to a Java String
 	 * 
-	 * @param inPtr pointer in memory
-	 * @param textLen length of text, use -1 to let the method search for a terminating \0
+	 * @param data data array
 	 * @return decoded String
 	 */
-	public static String fromLMBCS(Pointer inPtr, int textLen) {
-		return fromLMBCS(inPtr, textLen, false);
+	public static String fromLMBCS(byte[] data) {
+		int startOffset = 0;
+		
+		List<String> lines = new ArrayList<String>();
+		
+		for (int i=0; i<data.length; i++) {
+			if (data[i] == 0) {
+				CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(data, startOffset, i-startOffset));
+				String newLine = newLineBuf.toString();
+				lines.add(newLine);
+				startOffset = i+1;
+				
+				if (i==(data.length-1)) {
+					lines.add("");
+				}
+			}
+		}
+		
+		if (startOffset<data.length) {
+			CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(data, startOffset, data.length-startOffset));
+			String newLine = newLineBuf.toString();
+			lines.add(newLine);
+		}
+		boolean useOSLineBreak = isUseOSLineDelimiter();
+		if (PlatformUtils.isWindows() && useOSLineBreak) {
+			return StringUtil.join(lines, "\r\n");
+		}
+		else {
+			return StringUtil.join(lines, "\n");
+		}
 	}
-	
-	private static final Charset ASCII = Charset.forName("ASCII");
 	
 	/**
 	 * Converts an LMBCS string to a Java String
 	 * 
 	 * @param inPtr pointer in memory
 	 * @param textLen length of text, use -1 to let the method search for a terminating \0
-	 * @param skipAsciiCheck true to skip the check whether the memory contains pure ASCII (parameter added to avoid a duplicate check), will always result in a C API call to convert the string
 	 * @return decoded String
 	 */
-	public static String fromLMBCS(Pointer inPtr, int textLen, boolean skipAsciiCheck) {
-		if (inPtr==null || textLen==0) {
-			return "";
-		}
-
+	public static String fromLMBCS(Pointer inPtr, int textLen) {
 		if (textLen==-1) {
-			int foundLen = 0;
-			int offset = 0;
-			while (true) {
-				if (inPtr.getByte(offset)==0) {
-					break;
-				}
-				foundLen++;
-				offset++;
-			}
-			textLen = foundLen;
+			textLen = getNullTerminatedLength(inPtr);
+			CharBuffer charBuf = LMBCSCharset.decode(inPtr.getByteBuffer(0, textLen));
+			String str = charBuf.toString();
+			return str;
 		}
-
-		if (!skipAsciiCheck) {
-			boolean isPureAscii = true;
-			byte[] data = inPtr.getByteArray(0, textLen);
-			for (int i=0; i < textLen; i++) {
-				byte b = data[i];
-				if (b <= 0x1f || b >= 0x80) {
-					isPureAscii = false;
-					break;
-				}
-			}
-
-			if (isPureAscii) {
-				String asciiStr = new String(data, ASCII);
-				return asciiStr;
-			}
-		}
-
-		Pointer pText = inPtr;
-		boolean useOSLineBreak = isUseOSLineDelimiter();
-
-		DisposableMemory pBuf_utf8 = new DisposableMemory(2*NotesConstants.MAXPATH+1);
-		StringBuilder result = new StringBuilder(textLen + 5);
-		try {
-			while (textLen > 0) {
-				long len=(textLen>NotesConstants.MAXPATH) ? NotesConstants.MAXPATH : textLen;
-				long outLen=2*len;
-
-				//convert text from LMBCS to utf8
-				int len_utf8 = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8, pText, (short) (len & 0xffff), pBuf_utf8, (short) (outLen & 0xffff));
-				pBuf_utf8.setByte(len_utf8, (byte) 0);
-
-				// copy 
-				String currConvertedStr;
-				try {
-					currConvertedStr = new String(pBuf_utf8.getByteArray(0, len_utf8), 0, len_utf8, "UTF-8");
-					if (currConvertedStr.contains("\0")) {
-						//Notes uses \0 for multiline strings
-						if (PlatformUtils.isWindows() && useOSLineBreak) {
-							currConvertedStr = currConvertedStr.replace("\0", "\r\n");
-						}
-						else {
-							currConvertedStr = currConvertedStr.replace("\0", "\n");
-						}
+		else {
+			//check for \0 as newline delimiter
+			byte[] dataArr = inPtr.getByteArray(0, textLen);
+			int startOffset = 0;
+			
+			List<String> lines = new ArrayList<String>();
+			
+			for (int i=0; i<textLen; i++) {
+				if (dataArr[i] == 0) {
+					CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(dataArr, startOffset, i-startOffset));
+					String newLine = newLineBuf.toString();
+					lines.add(newLine);
+					startOffset = i+1;
+					
+					if (i==(textLen-1)) {
+						lines.add("");
 					}
-				} catch (UnsupportedEncodingException e) {
-					throw new RuntimeException("Unknown encoding UTF-8", e);
 				}
-
-				textLen -= len;
-
-				//shortcut for short strings
-				if (result==null && textLen<=0) {
-					return currConvertedStr;
-				}
-
-				if (result==null) {
-					result = new StringBuilder();
-				}
-				result.append(currConvertedStr);
-
-				pText = pText.share(len);
+			}
+			
+			if (startOffset<textLen) {
+				CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(dataArr, startOffset, textLen-startOffset));
+				String newLine = newLineBuf.toString();
+				lines.add(newLine);
+			}
+			boolean useOSLineBreak = isUseOSLineDelimiter();
+			if (PlatformUtils.isWindows() && useOSLineBreak) {
+				return StringUtil.join(lines, "\r\n");
+			}
+			else {
+				return StringUtil.join(lines, "\n");
 			}
 		}
-		finally {
-			pBuf_utf8.dispose();
-		}
-		return result==null ? "" : result.toString();
 	}
-
+	
 	/**
 	 * Converts a string to LMBCS format
 	 * 
@@ -302,34 +285,48 @@ public class NotesStringUtils {
 			return cachedMem;
 		}
 		
-		//check if string only contains ascii characters that map 1:1 to LMBCS;
-		//in this case we can skip the OSTranslate call
-		boolean isPureAscii = true;
-		for (int i=0; i<inStr.length(); i++) {
-			char c = inStr.charAt(i);
-			if (c <= 0x1f || c >= 0x80) {
-				isPureAscii = false;
-				break;
+		if (inStr.contains("\n")) {
+			//replace line breaks with null characters
+			String[] lines = inStr.split("\\r?\\n", -1);
+			ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+			for (int i=0; i<lines.length; i++) {
+				if (i>0)
+					bOut.write(0);
+
+				CharBuffer charBuf = CharBuffer.wrap(lines[i]);
+				ByteBuffer byteBuf = LMBCSCharset.encode(charBuf);
+				try {
+					if (byteBuf.hasArray()) {
+						bOut.write(byteBuf.array(), byteBuf.arrayOffset(), byteBuf.limit());
+					}
+					else {
+						byte[] data = new byte[byteBuf.limit()];
+						byteBuf.get(data);
+						bOut.write(data);
+					}
+				}
+				catch (IOException e) {
+					throw new NotesError(0, "Error writing converted data", e);
+				}
 			}
-		}
-		
-		if (isPureAscii) {
-			byte[] asciiBytes = inStr.getBytes(ASCII);
 			
 			if (addNull) {
-				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length + 1);
-				m.write(0, asciiBytes, 0, asciiBytes.length);
-				m.setByte(asciiBytes.length, (byte) 0);
+				int limit = bOut.size();
+				ReadOnlyMemory m = new ReadOnlyMemory(limit + 1);
+				byte[] data = bOut.toByteArray();
+				m.write(0, data, 0, data.length);
+				m.setByte(limit, (byte) 0);
 				m.seal();
-				
+
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
 					m_string2LMBCSCacheWithNull.put(inStr, m);
 				}
 				return m;
 			}
 			else {
-				ReadOnlyMemory m = new ReadOnlyMemory(asciiBytes.length);
-				m.write(0, asciiBytes, 0, asciiBytes.length);
+				ReadOnlyMemory m = new ReadOnlyMemory(bOut.size());
+				byte[] data = bOut.toByteArray();
+				m.write(0, data, 0, data.length);
 				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
@@ -338,86 +335,49 @@ public class NotesStringUtils {
 				return m;
 			}
 		}
-			
-		if (inStr.contains("\n")) {
-			//replace line breaks with null characters
-			String[] lines = inStr.split("\\r?\\n", -1);
-			StringBuilder sb = new StringBuilder();
-			for (int i=0; i<lines.length; i++) {
-				if (i>0) {
-					sb.append('\0');
-				}
-				sb.append(lines[i]);
-			}
-			inStr = sb.toString();
-		}
-
-		String currRemainingStr = inStr;
-		
-		final int maxStrSize = 32767;
-		
-		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-		
-		while (currRemainingStr.length()>0) {
-			//decide how much text we want to process; we need to do some calculations
-			//to not exceed the max buffer size for the UTF-8 characters of 65535 bytes (length is specified as WORD)
-			int numWorkCharacters = Math.min(currRemainingStr.length(), maxStrSize);
-			
-			@SuppressWarnings("unused")
-			int remainingStrUtf8Size;
-			while ((remainingStrUtf8Size = StringUtil.stringLengthInUTF8(currRemainingStr.substring(0, numWorkCharacters))) > 32767) {
-				numWorkCharacters -= 10;
-			}
-			
-			String currWorkStr = currRemainingStr.substring(0, numWorkCharacters);
-			currRemainingStr = currRemainingStr.substring(numWorkCharacters);
-			
-			byte[] currWorkStrAsBytes;
-			try {
-				currWorkStrAsBytes = currWorkStr.getBytes("UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException("Unknown encoding UTF-8", e);
-			}
-			DisposableMemory in = new DisposableMemory(currWorkStrAsBytes.length);
-			in.write(0, currWorkStrAsBytes, 0, currWorkStrAsBytes.length);
-
-			DisposableMemory out = new DisposableMemory(in.size() * 2);
-			if (out.size() >= 65535) {
-				throw new IllegalStateException("out buffer is expected to be in WORD range. "+out.size()+" >= 65535");
-			}
-			
-			short outContentLength = NotesNativeAPI.get().OSTranslate(NotesConstants.OS_TRANSLATE_UTF8_TO_LMBCS, in, (short) (in.size() & 0xffff), out, (short) (out.size() & 0xffff));
-			byte[] outAsBytes = new byte[outContentLength];
-			
-			out.read(0, outAsBytes, 0, outContentLength);
-			bOut.write(outAsBytes, 0, outContentLength);
-			
-			in.dispose();
-			out.dispose();
-		}
-		
-		if (addNull) {
-			ReadOnlyMemory all = new ReadOnlyMemory(bOut.size()+1);
-			byte[] allAsBytes = bOut.toByteArray();
-			all.write(0, allAsBytes, 0, bOut.size());
-			all.setByte(all.size()-1, (byte) 0); 
-			all.seal();
-			
-			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-				m_string2LMBCSCacheWithNull.put(inStr, all);
-			}
-			return all;			
-		}
 		else {
-			ReadOnlyMemory all = new ReadOnlyMemory(bOut.size());
-			byte[] allAsBytes = bOut.toByteArray();
-			all.write(0, allAsBytes, 0, bOut.size());
-			all.seal();
+			CharBuffer charBuf = CharBuffer.wrap(inStr);
+			ByteBuffer byteBuf = LMBCSCharset.encode(charBuf);
 			
-			if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-				m_string2LMBCSCacheWithoutNull.put(inStr, all);
+			if (addNull) {
+				int limit = byteBuf.limit();
+				
+				ReadOnlyMemory m = new ReadOnlyMemory(limit + 1);
+				if (byteBuf.hasArray()) {
+					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
+				}
+				else {
+					byte[] dataArr = new byte[limit];
+					byteBuf.get(dataArr);
+					m.write(0, dataArr, 0, dataArr.length);
+				}
+				m.setByte(limit, (byte) 0);
+				m.seal();
+				
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					m_string2LMBCSCacheWithNull.put(inStr, m);
+				}
+				return m;
 			}
-			return all;
+			else {
+				int limit = byteBuf.limit();
+				
+				ReadOnlyMemory m = new ReadOnlyMemory(limit);
+				if (byteBuf.hasArray()) {
+					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
+				}
+				else {
+					byte[] dataArr = new byte[limit];
+					byteBuf.get(dataArr);
+					m.write(0, dataArr, 0, dataArr.length);
+				}
+				m.seal();
+				
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					m_string2LMBCSCacheWithoutNull.put(inStr, m);
+				}
+				return m;
+			}
 		}
 	}
 

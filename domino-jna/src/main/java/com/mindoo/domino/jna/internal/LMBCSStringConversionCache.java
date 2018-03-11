@@ -43,29 +43,7 @@ public class LMBCSStringConversionCache {
 		if (stringFromCache==null) {
 			byte[] dataArr = lmbcsString.getData();
 			
-			boolean isPureAscii = true;
-			for (int i=0; i < dataArr.length; i++) {
-				byte b = dataArr[i];
-				if (b <= 0x1f || b >= 0x80) {
-					isPureAscii = false;
-					break;
-				}
-			}
-			
-			if (isPureAscii) {
-				String asciiStr = new String(dataArr, Charset.forName("ASCII"));
-				if (USE_LMBCS2STRING_CACHE && lmbcsString.size()<=MAX_LMBCS2STRING_KEY_LENGTH) {
-					LMBCS2STRINGCACHE.put(lmbcsString, asciiStr);
-				}
-				return asciiStr;
-			}
-			
-			DisposableMemory dataMem = new DisposableMemory(dataArr.length);
-			dataMem.write(0, dataArr, 0, dataArr.length);
-			
-			boolean skipAsciiCheck = true;
-			convertedString = NotesStringUtils.fromLMBCS(dataMem, dataArr.length, skipAsciiCheck);
-			dataMem.dispose();
+			convertedString = NotesStringUtils.fromLMBCS(dataArr);
 			if (USE_LMBCS2STRING_CACHE && lmbcsString.size()<=MAX_LMBCS2STRING_KEY_LENGTH) {
 				LMBCS2STRINGCACHE.put(lmbcsString, convertedString);
 			}

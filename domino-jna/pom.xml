@@ -188,6 +188,17 @@
 			<artifactId>concurrentlinkedhashmap-lru</artifactId>
 			<version>1.4.2</version>
 		</dependency>
+		<dependency>
+		    <groupId>joda-time</groupId>
+		    <artifactId>joda-time</artifactId>
+		    <version>2.9.9</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>com.ibm.icu</groupId>
+		    <artifactId>icu4j-charset</artifactId>
+		    <version>60.2</version>
+		</dependency>
 	</dependencies>
 
 	<build>
