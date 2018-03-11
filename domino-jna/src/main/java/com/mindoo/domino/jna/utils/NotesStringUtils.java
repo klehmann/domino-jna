@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
@@ -40,7 +42,16 @@ public class NotesStringUtils {
 	private static LRUStringLMBCSCache m_string2LMBCSCacheWithNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
 	private static LRUStringLMBCSCache m_string2LMBCSCacheWithoutNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
 	//shared CharsetLMBCS instance
-	private static Charset LMBCSCharset = CharsetICU.forNameICU("LMBCS");
+	private static final Charset LMBCSCharset;
+	static {
+		LMBCSCharset = AccessController.doPrivileged(new PrivilegedAction<Charset>() {
+
+			@Override
+			public Charset run() {
+				return CharsetICU.forNameICU("LMBCS");
+			}
+		});
+	}
 	
 	/**
 	 * Method to control the LMBCS / Java String conversion for newline characters. By default
