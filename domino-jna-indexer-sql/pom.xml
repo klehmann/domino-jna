@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-indexer-sql</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.16-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA Add-on for data indexing with SQL</name>
