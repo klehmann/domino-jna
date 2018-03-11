@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry exported="true" kind="lib" path="lib/icu4j-60.2.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/icu4j-charset-60.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/concurrentlinkedhashmap-lru-1.4.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/asm-5.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/cglib-3.2.5.jar"/>
