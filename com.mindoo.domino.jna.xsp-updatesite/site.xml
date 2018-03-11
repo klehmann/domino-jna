@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/com.mindoo.domino.jna.xsp_feature_0.9.16.qualifier.jar" id="com.mindoo.domino.jna.xsp_feature" version="0.9.16.qualifier">
+   <feature url="features/com.mindoo.domino.jna.xsp_feature_0.9.17.qualifier.jar" id="com.mindoo.domino.jna.xsp_feature" version="0.9.17.qualifier">
       <category name="Mindoo"/>
    </feature>
    <category-def name="Mindoo" label="Mindoo"/>
