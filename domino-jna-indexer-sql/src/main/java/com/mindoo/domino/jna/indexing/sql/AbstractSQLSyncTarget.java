@@ -47,17 +47,19 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__seqtime_innard0, "
 			+ "__seqtime_innard1, "
 			+ "__seqtime_millis, "
+			+ "__modifiedinthisfile_millis, "
 			+ "__readers, "
 			+ "__flags, "
 			+ "__form, "
 			+ "__json, "
-			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String SQL_UPDATE_DOMINODOC = "UPDATE docs SET "
 			+ "__unid = ? , "
 			+ "__seq = ?, "
 			+ "__seqtime_innard0 = ?, "
 			+ "__seqtime_innard1 = ?, "
 			+ "__seqtime_millis = ?, "
+			+ "__modifiedinthisfile_millis = ?, "
 			+ "__readers = ?, "
 			+ "__flags = ?, "
 			+ "__form = ?, "
@@ -574,6 +576,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setLong(4, seqTimeInnards[1]);
 		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
+		stmt.setLong(6, seqTimeCal.getTimeInMillis());
 
 		List<String> readers = getReaders(oid, summaryBufferData, note);
 		if (readers==null) {
@@ -588,12 +591,12 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			readers = readersLC;
 		}
 		JSONArray readersJson = new JSONArray(readers);
-		stmt.setString(6, readersJson.toString());
+		stmt.setString(7, readersJson.toString());
 
 		List<String> flags = getFlags(oid, summaryBufferData, note);
 		if (flags==null)
 			flags=Collections.emptyList();
-		stmt.setString(7, new JSONArray(flags).toString());
+		stmt.setString(8, new JSONArray(flags).toString());
 
 		String form = null;
 		if (summaryBufferData!=null) {
@@ -604,19 +607,19 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(8, form);
+		stmt.setString(9, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(9, jsonStr);
+		stmt.setString(10, jsonStr);
 
 		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
 		if (binaryData!=null) {
-			stmt.setBytes(10, binaryData);
+			stmt.setBytes(11, binaryData);
 		}
 
-		stmt.setString(11, unid);
+		stmt.setString(12, unid);
 		return true;
 	}
 
@@ -644,6 +647,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setLong(4, seqTimeInnards[1]);
 		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
+		stmt.setLong(6, seqTimeCal.getTimeInMillis());
 
 		List<String> readers = getReaders(oid, summaryBufferData, note);
 		if (readers==null) {
@@ -658,12 +662,12 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			readers = readersLC;
 		}
 		JSONArray readersJson = new JSONArray(readers);
-		stmt.setString(6, readersJson.toString());
+		stmt.setString(7, readersJson.toString());
 
 		List<String> flags = getFlags(oid, summaryBufferData, note);
 		if (flags==null)
 			flags=Collections.emptyList();
-		stmt.setString(7, new JSONArray(flags).toString());
+		stmt.setString(8, new JSONArray(flags).toString());
 		
 		String form = null;
 		if (summaryBufferData!=null) {
@@ -674,16 +678,16 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(8, form);
+		stmt.setString(9, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(9, jsonStr);
+		stmt.setString(10, jsonStr);
 
 		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
 		if (binaryData!=null) {
-			stmt.setBytes(10, binaryData);
+			stmt.setBytes(11, binaryData);
 		}
 		return true;
 	}
@@ -820,7 +824,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			throw new SqlSyncException("Error deleting document with UNID "+oid.getUNID(), e);
 		}
 	}
-
+	
 	public boolean isLoggable(Level level) {
 		return level.intValue() >= Level.WARNING.intValue();
 	}
