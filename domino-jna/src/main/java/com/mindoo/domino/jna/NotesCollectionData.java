@@ -1,7 +1,5 @@
 package com.mindoo.domino.jna;
 
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
-
 public class NotesCollectionData {
 	/**
 	 * Keys in a COLLECTIONDATA structure are divided into percentiles - divisions corresponding
@@ -41,9 +39,9 @@ public class NotesCollectionData {
 	public int m_btreeLeafNodes;
 	/** Number of B-tree levels for this index. */
 	public short m_btreeDepth;
-	private ItemValueTableData[] m_itemValueTables;
+	private IItemValueTableData[] m_itemValueTables;
 	
-	public NotesCollectionData(int docCount, int docTotalSize, int btreeLeafNodes, short btreeDepth, ItemValueTableData[] itemValueTables) {
+	public NotesCollectionData(int docCount, int docTotalSize, int btreeLeafNodes, short btreeDepth, IItemValueTableData[] itemValueTables) {
 		m_docCount = docCount;
 		m_docTotalSize = docTotalSize;
 		m_btreeLeafNodes = btreeLeafNodes;
@@ -98,7 +96,7 @@ public class NotesCollectionData {
 	 * @param index index between 0 and {@link #PERCENTILE_COUNT}
 	 * @return item value table
 	 */
-	public ItemValueTableData getItemValueTable(int index) {
+	public IItemValueTableData getItemValueTable(int index) {
 		return m_itemValueTables[index];
 	}
 }

@@ -21,7 +21,6 @@ import com.mindoo.domino.jna.internal.structs.NotesScheduleStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -212,8 +211,6 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		IntByReference rethMoreCtx = new IntByReference();
 		
 		boolean hasMoreData;
-		boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-		int gmtOffset = NotesDateTimeUtils.getGMTOffset();
 		
 		//read first piece of busy time
 		if (PlatformUtils.is64Bit()) {
@@ -228,7 +225,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			if (hRange!=0) {
 				Pointer rangePtr = Mem64.OSLockObject(hRange);
 				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 					for (Object currObj : currentRange) {
 						if (currObj instanceof Calendar[]) {
 							allRanges.add((Calendar[]) currObj);
@@ -254,7 +251,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			if (hRange!=0) {
 				Pointer rangePtr = Mem32.OSLockObject(hRange);
 				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 					for (Object currObj : currentRange) {
 						if (currObj instanceof Calendar[]) {
 							allRanges.add((Calendar[]) currObj);
@@ -283,7 +280,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem64.OSLockObject(hRange);
 					try {
-						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 						for (Object currObj : currentRange) {
 							if (currObj instanceof Calendar[]) {
 								allRanges.add((Calendar[]) currObj);
@@ -308,7 +305,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem32.OSLockObject(hRange);
 					try {
-						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 						for (Object currObj : currentRange) {
 							if (currObj instanceof Calendar[]) {
 								allRanges.add((Calendar[]) currObj);
@@ -368,9 +365,6 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		
 		IntByReference retdwSize = new IntByReference();
 		
-		boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-		int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-		
 		//read first piece of busy time
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethRange = new LongByReference();
@@ -383,7 +377,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			if (hRange!=0) {
 				Pointer rangePtr = Mem64.OSLockObject(hRange);
 				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 					for (Object currObj : currentRange) {
 						if (currObj instanceof Calendar[]) {
 							allRanges.add((Calendar[]) currObj);
@@ -408,7 +402,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			if (hRange!=0) {
 				Pointer rangePtr = Mem32.OSLockObject(hRange);
 				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
 					for (Object currObj : currentRange) {
 						if (currObj instanceof Calendar[]) {
 							allRanges.add((Calendar[]) currObj);

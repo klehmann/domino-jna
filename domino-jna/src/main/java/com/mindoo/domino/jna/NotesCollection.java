@@ -37,15 +37,12 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
@@ -3253,7 +3250,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 						
 						@Override
-						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 							retIds.add(searchMatch.getNoteId());
 							return Action.Continue;
 						}
@@ -3301,7 +3298,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		checkHandle();
 
 		NotesCollectionDataStruct struct;
-		ItemValueTableData[] itemValueTables = new ItemValueTableData[NotesConstants.PERCENTILE_COUNT];
+		IItemValueTableData[] itemValueTables = new IItemValueTableData[NotesConstants.PERCENTILE_COUNT];
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
@@ -3315,14 +3312,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
 				
-				final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 				final boolean convertStringsLazily = false;
 				final boolean decodeAllValues = true;
 				
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
-					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight,
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable,
 							convertStringsLazily, decodeAllValues);
 				}
 				
@@ -3347,14 +3342,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct = NotesCollectionDataStruct.newInstance(ptrCollectionData);
 				struct.read();
 				
-				final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 				final boolean convertStringsLazily = false;
 				final boolean decodeAllValues = true;
 
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
-					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable, gmtOffset, useDayLight,
+					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable,
 							convertStringsLazily, decodeAllValues);
 				}
 				

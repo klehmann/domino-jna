@@ -137,7 +137,7 @@ public class NotesNamingUtils {
 		
 		if (abbrName==null) {
 			StringTokenizerExt st=new StringTokenizerExt(name, "/");
-			StringBuilder sb=new StringBuilder();
+			StringBuilder sb=new StringBuilder(name.length());
 			while (st.hasMoreTokens()) {
 				String currToken=st.nextToken();
 				int iPos = currToken.indexOf("=");

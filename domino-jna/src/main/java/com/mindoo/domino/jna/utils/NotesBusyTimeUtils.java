@@ -110,9 +110,7 @@ public class NotesBusyTimeUtils {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem64.OSLockObject(hRange);
 					try {
-						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr);
 					}
 					finally {
 						Mem64.OSUnlockObject(rethRange.getValue());
@@ -162,9 +160,7 @@ public class NotesBusyTimeUtils {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem32.OSLockObject(hRange);
 					try {
-						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr);
 					}
 					finally {
 						Mem32.OSUnlockObject(rethRange.getValue());

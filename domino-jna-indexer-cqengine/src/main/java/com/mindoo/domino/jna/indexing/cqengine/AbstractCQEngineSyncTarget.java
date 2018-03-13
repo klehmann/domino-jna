@@ -22,9 +22,9 @@ import com.googlecode.cqengine.index.hash.HashIndex;
 import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 
@@ -193,7 +193,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 	}
 
 	@Override
-	public TargetResult noteChangedMatchingFormula(Object ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	public TargetResult noteChangedMatchingFormula(Object ctx, NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		
 		T obj = findObject(oid);
@@ -241,7 +241,7 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 * @return index object or null if unsupported / irrelevant data
 	 */
-	protected abstract T toObject(NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
+	protected abstract T toObject(NotesOriginatorIdData oid, IItemTableData summaryBufferData, NotesNote note);
 	
 	
 	@Override

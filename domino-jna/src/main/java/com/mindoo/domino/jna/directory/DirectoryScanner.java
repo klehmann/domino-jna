@@ -6,11 +6,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.Search;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.DbDirectory;
 
@@ -65,7 +65,7 @@ public class DirectoryScanner {
 			dir.searchFiles(formula, null, EnumSet.of(Search.FILETYPE, Search.SUMMARY), m_fileTypes, null, new NotesDatabase.SearchCallback() {
 
 				@Override
-				public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+				public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 
 					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);
 

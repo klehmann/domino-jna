@@ -11,7 +11,6 @@ import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesRangeStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -169,7 +168,7 @@ public class ItemDecoder {
 	
 	}
 	
-	public static List<Object> decodeTimeDateList(Pointer ptr, boolean useDayLight, int gmtOffset) {
+	public static List<Object> decodeTimeDateList(Pointer ptr) {
 		NotesRangeStruct range = NotesRangeStruct.newInstance(ptr);
 		range.read();
 		

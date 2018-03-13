@@ -41,12 +41,10 @@ public class NotesDateTimeUtils {
 	/**
 	 * Method to convert a {@link NotesTimeDate} object to a Java {@link Calendar}
 	 * 
-	 * @param useDayLight true to use daylight savings time
-	 * @param gmtOffset GMT offset
 	 * @param timeDate time date to convert
 	 * @return calendar or null if timedate contains invalid innards
 	 */
-	public static Calendar timeDateToCalendar(boolean useDayLight, int gmtOffset, NotesTimeDate timeDate) {
+	public static Calendar timeDateToCalendar(NotesTimeDate timeDate) {
 		return timeDate.toCalendar();
 	}
 

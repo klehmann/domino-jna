@@ -19,7 +19,6 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -304,10 +303,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
+			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr);
 			return calendarValues==null ? Collections.emptyList() : calendarValues;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {

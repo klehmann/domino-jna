@@ -1838,9 +1838,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public Calendar getFTLastIndexTime() {
 		checkHandle();
 		
-        int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-        boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-
 		if (PlatformUtils.is64Bit()) {
 			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 			short result = NotesNativeAPI64.get().FTGetLastIndexTime(m_hDB64, retTime);
@@ -1851,7 +1848,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retTime.read();
 			
 			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
+			return NotesDateTimeUtils.timeDateToCalendar(retTimeWrap);
 		}
 		else {
 			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
@@ -1863,7 +1860,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retTime.read();
 			
 			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
+			return NotesDateTimeUtils.timeDateToCalendar(retTimeWrap);
 		}
 	}
 

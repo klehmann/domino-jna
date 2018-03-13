@@ -7,6 +7,7 @@ import java.util.logging.Level;
 
 import org.junit.Test;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.SearchCallback;
 import com.mindoo.domino.jna.NotesNote;
@@ -15,7 +16,6 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.SyncResult;
 import com.mindoo.domino.jna.sync.SyncUtil;
 
@@ -57,7 +57,7 @@ public class TestSync extends BaseJNATestClass {
 							null, new SearchCallback() {
 
 						@Override
-						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 							unidsOfAllPersons.add(searchMatch.getUNID());
 							return Action.Continue;
 						}
@@ -163,7 +163,7 @@ public class TestSync extends BaseJNATestClass {
 
 						@Override
 						public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
-								ItemTableData summaryBufferData) {
+								IItemTableData summaryBufferData) {
 							unidsOfLPersons.add(searchMatch.getUNID());
 							return Action.Continue;
 						}

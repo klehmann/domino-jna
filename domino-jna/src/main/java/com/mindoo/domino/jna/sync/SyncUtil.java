@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
@@ -22,7 +23,6 @@ import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.NotesError;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget.DataToRead;
 import com.mindoo.domino.jna.sync.ISyncTarget.TargetResult;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -112,7 +112,7 @@ public class SyncUtil {
 							EnumSet.of(NoteClass.DOCUMENT), null, new SearchCallback() {
 
 								@Override
-								public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+								public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 									
 									NotesOriginatorIdData oidData = searchMatch.getOIDData();
 									sourceOIDsByUNID.put(oidData.getUNID(), oidData);
@@ -275,7 +275,7 @@ public class SyncUtil {
 						sinceDateForSearch, new SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 
 						NotesOriginatorIdData oidData = searchMatch.getOIDData();
 						int noteId = searchMatch.getNoteId();
@@ -319,7 +319,7 @@ public class SyncUtil {
 					}
 
 					@Override
-					public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+					public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 						
 						NotesOriginatorIdData oidData = searchMatch.getOIDData();
 						

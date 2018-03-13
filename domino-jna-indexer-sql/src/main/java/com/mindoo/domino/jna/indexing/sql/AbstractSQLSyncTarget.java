@@ -22,9 +22,9 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.json.JSONArray;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -510,7 +510,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 */
 
-	public TargetResult noteChangedMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	public TargetResult noteChangedMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		NotesOriginatorIdData oidInDb = findDocumentByUnid(ctx, oid);
 
@@ -563,7 +563,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @return true if it's ok to execute the statement (we call {@link PreparedStatement#executeBatch()})
 	 * @throws SQLException in case of SQL errors
 	 */
-	protected boolean populateUpdateDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected boolean populateUpdateDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) throws SQLException {
 
 		String unid = oid.getUNID();
@@ -634,7 +634,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @return true if it's ok to execute the statement (we call {@link PreparedStatement#executeBatch()})
 	 * @throws SQLException in case of SQL errors
 	 */
-	protected boolean populateInsertDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected boolean populateInsertDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) throws SQLException {
 
 		String unid = oid.getUNID();
@@ -705,7 +705,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return readers or null if no readers stored in note
 	 */
-	protected List<String> getReaders(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected List<String> getReaders(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		if (summaryBufferData!=null) {
 			List<String> readers = summaryBufferData.getAsStringList("$C1$", null);
@@ -723,7 +723,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return flags (empty list)
 	 */
-	protected List<String> getFlags(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected List<String> getFlags(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		return Collections.emptyList();
 	}
@@ -737,7 +737,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return bytes array or null
 	 */
-	protected byte[] getBinaryData(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected byte[] getBinaryData(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		return null;
 	}
@@ -750,7 +750,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return JSON string or null if there is no JSON to store
 	 */
-	protected abstract String toJson(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected abstract String toJson(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note);
 
 	public TargetResult noteChangedNotMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid) {

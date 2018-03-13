@@ -23,8 +23,6 @@ import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemValueTableData;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.SearchMatchDecoder;
@@ -374,9 +372,6 @@ public class NotesSearch {
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
 
-		final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-		final boolean isDST = NotesDateTimeUtils.isDaylightTime();
-
 		final EnumSet<Search> useSearchFlags = searchFlags.clone();
 		if (columnFormulas!=null) {
 			useSearchFlags.add(Search.SUMMARY);
@@ -401,7 +396,7 @@ public class NotesSearch {
 
 					ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 					
-					ItemTableData itemTableData=null;
+					IItemTableData itemTableData=null;
 					try {
 						boolean isMatch = formula==null || searchMatch.matchesFormula();
 						
@@ -413,12 +408,11 @@ public class NotesSearch {
 									//buffer contains an ITEM_VALUE_TABLE with column values
 									//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 									//pairs
-									ItemValueTableData itemValueTableData = NotesLookupResultBufferDecoder.decodeItemValueTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily, false);
 									//create an ItemTableData by adding the column names to make this invisible to callers
-									itemTableData = new ItemTableData(columnItemNames, itemValueTableData);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
 								}
 								else {
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
 											convertStringsLazily, false);
 								}
 							}
@@ -602,7 +596,7 @@ public class NotesSearch {
 
 						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 
-						ItemTableData itemTableData=null;
+						IItemTableData itemTableData=null;
 						try {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
@@ -614,12 +608,11 @@ public class NotesSearch {
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
-										ItemValueTableData itemValueTableData = NotesLookupResultBufferDecoder.decodeItemValueTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily, false);
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = new ItemTableData(columnItemNames, itemValueTableData);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
 									}
 									else {
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, 
 												convertStringsLazily, false);
 									}
 								}
@@ -666,7 +659,7 @@ public class NotesSearch {
 
 						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 						
-						ItemTableData itemTableData=null;
+						IItemTableData itemTableData=null;
 						try {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
@@ -678,12 +671,11 @@ public class NotesSearch {
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
-										ItemValueTableData itemValueTableData = NotesLookupResultBufferDecoder.decodeItemValueTable(summaryBufferPtr, gmtOffset, isDST, convertStringsLazily, false);
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = new ItemTableData(columnItemNames, itemValueTableData);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
 									}
 									else {
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, gmtOffset, isDST,
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
 												convertStringsLazily, false);
 									}
 								}
@@ -884,7 +876,7 @@ public class NotesSearch {
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public abstract Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData);
+		public abstract Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData);
 		
 		/**
 		 * Implement this method to read deletion stubs. Method
@@ -907,7 +899,7 @@ public class NotesSearch {
 		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+		public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 			return Action.Continue;
 		}
 		
@@ -928,7 +920,7 @@ public class NotesSearch {
 		
 		public boolean hasItem(String itemName);
 		
-		public ItemTableData decodeWholeBuffer();
+		public IItemTableData decodeWholeBuffer();
 		
 
 		/**

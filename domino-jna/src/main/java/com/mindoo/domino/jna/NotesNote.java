@@ -1508,10 +1508,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				return tdValues==null ? Collections.emptyList() : tdValues;
 			}
 			else {
-				boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-				int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-				
-				List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
+				List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr);
 				return calendarValues==null ? Collections.emptyList() : calendarValues;
 			}
 		}
