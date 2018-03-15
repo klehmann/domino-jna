@@ -57,12 +57,42 @@ public class SyncUtil {
 	 * @param <CTX> sync context type
 	 */
 	public static <CTX> SyncResult sync(final NotesDatabase dbSource, String selectionFormula, final ISyncTarget<CTX> target) {
+		return sync(dbSource, selectionFormula, target, null);
+	}
+
+	/**
+	 * Settings to control the sync process
+	 */
+	public static enum SyncSetting {
+		/** Wipes the sync target at the beginning of the sync process; without this setting, this
+		 * is only done when the db replica id changes */
+		EnforceWipe,
+		/** Compares the db and the sync target to check if they are in sync; without this setting,
+		 * this is only done on selection formula change */
+		EnforceFullComparison
+	}
+	
+	/**
+	 * Synchronizes a subset of a Domino database with a {@link ISyncTarget}.
+	 * 
+	 * @param dbSource source database
+	 * @param selectionFormula selection formula for content
+	 * @param target sync target
+	 * @param settings optional enum set of settings to control the sync process (e.g. to enforce a complete comparion between the database and the sync target, although we have a last sync end date) or null
+	 * @return result statistics
+	 * 
+	 * @param <CTX> sync context type
+	 */
+	public static <CTX> SyncResult sync(final NotesDatabase dbSource, String selectionFormula, final ISyncTarget<CTX> target, EnumSet<SyncSetting> settings) {
 		long t0=System.currentTimeMillis();
+		
+		if (settings==null)
+			settings = EnumSet.noneOf(SyncSetting.class);
 		
 		String dbReplicaId = dbSource.getReplicaID();
 		String lastDbReplicaId = target.getLastSyncDbReplicaId();
 		//check if replica has changed; in this case, all existing target data needs to be removed
-		boolean isWipeReqired = lastDbReplicaId!=null && !dbReplicaId.equals(lastDbReplicaId);
+		boolean isWipeReqired = (lastDbReplicaId!=null && !dbReplicaId.equals(lastDbReplicaId)) || settings.contains(SyncSetting.EnforceWipe);
 		
 		String lastSelectionFormula = target.getLastSyncSelectionFormula();
 		//check if selection formula has changed; in that case we might need to remove data from the target
@@ -95,7 +125,7 @@ public class SyncUtil {
 
 			boolean skipSearchAndCopy = false;
 			
-			if (selectionFormulaHasChanged || lastSyncEndDate==null) {
+			if (selectionFormulaHasChanged || lastSyncEndDate==null || settings.contains(SyncSetting.EnforceFullComparison)) {
 				sinceDateForSearch = null;
 				
 				//no last sync date, so we need to do a one-time comparison of source and target content
