@@ -279,12 +279,24 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 
 		flyway.setTarget(MigrationVersion.fromVersion(getDbMainVersion()+"."+getDbSubVersion()));
 		
+		postInitFlyway(flyway);
+		
 		// migrate db schemas and data
 		flyway.migrate();
 
 		return ds.getConnection();
 	}
 
+	/**
+	 * Add your own custom code here to init the flyway instance used
+	 * for DB schema upgrades
+	 * 
+	 * @param flyway flyway
+	 */
+	protected void postInitFlyway(Flyway flyway) {
+		//
+	}
+	
 	/**
 	 * Override this method to return a classloader that should be used by
 	 * Flyway to load the DB migrations. The default implementation returns null which
