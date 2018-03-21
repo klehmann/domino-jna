@@ -80,8 +80,9 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String SQL_INSERTORREPLACE_LASTSYNCDATAINFO = "INSERT OR REPLACE INTO syncdatainfo ("
 			+ "dbid, "
-			+ "selectionformula) " +
-			"VALUES (?, ?)";
+			+ "selectionformula, "
+			+ "customdata) " +
+			"VALUES (?, ?, ?)";
 	private static final String SQL_FINDDOCBYUNID = "SELECT "
 			+ "__unid, "
 			+ "__seq, "
@@ -97,6 +98,8 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	private static final String SQL_GETLASTSYNCDBREPLICAID = "SELECT dbid "
 			+ "FROM syncdatainfo LIMIT 1;";
 	private static final String SQL_GETLASTSYNCSELECTIONFORMULA = "SELECT selectionformula "
+			+ "FROM syncdatainfo LIMIT 1;";
+	private static final String SQL_GETLASTSYNCCUSTOMDATA = "SELECT customdata "
 			+ "FROM syncdatainfo LIMIT 1;";
 	private static final String SQL_GETLASTSYNCENDDATE = "SELECT newcutoffdate_innard0, "
 			+ "newcutoffdate_innard1 "
@@ -388,6 +391,33 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 
+	public String getLastSyncCustomData() {
+		PreparedStatement readCustomDataStmt = null;
+
+		try {
+			readCustomDataStmt = getConnection().prepareStatement(SQL_GETLASTSYNCCUSTOMDATA);
+
+			ResultSet rs = readCustomDataStmt.executeQuery();
+
+			if (rs.next()) {
+				String customData = rs.getString("customdata");
+				return customData;
+			}
+			return null;
+		} catch (SQLException e) {
+			throw new SqlSyncException("Error reading last sync customdata", e);
+		}
+		finally {
+			try {
+				if (readCustomDataStmt != null) {
+					readCustomDataStmt.close();
+				}
+			} catch (SQLException ex) {
+				log(Level.SEVERE, "Could not close statement to read last sync customdata: "+SQL_GETLASTSYNCCUSTOMDATA, ex);
+			}
+		}
+	}
+	
 	public NotesTimeDate getLastSyncEndDate(String dbInstanceId) {
 		PreparedStatement readCutOffDateStmt = null;
 
@@ -1007,6 +1037,16 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 	
+	/**
+	 * Override this method to store some custom data for the last successful sync run
+	 * 
+	 * @param ctx sync context
+	 * @return custom data or null (default implementation returns null)
+	 */
+	protected String getCustomDataOfSync(SyncContext ctx) {
+		return null;
+	}
+	
 	protected void writeDbIdAndSelectionFormula(SyncContext ctx, String selectionFormulaForNextSync, String dbInstanceId,
 			NotesTimeDate startingDateForNextSync) {
 
@@ -1028,11 +1068,16 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			}
 		}
 
+		String customData = getCustomDataOfSync(ctx);
+		if (customData==null)
+			customData = "";
+		
 		try {
 			//write new content
 			PreparedStatement insertLastSyncDataStmt = createStatementInsertLastSyncDataInfoEntry();
 			insertLastSyncDataStmt.setString(1, ctx.getDbId());
 			insertLastSyncDataStmt.setString(2, selectionFormulaForNextSync);
+			insertLastSyncDataStmt.setString(3, customData);
 			insertLastSyncDataStmt.executeUpdate();
 		} catch (SQLException e) {
 			throw new SqlSyncException("Error writing dbid/selectionformula for next sync", e);

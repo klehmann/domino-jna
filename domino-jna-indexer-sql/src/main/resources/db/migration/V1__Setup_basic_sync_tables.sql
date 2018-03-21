@@ -57,11 +57,12 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE INDEX IF NOT EXISTS attachments_unid ON attachments (__unid);
 
-/* This table will only contain a single line with the db replica id
- * and the selection fornula used for the last successful sync run */
+/* This table will only contain a single line with the db replica id,
+ * and the selection formula used for the last successful sync run and optional custom data */
 CREATE TABLE IF NOT EXISTS syncdatainfo (
 	dbid text,
-	selectionformula text
+	selectionformula text,
+	customdata text
 );
 
 /* For each DB instance that syncs with the SQL database, we track the
