@@ -104,13 +104,31 @@ public interface IItemTableData extends IItemValueTableData {
 	public Calendar getAsCalendar(String itemName, Calendar defaultValue);
 	
 	/**
+	 * Convenience function that converts a summary value to a {@link NotesTimeDate}
+	 * 
+	 * @param itemName item name, case insensitive
+	 * @param defaultValue default value if column is empty or is not a NotesTimeDate
+	 * @return NotesTimeDate value or null
+	 */
+	public NotesTimeDate getAsTimeDate(String itemName, NotesTimeDate defaultValue);
+	
+	/**
 	 * Convenience function that converts a summary value to a {@link Calendar} list
 	 * 
 	 * @param itemName item name, case insensitive
-	 * @param defaultValue default value if column is empty or is not a number
+	 * @param defaultValue default value if column is empty or is not a Calendar
 	 * @return calendar list value or null
 	 */
 	public List<Calendar> getAsCalendarList(String itemName, List<Calendar> defaultValue);
+	
+	/**
+	 * Convenience function that converts a summary value to a {@link NotesTimeDate} list
+	 * 
+	 * @param itemName item name, case insensitive
+	 * @param defaultValue default value if column is empty or is not a NotesTimeDate list
+	 * @return NotesTimeDate list value or null
+	 */
+	public List<NotesTimeDate> getAsTimeDateList(String itemName, List<NotesTimeDate> defaultValue);
 	
 	/**
 	 * Convenience function that converts a summary value to a double

@@ -478,6 +478,7 @@ public class NotesLookupResultBufferDecoder {
 		protected int[] m_itemValueLengthsInBytes;
 		protected boolean m_convertStringsLazily;
 		protected boolean m_freed;
+		private boolean m_preferNotesTimeDates;
 		
 		public ItemValueTableDataImpl(boolean convertStringsLazily) {
 			m_convertStringsLazily = convertStringsLazily;
@@ -492,12 +493,23 @@ public class NotesLookupResultBufferDecoder {
 		}
 		
 		@Override
+		public void setPreferNotesTimeDates(boolean b) {
+			m_preferNotesTimeDates = b;
+		}
+		
+		@Override
+		public boolean isPreferNotesTimeDates() {
+			return m_preferNotesTimeDates;
+		}
+
+		@Override
 		public Object getItemValue(int index) {
+			int type = getItemDataType(index);
+			
 			if (m_itemValues[index] == null) {
 				if (isFreed())
 					throw new NotesError(0, "Buffer already freed");
 				
-				int type = getItemDataType(index);
 				if (type == NotesItem.TYPE_TEXT) {
 					m_itemValues[index] = ItemDecoder.decodeTextValue(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_convertStringsLazily);
 				}
@@ -510,16 +522,56 @@ public class NotesLookupResultBufferDecoder {
 					m_itemValues[index] = ItemDecoder.decodeNumber(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
+					//we always store NotesTimeDate and convert to Calendar if requested by caller
+					m_itemValues[index] = ItemDecoder.decodeTimeDateAsNotesTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_NUMBER_RANGE) {
 					m_itemValues[index] = ItemDecoder.decodeNumberList(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME_RANGE) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDateList(m_itemValueBufferPointers[index]);
+					//we always store a List of NotesTimeDate and convert to Calendar if requested by caller
+					m_itemValues[index] = ItemDecoder.decodeTimeDateListAsNotesTimeDate(m_itemValueBufferPointers[index]);
 				}
 			}
-			return m_itemValues[index];
+			
+			if (type == NotesItem.TYPE_TIME && !isPreferNotesTimeDates()) {
+				if (m_itemValues[index] instanceof NotesTimeDate) {
+					return ((NotesTimeDate)m_itemValues[index]).toCalendar();
+				}
+				else if (m_itemValues[index] instanceof NotesTimeDate[]) {
+					NotesTimeDate[] range = (NotesTimeDate[]) m_itemValues[index];
+					Calendar[] convertedRange = new Calendar[] {range[0].toCalendar(), range[1].toCalendar()};
+					return convertedRange;
+				}
+				else {
+					//should not happen
+					return m_itemValues[index];
+				}
+			}
+			else if (type == NotesItem.TYPE_TIME_RANGE && m_itemValues[index] instanceof List && !isPreferNotesTimeDates()) {
+				List<Object> tdList = (List<Object>) m_itemValues[index];
+				
+				List<Object> calList = new ArrayList<Object>(tdList.size());
+				
+				for (int i=0; i<tdList.size(); i++) {
+					if (tdList.get(i) instanceof NotesTimeDate) {
+						calList.add(((NotesTimeDate) tdList.get(i)).toCalendar());
+					}
+					else if (tdList.get(i) instanceof NotesTimeDate[]) {
+						NotesTimeDate[] range = (NotesTimeDate[]) tdList.get(i);
+						Calendar[] convertedRange = new Calendar[] {range[0].toCalendar(), range[1].toCalendar()};
+						calList.add(convertedRange);
+					}
+					else {
+						//should not happen
+						calList.add(tdList.get(i));
+					}
+				}
+				
+				return calList;
+			}
+			else
+				return m_itemValues[index];
 		}
 		
 		@Override
@@ -562,7 +614,7 @@ public class NotesLookupResultBufferDecoder {
 		protected String[] m_itemNames;
 		private ItemValueTableDataImpl m_wrappedValueTable;
 		private Map<String,Boolean> m_itemExistence;
-		
+
 		public ItemTableDataImpl(String[] itemNames, ItemValueTableDataImpl valueTable) {
 			super(valueTable.m_convertStringsLazily);
 			
@@ -726,10 +778,79 @@ public class NotesLookupResultBufferDecoder {
 		}
 		
 		@Override
+		public NotesTimeDate getAsTimeDate(String itemName, NotesTimeDate defaultValue) {
+			boolean oldPrefTimeDate = isPreferNotesTimeDates();
+			//prevent automatic conversion to Calendar
+			setPreferNotesTimeDates(true);
+			Object val;
+			try {
+				val = get(itemName);
+			}
+			finally {
+				setPreferNotesTimeDates(oldPrefTimeDate);
+			}
+			if (val instanceof NotesTimeDate) {
+				return (NotesTimeDate) val;
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (!valAsList.isEmpty()) {
+					Object firstVal = valAsList.get(0);
+					if (firstVal instanceof NotesTimeDate) {
+						return (NotesTimeDate) firstVal;
+					}
+				}
+			}
+			return defaultValue;
+		}
+		
+		@Override
+		public List<NotesTimeDate> getAsTimeDateList(String itemName, List<NotesTimeDate> defaultValue) {
+			boolean oldPrefTimeDate = isPreferNotesTimeDates();
+			//prevent automatic conversion to Calendar
+			setPreferNotesTimeDates(true);
+			Object val;
+			try {
+				val = get(itemName);
+			}
+			finally {
+				setPreferNotesTimeDates(oldPrefTimeDate);
+			}
+			if (val instanceof NotesTimeDate) {
+				return Arrays.asList((NotesTimeDate) val);
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean supportedType=true;
+				
+				for (int i=0; i<valAsList.size(); i++) {
+					if (valAsList.get(i) instanceof NotesTimeDate) {
+						//ok
+					}
+					else {
+						supportedType = false;
+						break;
+					}
+				}
+				
+				if (supportedType) {
+					return (List<NotesTimeDate>) valAsList;
+				}
+				else {
+					return defaultValue;
+				}
+			}
+			return defaultValue;
+		}
+		
+		@Override
 		public Calendar getAsCalendar(String itemName, Calendar defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof Calendar) {
 				return (Calendar) val;
+			}
+			else if (val instanceof NotesTimeDate) {
+				return ((NotesTimeDate) val).toCalendar();
 			}
 			else if (val instanceof List) {
 				List<?> valAsList = (List<?>) val;
@@ -737,6 +858,9 @@ public class NotesLookupResultBufferDecoder {
 					Object firstVal = valAsList.get(0);
 					if (firstVal instanceof Calendar) {
 						return (Calendar) firstVal;
+					}
+					else if (firstVal instanceof NotesTimeDate) {
+						return ((NotesTimeDate) firstVal).toCalendar();
 					}
 				}
 			}
@@ -749,18 +873,43 @@ public class NotesLookupResultBufferDecoder {
 			if (val instanceof Calendar) {
 				return Arrays.asList((Calendar) val);
 			}
+			else if (val instanceof NotesTimeDate) {
+				return Arrays.asList(((NotesTimeDate) val).toCalendar());
+			}
 			else if (val instanceof List) {
 				List<?> valAsList = (List<?>) val;
-				boolean correctType=true;
+				boolean supportedType=true;
+				boolean conversionRequired=false;
+				
 				for (int i=0; i<valAsList.size(); i++) {
-					if (!(valAsList.get(i) instanceof Calendar)) {
-						correctType=false;
+					if (valAsList.get(i) instanceof Calendar) {
+						//ok
+					}
+					else if (valAsList.get(i) instanceof NotesTimeDate) {
+						conversionRequired = true;
+					}
+					else {
+						supportedType = false;
 						break;
 					}
 				}
 				
-				if (correctType) {
-					return (List<Calendar>) valAsList;
+				if (supportedType) {
+					if (conversionRequired) {
+						List<Calendar> calList = new ArrayList<Calendar>(valAsList.size());
+						for (int i=0; i<valAsList.size(); i++) {
+							if (valAsList.get(i) instanceof Calendar) {
+								calList.add((Calendar) valAsList.get(i));
+							}
+							else if (valAsList.get(i) instanceof NotesTimeDate) {
+								calList.add(((NotesTimeDate) valAsList.get(i)).toCalendar());
+							}
+						}
+						return calList;
+					}
+					else {
+						return (List<Calendar>) valAsList;
+					}
 				}
 				else {
 					return defaultValue;
@@ -913,25 +1062,36 @@ public class NotesLookupResultBufferDecoder {
 						data.put(m_itemNames[i], val);
 					}
 				}
+				else if(val instanceof NotesTimeDate) {
+					data.put(m_itemNames[i], ((NotesTimeDate)val).toCalendar());
+				}
 				else if (val instanceof List) {
 					if (decodeLMBCS) {
-						//check for LMBCS strings
+						//check for LMBCS strings and NotesTimeDate
 						List valAsList = (List) val;
 						boolean hasLMBCS = false;
+						boolean hasTimeDate = false;
 						
 						for (int j=0; j<valAsList.size(); j++) {
 							if (valAsList.get(j) instanceof LMBCSString) {
 								hasLMBCS = true;
 								break;
 							}
+							else if (valAsList.get(j) instanceof NotesTimeDate) {
+								hasTimeDate = true;
+								break;
+							}
 						}
 						
-						if (hasLMBCS) {
+						if (hasLMBCS || hasTimeDate) {
 							List<Object> convList = new ArrayList<Object>(valAsList.size());
 							for (int j=0; j<valAsList.size(); j++) {
 								Object currObj = valAsList.get(j);
 								if (currObj instanceof LMBCSString) {
 									convList.add(((LMBCSString)currObj).getValue());
+								}
+								else if (currObj instanceof NotesTimeDate) {
+									convList.add(((NotesTimeDate)currObj).toCalendar());
 								}
 								else {
 									convList.add(currObj);

@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -43,6 +44,8 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	
 	private Pointer m_ptrCompiledFormula;
 	
+	private boolean m_preferNotesTimeDates;
+
 	/**
 	 * Creates a new instance. The constructure compiles the formula and throws a {@link FormulaCompilationError},
 	 * if there are any compilation errors
@@ -138,6 +141,26 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			
 			NotesGC.__objectCreated(FormulaExecution.class, this);
 		}
+	}
+	
+	/**
+	 * Sets whether date/time values returned by the executed formulas should be
+	 * returned as {@link NotesTimeDate} instead of being converted to {@link Calendar}.
+	 * 
+	 * @param b true to prefer NotesTimeDate (false by default)
+	 */
+	public void setPreferNotesTimeDates(boolean b) {
+		m_preferNotesTimeDates = b;
+	}
+	
+	/**
+	 * Returns whether date/time values returned by the executed formulas should be
+	 * returned as {@link NotesTimeDate} instead of being converted to {@link Calendar}.
+	 * 
+	 * @return true to prefer NotesTimeDate
+	 */
+	public boolean isPreferNotesTimeDates() {
+		return m_preferNotesTimeDates;
 	}
 	
 	public String toString() {
@@ -299,12 +322,25 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
-			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength);
-			return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
+			if (isPreferNotesTimeDates()) {
+				NotesTimeDate td = ItemDecoder.decodeTimeDateAsNotesTimeDate(valueDataPtr, valueDataLength);
+				return td==null ? Collections.emptyList() : Arrays.asList((Object) td);
+			}
+			else {
+				Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength);
+				return cal==null ? Collections.emptyList() : Arrays.asList((Object) cal);
+				
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr);
-			return calendarValues==null ? Collections.emptyList() : calendarValues;
+			if (isPreferNotesTimeDates()) {
+				List<Object> tdValues = ItemDecoder.decodeTimeDateListAsNotesTimeDate(valueDataPtr);
+				return tdValues==null ? Collections.emptyList() : tdValues;
+			}
+			else {
+				List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr);
+				return calendarValues==null ? Collections.emptyList() : calendarValues;
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			//e.g. returned by formula "@DeleteDocument"

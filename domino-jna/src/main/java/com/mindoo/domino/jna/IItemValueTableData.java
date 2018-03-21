@@ -53,4 +53,19 @@ public interface IItemValueTableData {
 	 */
 	public int getItemsCount();
 	
+	/**
+	 * Sets whether methods like {@link #getItemValue(int)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @param b true to prefer NotesTimeDate (false by default)
+	 */
+	public void setPreferNotesTimeDates(boolean b);
+	
+	/**
+	 * Returns whether methods like {@link #getItemValue(int)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @return true to prefer NotesTimeDate
+	 */
+	public boolean isPreferNotesTimeDates();
 }
