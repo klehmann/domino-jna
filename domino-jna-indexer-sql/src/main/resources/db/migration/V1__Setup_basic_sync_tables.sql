@@ -22,20 +22,31 @@ CREATE TABLE IF NOT EXISTS docs (
 
 	__modifiedinthisfile_millis integer,
 
-	__readers text,
+	__numreaders integer,
 	
 	__flags text,
 	__form text,
 	__json text,
-	__binarydata BLOB
+	__customtext text,
+	__custombinary BLOB
 );
 
 /* Create indexes to speed up UNID and FORM based searches */
 CREATE INDEX IF NOT EXISTS docs_unid ON docs (__unid);
 CREATE INDEX IF NOT EXISTS docs_form ON docs (__form);
 
+CREATE TABLE IF NOT EXISTS docreaders (
+	__unid text NOT NULL,
+	__reader text NOT NULL
+);
+
+/* Create indexes to speed up read access checks  */
+CREATE INDEX IF NOT EXISTS docreaders_unid ON docreaders (__unid);
+CREATE INDEX IF NOT EXISTS docreaders_reader ON docreaders (__reader);
+
+/* Create table to store attachments (not used yet) */
 CREATE TABLE IF NOT EXISTS attachments (
-	__unid text NOT NULL PRIMARY KEY,
+	__unid text NOT NULL,
 	
 	__created_millis integer,
 	__created_innard0 integer,
