@@ -14,4 +14,3 @@ hs_err_pid*
 # Eclipse artifacts
 .settings/
 .classpath
-.project
