@@ -488,6 +488,18 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Examines the items in the note and determines if they are correctly formed.
+	 */
+	public void check() {
+		checkHandle();
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NSFNoteCheck(getHandle64());
+		} else {
+			NotesNativeAPI32.get().NSFNoteCheck(getHandle32());
+		}
+	}
+	
+	/**
 	 * Reads the note flags (e.g. {@link NotesConstants#NOTE_FLAG_READONLY})
 	 * 
 	 * @return flags

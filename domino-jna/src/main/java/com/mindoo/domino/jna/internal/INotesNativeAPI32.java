@@ -360,6 +360,9 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
 			Pointer pCtx);
+	public short NSFNoteCheck(
+			int hNote
+			);
 
 	public short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 

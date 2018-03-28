@@ -363,6 +363,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			int dwFlags,
 			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
 			Pointer pCtx);
+	@Override public native short NSFNoteCheck(
+			long hNote);
 	
 	public native short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	public native short IDCreateTable (int alignment, LongByReference rethTable);
