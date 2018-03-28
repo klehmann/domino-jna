@@ -50,4 +50,5 @@ public interface Win32NotesCallbacks {
 
 	interface NSFObjectWriteCallbackWin32 extends NotesCallbacks.b32_NSFObjectWriteCallback, StdCallCallback {}
 
+	interface LSCompilerErrorProcWin32 extends NotesCallbacks.LSCompilerErrorProc, StdCallCallback {}
 }

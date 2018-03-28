@@ -358,7 +358,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hDb,
 			int hNote,
 			int dwFlags,
-			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			NotesCallbacks.LSCompilerErrorProc pfnErrProc,
 			Pointer pCtx);
 	public short NSFNoteCheck(
 			int hNote

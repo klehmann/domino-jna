@@ -5,9 +5,9 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.logging.Level;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 /**
  * Interface for a sync target that receives source database changes incrementally.
@@ -85,7 +85,7 @@ public interface ISyncTarget<CTX> {
 	 * Return here whether we should read just the summary buffer data for notes matching
 	 * the selection formula or the whole note need to be read. Depending the returned
 	 * value, one of the parameters in
-	 * {@link ISyncTarget#noteChangedMatchingFormula(Object, NotesOriginatorIdData, ItemTableData, NotesNote)}
+	 * {@link ISyncTarget#noteChangedMatchingFormula(Object, NotesOriginatorIdData, IItemTableData, NotesNote)}
 	 * (summary buffer / note) will have a value and the other will be null.
 	 * 
 	 * @return data to read
@@ -135,7 +135,7 @@ public interface ISyncTarget<CTX> {
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 * @return flag whether the note got added, removed or updated in the target, used for statistics
 	 */
-	public TargetResult noteChangedMatchingFormula(CTX ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note);
+	public TargetResult noteChangedMatchingFormula(CTX ctx, NotesOriginatorIdData oid, IItemTableData summaryBufferData, NotesNote note);
 
 	/**
 	 * The method is called for every note that changed since the last sync end date and

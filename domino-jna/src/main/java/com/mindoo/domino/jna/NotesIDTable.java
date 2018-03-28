@@ -28,7 +28,6 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -537,7 +536,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	public void setTime(NotesTimeDate time) {
 		checkHandle();
 		
-		NotesTimeDateStruct timeStruct = time==null ? null : time.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct timeStruct = time==null ? null : NotesTimeDateStruct.newInstance(time.getInnards());
 		
 		Pointer ptr;
 		if (PlatformUtils.is64Bit()) {
@@ -568,7 +567,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 */
 	public Calendar getTimeAsCalendar() {
 		NotesTimeDate time = getTime();
-		Calendar cal = time==null ? null : NotesDateTimeUtils.timeDateToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), time);
+		Calendar cal = time==null ? null : time.toCalendar();
 		return cal;
 	}
 	
@@ -1168,7 +1167,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 						EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 						retIds.add(searchMatch.getNoteId());
 						return Action.Continue;
 					}
@@ -1202,7 +1201,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				NotesSearch.search(db, NotesIDTable.this, formula, "", EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DOCUMENT), null, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 						retIds.add(searchMatch.getNoteId());
 						return Action.Continue;
 					}

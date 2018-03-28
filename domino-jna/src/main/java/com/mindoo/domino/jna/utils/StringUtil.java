@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -105,6 +106,24 @@ public class StringUtil {
 		}
 		return new String(chars);
 	}
+
+	/**
+	 * Repeats a string a number of times
+	 * 
+	 * @param c character
+	 * @param repetitions nr of repetitions
+	 * @return resulting string
+	 */
+	public static String repeat(Character c, int repetitions) {
+		if (repetitions==0)
+			return "";
+		else if (repetitions==1)
+			return c.toString();
+		
+		char[] chars=new char[repetitions];
+		Arrays.fill(chars, c);
+		return new String(chars);
+	}
 	
 	/**
 	 * Method to add character to a string until it gets the right length
@@ -193,8 +212,9 @@ public class StringUtil {
 	 */
 	public static String join(List<String> p_sStrList, String p_sDelimiter) {
 		StringBuilder sb=new StringBuilder();
-		for (String sCurrStr : p_sStrList) {
-			if (sb.length()>0)
+		for (int i=0; i<p_sStrList.size(); i++) {
+			String sCurrStr = p_sStrList.get(i);
+			if (i>0)
 				sb.append(p_sDelimiter);
 			sb.append(sCurrStr);
 		}

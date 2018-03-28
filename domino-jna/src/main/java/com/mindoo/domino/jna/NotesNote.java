@@ -5,6 +5,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -105,6 +108,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private Document m_legacyDocRef;
 	private EnumSet<NoteClass> m_noteClass;
+	private boolean m_preferNotesTimeDates;
 	
 	/**
 	 * Creates a new instance
@@ -1060,7 +1064,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 		NotesTimeDate timeDate = NotesDateTimeUtils.calendarToTimeDate(cal);
-		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : timeDate.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct timeDateStruct = timeDate==null ? null : NotesTimeDateStruct.newInstance(timeDate.getInnards());
 		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().NSFItemSetTime(m_hNote64, itemNameMem, timeDateStruct);
@@ -1322,6 +1326,38 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Use this function to read the value of a timedate item as {@link NotesTimeDate}.<br>
+	 * <br>
+	 * If the item does not exist, the method returns null.
+	 * 
+	 * @param itemName item name
+	 * @return time date value or null if not found
+	 */
+	public NotesTimeDate getItemValueAsTimeDate(String itemName) {
+		checkHandle();
+
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+		
+		NotesTimeDateStruct td_item_value = NotesTimeDateStruct.newInstance();
+		
+		if (PlatformUtils.is64Bit()) {
+			boolean exists = NotesNativeAPI64.get().NSFItemGetTime(m_hNote64, itemNameMem, td_item_value);
+			if (!exists) {
+				return null;
+			}
+		}
+		else {
+			boolean exists = NotesNativeAPI32.get().NSFItemGetTime(m_hNote32, itemNameMem, td_item_value);
+			if (!exists) {
+				return null;
+			}
+		}
+		td_item_value.read();
+		int[] innards = td_item_value.Innards;
+		return new NotesTimeDate(innards);
+	}
+	
+	/**
 	 * Decodes an item value
 	 * 
 	 * @param itemName item name (for logging purpose)
@@ -1354,6 +1390,26 @@ public class NotesNote implements IRecyclableNotesObject {
 				Mem32.OSUnlockObject(valueBlockId.pool);
 			}
 		}
+	}
+	
+	/**
+	 * Sets whether methods like {@link #getItemValue(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @param b true to prefer NotesTimeDate (false by default)
+	 */
+	public void setPreferNotesTimeDates(boolean b) {
+		m_preferNotesTimeDates = b;
+	}
+	
+	/**
+	 * Returns whether methods like {@link #getItemValue(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @return true to prefer NotesTimeDate
+	 */
+	public boolean isPreferNotesTimeDates() {
+		return m_preferNotesTimeDates;
 	}
 	
 	/**
@@ -1436,29 +1492,37 @@ public class NotesNote implements IRecyclableNotesObject {
 			return numberList==null ? Collections.emptyList() : numberList;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength, useDayLight, gmtOffset);
-			if (cal==null) {
-				Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-				nullCal.set(Calendar.YEAR, 1);
-				nullCal.set(Calendar.MONTH, 1);
-				nullCal.set(Calendar.DAY_OF_MONTH, 1);
-				nullCal.set(Calendar.HOUR, 0);
-				nullCal.set(Calendar.MINUTE, 0);
-				nullCal.set(Calendar.SECOND, 0);
-				nullCal.set(Calendar.MILLISECOND, 0);
-				return Arrays.asList((Object) nullCal);
+			if (isPreferNotesTimeDates()) {
+				NotesTimeDate td = ItemDecoder.decodeTimeDateAsNotesTimeDate(valueDataPtr, valueDataLength);
+				return Arrays.asList((Object) td);
 			}
-			return Arrays.asList((Object) cal);
+			else {
+				Calendar cal = ItemDecoder.decodeTimeDate(valueDataPtr, valueDataLength);
+				if (cal==null) {
+					Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+					nullCal.set(Calendar.YEAR, 1);
+					nullCal.set(Calendar.MONTH, 1);
+					nullCal.set(Calendar.DAY_OF_MONTH, 1);
+					nullCal.set(Calendar.HOUR, 0);
+					nullCal.set(Calendar.MINUTE, 0);
+					nullCal.set(Calendar.SECOND, 0);
+					nullCal.set(Calendar.MILLISECOND, 0);
+					return Arrays.asList((Object) nullCal);
+				}
+				else {
+					return Arrays.asList((Object) cal);
+				}
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_TIME_RANGE) {
-			boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-			int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-			
-			List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr, useDayLight, gmtOffset);
-			return calendarValues==null ? Collections.emptyList() : calendarValues;
+			if (isPreferNotesTimeDates()) {
+				List<Object> tdValues = ItemDecoder.decodeTimeDateListAsNotesTimeDate(valueDataPtr);
+				return tdValues==null ? Collections.emptyList() : tdValues;
+			}
+			else {
+				List<Object> calendarValues = ItemDecoder.decodeTimeDateList(valueDataPtr);
+				return calendarValues==null ? Collections.emptyList() : calendarValues;
+			}
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_OBJECT) {
 			NotesObjectDescriptorStruct objDescriptor = NotesObjectDescriptorStruct.newInstance(valueDataPtr);
@@ -2159,27 +2223,67 @@ public class NotesNote implements IRecyclableNotesObject {
 		checkHandle();
 		
 		final Ref<NotesError> exception = new Ref<NotesError>();
-		NotesCallbacks.LSCOMPILERERRORPROC errorProc = new NotesCallbacks.LSCOMPILERERRORPROC() {
-			@Override public short invoke(Pointer pInfo, Pointer pCtx) {
-				NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
-				errorInfo.read();
-				
-				int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
-				int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
-				
-				String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
-				String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
-				
-				exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
-				return 0;
-			}
-		};
-		
+		final NotesCallbacks.LSCompilerErrorProc errorProc;
+		if (PlatformUtils.isWin32()) {
+			errorProc = new Win32NotesCallbacks.LSCompilerErrorProcWin32() {
+				@Override public short invoke(Pointer pInfo, Pointer pCtx) {
+					NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
+					errorInfo.read();
+					
+					int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
+					int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
+					
+					String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
+					String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
+					
+					exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
+					return 0;
+				}
+			};
+		}
+		else {
+			errorProc = new NotesCallbacks.LSCompilerErrorProc() {
+				@Override public short invoke(Pointer pInfo, Pointer pCtx) {
+					NotesLSCompileErrorInfoStruct errorInfo = NotesLSCompileErrorInfoStruct.newInstance(pInfo);
+					errorInfo.read();
+					
+					int errTextLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrText);
+					int errFileLen = NotesStringUtils.getNullTerminatedLength(errorInfo.pErrFile);
+					
+					String errText = NotesStringUtils.fromLMBCS(errorInfo.pErrText, errTextLen);
+					String errFile = NotesStringUtils.fromLMBCS(errorInfo.pErrFile, errFileLen);
+					
+					exception.set(new LotusScriptCompilationError(12051, errorInfo.getLineAsInt(), errText, errFile));
+					return 0;
+				}
+			};
+		}
+
 		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NSFNoteLSCompileExt(this.getParent().getHandle64(), m_hNote64, 0, errorProc, null);
-		} else {
-			result = NotesNativeAPI32.get().NSFNoteLSCompileExt(this.getParent().getHandle32(), m_hNote32, 0, errorProc, null);
+		try {
+			if (PlatformUtils.is64Bit()) {
+				//AccessController call required to prevent SecurityException when running in XPages
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI64.get().NSFNoteLSCompileExt(NotesNote.this.getParent().getHandle64(), m_hNote64, 0, errorProc, null);
+					}
+				});
+			} else {
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI32.get().NSFNoteLSCompileExt(NotesNote.this.getParent().getHandle32(), m_hNote32, 0, errorProc, null);
+					}
+				});
+			}
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error getting notes from database", e);
 		}
 		if(exception.get() != null) {
 			throw exception.get();

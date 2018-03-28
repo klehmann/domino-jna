@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -22,9 +23,9 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.json.JSONArray;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -47,23 +48,33 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "__seqtime_innard0, "
 			+ "__seqtime_innard1, "
 			+ "__seqtime_millis, "
-			+ "__readers, "
+			+ "__modifiedinthisfile_millis, "
+			+ "__numreaders, "
 			+ "__flags, "
 			+ "__form, "
 			+ "__json, "
-			+ "__binarydata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			+ "__customtext, "
+			+ "__custombinary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	private static final String SQL_INSERT_DOMINODOCREADERS = "INSERT INTO docreaders ("
+			+ "__unid, "
+			+ "__reader) VALUES (?, ?)";
 	private static final String SQL_UPDATE_DOMINODOC = "UPDATE docs SET "
 			+ "__unid = ? , "
 			+ "__seq = ?, "
 			+ "__seqtime_innard0 = ?, "
 			+ "__seqtime_innard1 = ?, "
 			+ "__seqtime_millis = ?, "
-			+ "__readers = ?, "
+			+ "__modifiedinthisfile_millis = ?, "
+			+ "__numreaders = ?, "
 			+ "__flags = ?, "
 			+ "__form = ?, "
 			+ "__json = ?, "
-			+ "__binarydata = ? "
+			+ "__customtext = ?, "
+			+ "__custombinary = ? "
 			+ "WHERE __unid = ?";
+	
+	private static final String SQL_REMOVE_DOCREADERS_BY_UNID = "DELETE from docreaders where __unid = ?";
+
 	private static final String SQL_INSERTORREPLACE_HISTORYENTRY = "INSERT OR REPLACE INTO synchistory ("
 			+ "dbinstanceid, "
 			+ "startdatetime, "
@@ -78,8 +89,9 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	private static final String SQL_INSERTORREPLACE_LASTSYNCDATAINFO = "INSERT OR REPLACE INTO syncdatainfo ("
 			+ "dbid, "
-			+ "selectionformula) " +
-			"VALUES (?, ?)";
+			+ "selectionformula, "
+			+ "customdata) " +
+			"VALUES (?, ?, ?)";
 	private static final String SQL_FINDDOCBYUNID = "SELECT "
 			+ "__unid, "
 			+ "__seq, "
@@ -96,12 +108,11 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			+ "FROM syncdatainfo LIMIT 1;";
 	private static final String SQL_GETLASTSYNCSELECTIONFORMULA = "SELECT selectionformula "
 			+ "FROM syncdatainfo LIMIT 1;";
+	private static final String SQL_GETLASTSYNCCUSTOMDATA = "SELECT customdata "
+			+ "FROM syncdatainfo LIMIT 1;";
 	private static final String SQL_GETLASTSYNCENDDATE = "SELECT newcutoffdate_innard0, "
 			+ "newcutoffdate_innard1 "
 			+ "FROM synchistory WHERE dbinstanceid=? LIMIT 1;";
-
-	private boolean m_useDayLight;
-	private int m_gmtOffset;
 	
 	/**
 	 * Context class that captures all relevant data for a single sync run
@@ -118,7 +129,9 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		private PreparedStatement m_stmtFindDominoDocByUnid;
 		private PreparedStatement m_stmtRemoveDominoDocByUnid;
 		private PreparedStatement m_stmtInsertDominoDoc;
+		private PreparedStatement m_stmtInsertDominoDocReaders;
 		private PreparedStatement m_stmtUpdateDominoDoc;
+		private PreparedStatement m_stmtDeleteAllDominoDocReaders;
 		
 		public SyncContext() {
 		}
@@ -182,9 +195,17 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		public PreparedStatement getStatementInsertDominoDoc() {
 			return m_stmtInsertDominoDoc;
 		}
-
+		
 		public void setStatementInsertDominoDoc(PreparedStatement stmt) {
 			this.m_stmtInsertDominoDoc = stmt;
+		}
+
+		public PreparedStatement getStatementInsertDominoDocReaders() {
+			return m_stmtInsertDominoDocReaders;
+		}
+
+		public void setStatementInsertDominoDocReaders(PreparedStatement stmt) {
+			this.m_stmtInsertDominoDocReaders = stmt;
 		}
 
 		public PreparedStatement getStatementUpdateDominoDoc() {
@@ -195,6 +216,14 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			this.m_stmtUpdateDominoDoc = stmt;
 		}
 
+		public PreparedStatement getStatementDeleteAllDocReaders() {
+			return m_stmtDeleteAllDominoDocReaders;
+		}
+		
+		public void setStatementDeleteAllDocReaders(PreparedStatement stmt) {
+			this.m_stmtDeleteAllDominoDocReaders = stmt;
+		}
+		
 		public PreparedStatement getStatementFindDominoDocByUnid() {
 			return m_stmtFindDominoDocByUnid;
 		}
@@ -211,8 +240,6 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 */
 	public AbstractSQLSyncTarget(String jdbcUrl) {
 		m_jdbcUrl = jdbcUrl;
-		m_useDayLight = NotesDateTimeUtils.isDaylightTime();
-		m_gmtOffset = NotesDateTimeUtils.getGMTOffset();
 	}
 
 	protected PreparedStatement createStatementRemoveDominoDocByUnid() throws SQLException {
@@ -223,6 +250,10 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		return getConnection().prepareStatement(SQL_INSERT_DOMINODOC);
 	}
 
+	protected PreparedStatement createStatementInsertDominoDocReaders() throws SQLException {
+		return getConnection().prepareStatement(SQL_INSERT_DOMINODOCREADERS);
+	}
+	
 	protected PreparedStatement createStatementUpdateDominoDoc() throws SQLException {
 		return getConnection().prepareStatement(SQL_UPDATE_DOMINODOC);
 	}
@@ -241,6 +272,10 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 
 	protected PreparedStatement createStatementScanDatabase() throws SQLException {
 		return getConnection().prepareStatement(SQL_SCANDATABASE);
+	}
+	
+	protected PreparedStatement createStatementDeleteAllDocReaders() throws SQLException {
+		return getConnection().prepareStatement(SQL_REMOVE_DOCREADERS_BY_UNID);
 	}
 	
 	protected abstract DataSource createDataSource(String jdbcUrl);
@@ -282,12 +317,24 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 
 		flyway.setTarget(MigrationVersion.fromVersion(getDbMainVersion()+"."+getDbSubVersion()));
 		
+		postInitFlyway(flyway);
+		
 		// migrate db schemas and data
 		flyway.migrate();
 
 		return ds.getConnection();
 	}
 
+	/**
+	 * Add your own custom code here to init the flyway instance used
+	 * for DB schema upgrades
+	 * 
+	 * @param flyway flyway
+	 */
+	protected void postInitFlyway(Flyway flyway) {
+		//
+	}
+	
 	/**
 	 * Override this method to return a classloader that should be used by
 	 * Flyway to load the DB migrations. The default implementation returns null which
@@ -379,6 +426,33 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 
+	public String getLastSyncCustomData() {
+		PreparedStatement readCustomDataStmt = null;
+
+		try {
+			readCustomDataStmt = getConnection().prepareStatement(SQL_GETLASTSYNCCUSTOMDATA);
+
+			ResultSet rs = readCustomDataStmt.executeQuery();
+
+			if (rs.next()) {
+				String customData = rs.getString("customdata");
+				return customData;
+			}
+			return null;
+		} catch (SQLException e) {
+			throw new SqlSyncException("Error reading last sync customdata", e);
+		}
+		finally {
+			try {
+				if (readCustomDataStmt != null) {
+					readCustomDataStmt.close();
+				}
+			} catch (SQLException ex) {
+				log(Level.SEVERE, "Could not close statement to read last sync customdata: "+SQL_GETLASTSYNCCUSTOMDATA, ex);
+			}
+		}
+	}
+	
 	public NotesTimeDate getLastSyncEndDate(String dbInstanceId) {
 		PreparedStatement readCutOffDateStmt = null;
 
@@ -427,10 +501,22 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			throw new SqlSyncException("Error creating prepared statement to insert domino document", e);
 		}
 		try {
+			ctx.setStatementInsertDominoDocReaders(createStatementInsertDominoDocReaders());
+		}
+		catch (SQLException e) {
+			throw new SqlSyncException("Error creating prepared statement to insert domino document readers", e);
+		}
+		try {
 			ctx.setStatementRemoveDominoDocByUnid(createStatementRemoveDominoDocByUnid());
 		}
 		catch (SQLException e) {
 			throw new SqlSyncException("Error creating prepared statement to remove domino document", e);
+		}
+		try {
+			ctx.setStatementDeleteAllDocReaders(createStatementDeleteAllDocReaders());
+		}
+		catch (SQLException e) {
+			throw new SqlSyncException("Error creating prepared statement to remove domino document readers", e);
 		}
 		try {
 			ctx.setStatementUpdateDominoDoc(createStatementUpdateDominoDoc());
@@ -513,22 +599,24 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note if {@link #getWhichDataToRead()} returned {@link DataToRead#NoteWithAllItems} or {@link DataToRead#NoteWithSummaryItems}, null otherwise
 	 */
 
-	public TargetResult noteChangedMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	public TargetResult noteChangedMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		NotesOriginatorIdData oidInDb = findDocumentByUnid(ctx, oid);
+
+		List<String> readers = getReaders(oid, summaryBufferData, note);
+		if (readers!=null) {
+			//convert to lowercase, because reader fields are case-insensitive
+			List<String> readersLC = new ArrayList<String>(readers.size());
+			for (String currReader : readers) {
+				readersLC.add(currReader.toLowerCase(Locale.ENGLISH));
+			}
+			readers = readersLC;
+		}
 
 		if (oidInDb==null) {
 			try {
 				PreparedStatement insertDocStmt = ctx.getStatementInsertDominoDoc();
-
-				if (!populateInsertDocStatementWithData(ctx, insertDocStmt, oid, summaryBufferData, note)) {
-					return TargetResult.None;
-				}
-				insertDocStmt.addBatch();
-				ctx.setAdded(ctx.getAdded()+1);
-				if ((ctx.getAdded() % getMaxBatchSize()) == 0) {
-					executeBatchedInserts(ctx);
-				}
+				insertDocumentRowWithData(ctx, insertDocStmt, oid, summaryBufferData, note, readers);
 			}
 			catch (SQLException e) {
 				throw new SqlSyncException("Error inserting note with UNID "+oid.getUNID(), e);
@@ -538,14 +626,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		else {
 			try {
 				PreparedStatement updateDocStmt = ctx.getStatementUpdateDominoDoc();
-				if (!populateUpdateDocStatementWithData(ctx, updateDocStmt, oid, summaryBufferData, note)) {
-					return TargetResult.None;
-				}
-				updateDocStmt.addBatch();
-				ctx.setChanged(ctx.getChanged()+1);
-				if ((ctx.getChanged() % getMaxBatchSize()) == 0) {
-					executeBatchedUpdates(ctx);
-				}
+				updateDocumentRowWithData(ctx, updateDocStmt, oid, summaryBufferData, note, readers);
 			}
 			catch (SQLException e) {
 				throw new SqlSyncException("Error updating note with UNID "+oid.getUNID(), e);
@@ -563,11 +644,12 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param oid note originator id
 	 * @param summaryBufferData summary buffer if specified in {@link #getWhichDataToRead()}
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
-	 * @return true if it's ok to execute the statement (we call {@link PreparedStatement#executeBatch()})
+	 * @param readers readers of this note converted to lowercase or null if there are no restrictions
 	 * @throws SQLException in case of SQL errors
 	 */
-	protected boolean populateUpdateDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
-			NotesNote note) throws SQLException {
+	private void updateDocumentRowWithData(SyncContext ctx, PreparedStatement stmt,
+			NotesOriginatorIdData oid, IItemTableData summaryBufferData,
+			NotesNote note, List<String> readers) throws SQLException {
 
 		String unid = oid.getUNID();
 		int seq = oid.getSequence();
@@ -577,28 +659,23 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setInt(2, seq);
 		stmt.setLong(3, seqTimeInnards[0]);
 		stmt.setLong(4, seqTimeInnards[1]);
-		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(m_useDayLight, m_gmtOffset, seqTimeInnards);
+		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
+		stmt.setLong(6, seqTimeCal.getTimeInMillis());
 
-		List<String> readers = getReaders(oid, summaryBufferData, note);
+		int numReaders;
 		if (readers==null) {
-			readers = READERS_ALL;
+			numReaders = 0;
 		}
 		else {
-			//convert to lowercase, because reader fields are case-insensitive
-			List<String> readersLC = new ArrayList<String>(readers.size());
-			for (String currReader : readers) {
-				readersLC.add(currReader.toLowerCase(Locale.ENGLISH));
-			}
-			readers = readersLC;
+			numReaders = readers.size();
 		}
-		JSONArray readersJson = new JSONArray(readers);
-		stmt.setString(6, readersJson.toString());
+		stmt.setInt(7, numReaders);
 
 		List<String> flags = getFlags(oid, summaryBufferData, note);
 		if (flags==null)
 			flags=Collections.emptyList();
-		stmt.setString(7, new JSONArray(flags).toString());
+		stmt.setString(8, new JSONArray(flags).toString());
 
 		String form = null;
 		if (summaryBufferData!=null) {
@@ -609,22 +686,49 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(8, form);
+		stmt.setString(9, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(9, jsonStr);
+		stmt.setString(10, jsonStr);
 
-		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
-		if (binaryData!=null) {
-			stmt.setBytes(10, binaryData);
+		String customTextData = getCustomTextData(oid, summaryBufferData, note);
+		if (customTextData!=null) {
+			stmt.setString(11, customTextData);
+		}
+		
+		byte[] customBinaryData = getCustomBinaryData(oid, summaryBufferData, note);
+		if (customBinaryData!=null) {
+			stmt.setBytes(12, customBinaryData);
 		}
 
-		stmt.setString(11, unid);
-		return true;
-	}
+		stmt.setString(12, unid);
+		
+		stmt.addBatch();
+		ctx.setChanged(ctx.getChanged()+1);
+		if ((ctx.getChanged() % getMaxBatchSize()) == 0) {
+			executeBatchedUpdates(ctx);
+		}
 
+		//flush old readers
+		PreparedStatement deleteAllDocReaders = ctx.getStatementDeleteAllDocReaders();
+		deleteAllDocReaders.setString(1, unid);
+		deleteAllDocReaders.executeUpdate();
+		
+		if (readers!=null) {
+			//and write new readers
+			PreparedStatement insertDocReadersStmt = ctx.getStatementInsertDominoDocReaders();
+			for (String currReader : readers) {
+				insertDocReadersStmt.setString(1, unid);
+				insertDocReadersStmt.setString(2, currReader);
+				
+				insertDocReadersStmt.addBatch();
+			}
+			insertDocReadersStmt.executeBatch();
+		}
+	}
+	
 	/**
 	 * Method to fill the parameters of an insert statement that inserts a document into the database
 	 * 
@@ -633,11 +737,12 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param oid note originator id
 	 * @param summaryBufferData summary buffer if specified in {@link #getWhichDataToRead()}
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
-	 * @return true if it's ok to execute the statement (we call {@link PreparedStatement#executeBatch()})
+	 * @param readers readers of this note converted to lowercase or null if there are no restrictions
 	 * @throws SQLException in case of SQL errors
 	 */
-	protected boolean populateInsertDocStatementWithData(SyncContext ctx, PreparedStatement stmt, NotesOriginatorIdData oid, ItemTableData summaryBufferData,
-			NotesNote note) throws SQLException {
+	private void insertDocumentRowWithData(SyncContext ctx, PreparedStatement stmt,
+			NotesOriginatorIdData oid, IItemTableData summaryBufferData,
+			NotesNote note, List<String> readers) throws SQLException {
 
 		String unid = oid.getUNID();
 		int seq = oid.getSequence();
@@ -647,28 +752,23 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		stmt.setInt(2, seq);
 		stmt.setLong(3, seqTimeInnards[0]);
 		stmt.setLong(4, seqTimeInnards[1]);
-		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(m_useDayLight, m_gmtOffset, seqTimeInnards);
+		Calendar seqTimeCal = NotesDateTimeUtils.innardsToCalendar(seqTimeInnards);
 		stmt.setLong(5, seqTimeCal.getTimeInMillis());
+		stmt.setLong(6, seqTimeCal.getTimeInMillis());
 
-		List<String> readers = getReaders(oid, summaryBufferData, note);
+		int numReaders;
 		if (readers==null) {
-			readers = READERS_ALL;
+			numReaders = 0;
 		}
 		else {
-			//convert to lowercase, because reader fields are case-insensitive
-			List<String> readersLC = new ArrayList<String>(readers.size());
-			for (String currReader : readers) {
-				readersLC.add(currReader.toLowerCase(Locale.ENGLISH));
-			}
-			readers = readersLC;
+			numReaders = readers.size();
 		}
-		JSONArray readersJson = new JSONArray(readers);
-		stmt.setString(6, readersJson.toString());
+		stmt.setInt(7, numReaders);
 
 		List<String> flags = getFlags(oid, summaryBufferData, note);
 		if (flags==null)
 			flags=Collections.emptyList();
-		stmt.setString(7, new JSONArray(flags).toString());
+		stmt.setString(8, new JSONArray(flags).toString());
 		
 		String form = null;
 		if (summaryBufferData!=null) {
@@ -679,21 +779,40 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 		if (form==null)
 			form = "";
-		stmt.setString(8, form);
+		stmt.setString(9, form);
 
 		String jsonStr = toJson(oid, summaryBufferData, note);
 		if (jsonStr==null)
 			jsonStr = "{}";
-		stmt.setString(9, jsonStr);
+		stmt.setString(10, jsonStr);
 
-		byte[] binaryData = getBinaryData(oid, summaryBufferData, note);
-		if (binaryData!=null) {
-			stmt.setBytes(10, binaryData);
+		String customTextData = getCustomTextData(oid, summaryBufferData, note);
+		if (customTextData!=null) {
+			stmt.setString(11, customTextData);
 		}
-		return true;
-	}
+		
+		byte[] customBinaryData = getCustomBinaryData(oid, summaryBufferData, note);
+		if (customBinaryData!=null) {
+			stmt.setBytes(12, customBinaryData);
+		}
+		
+		stmt.addBatch();
+		ctx.setAdded(ctx.getAdded()+1);
+		if ((ctx.getAdded() % getMaxBatchSize()) == 0) {
+			executeBatchedInserts(ctx);
+		}
 
-	private static final List<String> READERS_ALL = Collections.unmodifiableList(Arrays.asList("*"));
+		if (numReaders>0) {
+			PreparedStatement insertDocReadersStmt = ctx.getStatementInsertDominoDocReaders();
+			for (String currReader : readers) {
+				insertDocReadersStmt.setString(1, unid);
+				insertDocReadersStmt.setString(2, currReader);
+				
+				insertDocReadersStmt.addBatch();
+			}
+			insertDocReadersStmt.executeBatch();
+		}
+	}
 
 	/**
 	 * Override this method to read the readers and authors from specific fields. The default
@@ -706,7 +825,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return readers or null if no readers stored in note
 	 */
-	protected List<String> getReaders(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected List<String> getReaders(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		if (summaryBufferData!=null) {
 			List<String> readers = summaryBufferData.getAsStringList("$C1$", null);
@@ -716,6 +835,20 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	}
 
 	/**
+	 * Override this method to return a custom text to be stored for a document in
+	 * the database
+	 * 
+	 * @param oid note originator id
+	 * @param summaryBufferData summary buffer if specified in {@link #getWhichDataToRead()}
+	 * @param note note  if specified in {@link #getWhichDataToRead()}
+	 * @return custom string or null  (default)
+	 */
+	protected String getCustomTextData(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
+			NotesNote note) {
+		return null;
+	}
+	
+	/**
 	 * The method currently just returns an empty list. The return value is stored in the
 	 * __flags column and is reserved for future use.
 	 * 
@@ -724,7 +857,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return flags (empty list)
 	 */
-	protected List<String> getFlags(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected List<String> getFlags(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		return Collections.emptyList();
 	}
@@ -738,7 +871,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return bytes array or null
 	 */
-	protected byte[] getBinaryData(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected byte[] getCustomBinaryData(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note) {
 		return null;
 	}
@@ -751,7 +884,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @param note note  if specified in {@link #getWhichDataToRead()}
 	 * @return JSON string or null if there is no JSON to store
 	 */
-	protected abstract String toJson(NotesOriginatorIdData oid, ItemTableData summaryBufferData,
+	protected abstract String toJson(NotesOriginatorIdData oid, IItemTableData summaryBufferData,
 			NotesNote note);
 
 	public TargetResult noteChangedNotMatchingFormula(SyncContext ctx, NotesOriginatorIdData oid) {
@@ -825,7 +958,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			throw new SqlSyncException("Error deleting document with UNID "+oid.getUNID(), e);
 		}
 	}
-
+	
 	public boolean isLoggable(Level level) {
 		return level.intValue() >= Level.WARNING.intValue();
 	}
@@ -996,7 +1129,17 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 	
-	protected void writeDbIdAndSelectionFormula(SyncContext ctx, String selectionFormulaForNextSync, String dbInstanceId,
+	/**
+	 * Override this method to store some custom data for the last successful sync run
+	 * 
+	 * @param ctx sync context
+	 * @return custom data or null (default implementation returns null)
+	 */
+	protected String getCustomDataOfSync(SyncContext ctx) {
+		return null;
+	}
+	
+	private void writeDbIdAndSelectionFormula(SyncContext ctx, String selectionFormulaForNextSync, String dbInstanceId,
 			NotesTimeDate startingDateForNextSync) {
 
 		//remove old content
@@ -1017,11 +1160,16 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			}
 		}
 
+		String customData = getCustomDataOfSync(ctx);
+		if (customData==null)
+			customData = "";
+		
 		try {
 			//write new content
 			PreparedStatement insertLastSyncDataStmt = createStatementInsertLastSyncDataInfoEntry();
 			insertLastSyncDataStmt.setString(1, ctx.getDbId());
 			insertLastSyncDataStmt.setString(2, selectionFormulaForNextSync);
+			insertLastSyncDataStmt.setString(3, customData);
 			insertLastSyncDataStmt.executeUpdate();
 		} catch (SQLException e) {
 			throw new SqlSyncException("Error writing dbid/selectionformula for next sync", e);
@@ -1029,7 +1177,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 
 	}
 	
-	protected void writeSyncHistoryEntry(SyncContext ctx, String selectionFormulaForNextSync, String dbInstanceId,
+	private void writeSyncHistoryEntry(SyncContext ctx, String selectionFormulaForNextSync, String dbInstanceId,
 			NotesTimeDate startingDateForNextSync) {
 		try {
 			PreparedStatement insertHistoryStmt = createStatementInsertHistoryEntry();

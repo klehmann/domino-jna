@@ -361,7 +361,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long hDb,
 			long hNote,
 			int dwFlags,
-			NotesCallbacks.LSCOMPILERERRORPROC pfnErrProc,
+			NotesCallbacks.LSCompilerErrorProc pfnErrProc,
 			Pointer pCtx);
 	@Override public native short NSFNoteCheck(
 			long hNote);

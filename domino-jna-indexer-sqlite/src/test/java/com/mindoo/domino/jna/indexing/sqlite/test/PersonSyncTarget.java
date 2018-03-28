@@ -6,9 +6,9 @@ import java.util.Map;
 
 import org.json.JSONObject;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.indexing.sqlite.AbstractSQLiteSyncTarget;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 
 public class PersonSyncTarget extends AbstractSQLiteSyncTarget {
@@ -42,7 +42,7 @@ public class PersonSyncTarget extends AbstractSQLiteSyncTarget {
 	}
 
 	@Override
-	protected String toJson(NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note) {
+	protected String toJson(NotesOriginatorIdData oid, IItemTableData summaryBufferData, NotesNote note) {
 		String companyName;
 		String fullName;
 		String lastName;

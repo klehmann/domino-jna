@@ -9,9 +9,9 @@ import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.SimpleAttribute;
 import com.googlecode.cqengine.query.option.QueryOptions;
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.indexing.cqengine.AbstractCQEngineSyncTarget;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 import com.mindoo.domino.jna.sync.ISyncTarget;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
 
@@ -77,7 +77,7 @@ public class PersonSyncTarget extends AbstractCQEngineSyncTarget<Person, Object>
 	}
 
 	@Override
-	protected Person toObject(NotesOriginatorIdData oid, ItemTableData summaryBufferData, NotesNote note) {
+	protected Person toObject(NotesOriginatorIdData oid, IItemTableData summaryBufferData, NotesNote note) {
 		String unid = oid.getUNID();
 		int seq = oid.getSequence();
 		int[] seqTimeInnards = oid.getSequenceTimeInnards();

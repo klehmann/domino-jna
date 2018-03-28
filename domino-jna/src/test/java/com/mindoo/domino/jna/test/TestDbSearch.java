@@ -11,6 +11,7 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
@@ -28,7 +29,6 @@ import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
 import com.mindoo.domino.jna.directory.DirectoryScanner.DatabaseData;
 import com.mindoo.domino.jna.directory.DirectoryScanner.SearchResultData;
-import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder.ItemTableData;
 
 import lotus.domino.Database;
 import lotus.domino.Document;
@@ -192,7 +192,7 @@ public class TestDbSearch extends BaseJNATestClass {
 				NotesTimeDate endTimeDate = NotesSearch.search(dbData, null, formula, colValues, viewTitle, searchFlags, EnumSet.of(NoteClass.DOCUMENT), since, new NotesSearch.SearchCallback() {
 
 					@Override
-					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, ItemTableData summaryBufferData) {
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 						int noteId = searchMatch.getNoteId();
 						EnumSet<NoteClass> noteClass = searchMatch.getNoteClass();
 						NotesTimeDate dbCreated = searchMatch.getDbCreated();

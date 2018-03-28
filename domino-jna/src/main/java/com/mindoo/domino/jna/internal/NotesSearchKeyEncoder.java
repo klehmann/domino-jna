@@ -265,8 +265,8 @@ public class NotesSearchKeyEncoder {
 		NotesTimeDate lower = NotesDateTimeUtils.calendarToTimeDate(lowerBound);
 		NotesTimeDate upper = NotesDateTimeUtils.calendarToTimeDate(upperBound);
 		
-		pair.Lower = lower.getAdapter(NotesTimeDateStruct.class);
-		pair.Upper = upper.getAdapter(NotesTimeDateStruct.class);
+		pair.Lower = NotesTimeDateStruct.newInstance(lower.getInnards());
+		pair.Upper = NotesTimeDateStruct.newInstance(upper.getInnards());
 		pair.write();
 		
 		for (int i=0; i<valueMem.size(); i++) {

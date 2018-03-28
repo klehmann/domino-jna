@@ -3,11 +3,14 @@
  * The first block of columns is required for the sync (e.g. to find document
  * information like the sequence time, basically "last modified", by the doc UNID.
  * 
- * The __readers column in the second block contains a JSON array of all readers and
+ * The field __modifiedinthisfile_millis is a reserved field to support a
+ * later sync in opposite direction.
+ * 
+ * The __readers column in the third block contains a JSON array of all readers and
  * authors (if readers are present) stored in the document to check for read access.
  * Values are converted to lowercase, because reader items in Domino are case-insensitive.
  * 
- * The third block contains the actual document content, e.g. the "form" value for optimized
+ * The fourth block contains the actual document content, e.g. the "form" value for optimized
  * filtering of documents with a specific type, a JSON object with all relevant document data
  * and a BLOB that is currently not used. */
 CREATE TABLE IF NOT EXISTS docs (
@@ -16,24 +19,61 @@ CREATE TABLE IF NOT EXISTS docs (
 	__seqtime_innard0 integer,
 	__seqtime_innard1 integer,
 	__seqtime_millis integer,
-	
-	__readers text,
+
+	__modifiedinthisfile_millis integer,
+
+	__numreaders integer,
 	
 	__flags text,
 	__form text,
 	__json text,
-	__binarydata BLOB
+	__customtext text,
+	__custombinary BLOB
 );
 
 /* Create indexes to speed up UNID and FORM based searches */
 CREATE INDEX IF NOT EXISTS docs_unid ON docs (__unid);
 CREATE INDEX IF NOT EXISTS docs_form ON docs (__form);
 
-/* This table will only contain a single line with the db replica id
- * and the selection fornula used for the last successful sync run */
+CREATE TABLE IF NOT EXISTS docreaders (
+	__unid text NOT NULL,
+	__reader text NOT NULL
+);
+
+/* Create indexes to speed up read access checks  */
+CREATE INDEX IF NOT EXISTS docreaders_unid ON docreaders (__unid);
+CREATE INDEX IF NOT EXISTS docreaders_reader ON docreaders (__reader);
+
+/* Create table to store attachments (not used yet) */
+CREATE TABLE IF NOT EXISTS attachments (
+	__unid text NOT NULL,
+	
+	__created_millis integer,
+	__created_innard0 integer,
+	__created_innard1 integer,
+	
+	__modified_millis integer,
+	__modified_innard0 integer,
+	__modified_innard1 integer
+	
+	__modifiedinthisfile_millis integer,
+
+	__filesize integer,
+	__filename text,
+	
+	__flags text,
+	__json text,
+	__binarydata BLOB
+);
+
+CREATE INDEX IF NOT EXISTS attachments_unid ON attachments (__unid);
+
+/* This table will only contain a single line with the db replica id,
+ * and the selection formula used for the last successful sync run and optional custom data */
 CREATE TABLE IF NOT EXISTS syncdatainfo (
 	dbid text,
-	selectionformula text
+	selectionformula text,
+	customdata text
 );
 
 /* For each DB instance that syncs with the SQL database, we track the

@@ -49,19 +49,16 @@ public class NotesBusyTimeUtils {
 			boolean findFirstFit, NotesTimeDate from, NotesTimeDate until, int duration, List<String> names) {
 		
 		NotesUniversalNoteIdStruct unidStruct = apptUnid==null ? null : NotesUniversalNoteIdStruct.fromString(apptUnid);
-		NotesTimeDateStruct apptOrigDateStruct = apptOrigDate==null ? null : apptOrigDate.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct apptOrigDateStruct = apptOrigDate==null ? null : NotesTimeDateStruct.newInstance(apptOrigDate.getInnards());
 		
 		if (from==null)
 			throw new IllegalArgumentException("from date cannot be null");
 		if (until==null)
 			throw new IllegalArgumentException("until date cannot be null");
 		
-		NotesTimeDateStruct fromStruct = from.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct untilStruct = until.getAdapter(NotesTimeDateStruct.class);
-		
 		NotesTimeDatePairStruct intervalPair = NotesTimeDatePairStruct.newInstance();
-		intervalPair.Lower = fromStruct;
-		intervalPair.Upper = untilStruct;
+		intervalPair.Lower = NotesTimeDateStruct.newInstance(from.getInnards());
+		intervalPair.Upper = NotesTimeDateStruct.newInstance(until.getInnards());
 		intervalPair.write();
 		
 		if (duration > 65535) {
@@ -113,9 +110,7 @@ public class NotesBusyTimeUtils {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem64.OSLockObject(hRange);
 					try {
-						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr);
 					}
 					finally {
 						Mem64.OSUnlockObject(rethRange.getValue());
@@ -165,9 +160,7 @@ public class NotesBusyTimeUtils {
 				if (hRange!=0) {
 					Pointer rangePtr = Mem32.OSLockObject(hRange);
 					try {
-						boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-						int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr, useDayLight, gmtOffset);
+						decodedTimeListAsObj = ItemDecoder.decodeTimeDateList(rangePtr);
 					}
 					finally {
 						Mem32.OSUnlockObject(rethRange.getValue());
@@ -220,12 +213,9 @@ public class NotesBusyTimeUtils {
 		if (until==null)
 			throw new IllegalArgumentException("until date cannot be null");
 		
-		NotesTimeDateStruct fromStruct = from.getAdapter(NotesTimeDateStruct.class);
-		NotesTimeDateStruct untilStruct = until.getAdapter(NotesTimeDateStruct.class);
-		
 		NotesTimeDatePairStruct intervalPair = NotesTimeDatePairStruct.newInstance();
-		intervalPair.Lower = fromStruct;
-		intervalPair.Upper = untilStruct;
+		intervalPair.Lower = NotesTimeDateStruct.newInstance(from.getInnards());
+		intervalPair.Upper = NotesTimeDateStruct.newInstance(until.getInnards());
 		intervalPair.write();
 
 		List<String> namesCanonical = new ArrayList<String>();

@@ -6,16 +6,8 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import com.mindoo.domino.jna.NotesTimeDate;
-import com.mindoo.domino.jna.errors.NotesError;
-import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.InnardsConverter;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
-import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
-import com.sun.jna.Memory;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.ShortByReference;
 
 /**
  * DateTime conversion utilities between Java and the Notes C API
@@ -30,7 +22,7 @@ public class NotesDateTimeUtils {
 	 * @return true if DST
 	 */
 	public static boolean isDaylightTime() {
-		TimeZone tz = Calendar.getInstance().getTimeZone();
+		TimeZone tz = TimeZone.getDefault();
 		
 	    return tz.useDaylightTime();
 	}
@@ -41,7 +33,7 @@ public class NotesDateTimeUtils {
 	 * @return offset
 	 */
 	public static int getGMTOffset() {
-		TimeZone tz = Calendar.getInstance().getTimeZone();
+		TimeZone tz = TimeZone.getDefault();
 		
 		return (int)(tz.getRawOffset() / 3600000);
 	}
@@ -49,14 +41,11 @@ public class NotesDateTimeUtils {
 	/**
 	 * Method to convert a {@link NotesTimeDate} object to a Java {@link Calendar}
 	 * 
-	 * @param useDayLight true to use daylight savings time
-	 * @param gmtOffset GMT offset
 	 * @param timeDate time date to convert
 	 * @return calendar or null if timedate contains invalid innards
 	 */
-	public static Calendar timeDateToCalendar(boolean useDayLight, int gmtOffset, NotesTimeDate timeDate) {
-		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
-		return innardsToCalendar(useDayLight, gmtOffset, struct.Innards);
+	public static Calendar timeDateToCalendar(NotesTimeDate timeDate) {
+		return timeDate.toCalendar();
 	}
 
 	/**
@@ -177,6 +166,32 @@ public class NotesDateTimeUtils {
 	}
 	
 	/**
+	 * Method to convert a {@link Date} object to an innard array
+	 * 
+	 * @param dt date
+	 * @return innard array
+	 */
+	public static int[] dateToInnards(Date dt) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dt);
+		return calendarToInnards(cal);
+	}
+	
+	/**
+	 * Method to convert a {@link Date} object to an innard array
+	 * 
+	 * @param dt date
+	 * @param hasDate true to convert the date
+	 * @param hasTime true to convert the time
+	 * @return innard array
+	 */
+	public static int[] dateToInnards(Date dt, boolean hasDate, boolean hasTime) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(dt);
+		return calendarToInnards(cal, hasDate, hasTime);
+	}
+	
+	/**
 	 * Method to convert a {@link Calendar} object to an innard array
 	 * 
 	 * @param cal calendar
@@ -198,51 +213,7 @@ public class NotesDateTimeUtils {
 	 * @return innard array
 	 */
 	public static int[] calendarToInnards(Calendar cal, boolean hasDate, boolean hasTime) {
-		int gmtOffset = getGMTOffset();
-		boolean isDST = isDaylightTime();
-
-		int year = cal.get(Calendar.YEAR);
-		int month = cal.get(Calendar.MONTH)+1;
-		int day = cal.get(Calendar.DATE);
-
-		int hour = cal.get(Calendar.HOUR_OF_DAY);
-		int minute = cal.get(Calendar.MINUTE);
-		int second = cal.get(Calendar.SECOND);
-		int millis = cal.get(Calendar.MILLISECOND);
-
-		Memory m = new Memory(NotesConstants.timeSize);
-		NotesTimeStruct time = NotesTimeStruct.newInstance(m);
-
-		time.dst=isDST ? 1 : 0;
-		time.zone=-gmtOffset;
-
-		time.hour = hour;
-		time.minute = minute;
-		time.second = second;
-		time.hundredth = (short) (millis / 10);
-
-		time.year = year;
-		time.month = month;
-		time.day = day;
-		time.write();
-
-		//convert day, month, year etc. to GM NotesTimeDate
-		boolean convRet = NotesNativeAPI.get().TimeLocalToGM(m);
-		if (convRet) {
-			String msg = "Error converting calendar value to GM: "+cal.getTime();
-			throw new NotesError(0, msg);
-		}
-		time.read();
-
-		int[] innards = time.GM.Innards;
-
-		if (!hasDate) {
-			innards[1] = NotesConstants.ANYDAY;
-		}
-		if (!hasTime) {
-			innards[0] = NotesConstants.ALLDAY;
-		}
-		return innards;
+		return InnardsConverter.encodeInnards(cal, hasDate, hasTime);
 	}
 	
 	/**
@@ -351,180 +322,11 @@ public class NotesDateTimeUtils {
 	/**
 	 * Converts C API innard values to Java {@link Calendar}
 	 * 
-	 * @param useDayLight true to use daylight savings time for the calendar object
-	 * @param gmtOffset GMT offset for the calendar object
 	 * @param innards array with 2 innard values
 	 * @return calendar or null if invalid innards
 	 */
-	public static Calendar innardsToCalendar(boolean useDayLight, int gmtOffset, int[] innards) {
-		if (innards==null || innards.length<2 || (innards.length>=2 && innards[0]==0 && innards[1]==0))
-			return null;
-
-		boolean hasTime=(innards[0]!=NotesConstants.ALLDAY);
-		boolean hasDate=(innards[1]!=NotesConstants.ANYDAY);
-
-		NotesTimeStruct time = NotesTimeStruct.newInstance();
-		time.GM.Innards[0] = innards[0];
-		time.GM.Innards[1] = innards[1];
-
-		//set desired daylight-saving time to appropriate value -> Calendar.getInstance().useDaylightTime()
-		time.dst=(useDayLight) ? 1 : 0; 
-		// set desired time zone to appropriate value -> Calendar.getInstance().getTimeZone().getRawOffset()
-		time.zone=-gmtOffset;
-
-		boolean convRet;
-		if (hasDate && hasTime) {
-			convRet = NotesNativeAPI.get().TimeGMToLocalZone(time);
-		}
-		else {
-			convRet = NotesNativeAPI.get().TimeGMToLocal(time);
-		}
-
-		if (convRet) {
-			//C API doc says:
-			//Returns FALSE if successful and TRUE if not.
-			
-			//not throwing an exception here anymore, but returning null, because legacy Domino API
-			//also ignores the value silently when reading these innards from a document
-			return null;
-		}
-
-		int year = time.year;
-		int month = time.month-1;
-		int date = time.day;
-		int weekday = time.weekday;
-		int hour = time.hour;
-		int minute = time.minute;
-		int second = time.second;
-		int millisecond = time.hundredth * 10;
-
-		Calendar cal = Calendar.getInstance();
-
-		if (hasTime && hasDate) {
-			// set date and time
-			cal.set((int) year,(int) month,(int) date,(int) hour,(int) minute,(int) second);
-		}
-		else if (!hasTime) {
-			// set date only
-			setAnyTime(cal);
-
-			// set date
-			cal.set((int) year,(int) month,(int) date);
-		}
-		else if (!hasDate) {
-			// set time only
-			setAnyTime(cal);
-
-			// set hour of the day
-			cal.set(Calendar.HOUR, (int) hour);
-
-			// set minute
-			cal.set(Calendar.MINUTE, (int) minute);
-
-			// set second
-			cal.set(Calendar.SECOND, (int) second);
-		}
-
-		if (hasTime) {
-			// set milliseconds
-			cal.set(Calendar.MILLISECOND, (int) millisecond);
-		}                
-
-		return cal;
-	}
-	
-	/**
-	 * Method to clear the {@link NotesTimeDate} value
-	 * 
-	 * @param timeDate value to be changed
-	 */
-	public static void setMinimum(NotesTimeDate timeDate) {
-		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
-		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MINIMUM, struct);
-		struct.read();
-	}
-	
-	/**
-	 * Method to set the {@link NotesTimeDate} value to the maximum value.
-	 * 
-	 * @param timeDate value to be changed
-	 */
-	public static void setMaximum(NotesTimeDate timeDate) {
-		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
-		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MAXIMUM, struct);
-		struct.read();
-	}
-	
-	/**
-	 * Method to set the {@link NotesTimeDate} value to ANYDAY/ALLDAY
-	 * 
-	 * @param timeDate value to be changed
-	 */
-	public static void setWildcard(NotesTimeDate timeDate) {
-		NotesTimeDateStruct struct = timeDate.getAdapter(NotesTimeDateStruct.class);
-		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_WILDCARD, struct);
-		struct.read();
-	}
-	
-	/**
-	 * Converts a {@link NotesTimeDate} to string
-	 * 
-	 * @param td timedate
-	 * @return string with formatted timedate
-	 */
-	public static String toString(NotesTimeDate td) {
-		NotesTimeDateStruct struct = td.getAdapter(NotesTimeDateStruct.class);
-		if (struct==null)
-			throw new IllegalArgumentException("Missing native data object");
-		
-		if (struct.Innards==null || struct.Innards.length<2)
-			return "";
-		if (struct.Innards[0]==0 && struct.Innards[1]==0)
-			return "MINIMUM";
-		if (struct.Innards[0]==0 && struct.Innards[1]==0xffffff)
-			return "MAXIMUM";
-		
-		DisposableMemory retTextBuffer = new DisposableMemory(100);
-		
-		ShortByReference retTextLength = new ShortByReference();
-		short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
-		if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
-			return "";
-		}
-		NotesErrorUtils.checkResult(result);
-
-		if (retTextLength.getValue() > retTextBuffer.size()) {
-			retTextBuffer.dispose();
-			retTextBuffer = new DisposableMemory(retTextLength.getValue());
-
-			result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
-			NotesErrorUtils.checkResult(result);
-		}
-
-		String txt = NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
-		retTextBuffer.dispose();
-		return txt;
-	}
-	
-	/**
-	 * Parses a timedate string to a {@link NotesTimeDate}
-	 * 
-	 * @param dateTimeStr timedate string
-	 * @return timedate
-	 */
-	public static NotesTimeDate fromString(String dateTimeStr) {
-		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr, true);
-		//convert method expects a pointer to the date string in memory
-		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
-		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);
-		
-		NotesTimeDateStruct retTimeDate = NotesTimeDateStruct.newInstance();
-		Memory retTimeDateMem = new Memory(retTimeDate.size());
-		retTimeDate = NotesTimeDateStruct.newInstance(retTimeDateMem);
-		
-		short result = NotesNativeAPI.get().ConvertTextToTIMEDATE(null, null, dateTimeStrLMBCSPtr, NotesConstants.MAXALPHATIMEDATE, retTimeDate);
-		NotesErrorUtils.checkResult(result);
-		return new NotesTimeDate(retTimeDate);
+	public static Calendar innardsToCalendar(int[] innards) {
+		return InnardsConverter.decodeInnards(innards);
 	}
 
 }

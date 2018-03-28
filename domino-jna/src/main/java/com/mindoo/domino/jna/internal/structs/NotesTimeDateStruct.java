@@ -174,7 +174,7 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 	 * @return calendar or null if data is invalid
 	 */
 	public Calendar toCalendar() {
-		return NotesDateTimeUtils.innardsToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), this.Innards);
+		return NotesDateTimeUtils.innardsToCalendar(this.Innards);
 	}
 	
 	/**
@@ -283,7 +283,7 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 	 * @param seconds positive or negative value or 0 for no change
 	 */
 	public void adjust(int year, int month, int day, int hours, int minutes, int seconds) {
-		Calendar cal = NotesDateTimeUtils.innardsToCalendar(NotesDateTimeUtils.isDaylightTime(), NotesDateTimeUtils.getGMTOffset(), this.Innards);
+		Calendar cal = NotesDateTimeUtils.innardsToCalendar(this.Innards);
 		if (cal!=null) {
 			boolean modified = false;
 			

@@ -184,7 +184,7 @@ public interface NotesCallbacks {
 		short invoke(Pointer pCDField, short phase, short error, long hErrorText, short wErrorTextSize, Pointer ctx);
 	}
 	
-	interface LSCOMPILERERRORPROC extends Callback {
+	interface LSCompilerErrorProc extends Callback {
 		short invoke(Pointer pInfo, Pointer pCtx);
 	}
 

@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-indexer-sqlite</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.9.18-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA Add-on for data indexing with SQLite</name>
@@ -100,9 +100,6 @@
 							</execution>
 						</executions>
 					</plugin>
-					<!-- <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-javadoc-plugin</artifactId> 
-						<version>2.9.1</version> <executions> <execution> <id>attach-javadocs</id> 
-						<goals> <goal>jar</goal> </goals> </execution> </executions> </plugin> -->
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
@@ -147,12 +144,12 @@
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
-			<version>0.9.16-SNAPSHOT</version>
+			<version>0.9.18-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna-indexer-sql</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.9.18-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>

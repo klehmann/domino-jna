@@ -5,11 +5,15 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
+import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.IItemValueTableData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollectionStats;
 import com.mindoo.domino.jna.NotesIDTable;
@@ -20,15 +24,12 @@ import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
-import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
-import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 /**
@@ -108,8 +109,6 @@ public class NotesLookupResultBufferDecoder {
 
 			List<NotesViewEntryData> viewEntries = new ArrayList<NotesViewEntryData>();
 			
-            final int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-            final boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
 			final boolean decodeAllValues = true;
 
 			for (int i=0; i<numEntriesReturned; i++) {
@@ -205,7 +204,7 @@ public class NotesLookupResultBufferDecoder {
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemValueTablePtr = bufferPtr.share(bufferPos);
-					ItemValueTableData itemTableData = decodeItemValueTable(itemValueTablePtr, gmtOffset, useDayLight,
+					ItemValueTableDataImpl itemTableData = (ItemValueTableDataImpl) decodeItemValueTable(itemValueTablePtr,
 							convertStringsLazily, decodeAllValues);
 					
 					//move to the end of the buffer
@@ -223,7 +222,7 @@ public class NotesLookupResultBufferDecoder {
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemTablePtr = bufferPtr.share(bufferPos);
-					ItemTableData itemTableData = decodeItemTable(itemTablePtr, gmtOffset, useDayLight, convertStringsLazily,
+					ItemTableDataImpl itemTableData = (ItemTableDataImpl) decodeItemTable(itemTablePtr, convertStringsLazily,
 							decodeAllValues);
 					
 					//move to the end of the buffer
@@ -255,16 +254,31 @@ public class NotesLookupResultBufferDecoder {
 	}
 
 	/**
-	 * Decodes an ITEM_VALUE_TABLE structure, which contains an ordered list of item values
+	 * Produces an ITEM_TABLE by decoding an ITEM_VALUE_TABLE structure, which contains an ordered list of item values,
+	 * and adding an array of column names
 	 * 
+	 * @param columnItemNames column item names
 	 * @param bufferPtr pointer to a buffer
-	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
-	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return item value table data
 	 */
-	public static ItemValueTableData decodeItemValueTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight,
+	public static IItemTableData decodeItemValueTableWithColumnNames(String[] columnItemNames,
+			Pointer bufferPtr, boolean convertStringsLazily, boolean decodeAllValues) {
+		ItemValueTableDataImpl valueTable = (ItemValueTableDataImpl) decodeItemValueTable(bufferPtr, convertStringsLazily, decodeAllValues);
+		IItemTableData itemTableData = new ItemTableDataImpl(columnItemNames, valueTable);
+		return itemTableData;
+	}
+	
+	/**
+	 * Decodes an ITEM_VALUE_TABLE structure, which contains an ordered list of item values
+	 * 
+	 * @param bufferPtr pointer to a buffer
+	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param decodeAllValues true to decode all values in the buffer
+	 * @return item value table data
+	 */
+	public static IItemValueTableData decodeItemValueTable(Pointer bufferPtr,
 			boolean convertStringsLazily, boolean decodeAllValues) {
 		int bufferPos = 0;
 		
@@ -300,12 +314,12 @@ public class NotesLookupResultBufferDecoder {
 			bufferPos += 2;
 		}
 
-		ItemValueTableData data = new ItemValueTableData(gmtOffset, useDayLight, convertStringsLazily);
+		ItemValueTableDataImpl data = new ItemValueTableDataImpl(convertStringsLazily);
 		data.m_totalBufferLength = totalBufferLength;
 		data.m_itemsCount = itemsCount;
 
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths, data,
+		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths, data,
 				convertStringsLazily, decodeAllValues);
 
 		return data;
@@ -315,16 +329,14 @@ public class NotesLookupResultBufferDecoder {
 	 * This utility method extracts the item values from the buffer
 	 * 
 	 * @param bufferPtr buffer pointer
-	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
-	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param itemsCount number of items in the buffer
 	 * @param itemValueLengths lengths of the item values
 	 * @param retData data object to populate
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param decodeAllValues true to decode all values in the buffer
 	 */
-	private static void populateItemValueTableData(Pointer bufferPtr, int gmtOffset, boolean useDayLight, int itemsCount,
-			int[] itemNameLengths, int[] itemValueLengths, ItemValueTableData retData, boolean convertStringsLazily,
+	private static void populateItemValueTableData(Pointer bufferPtr, int itemsCount,
+			int[] itemNameLengths, int[] itemValueLengths, ItemValueTableDataImpl retData, boolean convertStringsLazily,
 			boolean decodeAllValues) {
 		int bufferPos = 0;
 		String[] itemNames = new String[itemsCount];
@@ -377,7 +389,7 @@ public class NotesLookupResultBufferDecoder {
 						decodedItemValues[j] = numVal;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
-						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff), useDayLight, gmtOffset);
+						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
 						decodedItemValues[j]  = cal;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
@@ -385,7 +397,7 @@ public class NotesLookupResultBufferDecoder {
 						decodedItemValues[j]  = numberList;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
-						List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j], useDayLight, gmtOffset);
+						List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j]);
 						decodedItemValues[j] = calendarValues;
 					}
 				}
@@ -398,8 +410,8 @@ public class NotesLookupResultBufferDecoder {
 		retData.m_itemDataTypes = itemDataTypes;
 		retData.m_itemValueLengthsInBytes = itemValueLengths;
 		
-		if (retData instanceof ItemTableData) {
-			((ItemTableData)retData).m_itemNames = itemNames;
+		if (retData instanceof ItemTableDataImpl) {
+			((ItemTableDataImpl)retData).m_itemNames = itemNames;
 		}
 	}
 
@@ -407,13 +419,11 @@ public class NotesLookupResultBufferDecoder {
 	 * Decodes an ITEM_TABLE structure with item names and item values
 	 * 
 	 * @param bufferPtr pointer to a buffer
-	 * @param gmtOffset GMT offset ({@link NotesDateTimeUtils#getGMTOffset()}) to parse datetime values
-	 * @param useDayLight DST ({@link NotesDateTimeUtils#isDaylightTime()}) to parse datetime values
 	 * @param convertStringsLazily true to delay string conversion until the first use
 	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return data
 	 */
-	public static ItemTableData decodeItemTable(Pointer bufferPtr, int gmtOffset, boolean useDayLight,
+	public static IItemTableData decodeItemTable(Pointer bufferPtr,
 			boolean convertStringsLazily, boolean decodeAllValues) {
 		int bufferPos = 0;
 		NotesItemTableStruct itemTable = NotesItemTableStruct.newInstance(bufferPtr);
@@ -442,12 +452,12 @@ public class NotesLookupResultBufferDecoder {
 			bufferPos += NotesConstants.tableItemSize;
 		}
 		
-		ItemTableData data = new ItemTableData(gmtOffset, useDayLight, convertStringsLazily);
+		ItemTableDataImpl data = new ItemTableDataImpl(convertStringsLazily);
 		data.m_totalBufferLength = itemTable.getLengthAsInt();
 		data.m_itemsCount = itemsCount;
 		
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, gmtOffset, useDayLight, itemsCount, itemNameLengths, itemValueLengths,
+		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths,
 				data, convertStringsLazily, decodeAllValues);
 		
 		return data;
@@ -458,7 +468,7 @@ public class NotesLookupResultBufferDecoder {
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public static class ItemValueTableData {
+	private static class ItemValueTableDataImpl implements IItemValueTableData {
 		protected Pointer[] m_itemValueBufferPointers;
 		protected int[] m_itemValueBufferSizes;
 		protected Object[] m_itemValues;
@@ -466,14 +476,11 @@ public class NotesLookupResultBufferDecoder {
 		protected int m_totalBufferLength;
 		protected int m_itemsCount;
 		protected int[] m_itemValueLengthsInBytes;
-		protected int m_gmtOffset;
-		protected boolean m_isDST;
 		protected boolean m_convertStringsLazily;
 		protected boolean m_freed;
+		private boolean m_preferNotesTimeDates;
 		
-		public ItemValueTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
-			m_gmtOffset = gmtOffset;
-			m_isDST = isDST;
+		public ItemValueTableDataImpl(boolean convertStringsLazily) {
 			m_convertStringsLazily = convertStringsLazily;
 		}
 		
@@ -485,26 +492,24 @@ public class NotesLookupResultBufferDecoder {
 			return m_freed;
 		}
 		
-		/**
-		 * Returns the decoded item value, with the following types:<br>
-		 * <ul>
-		 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
-		 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
-		 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
-		 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-		 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
-		 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
-		 * </ul>
-		 * 
-		 * @param index item index between 0 and {@link #getItemsCount()}
-		 * @return value or null if unknown type
-		 */
+		@Override
+		public void setPreferNotesTimeDates(boolean b) {
+			m_preferNotesTimeDates = b;
+		}
+		
+		@Override
+		public boolean isPreferNotesTimeDates() {
+			return m_preferNotesTimeDates;
+		}
+
+		@Override
 		public Object getItemValue(int index) {
+			int type = getItemDataType(index);
+			
 			if (m_itemValues[index] == null) {
 				if (isFreed())
 					throw new NotesError(0, "Buffer already freed");
 				
-				int type = getItemDataType(index);
 				if (type == NotesItem.TYPE_TEXT) {
 					m_itemValues[index] = ItemDecoder.decodeTextValue(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_convertStringsLazily);
 				}
@@ -517,39 +522,60 @@ public class NotesLookupResultBufferDecoder {
 					m_itemValues[index] = ItemDecoder.decodeNumber(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff), m_isDST, m_gmtOffset);
+					//we always store NotesTimeDate and convert to Calendar if requested by caller
+					m_itemValues[index] = ItemDecoder.decodeTimeDateAsNotesTimeDate(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_NUMBER_RANGE) {
 					m_itemValues[index] = ItemDecoder.decodeNumberList(m_itemValueBufferPointers[index], (int) (m_itemValueBufferSizes[index] & 0xffff));
 				}
 				else if (type == NotesItem.TYPE_TIME_RANGE) {
-					m_itemValues[index] = ItemDecoder.decodeTimeDateList(m_itemValueBufferPointers[index], m_isDST, m_gmtOffset);
+					//we always store a List of NotesTimeDate and convert to Calendar if requested by caller
+					m_itemValues[index] = ItemDecoder.decodeTimeDateListAsNotesTimeDate(m_itemValueBufferPointers[index]);
 				}
 			}
-			return m_itemValues[index];
+			
+			if (type == NotesItem.TYPE_TIME && !isPreferNotesTimeDates()) {
+				if (m_itemValues[index] instanceof NotesTimeDate) {
+					return ((NotesTimeDate)m_itemValues[index]).toCalendar();
+				}
+				else if (m_itemValues[index] instanceof NotesTimeDate[]) {
+					NotesTimeDate[] range = (NotesTimeDate[]) m_itemValues[index];
+					Calendar[] convertedRange = new Calendar[] {range[0].toCalendar(), range[1].toCalendar()};
+					return convertedRange;
+				}
+				else {
+					//should not happen
+					return m_itemValues[index];
+				}
+			}
+			else if (type == NotesItem.TYPE_TIME_RANGE && m_itemValues[index] instanceof List && !isPreferNotesTimeDates()) {
+				List<Object> tdList = (List<Object>) m_itemValues[index];
+				
+				List<Object> calList = new ArrayList<Object>(tdList.size());
+				
+				for (int i=0; i<tdList.size(); i++) {
+					if (tdList.get(i) instanceof NotesTimeDate) {
+						calList.add(((NotesTimeDate) tdList.get(i)).toCalendar());
+					}
+					else if (tdList.get(i) instanceof NotesTimeDate[]) {
+						NotesTimeDate[] range = (NotesTimeDate[]) tdList.get(i);
+						Calendar[] convertedRange = new Calendar[] {range[0].toCalendar(), range[1].toCalendar()};
+						calList.add(convertedRange);
+					}
+					else {
+						//should not happen
+						calList.add(tdList.get(i));
+					}
+				}
+				
+				return calList;
+			}
+			else
+				return m_itemValues[index];
 		}
 		
-		/**
-		 * Returns the data type of an item value by its index, e.g. {@link NotesItem#TYPE_TEXT},
-		 * {@link NotesItem#TYPE_TEXT_LIST}, {@link NotesItem#TYPE_NUMBER},
-		 * {@link NotesItem#TYPE_NUMBER_RANGE}
-		 * 
-		 * @param index item index between 0 and {@link #getItemsCount()}
-		 * @return data type
-		 */
+		@Override
 		public int getItemDataType(int index) {
-			return m_itemDataTypes[index];
-		}
-		
-		/**
-		 * Returns the data types of an item values, e.g. {@link NotesItem#TYPE_TEXT},
-		 * {@link NotesItem#TYPE_TEXT_LIST}, {@link NotesItem#TYPE_NUMBER},
-		 * {@link NotesItem#TYPE_NUMBER_RANGE}
-		 * 
-		 * @param index item index between 0 and {@link #getItemsCount()}
-		 * @return data type
-		 */
-		public int getItemDataTypes(int index) {
 			return m_itemDataTypes[index];
 		}
 		
@@ -562,11 +588,7 @@ public class NotesLookupResultBufferDecoder {
 			return m_totalBufferLength;
 		}
 		
-		/**
-		 * Returns the number of decoded items
-		 * 
-		 * @return number
-		 */
+		@Override
 		public int getItemsCount() {
 			return m_itemsCount;
 		}
@@ -588,12 +610,13 @@ public class NotesLookupResultBufferDecoder {
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public static class ItemTableData extends ItemValueTableData {
+	private static class ItemTableDataImpl extends ItemValueTableDataImpl implements IItemTableData {
 		protected String[] m_itemNames;
-		private ItemValueTableData m_wrappedValueTable;
-		
-		public ItemTableData(String[] itemNames, ItemValueTableData valueTable) {
-			super(valueTable.m_gmtOffset, valueTable.m_isDST, valueTable.m_convertStringsLazily);
+		private ItemValueTableDataImpl m_wrappedValueTable;
+		private Map<String,Boolean> m_itemExistence;
+
+		public ItemTableDataImpl(String[] itemNames, ItemValueTableDataImpl valueTable) {
+			super(valueTable.m_convertStringsLazily);
 			
 			m_itemNames = itemNames;
 			
@@ -607,25 +630,42 @@ public class NotesLookupResultBufferDecoder {
 			m_itemValueLengthsInBytes = valueTable.m_itemValueLengthsInBytes;
 		}
 		
-		public ItemTableData(int gmtOffset, boolean isDST, boolean convertStringsLazily) {
-			super(gmtOffset, isDST, convertStringsLazily);
+		public ItemTableDataImpl(boolean convertStringsLazily) {
+			super(convertStringsLazily);
 		}
 		
-		/**
-		 * Returns the names of the decoded items (programmatic column names in case of collection data)
-		 * 
-		 * @return names
-		 */
+		@Override
+		public boolean has(String itemName) {
+			String itemNameLC = itemName.toLowerCase(Locale.ENGLISH);
+			
+			Boolean exists = null;
+			if (m_itemExistence!=null) {
+				exists = m_itemExistence.get(itemNameLC);
+			}
+			if (exists==null) {
+				//hash the result in case we have some really frequent calls for the same item
+				for (String currItem : m_itemNames) {
+					if (currItem.equalsIgnoreCase(itemName)) {
+						exists = Boolean.TRUE;
+						break;
+					}
+				}
+				if (exists==null)
+					exists = Boolean.FALSE;
+				
+				if (m_itemExistence==null)
+					m_itemExistence = new HashMap<String, Boolean>();
+				m_itemExistence.put(itemNameLC, exists);
+			}
+			return exists;
+		}
+		
+		@Override
 		public String[] getItemNames() {
 			return m_itemNames;
 		}
 		
-		/**
-		 * Returns a single value by its programmatic column name
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @return value or null
-		 */
+		@Override
 		public Object get(String itemName) {
 			if (m_wrappedValueTable!=null && m_wrappedValueTable.isFreed()) {
 				throw new NotesError(0, "Buffer already freed");
@@ -656,13 +696,7 @@ public class NotesLookupResultBufferDecoder {
 			return null;
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to a string
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if value is empty or is not a string
-		 * @return string value or null
-		 */
+		@Override
 		public String getAsString(String itemName, String defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof String) {
@@ -680,45 +714,23 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 
-		/**
-		 * Convenience function that converts a summary value to an abbreviated name
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @return name or null
-		 */
+		@Override
 		public String getAsNameAbbreviated(String itemName) {
 			return getAsNameAbbreviated(itemName, null);
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to an abbreviated name
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue value to be used of item not found
-		 * @return name or default value
-		 */
+		@Override
 		public String getAsNameAbbreviated(String itemName, String defaultValue) {
 			String nameStr = getAsString(itemName, null);
 			return nameStr==null ? defaultValue : NotesNamingUtils.toAbbreviatedName(nameStr);
 		}
 
-		/**
-		 * Convenience function that converts a summary value to a list of abbreviated names
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @return names or null
-		 */
+		@Override
 		public List<String> getAsNamesListAbbreviated(String itemName) {
 			return getAsNamesListAbbreviated(itemName, null);
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to a list of abbreviated names
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a string or string list
-		 * @return names or default value if not found
-		 */
+		@Override
 		public List<String> getAsNamesListAbbreviated(String itemName, List<String> defaultValue) {
 			List<String> strList = getAsStringList(itemName, null);
 			if (strList!=null) {
@@ -732,13 +744,7 @@ public class NotesLookupResultBufferDecoder {
 				return defaultValue;
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to a string list
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a string or string list
-		 * @return string list value or null
-		 */
+		@Override
 		public List<String> getAsStringList(String itemName, List<String> defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof String) {
@@ -771,54 +777,64 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to a {@link Calendar}
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a Calendar
-		 * @return calendar value or null
-		 */
-		public Calendar getAsCalendar(String itemName, Calendar defaultValue) {
-			Object val = get(itemName);
-			if (val instanceof Calendar) {
-				return (Calendar) val;
+		@Override
+		public NotesTimeDate getAsTimeDate(String itemName, NotesTimeDate defaultValue) {
+			boolean oldPrefTimeDate = isPreferNotesTimeDates();
+			//prevent automatic conversion to Calendar
+			setPreferNotesTimeDates(true);
+			Object val;
+			try {
+				val = get(itemName);
+			}
+			finally {
+				setPreferNotesTimeDates(oldPrefTimeDate);
+			}
+			if (val instanceof NotesTimeDate) {
+				return (NotesTimeDate) val;
 			}
 			else if (val instanceof List) {
 				List<?> valAsList = (List<?>) val;
 				if (!valAsList.isEmpty()) {
 					Object firstVal = valAsList.get(0);
-					if (firstVal instanceof Calendar) {
-						return (Calendar) firstVal;
+					if (firstVal instanceof NotesTimeDate) {
+						return (NotesTimeDate) firstVal;
 					}
 				}
 			}
 			return defaultValue;
 		}
-
-		/**
-		 * Convenience function that converts a summary value to a {@link Calendar} list
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
-		 * @return calendar list value or null
-		 */
-		public List<Calendar> getAsCalendarList(String itemName, List<Calendar> defaultValue) {
-			Object val = get(itemName);
-			if (val instanceof Calendar) {
-				return Arrays.asList((Calendar) val);
+		
+		@Override
+		public List<NotesTimeDate> getAsTimeDateList(String itemName, List<NotesTimeDate> defaultValue) {
+			boolean oldPrefTimeDate = isPreferNotesTimeDates();
+			//prevent automatic conversion to Calendar
+			setPreferNotesTimeDates(true);
+			Object val;
+			try {
+				val = get(itemName);
+			}
+			finally {
+				setPreferNotesTimeDates(oldPrefTimeDate);
+			}
+			if (val instanceof NotesTimeDate) {
+				return Arrays.asList((NotesTimeDate) val);
 			}
 			else if (val instanceof List) {
 				List<?> valAsList = (List<?>) val;
-				boolean correctType=true;
+				boolean supportedType=true;
+				
 				for (int i=0; i<valAsList.size(); i++) {
-					if (!(valAsList.get(i) instanceof Calendar)) {
-						correctType=false;
+					if (valAsList.get(i) instanceof NotesTimeDate) {
+						//ok
+					}
+					else {
+						supportedType = false;
 						break;
 					}
 				}
 				
-				if (correctType) {
-					return (List<Calendar>) valAsList;
+				if (supportedType) {
+					return (List<NotesTimeDate>) valAsList;
 				}
 				else {
 					return defaultValue;
@@ -827,13 +843,82 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 		
-		/**
-		 * Convenience function that converts a summary value to a double
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
-		 * @return double
-		 */
+		@Override
+		public Calendar getAsCalendar(String itemName, Calendar defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Calendar) {
+				return (Calendar) val;
+			}
+			else if (val instanceof NotesTimeDate) {
+				return ((NotesTimeDate) val).toCalendar();
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				if (!valAsList.isEmpty()) {
+					Object firstVal = valAsList.get(0);
+					if (firstVal instanceof Calendar) {
+						return (Calendar) firstVal;
+					}
+					else if (firstVal instanceof NotesTimeDate) {
+						return ((NotesTimeDate) firstVal).toCalendar();
+					}
+				}
+			}
+			return defaultValue;
+		}
+
+		@Override
+		public List<Calendar> getAsCalendarList(String itemName, List<Calendar> defaultValue) {
+			Object val = get(itemName);
+			if (val instanceof Calendar) {
+				return Arrays.asList((Calendar) val);
+			}
+			else if (val instanceof NotesTimeDate) {
+				return Arrays.asList(((NotesTimeDate) val).toCalendar());
+			}
+			else if (val instanceof List) {
+				List<?> valAsList = (List<?>) val;
+				boolean supportedType=true;
+				boolean conversionRequired=false;
+				
+				for (int i=0; i<valAsList.size(); i++) {
+					if (valAsList.get(i) instanceof Calendar) {
+						//ok
+					}
+					else if (valAsList.get(i) instanceof NotesTimeDate) {
+						conversionRequired = true;
+					}
+					else {
+						supportedType = false;
+						break;
+					}
+				}
+				
+				if (supportedType) {
+					if (conversionRequired) {
+						List<Calendar> calList = new ArrayList<Calendar>(valAsList.size());
+						for (int i=0; i<valAsList.size(); i++) {
+							if (valAsList.get(i) instanceof Calendar) {
+								calList.add((Calendar) valAsList.get(i));
+							}
+							else if (valAsList.get(i) instanceof NotesTimeDate) {
+								calList.add(((NotesTimeDate) valAsList.get(i)).toCalendar());
+							}
+						}
+						return calList;
+					}
+					else {
+						return (List<Calendar>) valAsList;
+					}
+				}
+				else {
+					return defaultValue;
+				}
+			}
+			return defaultValue;
+		}
+		
+		@Override
 		public Double getAsDouble(String itemName, Double defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof Number) {
@@ -851,13 +936,7 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 
-		/**
-		 * Convenience function that converts a summary value to a double
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
-		 * @return integer
-		 */
+		@Override
 		public Integer getAsInteger(String itemName, Integer defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof Number) {
@@ -875,13 +954,7 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 
-		/**
-		 * Convenience function that converts a summary value to a double list
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
-		 * @return double list
-		 */
+		@Override
 		public List<Double> getAsDoubleList(String itemName, List<Double> defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof Number) {
@@ -925,13 +998,7 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 
-		/**
-		 * Convenience function that converts a summary value to a integer list
-		 * 
-		 * @param itemName item name, case insensitive
-		 * @param defaultValue default value if column is empty or is not a number
-		 * @return integer list
-		 */
+		@Override
 		public List<Integer> getAsIntegerList(String itemName, List<Integer> defaultValue) {
 			Object val = get(itemName);
 			if (val instanceof Number) {
@@ -975,21 +1042,12 @@ public class NotesLookupResultBufferDecoder {
 			return defaultValue;
 		}
 
-		/**
-		 * Converts the values to a Java {@link Map}
-		 * 
-		 * @return data as map
-		 */
+		@Override
 		public Map<String,Object> asMap() {
 			return asMap(true);
 		}
 		
-		/**
-		 * Converts the values to a Java {@link Map}
-		 * 
-		 * @param decodeLMBCS true to convert {@link LMBCSString} objects and lists to Java Strings
-		 * @return data as map
-		 */
+		@Override
 		public Map<String,Object> asMap(boolean decodeLMBCS) {
 			Map<String,Object> data = new CaseInsensitiveMap<String, Object>();
 			int itemCount = getItemsCount();
@@ -1004,25 +1062,36 @@ public class NotesLookupResultBufferDecoder {
 						data.put(m_itemNames[i], val);
 					}
 				}
+				else if(val instanceof NotesTimeDate) {
+					data.put(m_itemNames[i], ((NotesTimeDate)val).toCalendar());
+				}
 				else if (val instanceof List) {
 					if (decodeLMBCS) {
-						//check for LMBCS strings
+						//check for LMBCS strings and NotesTimeDate
 						List valAsList = (List) val;
 						boolean hasLMBCS = false;
+						boolean hasTimeDate = false;
 						
 						for (int j=0; j<valAsList.size(); j++) {
 							if (valAsList.get(j) instanceof LMBCSString) {
 								hasLMBCS = true;
 								break;
 							}
+							else if (valAsList.get(j) instanceof NotesTimeDate) {
+								hasTimeDate = true;
+								break;
+							}
 						}
 						
-						if (hasLMBCS) {
+						if (hasLMBCS || hasTimeDate) {
 							List<Object> convList = new ArrayList<Object>(valAsList.size());
 							for (int j=0; j<valAsList.size(); j++) {
 								Object currObj = valAsList.get(j);
 								if (currObj instanceof LMBCSString) {
 									convList.add(((LMBCSString)currObj).getValue());
+								}
+								else if (currObj instanceof NotesTimeDate) {
+									convList.add(((NotesTimeDate)currObj).toCalendar());
 								}
 								else {
 									convList.add(currObj);

@@ -90,6 +90,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	/**
 	 * Initializes the Domino API
+	 * 
+	 * @param mode JNA mode, either {@link Mode#Direct} or {@link Mode#Classic}
 	 */
 	public static synchronized void initialize(final Mode mode) {
 		if (m_instanceWithoutCrashLogging==null && m_initError==null) {

@@ -1283,7 +1283,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Note: You program is responsible for freeing up the returned id table handle.
 	 * 
 	 * @param noteClassMaskEnum the appropriate {@link NoteClass} mask for the documents you wish to select. Symbols can be OR'ed to obtain the desired Note classes in the resulting ID Table.  
-	 * @param since A TIMEDATE structure containing the starting date used when selecting notes to be added to the ID Table built by this function. To include ALL notes (including those deleted during the time span) of a given note class, use {@link NotesDateTimeUtils#setWildcard(NotesTimeDate)}.  To include ALL notes of a given note class, but excluding those notes deleted during the time span, use {@link NotesDateTimeUtils#setMinimum(NotesTimeDate)}.
+	 * @param since A TIMEDATE structure containing the starting date used when selecting notes to be added to the ID Table built by this function. To include ALL notes (including those deleted during the time span) of a given note class, use {@link NotesTimeDate#setWildcard()}.  To include ALL notes of a given note class, but excluding those notes deleted during the time span, use {@link NotesTimeDate#setMinimum()}.
 	 * @param retUntil A pointer to a {@link NotesTimeDate} structure into which the ending time of this search will be returned.  This can subsequently be used as the starting time in a later search.
 	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
 	 */
@@ -1296,12 +1296,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (retUntil==null)
 			retUntil = new NotesTimeDate();
 		
-		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct sinceStruct = NotesTimeDateStruct.newInstance(since.getInnards());
 		NotesTimeDateStruct.ByValue sinceStructByVal = NotesTimeDateStruct.ByValue.newInstance();
 		sinceStructByVal.Innards[0] = sinceStruct.Innards[0];
 		sinceStructByVal.Innards[1] = sinceStruct.Innards[1];
 		sinceStructByVal.write();
-		NotesTimeDateStruct retUntilStruct = retUntil.getAdapter(NotesTimeDateStruct.class);
+		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance(retUntil.getInnards());
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
@@ -1838,9 +1838,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public Calendar getFTLastIndexTime() {
 		checkHandle();
 		
-        int gmtOffset = NotesDateTimeUtils.getGMTOffset();
-        boolean useDayLight = NotesDateTimeUtils.isDaylightTime();
-
 		if (PlatformUtils.is64Bit()) {
 			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
 			short result = NotesNativeAPI64.get().FTGetLastIndexTime(m_hDB64, retTime);
@@ -1851,7 +1848,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retTime.read();
 			
 			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
+			return NotesDateTimeUtils.timeDateToCalendar(retTimeWrap);
 		}
 		else {
 			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
@@ -1863,7 +1860,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			retTime.read();
 			
 			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
-			return NotesDateTimeUtils.timeDateToCalendar(useDayLight, gmtOffset, retTimeWrap);
+			return NotesDateTimeUtils.timeDateToCalendar(retTimeWrap);
 		}
 	}
 
@@ -3160,7 +3157,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NotesError(0, "Size of sinceSeqNum array does not match note ids array ("+sinceSeqNum.length+"!="+noteIds.length+")");
 		}
 		
-		final NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : folderSinceTime.getAdapter(NotesTimeDateStruct.class);
+		final NotesTimeDateStruct folderSinceTimeStruct = folderSinceTime==null ? null : NotesTimeDateStruct.newInstance(folderSinceTime.getInnards());
 		
 		final Memory arrNoteIdsMem = new Memory(4 * noteIds.length);
 		for (int i=0; i<noteIds.length; i++) {
