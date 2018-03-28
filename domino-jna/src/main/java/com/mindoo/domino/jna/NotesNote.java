@@ -493,14 +493,19 @@ public class NotesNote implements IRecyclableNotesObject {
 	
 	/**
 	 * Examines the items in the note and determines if they are correctly formed.
+	 * 
+	 * @throws NotesError if items contain errors like the overall lengths does not match the data type ({@link INotesErrorConstants#ERR_INVALID_ITEMLEN}) or an item's type is not recognized ({@link INotesErrorConstants#ERR_INVALID_ITEMTYPE})
 	 */
 	public void check() {
 		checkHandle();
+
+		short result;
 		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteCheck(getHandle64());
+			result = NotesNativeAPI64.get().NSFNoteCheck(getHandle64());
 		} else {
-			NotesNativeAPI32.get().NSFNoteCheck(getHandle32());
+			result = NotesNativeAPI32.get().NSFNoteCheck(getHandle32());
 		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
