@@ -368,7 +368,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	/**
 	 * Evaluates the formula on a note. Provides extended information.
 	 * 
-	 * @param note note
+	 * @param note note to be used as additional variables available to the formula or null
 	 * @return formula computation result with flags
 	 */
 	public FormulaExecutionResult evaluateExt(NotesNote note) {
@@ -387,7 +387,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
 			
-			short result = NotesNativeAPI64.get().NSFComputeEvaluate(m_hCompute64, note.getHandle64(), rethResult, retResultLength,
+			short result = NotesNativeAPI64.get().NSFComputeEvaluate(m_hCompute64, note==null ? 0 : note.getHandle64(), rethResult, retResultLength,
 					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
 			NotesErrorUtils.checkResult(result);
 			
@@ -421,7 +421,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
 
-			short result = NotesNativeAPI32.get().NSFComputeEvaluate(m_hCompute32, note.getHandle32(), rethResult, retResultLength,
+			short result = NotesNativeAPI32.get().NSFComputeEvaluate(m_hCompute32, note==null ? 0 : note.getHandle32(), rethResult, retResultLength,
 					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
 			NotesErrorUtils.checkResult(result);
 			
