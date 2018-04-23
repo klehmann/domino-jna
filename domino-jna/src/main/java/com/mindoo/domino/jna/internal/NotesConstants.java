@@ -767,6 +767,11 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** This item is a Names field. Indicated by the NAMES (distinguished names)
 	 * flag. Item is TYPE_TEXT or TYPE_TEXT_LIST. */
 	public static final short ITEM_NAMES = 0x0040;
+
+	/**
+	 * Item will not be written to disk
+	 */
+	public static final short ITEM_NOUPDATE = 0x0080;
 	
 	/** This item is a placeholder field in a form note. Item is TYPE_INVALID_OR_UNKNOWN. */
 	public static final short ITEM_PLACEHOLDER = 0x0100;

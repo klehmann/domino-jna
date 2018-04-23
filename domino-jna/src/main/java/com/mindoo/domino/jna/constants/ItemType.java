@@ -35,6 +35,11 @@ public enum ItemType {
 	 * Item is TYPE_TEXT or TYPE_TEXT_LIST. */
 	NAMES(0x0040),
 	
+	/**
+	 * Item will not be written to disk
+	 */
+	NOUPDATE(0x0080),
+	
 	/** This item is a placeholder field in a form note. Item is TYPE_INVALID_OR_UNKNOWN. */
 	PLACEHOLDER(0x100),
 	

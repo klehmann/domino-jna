@@ -343,6 +343,12 @@ public class NotesItem {
 		return (m_itemFlags & NotesConstants.ITEM_SUMMARY) == NotesConstants.ITEM_SUMMARY;
 	}
 	
+	public boolean isSaveToDisk() {
+		loadItemNameAndFlags();
+		
+		return (m_itemFlags & NotesConstants.ITEM_NOUPDATE) == 0;
+	}
+	
 	public void setSummary(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -356,6 +362,25 @@ public class NotesItem {
 			if (isSummary()) {
 				int flagsAsInt = m_itemFlags & 0xffff;
 				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_SUMMARY;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+			}
+		}
+	}
+	
+	public void setSaveToDisk(boolean flag) {
+		loadItemNameAndFlags();
+		if (flag) {
+			if (!isSaveToDisk()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_NOUPDATE;
+				setItemFlags((short) (newFlagsAsInt & 0xffff));
+				
+			}
+		}
+		else {
+			if (isSaveToDisk()) {
+				int flagsAsInt = m_itemFlags & 0xffff;
+				int newFlagsAsInt = flagsAsInt | NotesConstants.ITEM_NOUPDATE;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
 			}
 		}
