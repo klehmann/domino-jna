@@ -2744,8 +2744,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * 
 	 * @param itemName item name
 	 * @param flags item flags, e.g. {@link ItemType#SUMMARY}
-	 * @param value item value, see method comment for allowed types
-	 * @return created item
+	 * @param value item value, see method comment for allowed types; use null to just remove the old item value
+	 * @return created item or null if value was null
 	 */
 	public NotesItem replaceItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
 		if (!hasSupportedItemObjectType(value)) {
@@ -2755,12 +2755,18 @@ public class NotesNote implements IRecyclableNotesObject {
 		while (hasItem(itemName)) {
 			removeItem(itemName);
 		}
-		return appendItemValue(itemName, flags, value);
+		if (value!=null)
+			return appendItemValue(itemName, flags, value);
+		else
+			return null;
 	}
 	
 	@SuppressWarnings("rawtypes")
 	private boolean hasSupportedItemObjectType(Object value) {
-		if (value instanceof String) {
+		if (value==null) {
+			return true;
+		}
+		else if (value instanceof String) {
 			return true;
 		}
 		else if (value instanceof Number) {
