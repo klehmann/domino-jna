@@ -1,9 +1,11 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -13,6 +15,31 @@ import java.util.Set;
  */
 public class SetUtil {
 
+	/**
+	 * Intersects the specified sets and returns a set that contains elements that
+	 * exist in all of the sets.
+	 * 
+	 * @param ids sets
+	 * @return intersection of sets
+	 */
+	public static Set<Integer> and(Collection<Set<Integer>> ids) {
+		if (ids==null || ids.size()==0) {
+			return Collections.emptySet();
+		}
+		else if (ids.size()==1) {
+			return new HashSet<Integer>(ids.iterator().next());
+		}
+		else {
+			Iterator<Set<Integer>> idSetsIt = ids.iterator();
+			
+			Set<Integer> idsOfAll = new HashSet<Integer>(idSetsIt.next());
+			while (idSetsIt.hasNext()) {
+				idsOfAll.retainAll(idSetsIt.next());
+			}
+			return idsOfAll;
+		}
+	}
+	
 	/**
 	 * Intersects the specified sets and returns a set that contains elements that
 	 * exist in all of the sets.
@@ -36,6 +63,22 @@ public class SetUtil {
 		}
 	}
 
+	/**
+	 * Merges the specified sets and returns a set with elements from all sets
+	 * 
+	 * @param ids ids to merge
+	 * @return merge result
+	 */
+	public static Set<Integer> or(Collection<Set<Integer>> ids) {
+		Set<Integer> allIds = new HashSet<Integer>();
+		if (ids!=null) {
+			for (Set<Integer> currSet : ids) {
+				allIds.addAll(currSet);
+			}
+		}
+		return allIds;
+	}
+	
 	/**
 	 * Merges the specified sets and returns a set with elements from all sets
 	 * 
