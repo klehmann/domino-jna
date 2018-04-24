@@ -262,6 +262,15 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Method to check whether a note has already been saved
+	 * 
+	 * @return true if yet unsaved
+	 */
+	public boolean isNewNote() {
+		return getNoteId() == 0;
+	}
+	
+	/**
 	 * Returns the note class of the note
 	 * 
 	 * @return note class
@@ -418,6 +427,24 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesOriginatorIdStruct oidStruct = getOIDStruct();
 		NotesTimeDateStruct creationDateStruct = oidStruct.Note;
 		return creationDateStruct.toCalendar();
+	}
+	
+	/**
+	 * Returns the creation date of this note
+	 * 
+	 * @return creation date as {@link NotesTimeDate}
+	 */
+	public NotesTimeDate getCreationDateAsTimeDate() {
+		checkHandle();
+		
+		NotesTimeDate creationDate = getItemValueAsTimeDate("$CREATED");
+		if (creationDate!=null) {
+			return creationDate;
+		}
+		
+		NotesOriginatorIdStruct oidStruct = getOIDStruct();
+		NotesTimeDateStruct creationDateStruct = oidStruct.Note;
+		return new NotesTimeDate(creationDateStruct.Innards);
 	}
 	
 	/**
@@ -5438,4 +5465,219 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * if the document is locked, the method returns a list of current lock holders. If the
+	 * document is not locked, we return an empty list.
+	 * 
+	 * @return lock holders or empty list
+	 */
+	public List<String> getLockHolders() {
+		checkHandle();
+
+		if (isNewNote()) {
+			return Collections.emptyList();
+		}
+		
+		int lockFlags = NotesConstants.NOTE_LOCK_STATUS;
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethLockers = new LongByReference();
+			IntByReference retLength = new IntByReference();
+			
+			result = NotesNativeAPI64.get().NSFDbNoteLock(getParent().getHandle64(), getNoteId(), lockFlags,
+					null, rethLockers, retLength);
+			NotesErrorUtils.checkResult(result);
+
+			long rethLockersAsLong = rethLockers.getValue();
+			if (rethLockersAsLong==0 || retLength.getValue()==0)
+				return Collections.emptyList();
+			
+			Pointer retLockersPtr = Mem64.OSLockObject(rethLockersAsLong);
+			try {
+				String retLockHoldersConc = NotesStringUtils.fromLMBCS(retLockersPtr, retLength.getValue());
+				if (StringUtil.isEmpty(retLockHoldersConc))
+					return Collections.emptyList();
+				
+				String[] retLockHoldersArr = retLockHoldersConc.split(";");
+				return Arrays.asList(retLockHoldersArr);
+			}
+			finally {
+				Mem64.OSUnlockObject(rethLockersAsLong);
+			}
+		}
+		else {
+			IntByReference rethLockers = new IntByReference();
+			IntByReference retLength = new IntByReference();
+			
+			result = NotesNativeAPI32.get().NSFDbNoteLock(getParent().getHandle32(), getNoteId(), lockFlags,
+					null, rethLockers, retLength);
+			NotesErrorUtils.checkResult(result);
+
+			int rethLockersAsInt = rethLockers.getValue();
+			if (rethLockersAsInt==0 || retLength.getValue()==0)
+				return Collections.emptyList();
+			
+			Pointer retLockersPtr = Mem32.OSLockObject(rethLockersAsInt);
+			try {
+				String retLockHoldersConc = NotesStringUtils.fromLMBCS(retLockersPtr, retLength.getValue());
+				if (StringUtil.isEmpty(retLockHoldersConc))
+					return Collections.emptyList();
+				
+				String[] retLockHoldersArr = retLockHoldersConc.split(";");
+				return Arrays.asList(retLockHoldersArr);
+			}
+			finally {
+				Mem32.OSUnlockObject(rethLockersAsInt);
+			}
+		}
+	}
+
+	/** Document locking mode */
+	public static enum LockMode {
+		/** Hard lock can only be set if Master Locking Server is available */
+		Hard,
+		/** Try to create a hard lock; if Master Locking Server is not available, use a provisional lock */
+		HardOrProvisional,
+		/** Provisional lock can be set if Master Locking Server is not available */
+		Provisional
+	}
+
+	/**
+	 * This function adds an "$Writers" field to a note which contains a list of "writers"
+	 * who will be able to update the note.<br>
+	 * <br>
+	 * Any user will be able to open the note, but only the members contained in the "$Writers"
+	 * field are allowed to update the note.<br>
+	 * <br>
+	 * This function will only succeed if the database option "Allow document locking" is set.<br>
+	 * <br>
+	 * Please refer to the Domino documentation for a full description of document locking.
+	 * 
+	 * @param lockHolder new lock holder
+	 * @param mode lock mode
+	 * @return true if successful, false if already locked
+	 */
+	public boolean lock(String lockHolder, LockMode mode) {
+		return lock(Arrays.asList(lockHolder), mode);
+	}
+	
+	/**
+	 * This function adds an "$Writers" field to a note which contains a list of "writers"
+	 * who will be able to update the note.<br>
+	 * <br>
+	 * Any user will be able to open the note, but only the members contained in the "$Writers"
+	 * field are allowed to update the note.<br>
+	 * <br>
+	 * This function will only succeed if the database option "Allow document locking" is set.<br>
+	 * <br>
+	 * Please refer to the Domino documentation for a full description of document locking.
+	 * 
+	 * @param lockHolders new lock holders
+	 * @param mode lock mode
+	 * @return true if successful, false if already locked
+	 */
+	public boolean lock(List<String> lockHolders, LockMode mode) {
+		checkHandle();
+
+		if (isNewNote())
+			throw new NotesError(0, "Note must be saved before locking");
+		
+		int lockFlags = 0;
+		if (mode==LockMode.Hard || mode==LockMode.HardOrProvisional) {
+			lockFlags = NotesConstants.NOTE_LOCK_HARD;
+		}
+		else if (mode==LockMode.Provisional) {
+			lockFlags = NotesConstants.NOTE_LOCK_PROVISIONAL;
+		}
+		else
+			throw new IllegalArgumentException("Missing lock mode");
+		
+		String lockHoldersConc = StringUtil.join(lockHolders, ";");
+		Memory lockHoldersMem = NotesStringUtils.toLMBCS(lockHoldersConc, true);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethLockers = new LongByReference();
+			IntByReference retLength = new IntByReference();
+			
+			result = NotesNativeAPI64.get().NSFDbNoteLock(getParent().getHandle64(), getNoteId(), lockFlags,
+					lockHoldersMem, rethLockers, retLength);
+			
+			if (result==1463) { //Unable to connect to Master Lock Database
+				if (mode==LockMode.HardOrProvisional) {
+					result = NotesNativeAPI64.get().NSFDbNoteLock(getParent().getHandle64(), getNoteId(), NotesConstants.NOTE_LOCK_PROVISIONAL,
+							lockHoldersMem, rethLockers, retLength);
+				}
+			}
+		}
+		else {
+			IntByReference rethLockers = new IntByReference();
+			IntByReference retLength = new IntByReference();
+			
+			result = NotesNativeAPI32.get().NSFDbNoteLock(getParent().getHandle32(), getNoteId(), lockFlags,
+					lockHoldersMem, rethLockers, retLength);
+			
+			if (result==1463) { //Unable to connect to Master Lock Database
+				if (mode==LockMode.HardOrProvisional) {
+					result = NotesNativeAPI32.get().NSFDbNoteLock(getParent().getHandle32(), getNoteId(), NotesConstants.NOTE_LOCK_PROVISIONAL,
+							lockHoldersMem, rethLockers, retLength);
+				}
+			}
+		}
+		if (result == INotesErrorConstants.ERR_NOTE_LOCKED) {
+			return false;
+		}
+		NotesErrorUtils.checkResult(result);
+
+		return true;
+	}
+	
+	/**
+	 * This function removes the lock on a note.<br>
+	 * <br>
+	 * Only the members contained in the "writers" list are allowed to remove a lock,
+	 * with the exception of person(s) designated as capable of removing locks.<br>
+	 * <br>
+	 * Please refer to the Domino documentation for a full description of document locking.#
+	 * 
+	 * @param mode lock mode
+	 */
+	public void unlock(LockMode mode) {
+		checkHandle();
+		
+		if (isNewNote())
+			return;
+		
+		int lockFlags = 0;
+		if (mode==LockMode.Hard || mode==LockMode.HardOrProvisional) {
+			lockFlags = NotesConstants.NOTE_LOCK_HARD;
+		}
+		else if (mode==LockMode.Provisional) {
+			lockFlags = NotesConstants.NOTE_LOCK_PROVISIONAL;
+		}
+		else
+			throw new IllegalArgumentException("Missing lock mode");
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFDbNoteUnlock(getParent().getHandle64(), getNoteId(), lockFlags);
+			
+			if (result==1463) { //Unable to connect to Master Lock Database
+				if (mode==LockMode.HardOrProvisional) {
+					result = NotesNativeAPI64.get().NSFDbNoteUnlock(getParent().getHandle64(), getNoteId(), NotesConstants.NOTE_LOCK_PROVISIONAL);
+				}
+			}
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFDbNoteUnlock(getParent().getHandle32(), getNoteId(), lockFlags);
+			
+			if (result==1463) { //Unable to connect to Master Lock Database
+				if (mode==LockMode.HardOrProvisional) {
+					result = NotesNativeAPI32.get().NSFDbNoteUnlock(getParent().getHandle32(), getNoteId(), NotesConstants.NOTE_LOCK_PROVISIONAL);
+				}
+			}
+		}
+		NotesErrorUtils.checkResult(result);
+	}
 }

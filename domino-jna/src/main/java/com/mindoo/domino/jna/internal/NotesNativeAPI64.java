@@ -366,6 +366,22 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	@Override public native short NSFNoteCheck(
 			long hNote);
 	
+	public native short NSFDbNoteLock(
+			long hDB,
+			int NoteID,
+			int Flags,
+			Memory pLockers,
+			LongByReference rethLockers,
+			IntByReference retLength);
+	
+	public native short NSFDbNoteUnlock(
+			long hDB,
+			int NoteID,
+			int Flags);
+
+	public native short NSFNoteOpenWithLock(long hDB, int NoteID, int LockFlags, int OpenFlags, Memory pLockers,
+			LongByReference rethLockers, IntByReference retLength, LongByReference rethNote);
+	
 	public native short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	public native short IDCreateTable (int alignment, LongByReference rethTable);
 	public native short IDDestroyTable(long hTable);

@@ -4439,6 +4439,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return m_dbMode;
 	}
 	
+	/**
+	 * Indicates whether document locking is enabled for a database.
+	 *  
+	 * @return true if enabled
+	 */
+	public boolean isDocumentLockingEnabled() {
+		return getOption(DatabaseOption.IS_LOCK_DB);
+	}
+	
+	/**
+	 * Indicates whether document locking is enabled for a database.
+	 * 
+	 * @param b true to enable document locking
+	 */
+	public void setDocumentLockingEnabled(boolean b) {
+		setOption(DatabaseOption.IS_LOCK_DB, b);
+	}
+	
 	private static final Pattern[] dbFilenamePatterns = new Pattern[] {
 			//old NSF versions
 			Pattern.compile("^.+\\.ns\\d$", Pattern.CASE_INSENSITIVE),

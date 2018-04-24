@@ -364,6 +364,29 @@ public interface INotesNativeAPI32 extends Library {
 			int hNote
 			);
 
+	public short NSFDbNoteLock(
+			int hDB,
+			int NoteID,
+			int Flags,
+			Memory pLockers,
+			IntByReference rethLockers,
+			IntByReference retLength);
+
+	public short NSFDbNoteUnlock(
+			int hDB,
+			int NoteID,
+			int Flags);
+	
+	public short NSFNoteOpenWithLock(
+			int hDB,
+			int NoteID,
+			int LockFlags,
+			int OpenFlags,
+			Memory pLockers,
+			IntByReference rethLockers,
+			IntByReference retLength,
+			IntByReference rethNote);
+	
 	public short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 
 	public short IDCreateTable (int alignment, IntByReference rethTable);
