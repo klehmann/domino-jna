@@ -6,6 +6,7 @@ import com.mindoo.domino.jna.NotesUserId;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -23,6 +24,7 @@ import lotus.domino.Session;
  * @author Karsten Lehmann
  */
 public class IDUtils {
+	private static final String HASHKEY_EFFECTIVE_USERNAME = "IDUtils.effectiveUsername";
 
 	/**
 	 * Will contact the server and locate a vault for <code>userName</code>.<br>
@@ -400,7 +402,8 @@ public class IDUtils {
 	}
 	
 	/**
-	 * This function returns the Username associated with the workstation's or server's ID where this function is executed.<br>
+	 * This function returns the Username associated with the workstation's or server's
+	 * ID where this function is executed.
 	 * 
 	 * @return username
 	 */
@@ -420,6 +423,29 @@ public class IDUtils {
 		
 		String userName = NotesStringUtils.fromLMBCS(retUserNameMem, userNameLength);
 		return userName;
+	}
+	
+	/**
+	 * Returns the effective username previously set by calling {@link #setEffectiveUsername(String)}.<br>
+	 * <br>
+	 * 
+	 * @return effective username or null if not called yet
+	 */
+	public static String getEffectiveUsername() {
+		return (String) NotesGC.getCustomValue(HASHKEY_EFFECTIVE_USERNAME);
+	}
+	
+	/**
+	 * Stores the effective username for the current {@link NotesGC} execution block by
+	 * calling {@link NotesGC#setCustomValue(String, Object)}.<br>
+	 * <br>
+	 * We added this method to have a uniform way to store this username, which may not be the same
+	 * as {@link #getCurrentUsername()} that returns the ID file owner.
+	 * 
+	 * @param effUsername effective username, either abbreviated or canonical
+	 */
+	public static void setEffectiveUsername(String effUsername) {
+		NotesGC.setCustomValue(HASHKEY_EFFECTIVE_USERNAME, NotesNamingUtils.toCanonicalName(effUsername));
 	}
 	
 	/**
