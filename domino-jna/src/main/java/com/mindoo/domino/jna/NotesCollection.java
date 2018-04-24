@@ -2129,9 +2129,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 				else {
 					boolean convertStringsLazily = true;
+					boolean convertNotesTimeDateToCalendar = false;
+					
 					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 							0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null,
-							convertStringsLazily, null);
+							convertStringsLazily, convertNotesTimeDateToCalendar, null);
 					return viewData;
 				}
 			}
@@ -2162,9 +2164,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 				}
 				else {
 					boolean convertStringsLazily = true;
+					boolean convertNotesTimeDateToCalendar = false;
+					
 					NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 							0, retNumMatches.getValue(), returnMask, retSignalFlags.getValue(), retIndexPos.toPosString(), retSequence.getValue(), null,
-							convertStringsLazily, null);
+							convertStringsLazily, convertNotesTimeDateToCalendar, null);
 					return viewData;
 				}
 			}
@@ -2520,9 +2524,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
+				boolean convertNotesTimeDateToCalendar = false;
+				
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, null, convertStringsLazily, null);
+						indexModifiedSequenceNo, null, convertStringsLazily, convertNotesTimeDateToCalendar, null);
 				return viewData;
 			}
 		}
@@ -2551,10 +2557,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
-
+				boolean convertNotesTimeDateToCalendar = false;
+				
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, null, convertStringsLazily, null);
+						indexModifiedSequenceNo, null, convertStringsLazily, convertNotesTimeDateToCalendar, null);
 				return viewData;
 			}
 		}
@@ -2636,9 +2643,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
+				boolean convertNotesTimeDateToCalendar = false;
+				
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, singleColumnLookupName);
+						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, convertNotesTimeDateToCalendar, singleColumnLookupName);
 				return viewData;
 			}
 		}
@@ -2663,10 +2672,11 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			else {
 				boolean convertStringsLazily = true;
-
+				boolean convertNotesTimeDateToCalendar = false;
+				
 				NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(this, retBuffer.getValue(),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(), returnMask, retSignalFlags.getValue(), null,
-						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, singleColumnLookupName);
+						indexModifiedSequenceNo, retDiffTimeWrap, convertStringsLazily, convertNotesTimeDateToCalendar, singleColumnLookupName);
 				return viewData;
 			}
 		}
@@ -3313,12 +3323,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct.read();
 				
 				final boolean convertStringsLazily = false;
+				final boolean convertNotesTimeDateToCalendar = false;
+				
 				final boolean decodeAllValues = true;
 				
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
 					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable,
-							convertStringsLazily, decodeAllValues);
+							convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 				}
 				
 				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,
@@ -3343,12 +3355,14 @@ public class NotesCollection implements IRecyclableNotesObject {
 				struct.read();
 				
 				final boolean convertStringsLazily = false;
+				final boolean convertNotesTimeDateToCalendar = false;
+				
 				final boolean decodeAllValues = true;
 
 				for (int i=0; i<NotesConstants.PERCENTILE_COUNT; i++) {
 					Pointer ptrItemTable = ptrCollectionData.share(struct.keyOffset[i]);
 					itemValueTables[i] = NotesLookupResultBufferDecoder.decodeItemValueTable(ptrItemTable,
-							convertStringsLazily, decodeAllValues);
+							convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 				}
 				
 				NotesCollectionData data = new NotesCollectionData(struct.docCount, struct.docTotalSize,

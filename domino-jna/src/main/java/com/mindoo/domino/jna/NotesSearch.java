@@ -403,17 +403,19 @@ public class NotesSearch {
 						if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
+								boolean convertNotesTimeDateToCalendar = false;
+								
 								if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 									//flag to just return the column values is used; so the
 									//buffer contains an ITEM_VALUE_TABLE with column values
 									//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 									//pairs
 									//create an ItemTableData by adding the column names to make this invisible to callers
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
 								}
 								else {
 									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
-											convertStringsLazily, false);
+											convertStringsLazily, convertNotesTimeDateToCalendar, false);
 								}
 							}
 						}
@@ -603,17 +605,19 @@ public class NotesSearch {
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
+									boolean convertNotesTimeDateToCalendar = false;
+									
 									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
 									}
 									else {
 										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, 
-												convertStringsLazily, false);
+												convertStringsLazily, convertNotesTimeDateToCalendar, false);
 									}
 								}
 							}
@@ -666,17 +670,19 @@ public class NotesSearch {
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
 								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
+									boolean convertNotesTimeDateToCalendar = false;
+									
 									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
 										//buffer contains an ITEM_VALUE_TABLE with column values
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, false);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
 									}
 									else {
 										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
-												convertStringsLazily, false);
+												convertStringsLazily, convertNotesTimeDateToCalendar, false);
 									}
 								}
 							}

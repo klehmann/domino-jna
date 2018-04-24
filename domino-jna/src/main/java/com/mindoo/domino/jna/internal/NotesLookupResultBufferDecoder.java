@@ -53,14 +53,17 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b32_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, int bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos,
-			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily, String singleColumnLookupName) {
+			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar,
+			String singleColumnLookupName) {
 		return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferHandle, numEntriesSkipped, numEntriesReturned,
-				returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily, singleColumnLookupName);
+				returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily, convertNotesTimeDateToCalendar,
+				singleColumnLookupName);
 	}
 
 	/**
@@ -76,12 +79,13 @@ public class NotesLookupResultBufferDecoder {
 	 * @param indexModifiedSequenceNo index modified sequence no
 	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
 	 * @return collection data
 	 */
 	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime,
-			boolean convertStringsLazily, String singleColumnLookupName) {
+			boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, String singleColumnLookupName) {
 
 		Pointer bufferPtr;
 		if (PlatformUtils.is64Bit()) {
@@ -205,7 +209,7 @@ public class NotesLookupResultBufferDecoder {
 
 					Pointer itemValueTablePtr = bufferPtr.share(bufferPos);
 					ItemValueTableDataImpl itemTableData = (ItemValueTableDataImpl) decodeItemValueTable(itemValueTablePtr,
-							convertStringsLazily, decodeAllValues);
+							convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 					
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
@@ -223,7 +227,7 @@ public class NotesLookupResultBufferDecoder {
 
 					Pointer itemTablePtr = bufferPtr.share(bufferPos);
 					ItemTableDataImpl itemTableData = (ItemTableDataImpl) decodeItemTable(itemTablePtr, convertStringsLazily,
-							decodeAllValues);
+							convertNotesTimeDateToCalendar, decodeAllValues);
 					
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
@@ -260,12 +264,13 @@ public class NotesLookupResultBufferDecoder {
 	 * @param columnItemNames column item names
 	 * @param bufferPtr pointer to a buffer
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return item value table data
 	 */
 	public static IItemTableData decodeItemValueTableWithColumnNames(String[] columnItemNames,
-			Pointer bufferPtr, boolean convertStringsLazily, boolean decodeAllValues) {
-		ItemValueTableDataImpl valueTable = (ItemValueTableDataImpl) decodeItemValueTable(bufferPtr, convertStringsLazily, decodeAllValues);
+			Pointer bufferPtr, boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, boolean decodeAllValues) {
+		ItemValueTableDataImpl valueTable = (ItemValueTableDataImpl) decodeItemValueTable(bufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 		IItemTableData itemTableData = new ItemTableDataImpl(columnItemNames, valueTable);
 		return itemTableData;
 	}
@@ -275,11 +280,12 @@ public class NotesLookupResultBufferDecoder {
 	 * 
 	 * @param bufferPtr pointer to a buffer
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return item value table data
 	 */
 	public static IItemValueTableData decodeItemValueTable(Pointer bufferPtr,
-			boolean convertStringsLazily, boolean decodeAllValues) {
+			boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, boolean decodeAllValues) {
 		int bufferPos = 0;
 		
 		//skip item value table header
@@ -320,7 +326,7 @@ public class NotesLookupResultBufferDecoder {
 
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
 		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths, data,
-				convertStringsLazily, decodeAllValues);
+				convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 
 		return data;
 	}
@@ -333,11 +339,12 @@ public class NotesLookupResultBufferDecoder {
 	 * @param itemValueLengths lengths of the item values
 	 * @param retData data object to populate
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param decodeAllValues true to decode all values in the buffer
 	 */
 	private static void populateItemValueTableData(Pointer bufferPtr, int itemsCount,
 			int[] itemNameLengths, int[] itemValueLengths, ItemValueTableDataImpl retData, boolean convertStringsLazily,
-			boolean decodeAllValues) {
+			boolean convertNotesTimeDateToCalendar, boolean decodeAllValues) {
 		int bufferPos = 0;
 		String[] itemNames = new String[itemsCount];
 		int[] itemDataTypes = new int[itemsCount];
@@ -389,15 +396,27 @@ public class NotesLookupResultBufferDecoder {
 						decodedItemValues[j] = numVal;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_TIME) {
-						Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
-						decodedItemValues[j]  = cal;
+						if (convertNotesTimeDateToCalendar) {
+							Calendar cal = ItemDecoder.decodeTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+							decodedItemValues[j]  = cal;
+						}
+						else {
+							NotesTimeDate td = ItemDecoder.decodeTimeDateAsNotesTimeDate(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
+							decodedItemValues[j]  = td;
+						}
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_NUMBER_RANGE) {
 						List<Object> numberList = ItemDecoder.decodeNumberList(itemValueBufferPointers[j], (int) (itemValueBufferSizes[j] & 0xffff));
 						decodedItemValues[j]  = numberList;
 					}
 					else if (itemDataTypes[j] == NotesItem.TYPE_TIME_RANGE) {
-						List<Object> calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j]);
+						List<Object> calendarValues;
+						if (convertNotesTimeDateToCalendar) {
+							calendarValues = ItemDecoder.decodeTimeDateList(itemValueBufferPointers[j]);
+						}
+						else {
+							calendarValues = ItemDecoder.decodeTimeDateListAsNotesTimeDate(itemValueBufferPointers[j]);
+						}
 						decodedItemValues[j] = calendarValues;
 					}
 				}
@@ -420,11 +439,12 @@ public class NotesLookupResultBufferDecoder {
 	 * 
 	 * @param bufferPtr pointer to a buffer
 	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
 	 * @param decodeAllValues true to decode all values in the buffer
 	 * @return data
 	 */
 	public static IItemTableData decodeItemTable(Pointer bufferPtr,
-			boolean convertStringsLazily, boolean decodeAllValues) {
+			boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, boolean decodeAllValues) {
 		int bufferPos = 0;
 		NotesItemTableStruct itemTable = NotesItemTableStruct.newInstance(bufferPtr);
 		itemTable.read();
@@ -458,7 +478,7 @@ public class NotesLookupResultBufferDecoder {
 		
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
 		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths,
-				data, convertStringsLazily, decodeAllValues);
+				data, convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 		
 		return data;
 	}

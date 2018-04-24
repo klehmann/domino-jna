@@ -43,6 +43,7 @@ public class NotesViewEntryData {
 	private Map<String, Object> m_summaryData;
 	private SoftReference<Map<String, Object>> m_convertedDataRef;
 	private String m_singleColumnLookupName;
+	private boolean m_preferNotesTimeDates;
 	
 	/**
 	 * Creates a new instance
@@ -593,6 +594,26 @@ public class NotesViewEntryData {
 			return false;
 		}
 	}
+
+	/**
+	 * Sets whether methods like {@link #get(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @param b true to prefer NotesTimeDate (false by default)
+	 */
+	public void setPreferNotesTimeDates(boolean b) {
+		m_preferNotesTimeDates = b;
+	}
+	
+	/**
+	 * Returns whether methods like {@link #get(String)} should return {@link NotesTimeDate}
+	 * instead of {@link Calendar}.
+	 * 
+	 * @return true to prefer NotesTimeDate
+	 */
+	public boolean isPreferNotesTimeDates() {
+		return m_preferNotesTimeDates;
+	}
 	
 	/**
 	 * Returns a column value. Only returns data of either {@link ReadMask#SUMMARY} or {@link ReadMask#SUMMARYVALUES}
@@ -604,14 +625,41 @@ public class NotesViewEntryData {
 	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
 	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
 	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
-	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar} or {@link NotesTimeDate} if {@link #setPreferNotesTimeDates(boolean)} has been called</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for datetime lists or Calendar[] values for datetime ranges {@link NotesTimeDate} if {@link #setPreferNotesTimeDates(boolean)} has been called</li>
 	 * </ul>
 	 * 
 	 * @param columnNameOrTitle programatic column name or column title
 	 * @return column value or null
 	 */
 	public Object get(String columnNameOrTitle) {
+		if (isPreferNotesTimeDates()) {
+			return get(columnNameOrTitle, false);
+		}
+		else {
+			return get(columnNameOrTitle, true);
+		}
+	}
+	
+	/**
+	 * Returns a column value. Only returns data of either {@link ReadMask#SUMMARY} or {@link ReadMask#SUMMARYVALUES}
+	 * was used to read the collection data
+	 * <br>
+	 * The following data types are returned for the different column data types:<br>
+	 * <ul>
+	 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar} or {@link NotesTimeDate} if {@link #setPreferNotesTimeDates(boolean)} has been called</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for datetime lists or Calendar[] values for datetime ranges {@link NotesTimeDate} if {@link #setPreferNotesTimeDates(boolean)} has been called</li>
+	 * </ul>
+	 * 
+	 * @param columnNameOrTitle programatic column name or column title
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
+	 * @return column value or null
+	 */
+	private Object get(String columnNameOrTitle, boolean convertNotesTimeDateToCalendar) {
 		Object val = null;
 		
 		String columnNameOrTitleLC = columnNameOrTitle.toLowerCase();
@@ -652,10 +700,20 @@ public class NotesViewEntryData {
 				if (currListValue instanceof LMBCSString) {
 					valAsList.set(i, ((LMBCSString)currListValue).getValue());
 				}
+				else if (val instanceof NotesTimeDate) {
+					if (convertNotesTimeDateToCalendar) {
+						valAsList.set(i, ((NotesTimeDate)val).toCalendar());
+					}
+				}
 			}
 		}
 		else if (val instanceof LMBCSString) {
 			val = ((LMBCSString)val).getValue();
+		}
+		else if (val instanceof NotesTimeDate) {
+			if (convertNotesTimeDateToCalendar) {
+				val = ((NotesTimeDate)val).toCalendar();
+			}
 		}
 		return val;
 	}
@@ -815,21 +873,45 @@ public class NotesViewEntryData {
 	 */
 	public Calendar getAsCalendar(String columnName, Calendar defaultValue) {
 		Object val = get(columnName);
-		if (val instanceof Calendar) {
-			return (Calendar) val;
+		if (val instanceof NotesTimeDate) {
+			return ((NotesTimeDate)val).toCalendar();
 		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
 			if (!valAsList.isEmpty()) {
 				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof Calendar) {
-					return (Calendar) firstVal;
+				if (firstVal instanceof NotesTimeDate) {
+					return ((NotesTimeDate) firstVal).toCalendar();
 				}
 			}
 		}
 		return defaultValue;
 	}
 
+	/**
+	 * Convenience function that converts a column value to a {@link NotesTimeDate}
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a NotesTimeDate
+	 * @return calendar value or null
+	 */
+	public NotesTimeDate getAsTimeDate(String columnName, NotesTimeDate defaultValue) {
+		Object val = get(columnName, false);
+		if (val instanceof NotesTimeDate) {
+			return (NotesTimeDate) val;
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			if (!valAsList.isEmpty()) {
+				Object firstVal = valAsList.get(0);
+				if (firstVal instanceof NotesTimeDate) {
+					return (NotesTimeDate) firstVal;
+				}
+			}
+		}
+		return defaultValue;
+	}
+	
 	/**
 	 * Convenience function that converts a column value to a {@link Calendar} list
 	 * 
@@ -839,21 +921,53 @@ public class NotesViewEntryData {
 	 */
 	public List<Calendar> getAsCalendarList(String columnName, List<Calendar> defaultValue) {
 		Object val = get(columnName);
-		if (val instanceof Calendar) {
-			return Arrays.asList((Calendar) val);
+		if (val instanceof NotesTimeDate) {
+			return Arrays.asList(((NotesTimeDate)val).toCalendar());
 		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
-			boolean correctType=true;
+			List<Calendar> valAsCalendarList = new ArrayList<Calendar>();
+			
 			for (int i=0; i<valAsList.size(); i++) {
-				if (!(valAsList.get(i) instanceof Calendar)) {
-					correctType=false;
+				Object currListVal = valAsList.get(i);
+				if (currListVal instanceof NotesTimeDate) {
+					valAsCalendarList.add(((NotesTimeDate)currListVal).toCalendar());
+				}
+				else {
+					//incorrect content type
+					return defaultValue;
+				}
+			}
+			return valAsCalendarList;
+		}
+		return defaultValue;
+	}
+	
+	/**
+	 * Convenience function that converts a column value to a {@link Calendar} list
+	 * 
+	 * @param columnName programatic column name or column title
+	 * @param defaultValue default value if column is empty or is not a number
+	 * @return calendar list value or null
+	 */
+	public List<NotesTimeDate> getAsTimeDateList(String columnName, List<NotesTimeDate> defaultValue) {
+		Object val = get(columnName, false);
+		if (val instanceof NotesTimeDate) {
+			return Arrays.asList(((NotesTimeDate)val));
+		}
+		else if (val instanceof List) {
+			List<?> valAsList = (List<?>) val;
+			boolean correctType = true;
+			
+			for (Object currVal : valAsList) {
+				if (!(currVal instanceof NotesTimeDate)) {
+					correctType = false;
 					break;
 				}
 			}
 			
 			if (correctType) {
-				return (List<Calendar>) valAsList;
+				return (List<NotesTimeDate>) valAsList;
 			}
 			else {
 				return defaultValue;
