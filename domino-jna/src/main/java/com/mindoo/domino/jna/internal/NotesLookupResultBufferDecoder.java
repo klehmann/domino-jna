@@ -16,6 +16,7 @@ import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.IItemValueTableData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollectionStats;
+import com.mindoo.domino.jna.NotesDateRange;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -576,6 +577,11 @@ public class NotesLookupResultBufferDecoder {
 				for (int i=0; i<tdList.size(); i++) {
 					if (tdList.get(i) instanceof NotesTimeDate) {
 						calList.add(((NotesTimeDate) tdList.get(i)).toCalendar());
+					}
+					else if (tdList.get(i) instanceof NotesDateRange) {
+						NotesDateRange range = (NotesDateRange) tdList.get(i);
+						Calendar[] convertedRange = new Calendar[] {range.getStartDateTime().toCalendar(), range.getEndDateTime().toCalendar()};
+						calList.add(convertedRange);
 					}
 					else if (tdList.get(i) instanceof NotesTimeDate[]) {
 						NotesTimeDate[] range = (NotesTimeDate[]) tdList.get(i);

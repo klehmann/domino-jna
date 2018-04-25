@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.NotesDateRange;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
@@ -161,7 +162,7 @@ public class ItemDecoder {
 			NotesTimeDate lowerTimeDate = new NotesTimeDate(lowerTimeDateInnards);
 			NotesTimeDate upperTimeDate = new NotesTimeDate(upperTimeDateInnards);
 			
-			calendarValues.add(new NotesTimeDate[] {lowerTimeDate, upperTimeDate});
+			calendarValues.add(new NotesDateRange(lowerTimeDate, upperTimeDate));
 		}
 		
 		return calendarValues;

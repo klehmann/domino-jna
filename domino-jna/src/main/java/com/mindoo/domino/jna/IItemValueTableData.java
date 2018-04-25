@@ -27,8 +27,8 @@ public interface IItemValueTableData {
 	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
 	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
 	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
-	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}; if {@link #setPreferNotesTimeDates(boolean)} is called, we return {@link NotesTimeDate} instead</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for datetime lists or Calendar[] values for datetime ranges; if {@link #setPreferNotesTimeDates(boolean)} is called, we return {@link NotesTimeDate} and {@link NotesDateRange} instead</li>
 	 * </ul>
 	 * 
 	 * @param index item index between 0 and {@link #getItemsCount()}
@@ -55,7 +55,7 @@ public interface IItemValueTableData {
 	
 	/**
 	 * Sets whether methods like {@link #getItemValue(int)} should return {@link NotesTimeDate}
-	 * instead of {@link Calendar}.
+	 * instead of {@link Calendar} and {@link NotesDateRange} instead of Calendar[].
 	 * 
 	 * @param b true to prefer NotesTimeDate (false by default)
 	 */
@@ -63,7 +63,7 @@ public interface IItemValueTableData {
 	
 	/**
 	 * Returns whether methods like {@link #getItemValue(int)} should return {@link NotesTimeDate}
-	 * instead of {@link Calendar}.
+	 * instead of {@link Calendar} and {@link NotesDateRange} instead of Calendar[].
 	 * 
 	 * @return true to prefer NotesTimeDate
 	 */
