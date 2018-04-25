@@ -1,9 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
-import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
-import com.mindoo.domino.jna.internal.structs.NotesSearchMatch32Struct;
-import com.mindoo.domino.jna.internal.structs.NotesSearchMatch64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.sun.jna.Callback;
 import com.sun.jna.Memory;
