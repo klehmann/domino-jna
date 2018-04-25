@@ -22,4 +22,13 @@ public class DisposableMemory extends Memory {
 	public synchronized void dispose() {
 		super.dispose();
 	}
+	
+	/**
+	 * Checks if this memory is already disposed
+	 * 
+	 * @return true if disposed
+	 */
+	public boolean isDisposed() {
+		return peer == 0;
+	}
 }
