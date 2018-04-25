@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 
+import com.mindoo.domino.jna.NotesDateRange;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.structs.NotesItemValueTableStruct;
@@ -36,7 +37,7 @@ public class NotesSearchKeyEncoder {
 	/**
 	 * Produces the keybuffer for NIFFindByKey
 	 * 
-	 * @param keys array of String, Double, Integer, Calendar, Date, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper)
+	 * @param keys array of String, Double, Integer, NotesTimeDate, Calendar, Date, NotesDateRange, Calendar[] (with two elements lower/upper), Date[] (with two elements lower/upper)
 	 * @return buffer with encoded keys
 	 * @throws Exception in case of errors
 	 */
@@ -85,6 +86,9 @@ public class NotesSearchKeyEncoder {
 			else if (currKey instanceof Calendar) {
 				addCalendarKey(metaDataByteOut, valueDataByteOut, (Calendar) currKey);
 			}
+			else if (currKey instanceof NotesTimeDate) {
+				addCalendarKey(metaDataByteOut, valueDataByteOut, (NotesTimeDate) currKey);
+			}
 			else if (currKey instanceof Date[]) {
 				Date[] dateArr = (Date[]) currKey;
 				Calendar[] calArr = new Calendar[dateArr.length];
@@ -98,6 +102,10 @@ public class NotesSearchKeyEncoder {
 			else if (currKey instanceof Calendar[]) {
 				//date range
 				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, (Calendar[]) currKey);
+			}
+			else if (currKey instanceof NotesDateRange) {
+				//date range
+				addCalendarRangeKey(metaDataByteOut, valueDataByteOut, (NotesDateRange) currKey);
 			}
 			else if (currKey instanceof double[]) {
 				//looks like this does not work (the C API documentation says it does not work either)
@@ -154,7 +162,38 @@ public class NotesSearchKeyEncoder {
 	 * @param currKey search key
 	 * @throws Exception in case of errors
 	 */
+	private static void addCalendarKey(OutputStream itemOut, OutputStream valueDataOut, NotesTimeDate td) throws Exception {
+		int[] innards = td.getInnards();
+		addCalendarKey(itemOut, valueDataOut, innards[0], innards[1]);
+	}
+	
+	/**
+	 * Writes data for a time search key
+	 * 
+	 * @param itemOut output stream for ITEM structure
+	 * @param valueDataOut output stream for search key value
+	 * @param currKey search key
+	 * @throws Exception in case of errors
+	 */
 	private static void addCalendarKey(OutputStream itemOut, OutputStream valueDataOut, Calendar currKey) throws Exception {
+		boolean hasDate = NotesDateTimeUtils.hasDate(currKey);
+		boolean hasTime = NotesDateTimeUtils.hasTime(currKey);
+		
+		int[] innards = NotesDateTimeUtils.calendarToInnards(currKey, hasDate, hasTime);
+
+		addCalendarKey(itemOut, valueDataOut, innards[0], innards[1]);
+	}
+	
+	/**
+	 * Writes data for a time search key
+	 * 
+	 * @param itemOut output stream for ITEM structure
+	 * @param valueDataOut output stream for search key value
+	 * @param innard0 first innard of date
+	 * @param innard1 second innard of date
+	 * @throws Exception in case of errors
+	 */
+	private static void addCalendarKey(OutputStream itemOut, OutputStream valueDataOut, int innard0, int innard1) throws Exception {
 		Memory itemMem = new Memory(NotesConstants.tableItemSize);
 		NotesTableItemStruct item = NotesTableItemStruct.newInstance(itemMem);
 		item.NameLength = 0;
@@ -169,14 +208,10 @@ public class NotesSearchKeyEncoder {
 		Memory valueMem = new Memory(2 + 8);
 		valueMem.setShort(0, (short) NotesItem.TYPE_TIME);
 		
-		boolean hasDate = NotesDateTimeUtils.hasDate(currKey);
-		boolean hasTime = NotesDateTimeUtils.hasTime(currKey);
-		
-		int[] innards = NotesDateTimeUtils.calendarToInnards(currKey, hasDate, hasTime);
 		Pointer timeDatePtr = valueMem.share(2);
 		NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(timeDatePtr);
-		timeDate.Innards[0] = innards[0];
-		timeDate.Innards[1] = innards[1];
+		timeDate.Innards[0] = innard0;
+		timeDate.Innards[1] = innard1;
 		timeDate.write();
 		
 		for (int i=0; i<valueMem.size(); i++) {
@@ -235,9 +270,44 @@ public class NotesSearchKeyEncoder {
 	 * @param currKey search key, array with two values
 	 * @throws Exception in case of errors
 	 */
+	private static void addCalendarRangeKey(OutputStream itemOut, OutputStream valueDataOut, NotesDateRange currKey) throws Exception {
+		int[] startInnards = currKey.getStartDateTime().getInnards();
+		int[] endInnards = currKey.getEndDateTime().getInnards();
+		
+		addCalendarRangeKey(itemOut, valueDataOut, startInnards[0], startInnards[1], endInnards[0], endInnards[1]);
+	}
+	
+	/**
+	 * Writes data for a time range search key
+	 * 
+	 * @param itemOut output stream for ITEM structure
+	 * @param valueDataOut output stream for search key value
+	 * @param currKey search key, array with two values
+	 * @throws Exception in case of errors
+	 */
 	private static void addCalendarRangeKey(OutputStream itemOut, OutputStream valueDataOut, Calendar[] currKey) throws Exception {
 		if (currKey.length!=2)
 			throw new IllegalArgumentException("Calendar search key array must have exactly 2 elements. We found "+currKey.length);
+		
+		int[] startInnards = NotesDateTimeUtils.calendarToInnards(currKey[0]);
+		int[] endInnards = NotesDateTimeUtils.calendarToInnards(currKey[1]);
+		
+		addCalendarRangeKey(itemOut, valueDataOut, startInnards[0], startInnards[1], endInnards[0], endInnards[1]);
+	}
+	
+	/**
+	 * Writes data for a time range search key
+	 * 
+	 * @param itemOut output stream for ITEM structure
+	 * @param valueDataOut output stream for search key value
+	 * @param startInnard0 innard 0 of startdatetime
+	 * @param startInnard1 innard 0 of startdatetime
+	 * @param endInnard0 innard 0 of enddatetime
+	 * @param endInnard1 innard 0 of enddatetime
+	 * @throws Exception in case of errors
+	 */
+	private static void addCalendarRangeKey(OutputStream itemOut, OutputStream valueDataOut, int startInnard0, int startInnard1,
+			int endInnard0, int endInnard1) throws Exception {
 		
 		Memory itemMem = new Memory(NotesConstants.tableItemSize);
 		NotesTableItemStruct item = NotesTableItemStruct.newInstance(itemMem);
@@ -260,13 +330,8 @@ public class NotesSearchKeyEncoder {
 		
 		Pointer pairPtr = rangePtr.share(NotesConstants.rangeSize);
 		NotesTimeDatePairStruct pair = NotesTimeDatePairStruct.newInstance(pairPtr);
-		Calendar lowerBound = currKey[0];
-		Calendar upperBound = currKey[1];
-		NotesTimeDate lower = NotesDateTimeUtils.calendarToTimeDate(lowerBound);
-		NotesTimeDate upper = NotesDateTimeUtils.calendarToTimeDate(upperBound);
-		
-		pair.Lower = NotesTimeDateStruct.newInstance(lower.getInnards());
-		pair.Upper = NotesTimeDateStruct.newInstance(upper.getInnards());
+		pair.Lower = NotesTimeDateStruct.newInstance(new int[] {startInnard0, startInnard1});
+		pair.Upper = NotesTimeDateStruct.newInstance(new int[] {endInnard0, endInnard1});
 		pair.write();
 		
 		for (int i=0; i<valueMem.size(); i++) {
