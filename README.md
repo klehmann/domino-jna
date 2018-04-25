@@ -96,8 +96,8 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		//preload the maximum number of entries, can be useful when implementing
 		//filter method in EntriesAsListCallback
 		int bufferSize = Integer.MAX_VALUE;
-		//tell the API which data we want to read (in this case note ids and column itemname/value map)
-		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY);
+		//tell the API which data we want to read (in this case note ids and column values map)
+		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARYVALUES);
 		
 		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries(startPos, entriesToSkip,
 				returnNavigator, Integer.MAX_VALUE,
