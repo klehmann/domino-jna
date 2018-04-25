@@ -53,10 +53,8 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
-import lotus.domino.View;
-
 /**
- * A collection represents a list of Notes, comparable to the {@link View} object
+ * A collection represents a list of notes, comparable to the View object in Notes.jar
  * 
  * @author Karsten Lehmann
  */
@@ -3066,10 +3064,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public static enum Direction {Ascending, Descending};
 	
 	/**
-	 * Finds the matching collation nunber for the specified sort column and direction
-	 * Convenience method that calls {@link #hashCollations(View)} and {@link CollationInfo#findCollation(String, Direction)}
+	 * Finds the matching collation number for the specified sort column and direction
+	 * Convenience method that calls {@link #getCollationsInfo()} and {@link CollationInfo#findCollation(String, Direction)}
 	 * 
-	 * @param view view view to search for the collation
 	 * @param columnName sort column name
 	 * @param direction sort direction
 	 * @return collation number or -1 if not found

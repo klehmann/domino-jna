@@ -9,7 +9,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
- * Utility class that gives actions to NSF transactions. NSF transactions cover
+ * Utility class that gives access to NSF transactions. NSF transactions cover
  * normal document operations like add/update/delete, but in R9 they have some
  * caveats like folder operations (e.g. moving docs between folders) that may not
  * be covered properly according to IBM dev. Transactions currently only work
