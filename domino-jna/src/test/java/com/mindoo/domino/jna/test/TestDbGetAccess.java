@@ -63,7 +63,7 @@ public class TestDbGetAccess extends BaseJNATestClass {
 				System.out.println("Access flags: "+accessInfo.getAclFlags());
 				
 				NotesACL acl = dbData.getACL();
-				NotesACLAccess aclAccess = acl.lookupAccess(IDUtils.getCurrentUsername());
+				NotesACLAccess aclAccess = acl.lookupAccess(IDUtils.getIdUsername());
 
 				Assert.assertEquals("ACL level is equal", accessInfo.getAclLevel(), aclAccess.getAclLevel());
 				Assert.assertEquals("ACL flags are equal", accessInfo.getAclFlags(), aclAccess.getAclFlags());

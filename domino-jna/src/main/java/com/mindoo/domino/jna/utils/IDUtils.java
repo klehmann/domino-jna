@@ -407,7 +407,7 @@ public class IDUtils {
 	 * 
 	 * @return username
 	 */
-	public static String getCurrentUsername() {
+	public static String getIdUsername() {
 		Memory retUserNameMem = new Memory(NotesConstants.MAXUSERNAME+1);
 		
 		short result = NotesNativeAPI.get().SECKFMGetUserName(retUserNameMem);

@@ -48,10 +48,10 @@ public class TestViewTraversalWithRights extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				NotesDatabase dbDataAsPeterTester = getFakeNamesDbAs("CN=Peter Tester/O=Mindoo");
 
-				List<String> idUserNamesListNoReadAll = NotesNamingUtils.getUserNamesList(IDUtils.getCurrentUsername());
+				List<String> idUserNamesListNoReadAll = NotesNamingUtils.getUserNamesList(IDUtils.getIdUsername());
 				idUserNamesListNoReadAll.remove("[ReadAll]");
 				
-				NotesDatabase dbDataAsIdUser = getFakeNamesDbAs(IDUtils.getCurrentUsername());
+				NotesDatabase dbDataAsIdUser = getFakeNamesDbAs(IDUtils.getIdUsername());
 
 				final String hiddenDocUnid;
 				final int hiddenDocId;

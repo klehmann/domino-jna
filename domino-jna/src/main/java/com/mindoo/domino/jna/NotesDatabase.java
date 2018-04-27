@@ -202,7 +202,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param openFlags flags to specify how to open the database
 	 */
 	private NotesDatabase(String server, String filePath, List<String> namesForNamesList, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
-		String idUserName = IDUtils.getCurrentUsername();
+		String idUserName = IDUtils.getIdUsername();
 		if (StringUtil.isEmpty(asUserCanonical)) {
 			asUserCanonical = idUserName;
 		}
@@ -243,7 +243,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		if (namesForNamesList==null) {
 			if (m_asUserCanonical==null) {
-				m_asUserCanonical = IDUtils.getCurrentUsername();
+				m_asUserCanonical = IDUtils.getIdUsername();
 			}
 		}
 		
@@ -1606,7 +1606,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		int noteClasses = NoteClass.toBitMaskInt(noteClassesEnum);
 		
-		String signer = IDUtils.getCurrentUsername();
+		String signer = IDUtils.getIdUsername();
 		
 		NotesCollection col = openDesignCollection();
 		try {
@@ -3887,7 +3887,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		server = NotesNamingUtils.toCanonicalName(server);
 		
-		String idUserName = IDUtils.getCurrentUsername();
+		String idUserName = IDUtils.getIdUsername();
 		boolean isOnServer = IDUtils.isOnServer();
 		
 		if (!"".equals(server)) {
