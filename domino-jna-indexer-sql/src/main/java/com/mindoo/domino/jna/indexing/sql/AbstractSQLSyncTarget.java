@@ -703,7 +703,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			stmt.setBytes(12, customBinaryData);
 		}
 
-		stmt.setString(12, unid);
+		stmt.setString(13, unid);
 		
 		stmt.addBatch();
 		ctx.setChanged(ctx.getChanged()+1);
