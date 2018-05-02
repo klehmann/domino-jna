@@ -127,6 +127,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Opens a database either as server or on behalf of a specified user
+	 * 
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @param asUserCanonical user context to open database or null/empty string to open as ID owner (e.g. server when running on the server); will be ignored if code is run locally in the Notes Client
+	 * @param openFlags flags to specify how to open the database
+	 */
+	public NotesDatabase(String server, String filePath, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
+		this(server, filePath, (List<String>) null, asUserCanonical, openFlags);
+	}
+	
+	/**
 	 * Method required to read username in constructor
 	 * 
 	 * @param session session
@@ -290,6 +302,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				if (m_passNamesListToDbOpen) {
 					result = NotesNativeAPI64.get().NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle64(),
 							modifiedTime, hDB, retDataModified, retNonDataModified);
+					
+					if (result==582 && StringUtil.isEmpty(server) && !isOnServer && m_loginAsIdOwner) {
+						result = NotesNativeAPI64.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB,
+								retDataModified, retNonDataModified);
+					}
 				}
 				else {
 					result = NotesNativeAPI64.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB,
@@ -325,6 +342,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//many dbs remotely that could be solved by retrying
 				if (m_passNamesListToDbOpen) {
 					result = NotesNativeAPI32.get().NSFDbOpenExtended(retFullNetPath, openOptions, m_namesList.getHandle32(), modifiedTime, hDB, retDataModified, retNonDataModified);
+					
+					if (result==582 && StringUtil.isEmpty(server) && !isOnServer && m_loginAsIdOwner) {
+						result = NotesNativeAPI32.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
+					}
 				}
 				else {
 					result = NotesNativeAPI32.get().NSFDbOpenExtended(retFullNetPath, openOptions, 0, modifiedTime, hDB, retDataModified, retNonDataModified);
