@@ -440,7 +440,7 @@ public class IDUtils {
 	 * calling {@link NotesGC#setCustomValue(String, Object)}.<br>
 	 * <br>
 	 * We added this method to have a uniform way to store this username, which may not be the same
-	 * as {@link #getCurrentUsername()} that returns the ID file owner.
+	 * as {@link #getIdUsername()} that returns the ID file owner.
 	 * 
 	 * @param effUsername effective username, either abbreviated or canonical
 	 */
