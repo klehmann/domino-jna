@@ -876,12 +876,18 @@ public class NotesViewEntryData {
 		if (val instanceof NotesTimeDate) {
 			return ((NotesTimeDate)val).toCalendar();
 		}
+		else if (val instanceof Calendar) {
+			return (Calendar) val;
+		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
 			if (!valAsList.isEmpty()) {
 				Object firstVal = valAsList.get(0);
 				if (firstVal instanceof NotesTimeDate) {
 					return ((NotesTimeDate) firstVal).toCalendar();
+				}
+				else if (firstVal instanceof Calendar) {
+					return (Calendar) firstVal;
 				}
 			}
 		}
@@ -924,6 +930,9 @@ public class NotesViewEntryData {
 		if (val instanceof NotesTimeDate) {
 			return Arrays.asList(((NotesTimeDate)val).toCalendar());
 		}
+		else if (val instanceof Calendar) {
+			return Arrays.asList((Calendar) val);
+		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
 			List<Calendar> valAsCalendarList = new ArrayList<Calendar>();
@@ -932,6 +941,9 @@ public class NotesViewEntryData {
 				Object currListVal = valAsList.get(i);
 				if (currListVal instanceof NotesTimeDate) {
 					valAsCalendarList.add(((NotesTimeDate)currListVal).toCalendar());
+				}
+				else if (currListVal instanceof Calendar) {
+					valAsCalendarList.add((Calendar) currListVal);
 				}
 				else {
 					//incorrect content type

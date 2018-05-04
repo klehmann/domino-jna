@@ -322,6 +322,7 @@ public class NotesLookupResultBufferDecoder {
 		}
 
 		ItemValueTableDataImpl data = new ItemValueTableDataImpl(convertStringsLazily);
+		data.setPreferNotesTimeDates(!convertNotesTimeDateToCalendar);
 		data.m_totalBufferLength = totalBufferLength;
 		data.m_itemsCount = itemsCount;
 
@@ -474,6 +475,7 @@ public class NotesLookupResultBufferDecoder {
 		}
 		
 		ItemTableDataImpl data = new ItemTableDataImpl(convertStringsLazily);
+		data.setPreferNotesTimeDates(!convertNotesTimeDateToCalendar);
 		data.m_totalBufferLength = itemTable.getLengthAsInt();
 		data.m_itemsCount = itemsCount;
 		
