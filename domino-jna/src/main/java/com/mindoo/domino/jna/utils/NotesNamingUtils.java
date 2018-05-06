@@ -603,7 +603,7 @@ public class NotesNamingUtils {
 	 * and all his groups and nested groups
 	 * 
 	 * @param server name of server, either abbreviated or canonical or null/empty string for local
-	 * @param userName username in canonical format
+	 * @param userName username in abbreviated or canonical format
 	 * @return usernames list
 	 */
 	public static List<String> getUserNamesList(String server, String userName) {
