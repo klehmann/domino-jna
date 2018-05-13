@@ -57,7 +57,7 @@ public class SetUtil {
 		else {
 			Set<Integer> idsOfAll = new HashSet<Integer>(ids[0]);
 			for (int i=1; i<ids.length; i++) {
-				idsOfAll.retainAll(ids[1]);
+				idsOfAll.retainAll(ids[i]);
 			}
 			return idsOfAll;
 		}
