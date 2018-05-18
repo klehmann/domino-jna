@@ -526,8 +526,8 @@ public class NotesCalendarUtils {
 		NotesTimeDateStruct.ByValue startStruct = start==null ? null : NotesTimeDateStruct.ByValue.newInstance(start.getInnards());
 		NotesTimeDateStruct.ByValue endStruct = end==null ? null : NotesTimeDateStruct.ByValue.newInstance(end.getInnards());
 
-		int dwReturnMask = Integer.MAX_VALUE; //CalendarReadRange.toBitMask(readMask);
-		int dwReturnMaskExt = Integer.MAX_VALUE; //CalendarReadRange.toBitMask2(readMask);
+		int dwReturnMask = CalendarReadRange.toBitMask(readMask);
+		int dwReturnMaskExt = CalendarReadRange.toBitMask2(readMask);
 
 		//variables to collect the whole lookup result
 		StringBuilder sbIcalAllData = retICal==null ? null : new StringBuilder();
