@@ -591,4 +591,5 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			short What,
 			Pointer Buffer);
 
+	public native short CalGetApptunidFromUID(Memory pszUID, Memory pszApptunid, int dwFlags, Pointer pCtx);
 }

@@ -107,6 +107,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native Pointer OSLockObject(long handle);
 	public native boolean OSUnlockObject(long handle);
 	public native short OSMemFree(long handle);
+	public native short OSMemoryAllocate(int dwtype, int size, LongByReference retHandle);
 	public native short OSMemGetSize(long handle, IntByReference retSize);
 	public native int OSMemoryGetSize(long handle);
 	public native void OSMemoryFree(long handle);
@@ -1014,4 +1015,28 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short QueueDelete(long qhandle);
 	
 	public native short NSFDbModeGet(long hDB, ShortByReference retMode);
+	
+	public native short CalCreateEntry(long hDB, Memory pszCalEntry, int dwFlags, LongByReference hRetUID, Pointer pCtx);
+	
+	public native short CalUpdateEntry(long hDB, Memory pszCalEntry, Memory pszUID, Memory pszRecurID, Memory pszComments,
+			int dwFlags, Pointer pCtx);
+	
+	public native short CalGetUIDfromNOTEID(long hDB, int noteid, Memory pszUID, short wLen, Pointer pReserved, int dwFlags,
+			Pointer pCtx);
+	
+	public native short CalGetUIDfromUNID(long hDB, NotesUniversalNoteIdStruct unid, Memory pszUID, short wLen,
+			Pointer pReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalOpenNoteHandle(long hDB, Memory pszUID, Memory pszRecurID, LongByReference rethNote, int dwFlags,
+			Pointer pCtx);
+	
+	public native short CalReadEntry(long hDB, Memory pszUID, Memory pszRecurID, LongByReference hRetCalData,
+			IntByReference pdwReserved, int dwFlags, Pointer pCtx);
+
+	@Override
+	public native short CalReadRange(long hDB, NotesTimeDateStruct.ByValue tdStart, NotesTimeDateStruct.ByValue tdEnd, int dwViewSkipCount,
+			int dwMaxReturnCount, int dwReturnMask, int dwReturnMaskExt, Pointer pFilterInfo,
+			LongByReference hRetCalData, ShortByReference retCalBufferLength, LongByReference hRetUIDData,
+			IntByReference retNumEntriesProcessed, ShortByReference retSignalFlags, int dwFlags, Pointer pCtx);
 }
+

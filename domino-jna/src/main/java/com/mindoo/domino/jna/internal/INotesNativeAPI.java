@@ -223,4 +223,10 @@ public interface INotesNativeAPI extends Library {
 			short What,
 			Pointer Buffer);
 
+	public short CalGetApptunidFromUID(
+			Memory pszUID,
+			Memory pszApptunid,
+			int dwFlags,
+			Pointer pCtx);
+
 }

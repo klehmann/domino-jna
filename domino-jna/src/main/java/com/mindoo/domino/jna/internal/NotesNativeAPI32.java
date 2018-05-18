@@ -107,6 +107,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native Pointer OSLockObject(int handle);
 	public native boolean OSUnlockObject(int handle);
 	public native short OSMemFree(int handle);
+	public native short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle);
 	public native short OSMemGetSize(int handle, IntByReference retSize);
 	public native int OSMemoryGetSize(int handle);
 	public native void OSMemoryFree(int handle);
@@ -1015,4 +1016,26 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short QueueDelete(int qhandle);
 	
 	public native short NSFDbModeGet(int hDB, ShortByReference retMode);
+	
+	public native short CalCreateEntry(int hDB, Memory pszCalEntry, int dwFlags, IntByReference hRetUID, Pointer pCtx);
+	
+	public native short CalUpdateEntry(int hDB, Memory pszCalEntry, Memory pszUID, Memory pszRecurID, Memory pszComments,
+			int dwFlags, Pointer pCtx);
+	
+	public native short CalGetUIDfromNOTEID(int hDB, int noteid, Memory pszUID, short wLen, Pointer pReserved, int dwFlags,
+			Pointer pCtx);
+	
+	public native short CalGetUIDfromUNID(int hDB, NotesUniversalNoteIdStruct unid, Memory pszUID, short wLen,
+			Pointer pReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalOpenNoteHandle(int hDB, Memory pszUID, Memory pszRecurID, IntByReference rethNote, int dwFlags,
+			Pointer pCtx);
+	
+	public native short CalReadEntry(int hDB, Memory pszUID, Memory pszRecurID, IntByReference hRetCalData,
+			IntByReference pdwReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalReadRange(int hDB, NotesTimeDateStruct.ByValue tdStart, NotesTimeDateStruct.ByValue tdEnd, int dwViewSkipCount,
+			int dwMaxReturnCount, int dwReturnMask, int dwReturnMaskExt, Pointer pFilterInfo,
+			IntByReference hRetCalData, ShortByReference retCalBufferLength, IntByReference hRetUIDData,
+			IntByReference retNumEntriesProcessed, ShortByReference retSignalFlags, int dwFlags, Pointer pCtx);
 }

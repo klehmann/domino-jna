@@ -85,6 +85,11 @@ public interface INotesNativeAPI64 extends Library {
 	@Deprecated
 	public int OSMemoryGetSize(long handle);
 	/**
+	 * @deprecated use {@link Mem32#OSMemoryAllocate(int, int, LongByReference)} instead
+	 */
+	@Deprecated
+	public short OSMemoryAllocate(int dwtype, int size, LongByReference retHandle);
+	/**
 	 * @deprecated use {@link Mem64#OSMemoryFree(long)} instead
 	 */
 	@Deprecated
@@ -1057,4 +1062,72 @@ public interface INotesNativeAPI64 extends Library {
 
 	@UndocumentedAPI
 	public short QueueDelete(long qhandle);
+	
+	public short CalCreateEntry(
+			long hDB,
+			Memory pszCalEntry,
+			int dwFlags,
+			LongByReference hRetUID,
+			Pointer pCtx);
+
+	public short CalUpdateEntry(
+			long hDB,
+			Memory pszCalEntry,
+			Memory pszUID,
+			Memory pszRecurID,
+			Memory pszComments,
+			int dwFlags,
+			Pointer pCtx);
+	
+	public short CalGetUIDfromNOTEID(
+			long hDB,
+			int noteid,
+			Memory pszUID,
+			short wLen,
+			Pointer pReserved,
+			int dwFlags,
+			Pointer pCtx);
+	
+	public short CalGetUIDfromUNID(
+			long hDB,
+			NotesUniversalNoteIdStruct unid,
+			Memory pszUID,
+			short wLen,
+			Pointer pReserved,
+			int dwFlags,
+			Pointer pCtx);
+
+	public short CalOpenNoteHandle(
+			long hDB,
+			Memory pszUID,
+			Memory pszRecurID,
+			LongByReference rethNote,
+			int dwFlags,
+			Pointer pCtx);
+
+	public short CalReadEntry(
+			long hDB,
+			Memory pszUID,
+			Memory pszRecurID,
+			LongByReference hRetCalData,
+			IntByReference pdwReserved,
+			int dwFlags,
+			Pointer pCtx);
+
+	public short CalReadRange(
+			long hDB,
+			NotesTimeDateStruct.ByValue tdStart,
+			NotesTimeDateStruct.ByValue  tdEnd,
+			int dwViewSkipCount,
+			int dwMaxReturnCount,
+			int dwReturnMask,
+			int dwReturnMaskExt,
+			Pointer pFilterInfo,
+			LongByReference hRetCalData,
+			ShortByReference retCalBufferLength,
+			LongByReference hRetUIDData,
+			IntByReference retNumEntriesProcessed,
+			ShortByReference retSignalFlags,
+			int dwFlags,
+			Pointer pCtx);
 }

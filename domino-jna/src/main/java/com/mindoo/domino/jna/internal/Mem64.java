@@ -72,4 +72,8 @@ public class Mem64 {
 		return NotesNativeAPI64.get().OSMemAlloc(BlkType, dwSize, retHandle);
 	}
 
+	public static short OSMemoryAllocate(int dwtype, int size, LongByReference retHandle) {
+		return NotesNativeAPI64.get().OSMemoryAllocate(dwtype, size, retHandle);
+	}
+
 }

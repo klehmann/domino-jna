@@ -43,6 +43,8 @@ import com.mindoo.domino.jna.html.IHtmlConversionResult;
 import com.mindoo.domino.jna.html.IHtmlImageRef;
 import com.mindoo.domino.jna.html.ReferenceType;
 import com.mindoo.domino.jna.html.TargetType;
+import com.mindoo.domino.jna.internal.CalNoteOpenData32;
+import com.mindoo.domino.jna.internal.CalNoteOpenData64;
 import com.mindoo.domino.jna.internal.CollationDecoder;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
 import com.mindoo.domino.jna.internal.DisposableMemory;
@@ -179,10 +181,25 @@ public class NotesNote implements IRecyclableNotesObject {
 			} catch (NotesError e) {
 				m_parentDb = LegacyAPIUtils.toNotesDatabase(legacyDb);
 			}
+			return;
+		}
+		if (PlatformUtils.is64Bit()) {
+			CalNoteOpenData64 calOpenNote = adaptable.getAdapter(CalNoteOpenData64.class);
+			if (calOpenNote!=null) {
+				m_parentDb = calOpenNote.getDb();
+				m_hNote64 = calOpenNote.getNoteHandle();
+				return;
+			}
 		}
 		else {
-			throw new NotesError(0, "Unsupported adaptable parameter");
+			CalNoteOpenData32 calOpenNote = adaptable.getAdapter(CalNoteOpenData32.class);
+			if (calOpenNote!=null) {
+				m_parentDb = calOpenNote.getDb();
+				m_hNote32 = calOpenNote.getNoteHandle();
+				return;
+			}
 		}
+		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 
 	private boolean isRecycled(Document doc) {

@@ -2833,4 +2833,87 @@ This allows an Editor to assume some Designer-level access */
 	/** hDB refers to a "directory" and not a file */
 	public short DB_DIRECTORY = 2;
 
+	// Flags that control behavior of the calendar APIs - Used when APIS take iCalendar input to modify calendar data
+	public int CAL_WRITE_COMPLETE_REPLACE = 0x00000001;		// Used when APIs modify entry data via CalUpdateEntry.
+																	// This flag means that NO data is preserved from the original entry and the
+																	// resulting entry is 100% a product of the iCalendar passed in.
+																	// NOTE: When this flag is NOT used, some content may be preserved during an
+																	// update if that particular content was not included in the iCalendar input.
+																	// This includes:
+																	// Body
+																	// Attachments
+																	// Custom data properties as specified in $CSCopyItems
+
+	public int CAL_WRITE_DISABLE_IMPLICIT_SCHEDULING = 0x00000002;		// Used when APIs create or modify calendar entries where the organizer is the mailfile owner.
+																	// When a calendar entry is modified with CAL_WRITE_DISABLE_IMPLICIT_SCHEDULING set, no notices are
+																	// sent (invites, updates, reschedules, cancels, etc)
+																	// Note: This is not intended for cases where you are saving a meeting as a draft (since there is currently
+																	// not a capability to then send it later.  It will also not allow some notices to go out but other notices
+																	// not to go out (such as, send invites to added invitees but dont send updates to existing invitees).
+																	// Rather, this is targeted at callers that prefer to be responsible for sending out notices themselves through
+																	// a separate mechanism
+
+	public int CAL_WRITE_IGNORE_VERIFY_DB = 0x00000004;		// Used when APIs create or modify entries on the calendar
+																	// This will allow creation/modification of calendar entries, even if the database is not a mailfile
+
+	public int CAL_WRITE_USE_ALARM_DEFAULTS = 0x00000008;		// By default, alarms will be created on calendar entries based on VALARM content of iCalendar input.  Use of
+																	// this flag will disregard VALARM information in the iCalendar and use the user's default alarm settings for
+																	// created or updated entries.
+
+	// Flags that control behavior of the calendar APIs - Used when opening a note handle for calendar data
+	public int CAL_NOTEOPEN_HANDLE_NOSPLIT = 0x00000001;		// Used when getting a handle via CalOpenNoteHandle (Handy for read-only cases)
+																	// When a specific instance of a recurring entry is requested, the underlying note may represent multiple
+																	// instances.  Default behavior makes appropriate modifications so that the returned handle represents
+																	// a single instance (but this might cause notes to be created or modified as a side effect).
+																	// Using CAL_NOTEOPEN_HANDLE_NOSPLIT will bypass any note creations or modifications and return a note handle
+																	// that may represent more than a single instance on the calendar.
+
+	// Flags that control behavior of the calendar APIs that return iCalendar data for an entry or notice
+	public int CAL_READ_HIDE_X_LOTUS = 0x00000001;			// Used when APIs generate iCalendar
+																	// By default, some X-LOTUS properties and parameters will be included in iCalendar data
+																	// returned by these APIs.  CAL_READ_HIDE_X_LOTUS causes all X-LOTUS properties and
+																	// parameters to be removed from the generated iCalendar data.
+																	// Note: This overrides CAL_READ_INCLUDE_X_LOTUS
+
+	public int CAL_READ_INCLUDE_X_LOTUS = 0x00000002;			// Used when APIs generate iCalendar
+																	// Include all Lotus specific properties like X-LOTUS-UPDATE-SEQ, X-LOTUS-UPDATE_WISL, etc
+																	// in the generated iCalendar data.
+																	// These properties are NOT included by default in any iCalendar data returned by the APIs.
+																	// Caution: Unless the caller knows how to use these it can be dangerous since their presence will
+																	// be honored and can cause issues if not updated properly.
+																	// Ignored if CAL_READ_HIDE_X_LOTUS is also specified.
+
+	public int CAL_READ_SKIP_RESPONSE_DATA = 0x00000004;			// RESERVED: This functionality is not currently in plan
+																	// When generating ATTENDEE info in CalReadEntry, determine and populate response
+																	// Status (which might be a performance hit)
+
+	public int READ_RANGE_MASK_DTSTART = 0x00000001;
+	public int READ_RANGE_MASK_DTEND = 0x00000002;
+	public int READ_RANGE_MASK_DTSTAMP = 0x00000004;
+	public int READ_RANGE_MASK_SUMMARY = 0x00000008;
+	public int READ_RANGE_MASK_CLASS = 0x00000010;
+	public int READ_RANGE_MASK_PRIORITY	= 0x00000020;
+	public int READ_RANGE_MASK_RECURRENCE_ID	 = 0x00000040;
+	public int READ_RANGE_MASK_SEQUENCE = 0x00000080;
+	public int READ_RANGE_MASK_LOCATION = 0x00000100;
+	public int READ_RANGE_MASK_TRANSP = 0x00000200;
+	public int READ_RANGE_MASK_CATEGORY = 0x00000400;
+	public int READ_RANGE_MASK_APPTTYPE = 0x00000800;
+	public int READ_RANGE_MASK_NOTICETYPE = 0x00001000;
+	public int READ_RANGE_MASK_STATUS = 0x00002000;
+	public int READ_RANGE_MASK_ONLINE_URL = 0x00004000;		// Includes online meeting URL as well as any online meeting password or conf ID
+	public int READ_RANGE_MASK_NOTESORGANIZER = 0x00008000;		// Note: For performance reasons, the organizer may not be stored in ORGANIZER but rather in
+																// X-LOTUS-ORGANIZER to avoid lookups necessary to get the internet address.
+	public int READ_RANGE_MASK_NOTESROOM = 0x00010000;		// Note: For performance reasons, the organizer may not be stored in PARTICIPANT but rather in
+																// X-LOTUS-ROOM to avoid lookups necessary to get the internet address.
+	public int READ_RANGE_MASK_ALARM = 0x00020000;		// Output alarm information for this entry
+
+
+	/* Non-default values - only harvested if requested in dwReturnMaskExt by CalReadRange.*/
+	public int READ_RANGE_MASK2_HASATTACH = 0x00000001;		// X-LOTUS-HASATTACH is set to 1 if there are any file attachments for this entry
+	public int READ_RANGE_MASK2_UNID = 0x00000002;		// X-LOTUS-UNID will always be set for notices (as it is used as the identifier for
+																// a notice), but setting this flag will also set X-LOTUS-UNID for calendar entries,
+																// where this will be set with the UNID of the note that currently contains this
+																// instance (can be used to construct a URL to open the instance in Notes, for instance)
+
 }
