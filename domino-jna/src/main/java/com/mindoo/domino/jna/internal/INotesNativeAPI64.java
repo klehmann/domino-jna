@@ -85,7 +85,7 @@ public interface INotesNativeAPI64 extends Library {
 	@Deprecated
 	public int OSMemoryGetSize(long handle);
 	/**
-	 * @deprecated use {@link Mem32#OSMemoryAllocate(int, int, LongByReference)} instead
+	 * @deprecated use {@link Mem64#OSMemoryAllocate(int, int, LongByReference)} instead
 	 */
 	@Deprecated
 	public short OSMemoryAllocate(int dwtype, int size, LongByReference retHandle);

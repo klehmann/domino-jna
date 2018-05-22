@@ -189,7 +189,7 @@ public class NotesCalendarUtils {
 	
 	/**
 	 * This is a convinience method that returns a UID from a NOTEID.<br>
-	 * NOTEID->UID is a many to one mapping since one or several notes may represent
+	 * NOTEID-&gt;UID is a many to one mapping since one or several notes may represent
 	 * a calendar entry (especially if it repeats) and its related notices.
 	 * <br>
 	 * As such, the UID output will be the same for all notes that refer to the same calendar entry.<br>
@@ -213,7 +213,7 @@ public class NotesCalendarUtils {
 	
 	/**
 	 * This is a convinience method that returns a UID from a NOTEID.<br>
-	 * NOTEID->UID is a many to one mapping since one or several notes may represent
+	 * NOTEID-&gt;UID is a many to one mapping since one or several notes may represent
 	 * a calendar entry (especially if it repeats) and its related notices.
 	 * <br>
 	 * As such, the UID output will be the same for all notes that refer to the same calendar entry.<br>
@@ -260,7 +260,7 @@ public class NotesCalendarUtils {
 	/**
 	 * This is a convinience method that returns a UID from a UNID.<br>
 	 * <br>
-	 * UNID->UID is a many to one mapping since one or several notes may represent a
+	 * UNID-&gt;UID is a many to one mapping since one or several notes may represent a
 	 * calendar entry (especially if it repeats) and its related notices.<br>
 	 * As such, the UID output will be the same for all notes that refer to the same
 	 * calendar entry.<br>
