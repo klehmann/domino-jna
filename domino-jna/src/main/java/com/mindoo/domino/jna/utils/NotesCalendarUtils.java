@@ -79,7 +79,7 @@ public class NotesCalendarUtils {
 		if (dbMail.isRecycled())
 			throw new NotesError(0, "Target database already recycled");
 		
-		Memory icalMem = NotesStringUtils.toLMBCS(iCal, true);
+		Memory icalMem = NotesStringUtils.toLMBCS(iCal, true, false);
 		
 		int dwFlags = flags==null ? 0 : CalendarWrite.toBitMask(flags);
 		

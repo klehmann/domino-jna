@@ -39,8 +39,12 @@ public class NotesStringUtils {
 	
 	private static final int MAX_STRING2LMBCS_SIZE_BYTES = 1000000;
 	
-	private static LRUStringLMBCSCache m_string2LMBCSCacheWithNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
-	private static LRUStringLMBCSCache m_string2LMBCSCacheWithoutNull = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	private static LRUStringLMBCSCache m_string2LMBCSCacheWithNullOrigLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	private static LRUStringLMBCSCache m_string2LMBCSCacheWithoutNullOrigLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	
+	private static LRUStringLMBCSCache m_string2LMBCSCacheWithNullReplacedLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	private static LRUStringLMBCSCache m_string2LMBCSCacheWithoutNullReplacedLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+
 	//shared CharsetLMBCS instance
 	private static final Charset LMBCSCharset;
 	static {
@@ -66,16 +70,29 @@ public class NotesStringUtils {
 			NotesGC.setCustomValue(PREF_USEOSLINEBREAK, Boolean.valueOf(b));
 			
 			//remove all cached values that contain newlines
-			List<String> keysWithNull = m_string2LMBCSCacheWithNull.getKeys();
+			List<String> keysWithNull = m_string2LMBCSCacheWithNullOrigLinebreaks.getKeys();
 			for (String currKey : keysWithNull) {
 				if (currKey.indexOf('\n') != -1) {
-					m_string2LMBCSCacheWithNull.remove(currKey);
+					m_string2LMBCSCacheWithNullOrigLinebreaks.remove(currKey);
 				}
 			}
-			List<String> keysWithoutNull = m_string2LMBCSCacheWithoutNull.getKeys();
+			keysWithNull = m_string2LMBCSCacheWithNullReplacedLinebreaks.getKeys();
+			for (String currKey : keysWithNull) {
+				if (currKey.indexOf('\n') != -1) {
+					m_string2LMBCSCacheWithNullReplacedLinebreaks.remove(currKey);
+				}
+			}
+			
+			List<String> keysWithoutNull = m_string2LMBCSCacheWithoutNullOrigLinebreaks.getKeys();
 			for (String currKey : keysWithoutNull) {
 				if (currKey.indexOf('\n') != -1) {
-					m_string2LMBCSCacheWithoutNull.remove(currKey);
+					m_string2LMBCSCacheWithoutNullOrigLinebreaks.remove(currKey);
+				}
+			}
+			keysWithoutNull = m_string2LMBCSCacheWithoutNullReplacedLinebreaks.getKeys();
+			for (String currKey : keysWithoutNull) {
+				if (currKey.indexOf('\n') != -1) {
+					m_string2LMBCSCacheWithoutNullReplacedLinebreaks.remove(currKey);
 				}
 			}
 		}
@@ -270,6 +287,18 @@ public class NotesStringUtils {
 	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
 	 */
 	public static Memory toLMBCS(String inStr, boolean addNull) {
+		return toLMBCS(inStr, addNull, true);
+	}
+	
+	/**
+	 * Converts a string to LMBCS format
+	 * 
+	 * @param inStr string
+	 * @param addNull tre to terminate the string with a null byte
+	 * @param replaceLineBreaks true to replace linebreaks with null bytes
+	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
+	 */
+	public static Memory toLMBCS(String inStr, boolean addNull, boolean replaceLineBreaks) {
 		if (inStr==null)
 			return null;
 		
@@ -286,10 +315,20 @@ public class NotesStringUtils {
 		
 		Memory cachedMem;
 		if (addNull) {
-			cachedMem = m_string2LMBCSCacheWithNull.get(inStr);
+			if (replaceLineBreaks) {
+				cachedMem = m_string2LMBCSCacheWithNullReplacedLinebreaks.get(inStr);
+			}
+			else {
+				cachedMem = m_string2LMBCSCacheWithNullOrigLinebreaks.get(inStr);
+			}
 		}
 		else {
-			cachedMem = m_string2LMBCSCacheWithoutNull.get(inStr);
+			if (replaceLineBreaks) {
+				cachedMem = m_string2LMBCSCacheWithoutNullReplacedLinebreaks.get(inStr);
+			}
+			else {
+				cachedMem = m_string2LMBCSCacheWithoutNullOrigLinebreaks.get(inStr);
+			}
 		}
 		
 		if (cachedMem!=null) {
@@ -301,9 +340,14 @@ public class NotesStringUtils {
 			String[] lines = inStr.split("\\r?\\n", -1);
 			ByteArrayOutputStream bOut = new ByteArrayOutputStream();
 			for (int i=0; i<lines.length; i++) {
-				if (i>0)
-					bOut.write(0);
-
+				if (i>0) {
+					if (replaceLineBreaks) {
+						bOut.write(0);
+					}
+					else {
+						bOut.write('\n');
+					}
+				}
 				CharBuffer charBuf = CharBuffer.wrap(lines[i]);
 				ByteBuffer byteBuf = LMBCSCharset.encode(charBuf);
 				try {
@@ -330,7 +374,12 @@ public class NotesStringUtils {
 				m.seal();
 
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m_string2LMBCSCacheWithNull.put(inStr, m);
+					if (replaceLineBreaks) {
+						m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
+					}
+					else {
+						m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+					}
 				}
 				return m;
 			}
@@ -341,7 +390,12 @@ public class NotesStringUtils {
 				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m_string2LMBCSCacheWithoutNull.put(inStr, m);
+					if (replaceLineBreaks) {
+						m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
+					}
+					else {
+						m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+					}
 				}
 				return m;
 			}
@@ -366,7 +420,12 @@ public class NotesStringUtils {
 				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m_string2LMBCSCacheWithNull.put(inStr, m);
+					if (replaceLineBreaks) {
+						m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
+					}
+					else {
+						m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+					}
 				}
 				return m;
 			}
@@ -385,7 +444,12 @@ public class NotesStringUtils {
 				m.seal();
 				
 				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					m_string2LMBCSCacheWithoutNull.put(inStr, m);
+					if (replaceLineBreaks) {
+						m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
+					}
+					else {
+						m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+					}
 				}
 				return m;
 			}
