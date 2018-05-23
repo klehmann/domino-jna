@@ -26,6 +26,7 @@ import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -592,4 +593,6 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			Pointer Buffer);
 
 	public native short CalGetApptunidFromUID(Memory pszUID, Memory pszApptunid, int dwFlags, Pointer pCtx);
+	
+	public native short CalGetRecurrenceID(ByValue tdInput, Memory pszRecurID, short wLenRecurId);
 }

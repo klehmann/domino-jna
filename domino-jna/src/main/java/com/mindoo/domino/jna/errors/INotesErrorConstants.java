@@ -2450,4 +2450,15 @@ public String ERR_MSG_SCOS_FILE_SIZE = "\nSCOS database specification out of ran
 	public short ERR_VALUE_LENGTH = PKG_MISC+15;
 	public String ERR_MSG_VALUE_LENGTH = "Value too long";
 
+	public short PKG_MAILMISC4 = 0x0880;	/* Mail Misc  limit to 0 - 127 */
+
+	public short ERR_NO_CALENDAR_FOUND = (PKG_MAILMISC4+90);
+	public String ERR_MSG_NO_CALENDAR_FOUND = "This database does not contain required calendar design elements.";
+
+	public short ERR_ICAL2NOTE_CONVERT = (PKG_MAILMISC4+92);
+	public String ERR_MSG_ICAL2NOTE_CONVERT = "Error interpreting iCalendar.";
+
+	public short ERR_IMPLICIT_SCHED_FAILED = (PKG_MAILMISC4+100);
+	public String ERR_MSG_IMPLICIT_SCHED_FAILED = "There was an error sending out notices to meeting participants.";
+	   
 }

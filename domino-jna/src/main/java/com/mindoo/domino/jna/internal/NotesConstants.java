@@ -2916,4 +2916,49 @@ This allows an Editor to assume some Designer-level access */
 																// where this will be set with the UNID of the note that currently contains this
 																// instance (can be used to construct a URL to open the instance in Notes, for instance)
 
+	/* CAL_PROCESS_### values are used to define the action taken by CalNoticeAction and CalEntryAction */
+	public int CAL_PROCESS_ACCEPT = 0x00000002;	/* Accept (regardless of conflicts)
+														 * For Information update notices or confirm notices, this will apply the changes to the relavent
+														 * calendar entry.
+														 * Used by the organizer to accept a counter proposal.
+														 */
+	public int CAL_PROCESS_TENTATIVE = 0x00000004;	/* Tentatively accept (regardless of conflicts) */
+	public int CAL_PROCESS_DECLINE = 0x00000008;	/* Decline 
+														 * Can be used by the organizer to decline a counter if done from a counter notice */
+	public int CAL_PROCESS_DELEGATE = 0x00000010;	/* Delegate to EXT_CALACTION_DATA::pszDelegateTo */
+	public int CAL_PROCESS_COUNTER = 0x00000020;	/* Counter to a new time (requires populating EXT_CALACTION_DATA::ptdChangeTo values) */
+	public int CAL_PROCESS_REQUESTINFO = 0x00000040;	/* Request updated information from the organizer for this meeting.
+														 * Also used by the organizer to respond to a request for updated info.
+														 */
+	public int CAL_PROCESS_REMOVECANCEL = 0x00000080;	/* This will process a cancelation notice, removing the meeting from the calendar */
+	public int CAL_PROCESS_DELETE = 0x00000100;	/* This will physically delete a meeting from the calendar.  This will NOT send notices out */
+	public int CAL_PROCESS_SMARTREMOVE = 0x00000200;	/* This will remove the meeting or appointment from the calendar and send notices if 
+														 * necessary.
+														 * It is treated as a CAL_PROCESS_CANCEL if the entry is a meeting the mailfile 
+														 * owner is the organizer of.  
+														 * It is treated as a CAL_PROCESS_DECLINE if the entry is a meeting that the mailfile 
+														 * owner is not the organizer of except when the entry is a broadcast.  In that case it
+														 * is treated as a CAL_PROCESS_DELETE.
+														 * It is treated as a CAL_PROCESS_DELETE if the entry is a non-meeting */
+	public int CAL_PROCESS_CANCEL = 0x00000400;	/* This will cancel a meeting that the mailfile owner is the organizer of */
+
+
+	public int CAL_PROCESS_UPDATEINVITEES = 0x00002000;	/* This will update the invitee lists on the specified entry (or entries) to include or remove
+														 * those users specified in lists contained in the EXT_CALACTION_DATA::pAddNames and 
+														 * EXT_CALACTION_DATA::pRemoveNames values */
+
+	/* Flags that control behavior of the CalNoticeAction and CalEntryAction calendar APIs
+	 * CAL_ACTION _### values are used to provide additional processing control to some actions taken by CalNoticeAction and CalEntryAction */
+
+	public int CAL_ACTION_DO_OVERWRITE_CHECK = 0x00000001;	/* Indicates that a check should be performed when processing the action to determine 
+														 		* if an overwrite of invitee changes to the entry will occur. */
+	public int CAL_ACTION_UPDATE_ALL_PARTICIPANTS = 0x00000002;	/* New in 9.01 release.  Used to indicate that current entry participants should be notified of changes
+																 * to the participant list in addition to those being added or removed. */
+
+	/* Range values for actions on recurring entries */
+	public int RANGE_REPEAT_CURRENT = 0;		/* Modifying just this instance */
+	public int RANGE_REPEAT_ALL = 1;		/* Modifying all instances */
+	public int RANGE_REPEAT_PREV = 2;		/* Modifying current + previous */
+	public int RANGE_REPEAT_FUT = 3;		/* Modifying current + future */
+
 }

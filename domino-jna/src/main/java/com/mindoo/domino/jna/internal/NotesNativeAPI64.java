@@ -7,6 +7,7 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
+import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
@@ -1038,5 +1039,27 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			int dwMaxReturnCount, int dwReturnMask, int dwReturnMaskExt, Pointer pFilterInfo,
 			LongByReference hRetCalData, ShortByReference retCalBufferLength, LongByReference hRetUIDData,
 			IntByReference retNumEntriesProcessed, ShortByReference retSignalFlags, int dwFlags, Pointer pCtx);
+	
+	public native short CalGetUnappliedNotices(long hDB, Memory pszUID, ShortByReference pwNumNotices,
+			LongByReference phRetNOTEIDs, LongByReference phRetUNIDs, Pointer pReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalGetNewInvitations(long hDB, NotesTimeDateStruct ptdStart, Memory pszUID,
+			NotesTimeDateStruct ptdSince, NotesTimeDateStruct ptdretUntil, ShortByReference pwNumInvites,
+			LongByReference phRetNOTEIDs, LongByReference phRetUNIDs, Pointer pReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalReadNotice(long hDB, int noteID, LongByReference hRetCalData, Pointer pReserved, int dwFlags,
+			Pointer pCtx);
+	
+	public native short CalReadNoticeUNID(long hDB, NotesUniversalNoteIdStruct unid, LongByReference hRetCalData,
+			Pointer pReserved, int dwFlags, Pointer pCtx);
+	
+	public native short CalNoticeAction(long hDB, int noteID, int dwAction, Memory pszComments,
+			NotesCalendarActionDataStruct pExtActionInfo, int dwFlags, Pointer pCtx);
+	
+	public native short CalNoticeActionUNID(long hDB, NotesUniversalNoteIdStruct unid, int dwAction, Memory pszComments,
+			NotesCalendarActionDataStruct pExtActionInfo, int dwFlags, Pointer pCtx);
+	
+	public native short CalEntryAction(long hDB, Memory pszUID, Memory pszRecurID, int dwAction, int dwRange,
+			Memory pszComments, NotesCalendarActionDataStruct pExtActionInfo, int dwFlags, Pointer pCtx);
 }
 

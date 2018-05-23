@@ -229,4 +229,8 @@ public interface INotesNativeAPI extends Library {
 			int dwFlags,
 			Pointer pCtx);
 
+	public short CalGetRecurrenceID(
+			NotesTimeDateStruct.ByValue tdInput,
+			Memory pszRecurID,
+			short wLenRecurId);
 }

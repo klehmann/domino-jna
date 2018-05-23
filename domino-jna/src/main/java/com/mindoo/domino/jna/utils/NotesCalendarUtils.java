@@ -5,11 +5,15 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import com.mindoo.domino.jna.NotesCalendarActionData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesUniversalNoteId;
+import com.mindoo.domino.jna.constants.CalendarActionOptions;
 import com.mindoo.domino.jna.constants.CalendarNoteOpen;
+import com.mindoo.domino.jna.constants.CalendarProcess;
+import com.mindoo.domino.jna.constants.CalendarRangeRepeat;
 import com.mindoo.domino.jna.constants.CalendarRead;
 import com.mindoo.domino.jna.constants.CalendarReadRange;
 import com.mindoo.domino.jna.constants.CalendarWrite;
@@ -26,6 +30,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.sun.jna.Memory;
@@ -59,15 +64,13 @@ public class NotesCalendarUtils {
 	 * <li>NOERROR - on success</li>
 	 * <li>{@link INotesErrorConstants#ERR_NULL_DBHANDLE} - The database handle is NULL</li>
 	 * <li>ERR_MISC_INVALID_ARGS - Unexpected arguments provided</li>
-	 * <li>ERR_NO_CALENDAR_FOUND - Unable to find the entry because the required view does not exist in this database</li>
+	 * <li>{@link INotesErrorConstants#ERR_NO_CALENDAR_FOUND} - Unable to find the entry because the required view does not exist in this database</li>
 	 * <li>ERR_EXISTS				An entry already exists</li>
 	 * <li>ERR_CS_PROFILE_NOOWNER - Calendar Profile does not specify owner</li>
 	 * <li>ERR_UNEXPECTED_METHOD - Provided iCalendar contains a method (no method expected here)</li>
-	 * <li>ERR_MissingVEventComponents - Missing required VEvent components</li>
-	 * <li>ERR_InvalidVEventPropertyFound - Invalid VEvent property found</li>
-	 * <li>ERR_ICAL2NOTE_CONVERT - Error interpereting iCalendar input</li>
+	 * <li>{@link INotesErrorConstants#ERR_ICAL2NOTE_CONVERT} - Error interpreting iCalendar input</li>
 	 * <li>ERR_MISC_UNEXPECTED_ERROR - Unexpected internal error</li>
-	 * <li>ERR_IMPLICIT_SCHED_FAILED - Entry was updated, but errors were encountered sending notices to meeting participants</li>
+	 * <li>{@link INotesErrorConstants#ERR_IMPLICIT_SCHED_FAILED} - Entry was updated, but errors were encountered sending notices to meeting participants</li>
 	 * </ul>	
 	 * 
 	 * @param dbMail The database where the entry will be created.
@@ -145,17 +148,15 @@ public class NotesCalendarUtils {
 	 * <li>{@link INotesErrorConstants#ERR_NULL_DBHANDLE} - The database handle is NULL</li>
 	 * <li>ERR_MISC_INVALID_ARGS - Unexpected arguments provided</li>
 	 * <li>ERR_CALACTION_INVALID - This calendar entry is not in a state where updating it is supported.</li>
-	 * <li>ERR_NO_CALENDAR_FOUND - Unable to find the entry because the required view does not exist in this database</li>
+	 * <li>{@link INotesErrorConstants#ERR_NO_CALENDAR_FOUND} - Unable to find the entry because the required view does not exist in this database</li>
 	 * <li>ERR_NOT_FOUND - There are no entries that match the specified UID or UID/recurid in the database</li>
 	 * <li>ERR_NOT_YET_IMPLEMENTED - This update is not yet supported (update range or multiple VEVENTs?)</li>
 	 * <li>ERR_CS_PROFILE_NOOWNER - Calendar Profile does not specify owner</li>
 	 * <li>ERR_UNEXPECTED_METHOD - Provided iCalendar contains a method (no method expected here)</li>
 	 * <li>ERR_ICAL2NOTE_OUTOFDATE - iCalendar input is out of date in regards to sequence information.</li>
-	 * <li>ERR_MissingVEventComponents - Missing required VEvent components</li>
-	 * <li>ERR_InvalidVEventPropertyFound - Invalid VEvent property found</li>
-	 * <li>ERR_ICAL2NOTE_CONVERT - Error interpereting iCalendar input</li>
+	 * <li>{@link INotesErrorConstants#ERR_ICAL2NOTE_CONVERT} - Error interpereting iCalendar input</li>
 	 * <li>ERR_MISC_UNEXPECTED_ERROR - Unexpected internal error</li>
-	 * <li>ERR_IMPLICIT_SCHED_FAILED - Entry was updated, but errors were encountered sending notices to meeting participants</li>
+	 * <li>{@link INotesErrorConstants#ERR_IMPLICIT_SCHED_FAILED} - Entry was updated, but errors were encountered sending notices to meeting participants</li>
 	 * </ul>
 	 * 
 	 * @param dbMail The database containing the entry to update
@@ -170,7 +171,7 @@ public class NotesCalendarUtils {
 		if (dbMail.isRecycled())
 			throw new NotesError(0, "Target database already recycled");
 
-		Memory icalMem = NotesStringUtils.toLMBCS(iCal, true);
+		Memory icalMem = NotesStringUtils.toLMBCS(iCal, true, false);
 		Memory uidMem = NotesStringUtils.toLMBCS(uid, true);
 		Memory recurIdMem = NotesStringUtils.toLMBCS(recurId, true);
 		Memory commentsMem = NotesStringUtils.toLMBCS(comments, true);
@@ -344,7 +345,7 @@ public class NotesCalendarUtils {
 	 * <ul>
 	 * <li>NOERROR - on success</li>
 	 * <li>{@link INotesErrorConstants#ERR_NULL_DBHANDLE} - The database handle is NULL</li>
-	 * <li>ERR_NO_CALENDAR_FOUND - Unable to find the entry because the required view does not exist in this database</li>
+	 * <li>{@link INotesErrorConstants#ERR_NO_CALENDAR_FOUND} - Unable to find the entry because the required view does not exist in this database</li>
 	 * <li>ERR_NOT_FOUND - There are no entries that match the specified UID or UID/recurid in the database</li>
 	 * <li>ERR_MISC_INVALID_ARGS - Unexpected arguments provided</li>
 	 * <li>ERR_TDI_CONV - The recurrence ID specified cannot be interpreted</li>
@@ -560,6 +561,10 @@ public class NotesCalendarUtils {
 					result = NotesNativeAPI64.get().CalReadRange(dbMail.getHandle64(), startStruct, endStruct, currSkipCount,
 							remainingToRead, dwReturnMask, dwReturnMaskExt, null, hRetCalData,
 							retCalBufferLength, hRetUIDData, retNumEntriesProcessed, retSignalFlags, 0, null);
+					
+					if (result==1028) { //no data found
+						return;
+					}
 					NotesErrorUtils.checkResult(result);
 					
 					int numEntriesProcessed = retNumEntriesProcessed.getValue();
@@ -623,6 +628,11 @@ public class NotesCalendarUtils {
 					result = NotesNativeAPI32.get().CalReadRange(dbMail.getHandle32(), startStruct, endStruct, currSkipCount,
 							remainingToRead, dwReturnMask, dwReturnMaskExt, null, hRetCalData,
 							retCalBufferLength, hRetUIDData, retNumEntriesProcessed, retSignalFlags, 0, null);
+					
+					if (result==1028) { //no data found
+						return;
+					}
+
 					NotesErrorUtils.checkResult(result);
 
 					int numEntriesProcessed = retNumEntriesProcessed.getValue();
@@ -696,5 +706,568 @@ public class NotesCalendarUtils {
 		if (retUIDs!=null && uidAllData!=null) {
 			retUIDs.addAll(uidAllData);
 		}
+	}
+	
+	/**
+	 * This is a convinience method that returns a RECURRENCE-ID (in UTC time) from a {@link NotesTimeDate} object.
+	 * 
+	 * @param td Input time/date object
+	 * @return RECURRENCE-ID
+	 */
+	public static String getRecurrenceID(NotesTimeDate td) {
+		NotesTimeDateStruct.ByValue tdByVal = NotesTimeDateStruct.ByValue.newInstance(td.getInnards());
+		DisposableMemory retRecurId = new DisposableMemory(NotesConstants.MAXPATH);
+		try {
+			short result = NotesNativeAPI.get().CalGetRecurrenceID(tdByVal, retRecurId, (short) ((retRecurId.size()-1) & 0xffff));
+			NotesErrorUtils.checkResult(result);
+			String recurId = NotesStringUtils.fromLMBCS(retRecurId, -1);
+			return recurId;
+		}
+		finally {
+			retRecurId.dispose();
+		}
+	}
+	
+	/**
+	 * Retrieve the unapplied notices that exist for a participant of calendar entry representing a meeting.<br>
+	 * <br>
+	 * This will return things like: Reschedules, informational updates, cancelations, confirmations, etc.<br>
+	 * <br>
+	 * Notices will only be returned if the initial invitation has already been responded to, otherwise
+	 * this method will return ERR_INVITE_NOT_ACCEPTED.<br>
+	 * <br>
+	 * For recurring meetings, notices that apply to any instances in the series will be returned, with
+	 * the exception of instances where the initial invitation has not yet been responded to.<br>
+	 * <br>
+	 * Calendar entries that are not meetings will return ERR_INVALID_NOTE.<br>
+	 * <br>
+	 * We do not currently support getting unprocessed calendar entries if you are the owner (such as
+	 * a counter proposal request or a request for updated information), so this will return
+	 * ERR_NOT_YET_IMPLEMENTED.<br>
+	 * <br>
+	 * Note: For recurring meetings, it is possible that multiple notices will contain current information
+	 * for a particular occurence, so it is not possible to guarantee that there is a single "most current"
+	 * notice.<br>
+	 * <br>
+	 * For example, the subject might be changed for a single instance, and then the time may be changed
+	 * across instances.<br>
+	 * <br>
+	 * Because only one notice will have the current subject and another notice will have the current
+	 * time but NOT the current subject, both notices will be returned and both must be processed to
+	 * guarantee accuracy.<br>
+	 * <br>
+	 * Process returned notices via the CalNoticeAction method.
+	 * 
+	 * @param dbMail The database to search for calendar entries
+	 * @param uid The UID of the entry to return notices for.
+	 * @param retNoteIds return list of note ids or NULL
+	 * @param retUNIDs return list of UNIDs or NULL
+	 * @return number of notices
+	 */
+	public static int getUnappliedNotices(NotesDatabase dbMail, String uid, List<Integer> retNoteIds, List<String> retUNIDs) {
+		if (dbMail.isRecycled())
+			throw new NotesError(0, "Target database already recycled");
+
+		Memory uidMem = NotesStringUtils.toLMBCS(uid, true);
+		
+		short result;
+		
+		ShortByReference retNumNotices = new ShortByReference();
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference phRetNOTEIDs = retNoteIds==null ? null : new LongByReference();
+			LongByReference phRetUNIDs = retUNIDs==null ? null : new LongByReference();
+			
+			result = NotesNativeAPI64.get().CalGetUnappliedNotices(dbMail.getHandle64(), uidMem,
+					retNumNotices, phRetNOTEIDs, phRetUNIDs, null, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			int numNotices = (int) (retNumNotices.getValue() & 0xffff);
+			if (numNotices>0) {
+				long hRetNOTEIDs = phRetNOTEIDs.getValue();
+				if (hRetNOTEIDs!=0) {
+					Pointer ptrNoteIds = Mem64.OSMemoryLock(hRetNOTEIDs);
+					try {
+						for (int i=0; i<numNotices; i++) {
+							int currNoteId = ptrNoteIds.share(4*i).getInt(0);
+							retNoteIds.add(currNoteId);
+						}
+					}
+					finally {
+						Mem64.OSMemoryUnlock(hRetNOTEIDs);
+						Mem64.OSMemoryFree(hRetNOTEIDs);
+					}
+				}
+				
+				long hRetUNIDs = phRetUNIDs.getValue();
+				if (hRetUNIDs!=0) {
+					Pointer ptrUNIDs = Mem64.OSMemoryLock(hRetUNIDs);
+					try {
+						for (int i=0; i<numNotices; i++) {
+							NotesUniversalNoteIdStruct currUnidStruct = NotesUniversalNoteIdStruct.newInstance(ptrUNIDs.share(i*NotesConstants.notesUniversalNoteIdSize));
+							String currUnid = currUnidStruct.toString();
+							retUNIDs.add(currUnid);
+						}
+					}
+					finally {
+						Mem64.OSMemoryUnlock(hRetUNIDs);
+						Mem64.OSMemoryFree(hRetUNIDs);
+					}
+				}
+			}
+			return numNotices;
+		}
+		else {
+			IntByReference phRetNOTEIDs = retNoteIds==null ? null : new IntByReference();
+			IntByReference phRetUNIDs = retUNIDs==null ? null : new IntByReference();
+			
+			result = NotesNativeAPI32.get().CalGetUnappliedNotices(dbMail.getHandle32(), uidMem,
+					retNumNotices, phRetNOTEIDs, phRetUNIDs, null, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			int numNotices = (int) (retNumNotices.getValue() & 0xffff);
+			if (numNotices>0) {
+				if (retNoteIds!=null) {
+					int hRetNOTEIDs = phRetNOTEIDs.getValue();
+					if (hRetNOTEIDs!=0) {
+						Pointer ptrNoteIds = Mem32.OSMemoryLock(hRetNOTEIDs);
+						try {
+							for (int i=0; i<numNotices; i++) {
+								int currNoteId = ptrNoteIds.share(4*i).getInt(0);
+								retNoteIds.add(currNoteId);
+							}
+						}
+						finally {
+							Mem32.OSMemoryUnlock(hRetNOTEIDs);
+							Mem32.OSMemoryFree(hRetNOTEIDs);
+						}
+					}
+				}
+
+				if (retUNIDs!=null) {
+					int hRetUNIDs = phRetUNIDs.getValue();
+					if (hRetUNIDs!=0) {
+						Pointer ptrUNIDs = Mem32.OSMemoryLock(hRetUNIDs);
+						try {
+							for (int i=0; i<numNotices; i++) {
+								NotesUniversalNoteIdStruct currUnidStruct = NotesUniversalNoteIdStruct.newInstance(ptrUNIDs.share(i*NotesConstants.notesUniversalNoteIdSize));
+								String currUnid = currUnidStruct.toString();
+								retUNIDs.add(currUnid);
+							}
+						}
+						finally {
+							Mem32.OSMemoryUnlock(hRetUNIDs);
+							Mem32.OSMemoryFree(hRetUNIDs);
+						}
+					}
+				}
+			}
+			return numNotices;
+		}
+	}
+	
+	/**
+	 * Retrieve invitations in a mailfile that have not yet been responded to.<br>
+	 * <br>
+	 * This returns the number of new invitations as well as optional NOTEID and/or UNID lists.<br>
+	 * This returns only invitations (and delegated invitations), and not reschedules, information
+	 * updates, cancels, etc.<br>
+	 * <br>
+	 * This method does not filter out any invitations that have since been canceled/rescheduled,
+	 * or are otherwise out of date.<br>
+	 * <br>
+	 * Once the invitation is accepted, other notices that apply to that meeting can be discovered
+	 * with a call to {@link #getUnappliedNotices(NotesDatabase, String, List, List)}
+	 * must be used (on a per-UID level).<br>
+	 * Only invitations for meetings that are current (at least one instance starts within the
+	 * last day or in the future) are returned, although the starting time can be specified by
+	 * the caller to override the default.A caller can retrieve only invitations that have arrived
+	 * since a prior call to {@link #getNewInvitations(NotesDatabase, NotesTimeDate, String, NotesTimeDate, List, List)}
+	 * by using tdSince and ptdretUntil.If <code>uid</code> is provided, invitations only for a
+	 * particular meeting will be returned.<br>
+	 * <br>
+	 * This is useful if you are looking for an invitation or invitations that correspond to an
+	 * updated notice that has arrived.<br>
+	 * <br>
+	 * Note: Multiple invitations might exist for a particular UID if that meeting is recurring
+	 * and you were added to an instance or instances after the initial creation.<br>
+	 * The returned notices are not guaranteed to be in any particular order.
+	 * 
+	 * @param dbMail The database from which entries are returned.
+	 * @param tdStart Optional: If provided, only invitations for meetings that occur on or after this time will be returned.Passing in NULL will use the default value (one day before current time).
+	 * @param uid Optional: If present only invitations with a matching UID will be returned. Note: For some repeating meetings there could be multiple invites for the same UID (for separate instances).
+	 * @param tdSince Optional: Only return invitations that have been received/modified since the provided time.Passing in NULL will return invitations regardless of when they arrived.
+	 * @param retUntil Optional: If provided, this is populated with the time of this method call, which can then be used as the ptdSince argument of a subsequent call.
+	 * @param retNoteIds return list of note ids or NULL
+	 * @param retUNIDs return list of UNIDs or NULL
+	 * @return number of invitations
+	 */
+	public static int getNewInvitations(NotesDatabase dbMail, NotesTimeDate tdStart, String uid, NotesTimeDate tdSince,
+			NotesTimeDate retUntil, List<Integer> retNoteIds, List<String> retUNIDs) {
+		if (dbMail.isRecycled())
+			throw new NotesError(0, "Target database already recycled");
+
+		Memory uidMem = NotesStringUtils.toLMBCS(uid, true);
+
+		NotesTimeDateStruct tdStartStruct = tdStart==null ? null : NotesTimeDateStruct.newInstance(tdStart.getInnards());
+		NotesTimeDateStruct tdSinceStruct = tdSince==null ? null : NotesTimeDateStruct.newInstance(tdSince.getInnards());
+		
+		NotesTimeDateStruct retTdUntilStruct = retUntil==null ? null : NotesTimeDateStruct.newInstance();
+		
+		ShortByReference retNumInvites = new ShortByReference();
+		
+		short result;
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference phRetNOTEIDs = retNoteIds==null ? null : new LongByReference();
+			LongByReference phRetUNIDs = retUNIDs==null ? null : new LongByReference();
+			
+			result = NotesNativeAPI64.get().CalGetNewInvitations(dbMail.getHandle64(), tdStartStruct,
+					uidMem, tdSinceStruct,
+					retTdUntilStruct, retNumInvites, phRetNOTEIDs, phRetUNIDs, null, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			if (retUntil!=null) {
+				retTdUntilStruct.read();
+				retUntil.setTime(retTdUntilStruct.Innards);
+			}
+			
+			int numInvites = (int) (retNumInvites.getValue() & 0xffff);
+			if (numInvites>0) {
+				if (retNoteIds!=null) {
+					long hRetNOTEIDs = phRetNOTEIDs.getValue();
+					if (hRetNOTEIDs!=0) {
+						Pointer ptrNoteIds = Mem64.OSMemoryLock(hRetNOTEIDs);
+						try {
+							for (int i=0; i<numInvites; i++) {
+								int currNoteId = ptrNoteIds.share(4*i).getInt(0);
+								retNoteIds.add(currNoteId);
+							}
+						}
+						finally {
+							Mem64.OSMemoryUnlock(hRetNOTEIDs);
+							Mem64.OSMemoryFree(hRetNOTEIDs);
+						}
+					}
+				}
+
+				if (retUNIDs!=null) {
+					long hRetUNIDs = phRetUNIDs.getValue();
+					if (hRetUNIDs!=0) {
+						Pointer ptrUNIDs = Mem64.OSMemoryLock(hRetUNIDs);
+						try {
+							for (int i=0; i<numInvites; i++) {
+								NotesUniversalNoteIdStruct currUnidStruct = NotesUniversalNoteIdStruct.newInstance(ptrUNIDs.share(i*NotesConstants.notesUniversalNoteIdSize));
+								String currUnid = currUnidStruct.toString();
+								retUNIDs.add(currUnid);
+							}
+						}
+						finally {
+							Mem64.OSMemoryUnlock(hRetUNIDs);
+							Mem64.OSMemoryFree(hRetUNIDs);
+						}
+					}
+				}
+			}
+			return numInvites;
+		}
+		else {
+			IntByReference phRetNOTEIDs = retNoteIds==null ? null : new IntByReference();
+			IntByReference phRetUNIDs = retUNIDs==null ? null : new IntByReference();
+			
+			result = NotesNativeAPI32.get().CalGetNewInvitations(dbMail.getHandle32(), tdStartStruct,
+					uidMem, tdSinceStruct,
+					retTdUntilStruct, retNumInvites, phRetNOTEIDs, phRetUNIDs, null, 0, null);
+			NotesErrorUtils.checkResult(result);
+			
+			if (retUntil!=null) {
+				retTdUntilStruct.read();
+				retUntil.setTime(retTdUntilStruct.Innards);
+			}
+
+			int numInvites = (int) (retNumInvites.getValue() & 0xffff);
+			if (numInvites>0) {
+				if (retNoteIds!=null) {
+					int hRetNOTEIDs = phRetNOTEIDs.getValue();
+					if (hRetNOTEIDs!=0) {
+						Pointer ptrNoteIds = Mem32.OSMemoryLock(hRetNOTEIDs);
+						try {
+							for (int i=0; i<numInvites; i++) {
+								int currNoteId = ptrNoteIds.share(4*i).getInt(0);
+								retNoteIds.add(currNoteId);
+							}
+						}
+						finally {
+							Mem32.OSMemoryUnlock(hRetNOTEIDs);
+							Mem32.OSMemoryFree(hRetNOTEIDs);
+						}
+					}
+				}
+				
+				if (retUNIDs!=null) {
+					int hRetUNIDs = phRetUNIDs.getValue();
+					if (hRetUNIDs!=0) {
+						Pointer ptrUNIDs = Mem32.OSMemoryLock(hRetUNIDs);
+						try {
+							for (int i=0; i<numInvites; i++) {
+								NotesUniversalNoteIdStruct currUnidStruct = NotesUniversalNoteIdStruct.newInstance(ptrUNIDs.share(i*NotesConstants.notesUniversalNoteIdSize));
+								String currUnid = currUnidStruct.toString();
+								retUNIDs.add(currUnid);
+							}
+						}
+						finally {
+							Mem32.OSMemoryUnlock(hRetUNIDs);
+							Mem32.OSMemoryFree(hRetUNIDs);
+						}
+					}
+				}
+			}
+			return numInvites;
+		}
+	}
+	
+	/**
+	 * This will return iCalendar data representing a notice with the specified NOTIED.<br>
+	 * <br>
+	 * A notice may not yet be applied to the calendar entries itself, but an application
+	 * may want to read the notice (and process it).<br>
+	 * <br>
+	 * Examples of notices include invitations, reschedules, information updates, confirmations,
+	 * cancelations, counterproposals, requests for information, acceptances, declines,
+	 * tenative acceptances, etc.
+	 * 
+	 * @param dbMail The database from which entries are returned.
+	 * @param noteId The NOTEID of the notice to be returned.
+	 * @param flags {@link CalendarRead} flags to control non-default behavior. Supported: {@link CalendarRead#HIDE_X_LOTUS}, {@link CalendarRead#INCLUDE_X_LOTUS}.
+	 * @return iCalendar data
+	 */
+	public static String readNotice(NotesDatabase dbMail, int noteId, EnumSet<CalendarRead> flags) {
+		if (dbMail.isRecycled())
+			throw new NotesError(0, "Target database already recycled");
+
+		int dwFlags = flags==null ? 0 : CalendarRead.toBitMask(flags);
+		
+		String retIcal = null;
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference hRetCalData = new LongByReference();
+			
+			result = NotesNativeAPI64.get().CalReadNotice(dbMail.getHandle64(), noteId, hRetCalData, null, dwFlags, null);
+			NotesErrorUtils.checkResult(result);
+			
+			long hRetCalDataLong = hRetCalData.getValue();
+			if (hRetCalDataLong!=0) {
+				Pointer retUIDPtr = Mem64.OSMemoryLock(hRetCalDataLong);
+				try {
+					retIcal = NotesStringUtils.fromLMBCS(retUIDPtr, -1);
+				}
+				finally {
+					Mem64.OSMemoryUnlock(hRetCalDataLong);
+					Mem64.OSMemoryFree(hRetCalDataLong);
+				}
+			}
+		}
+		else {
+			IntByReference hRetCalData = new IntByReference();
+			
+			result = NotesNativeAPI32.get().CalReadNotice(dbMail.getHandle32(), noteId, hRetCalData, null, dwFlags, null);
+			NotesErrorUtils.checkResult(result);
+			
+			int hRetCalDataInt = hRetCalData.getValue();
+			if (hRetCalDataInt!=0) {
+				Pointer retUIDPtr = Mem32.OSMemoryLock(hRetCalDataInt);
+				try {
+					retIcal = NotesStringUtils.fromLMBCS(retUIDPtr, -1);
+				}
+				finally {
+					Mem32.OSMemoryUnlock(hRetCalDataInt);
+					Mem32.OSMemoryFree(hRetCalDataInt);
+				}
+			}
+		}
+		
+		return retIcal;		
+	}
+	
+	/**
+	 * This will return iCalendar data representing a notice with the specified NOTIED.<br>
+	 * <br>
+	 * A notice may not yet be applied to the calendar entries itself, but an application
+	 * may want to read the notice (and process it).<br>
+	 * <br>
+	 * Examples of notices include invitations, reschedules, information updates, confirmations,
+	 * cancelations, counterproposals, requests for information, acceptances, declines,
+	 * tenative acceptances, etc.
+	 * 
+	 * @param dbMail The database from which entries are returned.
+	 * @param unid The UNID of the notice to be returned.
+	 * @param flags {@link CalendarRead} flags to control non-default behavior. Supported: {@link CalendarRead#HIDE_X_LOTUS}, {@link CalendarRead#INCLUDE_X_LOTUS}.
+	 * @return iCalendar data
+	 */
+	public static String readNotice(NotesDatabase dbMail, String unid, EnumSet<CalendarRead> flags) {
+		if (dbMail.isRecycled())
+			throw new NotesError(0, "Target database already recycled");
+
+		NotesUniversalNoteId unidObj = new NotesUniversalNoteId(unid);
+		NotesUniversalNoteIdStruct unidStruct = unidObj.getAdapter(NotesUniversalNoteIdStruct.class);
+
+		int dwFlags = flags==null ? 0 : CalendarRead.toBitMask(flags);
+		
+		String retIcal = null;
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference hRetCalData = new LongByReference();
+			
+			result = NotesNativeAPI64.get().CalReadNoticeUNID(dbMail.getHandle64(), unidStruct, hRetCalData, null, dwFlags, null);
+			NotesErrorUtils.checkResult(result);
+			
+			long hRetCalDataLong = hRetCalData.getValue();
+			if (hRetCalDataLong!=0) {
+				Pointer retUIDPtr = Mem64.OSMemoryLock(hRetCalDataLong);
+				try {
+					retIcal = NotesStringUtils.fromLMBCS(retUIDPtr, -1);
+				}
+				finally {
+					Mem64.OSMemoryUnlock(hRetCalDataLong);
+					Mem64.OSMemoryFree(hRetCalDataLong);
+				}
+			}
+		}
+		else {
+			IntByReference hRetCalData = new IntByReference();
+			
+			result = NotesNativeAPI32.get().CalReadNoticeUNID(dbMail.getHandle32(), unidStruct, hRetCalData, null, dwFlags, null);
+			NotesErrorUtils.checkResult(result);
+			
+			int hRetCalDataInt = hRetCalData.getValue();
+			if (hRetCalDataInt!=0) {
+				Pointer retUIDPtr = Mem32.OSMemoryLock(hRetCalDataInt);
+				try {
+					retIcal = NotesStringUtils.fromLMBCS(retUIDPtr, -1);
+				}
+				finally {
+					Mem32.OSMemoryUnlock(hRetCalDataInt);
+					Mem32.OSMemoryFree(hRetCalDataInt);
+				}
+			}
+		}
+		
+		return retIcal;
+	}
+
+	/**
+	 * Perform an action on a calendar entry.<br>
+	 * <br>
+	 * For instance, change the response of an accepted meeting to counter or delegate.<br>
+	 * This must be applied to meetings (with the exception of {@link CalendarProcess#DELETE},
+	 * which can be applied to any calendar entry).<br>
+	 * This makes the appropriate modifications to the invitee calendar and also sends appropriate notices out.
+
+	 * @param dbMail The database containing calendar entries to act on
+	 * @param uid The UID of the entry to act on
+	 * @param recurId The RECURRENCE-ID of the instance to act on. May be specified for recurring meetings (omission acts on all). MUST be NULL for single meetings. Timezones not permitted (time values must be in UTC time)
+	 * @param action The action to perform as defined in {@link CalendarProcess} values
+	 * @param scope {@link CalendarRangeRepeat} as defined above (ignored for non-repeating entries)
+	 * @param comment Comments to include on the outgoing notice(s) to organizer or participants (can be NULL).
+	 * @param data Conveys any additional information required to perform <code>action</code> - NULL for actions that do not require additional information to perform, required for {@link CalendarProcess#DELEGATE}, {@link CalendarProcess#DECLINE} and {@link CalendarProcess#COUNTER} and {@link CalendarProcess#UPDATEINVITEES}.
+	 * @param flags Flags - Only {@link CalendarActionOptions#UPDATE_ALL_PARTICIPANTS} is allowed (and only for {@link CalendarProcess#UPDATEINVITEES}
+	 */
+	public static void entryAction(NotesDatabase dbMail, String uid, String recurId, EnumSet<CalendarProcess> action,
+			CalendarRangeRepeat scope, String comment, NotesCalendarActionData data, EnumSet<CalendarActionOptions> flags) {
+
+		NotesCalendarActionDataStruct dataStruct = data==null ? null : data.getAdapter(NotesCalendarActionDataStruct.class);
+		if (dataStruct!=null) {
+			System.out.println("Size 1: "+dataStruct.size());
+			System.out.println("Size 2: "+dataStruct.wLen);
+		}
+		
+		short result;
+		
+		Memory uidMem = NotesStringUtils.toLMBCS(uid, true);
+		Memory recurIdMem = NotesStringUtils.toLMBCS(recurId, true);
+		int dwFlags = CalendarActionOptions.toBitMask(flags);
+		int dwAction = CalendarProcess.toBitMask(action);
+		int dwRange = scope.getValue();
+		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CalEntryAction(dbMail.getHandle64(), uidMem, recurIdMem,
+					dwAction, dwRange, commentMem, dataStruct, dwFlags, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().CalEntryAction(dbMail.getHandle32(), uidMem, recurIdMem,
+					dwAction, dwRange, commentMem, dataStruct, dwFlags, null);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Process a calendar notice.<br>
+	 * This makes the appropriate modifications to the calendar entry and also sends appropriate notices out.
+	 * 
+	 * @param dbMail The database containing the notice to act on.
+	 * @param noteId The noteid of the notice to act on.
+	 * @param action The action to perform as defined in {@link CalendarProcess} values.
+	 * @param comment Comments to include on the outgoing notice(s) to organizer or participants (can be NULL).
+	 * @param data Conveys any additional information required to perform <code>action</code> - NULL for actions that do not require additional information to perform, required for {@link CalendarProcess#DELEGATE} and {@link CalendarProcess#COUNTER}
+	 * @param flags Flags - (a {@link CalendarActionOptions} value).
+	 */
+	public static void noticeAction(NotesDatabase dbMail, int noteId, EnumSet<CalendarProcess> action,
+			String comment, NotesCalendarActionData data, EnumSet<CalendarActionOptions> flags) {
+
+		NotesCalendarActionDataStruct dataStruct = data==null ? null : data.getAdapter(NotesCalendarActionDataStruct.class);
+		
+		short result;
+		
+		int dwFlags = CalendarActionOptions.toBitMask(flags);
+		int dwAction = CalendarProcess.toBitMask(action);
+		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CalNoticeAction(dbMail.getHandle64(), noteId, dwAction,
+					commentMem, dataStruct, dwFlags, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().CalNoticeAction(dbMail.getHandle32(), noteId, dwAction,
+					commentMem, dataStruct, dwFlags, null);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+
+	/**
+	 * Process a calendar notice.<br>
+	 * This makes the appropriate modifications to the calendar entry and also sends appropriate notices out.
+	 * 
+	 * @param dbMail The database containing the notice to act on.
+	 * @param unid The UNID of the notice to act on
+	 * @param action The action to perform as defined in {@link CalendarProcess} values.
+	 * @param comment Comments to include on the outgoing notice(s) to organizer or participants (can be NULL).
+	 * @param data Conveys any additional information required to perform <code>action</code> - NULL for actions that do not require additional information to perform, required for {@link CalendarProcess#DELEGATE} and {@link CalendarProcess#COUNTER}
+	 * @param flags Flags - (a {@link CalendarActionOptions} value).
+	 */
+	public static void noticeAction(NotesDatabase dbMail, String unid, EnumSet<CalendarProcess> action,
+			String comment, NotesCalendarActionData data, EnumSet<CalendarActionOptions> flags) {
+
+		NotesCalendarActionDataStruct dataStruct = data==null ? null : data.getAdapter(NotesCalendarActionDataStruct.class);
+		
+		short result;
+		NotesUniversalNoteId unidObj = new NotesUniversalNoteId(unid);
+		NotesUniversalNoteIdStruct unidStruct = unidObj.getAdapter(NotesUniversalNoteIdStruct.class);
+		
+		int dwFlags = CalendarActionOptions.toBitMask(flags);
+		int dwAction = CalendarProcess.toBitMask(action);
+		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CalNoticeActionUNID(dbMail.getHandle64(), unidStruct, dwAction,
+					commentMem, dataStruct, dwFlags, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().CalNoticeActionUNID(dbMail.getHandle32(), unidStruct, dwAction,
+					commentMem, dataStruct, dwFlags, null);
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 }
