@@ -346,6 +346,16 @@ public class NotesTimeDate implements Comparable<NotesTimeDate> {
 	/**
 	 * Changes the internally stored date/time value
 	 * 
+	 * @param innards new value as innards array (will be copied)
+	 */
+	public void setTime(int[] innards) {
+		if (innards.length!=2)
+			throw new IllegalArgumentException("Innards array must have 2 elements ("+innards.length+"!=2");
+		m_innards = innards.clone();
+	}
+	/**
+	 * Changes the internally stored date/time value
+	 * 
 	 * @param cal new value
 	 */
 	public void setTime(Calendar cal) {
