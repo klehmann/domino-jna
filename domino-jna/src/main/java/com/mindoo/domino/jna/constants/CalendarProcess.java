@@ -19,7 +19,7 @@ public enum CalendarProcess {
 	ACCEPT(NotesConstants.CAL_PROCESS_ACCEPT),
 	/** Tentatively accept (regardless of conflicts) */
 	TENTATIVE(NotesConstants.CAL_PROCESS_TENTATIVE),
-	/** Decline 
+	/** Decline<br>
 	 * Can be used by the organizer to decline a counter if done from a counter notice */
 	DECLINE(NotesConstants.CAL_PROCESS_DECLINE),
 	/** Delegate to {@link NotesCalendarActionData#setDelegateTo(String)} */
