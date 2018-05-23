@@ -882,7 +882,7 @@ public class NotesCalendarUtils {
 	 * Only invitations for meetings that are current (at least one instance starts within the
 	 * last day or in the future) are returned, although the starting time can be specified by
 	 * the caller to override the default.A caller can retrieve only invitations that have arrived
-	 * since a prior call to {@link #getNewInvitations(NotesDatabase, NotesTimeDate, String, NotesTimeDate, List, List)}
+	 * since a prior call to {@link #getNewInvitations(NotesDatabase, NotesTimeDate, String, NotesTimeDate, NotesTimeDate, List, List)}
 	 * by using tdSince and ptdretUntil.If <code>uid</code> is provided, invitations only for a
 	 * particular meeting will be returned.<br>
 	 * <br>

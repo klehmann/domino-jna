@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.NotesCalendarActionData;
 import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
@@ -21,9 +22,9 @@ public enum CalendarProcess {
 	/** Decline 
 	 * Can be used by the organizer to decline a counter if done from a counter notice */
 	DECLINE(NotesConstants.CAL_PROCESS_DECLINE),
-	/** Delegate to EXT_CALACTION_DATA::pszDelegateTo */
+	/** Delegate to {@link NotesCalendarActionData#setDelegateTo(String)} */
 	DELEGATE(NotesConstants.CAL_PROCESS_DELEGATE),
-	/** Counter to a new time (requires populating EXT_CALACTION_DATA::ptdChangeTo values) */
+	/** Counter to a new time (requires populating {@link NotesCalendarActionData#setChangeToStart(com.mindoo.domino.jna.NotesTimeDate)} / {@link NotesCalendarActionData#setChangeToEnd(com.mindoo.domino.jna.NotesTimeDate)} values) */
 	COUNTER(NotesConstants.CAL_PROCESS_COUNTER),
 	/** Request updated information from the organizer for this meeting.
 	 * Also used by the organizer to respond to a request for updated info. */
@@ -34,18 +35,18 @@ public enum CalendarProcess {
 	DELETE(NotesConstants.CAL_PROCESS_DELETE),
 	/** This will remove the meeting or appointment from the calendar and send notices if 
 	 * necessary.<br>
-	 * It is treated as a {@link #CAN} CAL_PROCESS_CANCEL if the entry is a meeting the mailfile 
+	 * It is treated as a {@link #CANCEL} if the entry is a meeting the mailfile 
 	 * owner is the organizer of.<br>
-	 * It is treated as a CAL_PROCESS_DECLINE if the entry is a meeting that the mailfile
+	 * It is treated as a {@link #DECLINE} if the entry is a meeting that the mailfile
 	 * owner is not the organizer of except when the entry is a broadcast.  In that case it
-	 * is treated as a CAL_PROCESS_DELETE.<br>
-	 * It is treated as a CAL_PROCESS_DELETE if the entry is a non-meeting */
+	 * is treated as a {@link #DELETE}.<br>
+	 * It is treated as a {@link #DELETE} if the entry is a non-meeting */
 	SMARTREMOVE(NotesConstants.CAL_PROCESS_SMARTREMOVE),
 	/** This will cancel a meeting that the mailfile owner is the organizer of */
 	CANCEL(NotesConstants.CAL_PROCESS_CANCEL),
 	/** This will update the invitee lists on the specified entry (or entries) to include or remove
-	 * those users specified in lists contained in the EXT_CALACTION_DATA::pAddNames and 
-	 * EXT_CALACTION_DATA::pRemoveNames values */
+	 * those users specified in lists contained in the {@link NotesCalendarActionData#setAddNamesReq(java.util.List)} etc. and 
+	 * {@link NotesCalendarActionData#setRemoveNames(java.util.List)} values */
 	UPDATEINVITEES(NotesConstants.CAL_PROCESS_UPDATEINVITEES);
 
 	private int m_val;
