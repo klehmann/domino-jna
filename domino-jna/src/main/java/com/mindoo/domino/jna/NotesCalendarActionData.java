@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mindoo.domino.jna.constants.CalendarProcess;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -136,6 +137,11 @@ public class NotesCalendarActionData implements IAdaptable {
 		return delegateTo;
 	}
 
+	/**
+	 * Sets the name of the delegated user if {@link CalendarProcess#DELEGATE} is used
+	 * 
+	 * @param delegateTo name either in abbreviated or canonical format
+	 */
 	public void setDelegateTo(String delegateTo) {
 		this.delegateTo = delegateTo;
 	}
@@ -144,6 +150,11 @@ public class NotesCalendarActionData implements IAdaptable {
 		return changeToStart;
 	}
 
+	/**
+	 * Sets the new start time for {@link CalendarProcess#COUNTER}
+	 * 
+	 * @param changeToStart new start time
+	 */
 	public void setChangeToStart(NotesTimeDate changeToStart) {
 		this.changeToStart = changeToStart;
 	}
@@ -152,6 +163,11 @@ public class NotesCalendarActionData implements IAdaptable {
 		return changeToEnd;
 	}
 
+	/**
+	 * Sets the new end time for {@link CalendarProcess#COUNTER}
+	 * 
+	 * @param changeToEnd new end time
+	 */
 	public void setChangeToEnd(NotesTimeDate changeToEnd) {
 		this.changeToEnd = changeToEnd;
 	}
@@ -160,23 +176,39 @@ public class NotesCalendarActionData implements IAdaptable {
 		return keepInformed;
 	}
 
+	/**
+	 * Sets whether the users wants to be kept informed, e.g. when cancelling
+	 * an invivation via {@link CalendarProcess#CANCEL}
+	 * 
+	 * @param keepInformed true to be kept informed
+	 */
 	public void setKeepInformed(boolean keepInformed) {
 		this.keepInformed = keepInformed;
 	}
 
-	public List<String> getAddNamesReq() {
+	public List<String> getAddNamesRequired() {
 		return addNamesReq;
 	}
 
-	public void setAddNamesReq(List<String> addNamesReq) {
+	/**
+	 * Sets a new list of required attendees
+	 * 
+	 * @param addNamesReq attendees, either in canonical or abbreviated format
+	 */
+	public void setAddNamesRequired(List<String> addNamesReq) {
 		this.addNamesReq = addNamesReq;
 	}
 
-	public List<String> getAddNamesOpt() {
+	public List<String> getAddNamesOptional() {
 		return addNamesOpt;
 	}
 
-	public void setAddNamesOpt(List<String> addNamesOpt) {
+	/**
+	 * Sets a new list of optional attendees
+	 * 
+	 * @param addNamesOpt attendees, either in canonical or abbreviated format
+	 */
+	public void setAddNamesOptional(List<String> addNamesOpt) {
 		this.addNamesOpt = addNamesOpt;
 	}
 
@@ -184,6 +216,11 @@ public class NotesCalendarActionData implements IAdaptable {
 		return addNamesFYI;
 	}
 
+	/**
+	 * Sets a new list of FYI attendees
+	 * 
+	 * @param addNamesFYI attendees, either in canonical or abbreviated format
+	 */
 	public void setAddNamesFYI(List<String> addNamesFYI) {
 		this.addNamesFYI = addNamesFYI;
 	}
@@ -192,6 +229,11 @@ public class NotesCalendarActionData implements IAdaptable {
 		return removeNames;
 	}
 
+	/**
+	 * Sets a new list of attendees to be removed
+	 * 
+	 * @param removeNames attendees, either in canonical or abbreviated format
+	 */
 	public void setRemoveNames(List<String> removeNames) {
 		this.removeNames = removeNames;
 	}
