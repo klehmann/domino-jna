@@ -45,7 +45,7 @@ public enum CalendarProcess {
 	/** This will cancel a meeting that the mailfile owner is the organizer of */
 	CANCEL(NotesConstants.CAL_PROCESS_CANCEL),
 	/** This will update the invitee lists on the specified entry (or entries) to include or remove
-	 * those users specified in lists contained in the {@link NotesCalendarActionData#setAddNamesReq(java.util.List)} etc. and 
+	 * those users specified in lists contained in the {@link NotesCalendarActionData#setAddNamesRequired(java.util.List)} etc. and 
 	 * {@link NotesCalendarActionData#setRemoveNames(java.util.List)} values */
 	UPDATEINVITEES(NotesConstants.CAL_PROCESS_UPDATEINVITEES);
 
