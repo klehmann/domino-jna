@@ -847,6 +847,19 @@ public interface INotesNativeAPI64 extends Library {
 			Pointer mustBeNull2,
 			Pointer mustBeNull3);
 
+	public short SchSrvRetrieveExt(
+			Pointer pClientNames,
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			int dwOptions,
+			NotesTimeDatePairStruct pInterval,
+			Pointer pNames,
+			Pointer pDetails,
+			Pointer piCalList,
+			Memory pszProxyUserName,
+			Memory pszProxyPassword,
+			LongByReference rethCntnr);
+	
 	public void SchContainer_Free(long hCntnr);
 	public short SchContainer_GetFirstSchedule(
 			long hCntnr,
@@ -901,7 +914,17 @@ public interface INotesNativeAPI64 extends Library {
 			long hCntnr,
 			int hSched,
 			PointerByReference pretSched);
-
+	public short Schedule_GetFirstDetails(
+			long hCntnr,
+			int hSchedObj,
+			IntByReference rethDetailObj,
+			PointerByReference retpDetail);
+	
+	public short Schedule_GetNextDetails(
+			long hCntnr,
+			int hDetailObj,
+			IntByReference rethNextDetailObj,
+			PointerByReference retpNextDetail);
 	public short NSGetServerClusterMates(
 			Memory pServerName,
 			int dwFlags,

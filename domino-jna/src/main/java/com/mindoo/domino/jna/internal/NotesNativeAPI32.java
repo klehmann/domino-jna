@@ -806,6 +806,11 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			Pointer mustBeNull2,
 			Pointer mustBeNull3);
 
+	public native short SchSrvRetrieveExt(Pointer pClientNames, NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate, int dwOptions, NotesTimeDatePairStruct pInterval, Pointer pNames,
+			Pointer pDetails, Pointer piCalList, Memory pszProxyUserName, Memory pszProxyPassword,
+			IntByReference rethCntnr);
+	
 	public native void SchContainer_Free(int hCntnr);
 	public native short SchContainer_GetFirstSchedule(
 			int hCntnr,
@@ -1061,4 +1066,10 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	
 	public native short CalEntryAction(int hDB, Memory pszUID, Memory pszRecurID, int dwAction, int dwRange,
 			Memory pszComments, NotesCalendarActionDataStruct pExtActionInfo, int dwFlags, Pointer pCtx);
+	
+	public native short Schedule_GetFirstDetails(int hCntnr, int hSchedObj, IntByReference rethDetailObj,
+			PointerByReference retpDetail);
+	
+	public native short Schedule_GetNextDetails(int hCntnr, int hDetailObj, IntByReference rethNextDetailObj,
+			PointerByReference retpNextDetail);
 }
