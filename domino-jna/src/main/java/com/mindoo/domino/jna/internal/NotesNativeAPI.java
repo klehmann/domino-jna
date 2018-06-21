@@ -13,6 +13,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,11 +23,11 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
-import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -58,16 +59,17 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	private static int m_platformAlignment;
 	static Throwable m_initError;
 
-	public static enum Mode {Classic, Direct}
 	private static Mode m_activeMode;
-
-	/**
-	 * Returns the mode that JNA uses to call native code
-	 * 
-	 * @return mode
-	 */
+	private static Map<String, Object> m_libraryOptions;
+	
+	@Override
 	public Mode getActiveJNAMode() {
 		return m_activeMode;
+	}
+
+	@Override
+	public Map<String, Object> getLibraryOptions() {
+		return m_libraryOptions==null ? null : Collections.unmodifiableMap(m_libraryOptions);
 	}
 	
 	/**
@@ -143,20 +145,20 @@ public class NotesNativeAPI implements INotesNativeAPI {
 							System.out.println("WARNING: JNA protected mode should not be active on production systems!");
 						}
 						
-						Map<String, Object> libraryOptions = new HashMap<String, Object>();
-						libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
+						m_libraryOptions = new HashMap<String, Object>();
+						m_libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
 						
 						if (PlatformUtils.isWin32()) {
-							libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
+							m_libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
 						}
 						
 						if (mode==Mode.Direct) {
 							NativeLibrary library;
 							if (PlatformUtils.isWindows()) {
-						        library = NativeLibrary.getInstance("nnotes", libraryOptions);
+						        library = NativeLibrary.getInstance("nnotes", m_libraryOptions);
 							}
 							else {
-						        library = NativeLibrary.getInstance("notes", libraryOptions);
+						        library = NativeLibrary.getInstance("notes", m_libraryOptions);
 							}
 
 							Native.register(NotesNativeAPI.class, library);
@@ -178,26 +180,26 @@ public class NotesNativeAPI implements INotesNativeAPI {
 						else {
 							INotesNativeAPI api;
 							if (PlatformUtils.isWindows()) {
-								api = Native.loadLibrary("nnotes", INotesNativeAPI.class, libraryOptions);
+								api = Native.loadLibrary("nnotes", INotesNativeAPI.class, m_libraryOptions);
 
 								if (PlatformUtils.is64Bit()) {
-									INotesNativeAPI64 api64 = Native.loadLibrary("nnotes", INotesNativeAPI64.class, libraryOptions);
+									INotesNativeAPI64 api64 = Native.loadLibrary("nnotes", INotesNativeAPI64.class, m_libraryOptions);
 									NotesNativeAPI64.set(api64);
 								}
 								else {
-									INotesNativeAPI32 api32 = Native.loadLibrary("nnotes", INotesNativeAPI32.class, libraryOptions);
+									INotesNativeAPI32 api32 = Native.loadLibrary("nnotes", INotesNativeAPI32.class, m_libraryOptions);
 									NotesNativeAPI32.set(api32);
 								}
 							}
 							else {
-								api = Native.loadLibrary("notes", INotesNativeAPI.class, libraryOptions);
+								api = Native.loadLibrary("notes", INotesNativeAPI.class, m_libraryOptions);
 								
 								if (PlatformUtils.is64Bit()) {
-									INotesNativeAPI64 api64 = Native.loadLibrary("notes", INotesNativeAPI64.class, libraryOptions);
+									INotesNativeAPI64 api64 = Native.loadLibrary("notes", INotesNativeAPI64.class, m_libraryOptions);
 									NotesNativeAPI64.set(api64);
 								}
 								else {
-									INotesNativeAPI32 api32 = Native.loadLibrary("notes", INotesNativeAPI32.class, libraryOptions);
+									INotesNativeAPI32 api32 = Native.loadLibrary("notes", INotesNativeAPI32.class, m_libraryOptions);
 									NotesNativeAPI32.set(api32);
 								}
 							}
@@ -592,7 +594,5 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			short What,
 			Pointer Buffer);
 
-	public native short CalGetApptunidFromUID(Memory pszUID, Memory pszApptunid, int dwFlags, Pointer pCtx);
-	
 	public native short CalGetRecurrenceID(ByValue tdInput, Memory pszRecurID, short wLenRecurId);
 }

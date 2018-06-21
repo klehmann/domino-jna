@@ -24,12 +24,14 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.CalNoteOpenData32;
 import com.mindoo.domino.jna.internal.CalNoteOpenData64;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.INotesNativeAPIV901;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesNativeAPIV901;
 import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
@@ -315,10 +317,19 @@ public class NotesCalendarUtils {
 	 * @return ApptUnid
 	 */
 	public static String getApptUnidFromUID(String uid) {
+		//this may fail if the C API is too old, e.g. 9.0
+		INotesNativeAPIV901 api;
+		try {
+			api = NotesNativeAPIV901.get();
+		}
+		catch (Exception e) {
+			throw new NotesError(0, "Error initializing API. Notes C API version must be 9.0.1 or higher", e);
+		}
+		
 		Memory uidMem = NotesStringUtils.toLMBCS(uid, true);
 		DisposableMemory retApptUnidMem = new DisposableMemory(NotesConstants.MAXPATH);
 		try {
-			short result = NotesNativeAPI.get().CalGetApptunidFromUID(uidMem, retApptUnidMem, 0, null);
+			short result = api.CalGetApptunidFromUID(uidMem, retApptUnidMem, 0, null);
 			NotesErrorUtils.checkResult(result);
 			
 			String apptUnid = NotesStringUtils.fromLMBCS(retApptUnidMem, -1);
