@@ -311,6 +311,40 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Returns the {@link NotesTimeDate} when this view was last accessed
+	 * 
+	 * @return last access date/time
+	 */
+	public NotesTimeDate getLastAccessedTime() {
+		NotesTimeDateStruct retLastAccessedTime = NotesTimeDateStruct.newInstance();
+		
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NIFGetLastAccessedTime(m_hCollection64, retLastAccessedTime);
+		}
+		else {
+			NotesNativeAPI32.get().NIFGetLastAccessedTime(m_hCollection32, retLastAccessedTime);
+		}
+		return new NotesTimeDate(retLastAccessedTime);
+	}
+	
+	/**
+	 * Returns the {@link NotesTimeDate} when the view index will be discarded
+	 * 
+	 * @return discard date/time
+	 */
+	public NotesTimeDate getNextDiscardTime() {
+		NotesTimeDateStruct retNextDiscardTime = NotesTimeDateStruct.newInstance();
+		
+		if (PlatformUtils.is64Bit()) {
+			NotesNativeAPI64.get().NIFGetNextDiscardTime(m_hCollection64, retNextDiscardTime);
+		}
+		else {
+			NotesNativeAPI32.get().NIFGetNextDiscardTime(m_hCollection32, retNextDiscardTime);
+		}
+		return new NotesTimeDate(retNextDiscardTime);
+	}
+	
+	/**
 	 * This function adds the document(s) specified in an ID Table to this folder.
 	 * Throws an error if {@link #isFolder()} is <code>false</code>.
 	 * 

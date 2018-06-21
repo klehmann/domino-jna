@@ -537,6 +537,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
             ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
             NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	public native void NIFGetLastModifiedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public native void NIFGetLastAccessedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public native void NIFGetNextDiscardTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
 	public native short NIFFindByKeyExtended2 (long hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,

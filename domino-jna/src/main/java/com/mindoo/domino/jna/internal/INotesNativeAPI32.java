@@ -559,6 +559,8 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
 			NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	public void NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public void NIFGetLastAccessedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public void NIFGetNextDiscardTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
 	public short NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,

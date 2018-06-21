@@ -539,6 +539,9 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
 			NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	public native void NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public native void NIFGetLastAccessedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	public native void NIFGetNextDiscardTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	
 	public native short NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,
