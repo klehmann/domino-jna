@@ -388,6 +388,38 @@ public class NotesAgent implements IRecyclableNotesObject {
 			}
 		}
 	}
+
+	/**
+	 * Runs the agent on the server
+	 * 
+	 * @param suppressPrintToConsole true to not write "Print" statements in the agent code to the server console
+	 */
+	public void runOnServer(boolean suppressPrintToConsole) {
+		runOnServer(0, suppressPrintToConsole);
+	}
+	
+	/**
+	 * Runs the agent on the server
+	 * 
+	 * @param noteIdParamDoc note id of parameter docunent
+	 * @param suppressPrintToConsole true to not write "Print" statements in the agent code to the server console
+	 */
+	public void runOnServer(int noteIdParamDoc, boolean suppressPrintToConsole) {
+		checkHandle();
+		
+		boolean bForeignServer = false;
+				
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ClientRunServerAgent(m_parentDb.getHandle64(),
+					m_hNoteId, noteIdParamDoc, bForeignServer ? 1 : 0, suppressPrintToConsole ? 1 : 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().ClientRunServerAgent(m_parentDb.getHandle32(),
+					m_hNoteId, noteIdParamDoc, bForeignServer ? 1 : 0, suppressPrintToConsole ? 1 : 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
 	
 	@Override
 	public String toString() {

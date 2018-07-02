@@ -626,6 +626,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 		    int hSelection,
 			int dwFlags);
 	public native short AgentSetHttpStatusCode(long hAgentCtx, int httpStatus);
+	public native short ClientRunServerAgent(long hdb, int nidAgent, int nidParamDoc, int bForeignServer,
+			int bSuppressPrintToConsole);
 
 	public native short FTIndex(long hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
 	public native short FTDeleteIndex(long hDB);

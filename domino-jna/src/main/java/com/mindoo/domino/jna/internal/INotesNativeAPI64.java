@@ -665,6 +665,8 @@ public interface INotesNativeAPI64 extends Library {
 			int dwFlags);
 	@UndocumentedAPI
 	public short AgentSetHttpStatusCode(long hAgentCtx, int httpStatus);
+	public short ClientRunServerAgent(long hdb, int nidAgent, int nidParamDoc,
+			int bForeignServer, int bSuppressPrintToConsole);
 
 	public short FTIndex(long hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
 	public short FTDeleteIndex(long hDB);
