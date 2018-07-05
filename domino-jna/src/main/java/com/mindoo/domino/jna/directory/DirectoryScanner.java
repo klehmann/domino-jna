@@ -55,7 +55,7 @@ public class DirectoryScanner {
 	 * Starts the directory scan. During the scan, we call {@link #entryRead(SearchResultData)} with
 	 * every entry we found
 	 * 
-	 * @param formula optional search formula to filter the returned entries, see {@link SearchResultData#getRawData()} for available fields, e.g. $path="mydb.nsf"
+	 * @param formula optional search formula to filter the returned entries, see {@link SearchResultData#getRawData()} for available fields, e.g. $path="mydb.nsf" or @Word($info;@char(10);2)="db category name"
 	 * @return search result; override {@link #isAccepted(SearchResultData)} to apply your own filtering or {@link #entryRead(SearchResultData)} to read results while scanning
 	 */
 	public List<SearchResultData> scan(String formula) {
