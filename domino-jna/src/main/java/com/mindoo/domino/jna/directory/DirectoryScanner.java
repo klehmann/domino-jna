@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.utils.StringTokenizerExt;
 
 import lotus.domino.DbDirectory;
 
@@ -98,14 +99,44 @@ public class DirectoryScanner {
 							return action == DirectoryScanner.Action.Continue ? Action.Continue : Action.Stop;
 						}
 						else if ("$NOTEFILE".equals(typeStr)) {
-							String dbTitle = null;
-
+							String dbTitle = "";
+							String dbCategory = "";
+							String dbTemplateName = "";
+							String dbInheritTemplateName = "";
+							
 							Object infoObj = dataAsMap.get("$Info");
 							if (infoObj instanceof String) {
-								//the database title is the first line of the $Info value
-								String infoStr = (String) infoObj;
-								int iPos = infoStr.indexOf('\n');
-								dbTitle = iPos==-1 ? infoStr : infoStr.substring(0, iPos);
+								// parse weird $Info format:
+								// $info=Database title\n
+								// Database category\n
+								// #1Database template\n
+								// #2Database inherit template
+								String infoStr = ((String) infoObj).replace("\r", "");
+								StringTokenizerExt st = new StringTokenizerExt(infoStr, "\n");
+								if (st.hasMoreTokens()) {
+									dbTitle = st.nextToken();
+									
+									boolean secondLine = true;
+									while (st.hasMoreTokens()) {
+										String currLine = st.nextToken();
+										
+										if (secondLine) {
+											secondLine = false;
+											
+											if (!currLine.startsWith("1#") && !currLine.startsWith("2#")) {
+												dbCategory = currLine;
+												continue;
+											}
+										}
+										
+										if (currLine.startsWith("#1")) {
+											dbTemplateName = currLine.substring(2);
+										}
+										else if (currLine.startsWith("#2")) {
+											dbInheritTemplateName = currLine.substring(2);
+										}
+									}
+								}
 							}
 
 							Calendar dbCreated = null;
@@ -160,7 +191,10 @@ public class DirectoryScanner {
 							dbData.setDesignModifiedDate(nonDataMod);
 							dbData.setFileName(fileName);
 							dbData.setFilePath(filePath);
-
+							dbData.setCategory(dbCategory);
+							dbData.setTemplateName(dbTemplateName);
+							dbData.setInheritTemplateName(dbInheritTemplateName);
+							
 							if (isAccepted(dbData)) {
 								lookupResult.add(dbData);
 							}
@@ -229,7 +263,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param rawData data
 		 */
-		public void setRawData(Map<String,Object> rawData) {
+		void setRawData(Map<String,Object> rawData) {
 			this.m_rawData = rawData;
 		}
 		
@@ -259,7 +293,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param folderName name
 		 */
-		public void setFolderName(String folderName) {
+		private void setFolderName(String folderName) {
 			this.m_folderName = folderName;
 		}
 		
@@ -279,7 +313,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param folderPath path
 		 */
-		public void setFolderPath(String folderPath) {
+		private void setFolderPath(String folderPath) {
 			this.m_folderPath = folderPath;
 		}
 	}
@@ -299,6 +333,9 @@ public class DirectoryScanner {
 		private Calendar m_lastFixup;
 		private Calendar m_lastCompact;
 		private Calendar m_nonDataMod;
+		private String m_category;
+		private String m_templateName;
+		private String m_ineritTemplateName;
 		
 		/**
 		 * Returns the database title
@@ -314,7 +351,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param title title
 		 */
-		public void setTitle(String title) {
+		private void setTitle(String title) {
 			this.m_title = title;
 		}
 
@@ -332,7 +369,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param fileName filename
 		 */
-		public void setFileName(String fileName) {
+		private void setFileName(String fileName) {
 			this.m_fileName = fileName;
 		}
 
@@ -350,7 +387,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param filePath path
 		 */
-		public void setFilePath(String filePath) {
+		private void setFilePath(String filePath) {
 			this.m_filePath = filePath;
 		}
 
@@ -368,7 +405,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param created creation date
 		 */
-		public void setCreated(Calendar created) {
+		private void setCreated(Calendar created) {
 			this.m_created = created;
 		}
 
@@ -386,7 +423,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param modified modification date
 		 */
-		public void setModified(Calendar modified) {
+		private void setModified(Calendar modified) {
 			this.m_modified = modified;
 		}
 		
@@ -404,7 +441,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param lastFixup last fixup
 		 */
-		public void setLastFixup(Calendar lastFixup) {
+		private void setLastFixup(Calendar lastFixup) {
 			this.m_lastFixup = lastFixup;
 		}
 		
@@ -422,7 +459,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param lastCompact last compact
 		 */
-		public void setLastCompact(Calendar lastCompact) {
+		private void setLastCompact(Calendar lastCompact) {
 			this.m_lastCompact = lastCompact;
 		}
 		
@@ -440,8 +477,57 @@ public class DirectoryScanner {
 		 * 
 		 * @param nonDataMod design modified date
 		 */
-		public void setDesignModifiedDate(Calendar nonDataMod) {
+		private void setDesignModifiedDate(Calendar nonDataMod) {
 			this.m_nonDataMod = nonDataMod;
+		}
+		
+		/**
+		 * Returns the database category
+		 * 
+		 * @return category or empty string
+		 */
+		public String getCategory() {
+			return this.m_category;
+		}
+		
+		/**
+		 * Sets the database category
+		 * 
+		 * @param category category
+		 */
+		private void setCategory(String category) {
+			this.m_category = category;
+		}
+		
+		/**
+		 * Returns the template name
+		 * 
+		 * @return template name if this database is a template, empty string otherwise
+		 */
+		public String getTemplateName() {
+			return m_templateName;
+		}
+		
+		private void setTemplateName(String templateName) {
+			this.m_templateName = templateName;
+		}
+		
+		/**
+		 * Returns the name of the template that this database inherits its design from
+		 * 
+		 * @return inherit template name or empty string
+		 */
+		public String getInheritTemplateName() {
+			return m_ineritTemplateName;
+		}
+		
+		/**
+		 * Sets the inherit template name
+		 * 
+		 * @param inheritTemplateName inherit template name
+		 */
+		private void setInheritTemplateName(String inheritTemplateName) {
+			this.m_ineritTemplateName = inheritTemplateName;
 		}
 	}
 }
