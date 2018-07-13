@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -47,13 +48,23 @@ public class LegacyAPIUtils {
 			@Override
 			public Object run() {
 				try {
-					//This class only works when lwpd.domino.napi.jar and lwpd.commons.jar are in the classpath
-					Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
-					Method initLibrary = cClass.getMethod("initLibrary", String.class);
-					initLibrary.invoke(null, "");
+					String backendBridgeFinderClassname = System.getProperty(IBackendBridgeFinder.class.getName());
+					IBackendBridgeFinder backendBridgeFinder;
+					
+					if (!StringUtil.isEmpty(backendBridgeFinderClassname)) {
+						Class<IBackendBridgeFinder> backendBridgeFinderClass =
+								(Class<IBackendBridgeFinder>) Class.forName(backendBridgeFinderClassname);
+						
+						backendBridgeFinder = backendBridgeFinderClass.newInstance();
+					}
+					else {
+						//use fallback, works when running in a plugin that has the
+						//com.ibm.domino.napi dependency
+						backendBridgeFinder = new DefaultBackendBridgeFinder();
+					}
 
 					try {
-						Class<?> backendBridgeClass = Class.forName("com.ibm.domino.napi.c.BackendBridge");
+						Class<?> backendBridgeClass = backendBridgeFinder.getBackendBridgeClass();
 						try {
 							getDocumentHandleRW = backendBridgeClass.getMethod("getDocumentHandleRW", lotus.domino.Document.class);
 						}
@@ -97,7 +108,7 @@ public class LegacyAPIUtils {
 					}
 				}
 				catch (Exception t) {
-					//
+					t.printStackTrace();
 				}
 				return null;
 			}
@@ -380,4 +391,55 @@ public class LegacyAPIUtils {
 		});
 	}
 
+	/**
+	 * Interface to provide a custom class that locates the class
+	 * com.ibm.domino.napi.c.BackendBridge. Default implementation
+	 * just uses the JNA project's classloader to find it.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IBackendBridgeFinder {
+		
+		public Class<?> getBackendBridgeClass() throws ClassNotFoundException;
+		
+	}
+
+	/**
+	 * Default implementation of {@link IBackendBridgeFinder} that uses
+	 * the JNA project's classloader to find the BackendBridge class.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	private static class DefaultBackendBridgeFinder implements IBackendBridgeFinder {
+
+		@Override
+		public Class<?> getBackendBridgeClass() throws ClassNotFoundException {
+			//This class only works when lwpd.domino.napi.jar and lwpd.commons.jar are in the classpath
+			ClassLoader napiClassloader;
+			
+			try {
+				Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
+				Method initLibrary = cClass.getMethod("initLibrary", String.class);
+				initLibrary.invoke(null, "");
+				
+				napiClassloader = cClass.getClassLoader();
+				
+			} catch (ClassNotFoundException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			} catch (NoSuchMethodException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			} catch (SecurityException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			} catch (IllegalAccessException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			} catch (IllegalArgumentException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			} catch (InvocationTargetException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
+			}
+
+			return napiClassloader.loadClass("com.ibm.domino.napi.c.BackendBridge");
+		}
+	}
+	
 }
