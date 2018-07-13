@@ -32,6 +32,7 @@ public class LegacyAPIUtils {
 	private static boolean m_initialized;
 
 	private static volatile Method getDocumentHandleRW;
+	private static volatile Method getDatabaseHandleRO;
 	private static volatile Method createDocument;
 	private static volatile Method createDatabase;
 	private static volatile Method createXPageSession;
@@ -67,6 +68,12 @@ public class LegacyAPIUtils {
 						Class<?> backendBridgeClass = backendBridgeFinder.getBackendBridgeClass();
 						try {
 							getDocumentHandleRW = backendBridgeClass.getMethod("getDocumentHandleRW", lotus.domino.Document.class);
+						}
+						catch (Exception e) {
+							//
+						}
+						try {
+							getDatabaseHandleRO = backendBridgeClass.getMethod("getDatabaseHandleRO", lotus.domino.Database.class);
 						}
 						catch (Exception e) {
 							//
@@ -145,15 +152,26 @@ public class LegacyAPIUtils {
 	public static long getDBHandle(Database db) {
 		initialize();
 
-		if (getDBHandle==null) {
-			throw new NotesError(0, "Required method XSPNative.getDBHandle(Database) not available in this environment");
+		if (getDBHandle==null && getDatabaseHandleRO==null) {
+			throw new NotesError(0, "Required method to extract DB handle not available in this environment");
 		}
 
-		try {
-			long cHandle = (Long) getDBHandle.invoke(null, db);
-			return cHandle;
-		} catch (Exception e) {
-			throw new NotesError(0, "Could not get db handle", e);
+		if (getDBHandle!=null) {
+			try {
+				long cHandle = (Long) getDBHandle.invoke(null, db);
+				return cHandle;
+			} catch (Exception e) {
+				throw new NotesError(0, "Could not get db handle", e);
+			}
+			
+		}
+		else {
+			try {
+				long cHandle = (Long) getDatabaseHandleRO.invoke(null, db);
+				return cHandle;
+			} catch (Exception e) {
+				throw new NotesError(0, "Could not get db handle", e);
+			}
 		}
 	}
 
