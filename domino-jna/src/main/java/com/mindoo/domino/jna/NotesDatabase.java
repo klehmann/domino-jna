@@ -400,7 +400,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				String effUserName = session.getEffectiveUserName();
 				m_asUserCanonical = effUserName;
 				
-				List<String> names = NotesNamingUtils.getUserNamesList(m_asUserCanonical);
+				List<String> names = NotesNamingUtils.getUserNamesList(legacyDB.getServer(), m_asUserCanonical);
 				m_namesList = NotesNamingUtils.writeNewNamesList(names);
 
 				//setting authenticated flag for the user is required when running on the server
