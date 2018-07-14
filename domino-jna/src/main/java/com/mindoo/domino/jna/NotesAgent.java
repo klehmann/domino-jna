@@ -335,7 +335,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 					NotesNativeAPI32.get().AgentSetDocumentContext(rethContext.getValue(), note.getHandle32());
 				}
 				else if (cHandle!=0) {
-					NotesNativeAPI64.get().AgentSetDocumentContext(rethContext.getValue(), cHandle);
+					NotesNativeAPI32.get().AgentSetDocumentContext(rethContext.getValue(), (int) cHandle);
 				}
 				
 				if (paramDocId!=0) {
@@ -343,17 +343,17 @@ public class NotesAgent implements IRecyclableNotesObject {
 				}
 				
 				if (effectiveUserNameAsNamesList!=null) {
-					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
+					result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle32());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsStringList!=null) {
 					namesListToFree = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
-					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle32());
 					NotesErrorUtils.checkResult(result);
 				}
 				else if (effectiveUserNameAsString!=null) {
 					namesListToFree = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
-					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
+					result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle32());
 					NotesErrorUtils.checkResult(result);
 				}
 
