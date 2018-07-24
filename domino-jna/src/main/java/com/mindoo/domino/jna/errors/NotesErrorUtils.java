@@ -20,20 +20,37 @@ public class NotesErrorUtils {
 	 * @throws NotesError if the result is not 0
 	 */
 	public static void checkResult(short result) {
-		if (result > 0) {
-			short status = (short) (result & NotesConstants.ERR_MASK);
-			if (status==0)
-				return;
-			
-			String message;
-			try {
-				message = errToString(status);
-			}
-			catch (Throwable e) {
-				throw new NotesError(result, "ERR "+result);
-			}
-			throw new NotesError(result, "ERR "+result+": "+ message);
+		if (result==0)
+			return;
+		
+		NotesError ex = toNotesError(result);
+		if (ex==null)
+			return;
+		else
+			throw ex;
+	}
+
+	/**
+	 * Converts an error code into a {@link NotesError}.
+	 * 
+	 * @param result error code
+	 * @return exception of null if no error
+	 */
+	public static NotesError toNotesError(short result) {
+		short status = (short) (result & NotesConstants.ERR_MASK);
+		if (status==0)
+			return null;
+		
+		boolean isRemoteError = (result & NotesConstants.STS_REMOTE) == NotesConstants.STS_REMOTE;
+		
+		String message;
+		try {
+			message = errToString(status);
 		}
+		catch (Throwable e) {
+			return new NotesError(result, "ERR "+status);
+		}
+		return new NotesError(result, message + " (error code: "+status+(isRemoteError ? ", remote server error" : "")+", raw error with all flags: "+result+ ")");
 	}
 	
 	/**

@@ -112,7 +112,9 @@ public interface NotesConstants {
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
-
+	/** error came from remote machine */
+	public static final short STS_REMOTE = 0x4000;
+	
 	/*	Defines for Authentication flags */
 
 	/** Set if names list has been authenticated via Notes */
@@ -2960,5 +2962,4 @@ This allows an Editor to assume some Designer-level access */
 	public int RANGE_REPEAT_ALL = 1;		/* Modifying all instances */
 	public int RANGE_REPEAT_PREV = 2;		/* Modifying current + previous */
 	public int RANGE_REPEAT_FUT = 3;		/* Modifying current + future */
-
 }

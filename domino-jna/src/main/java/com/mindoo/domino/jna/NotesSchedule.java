@@ -169,13 +169,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 	 */
 	public NotesError getError() {
 		short err = m_scheduleData==null ? null : m_scheduleData.error;
-		if (err==0)
-			return null;
-		else {
-			String errString = NotesErrorUtils.errToString(err);
-			NotesError ex = new NotesError(err, "ERR"+err+" "+errString);
-			return ex;
-		}
+		return NotesErrorUtils.toNotesError(err);
 	}
 	
 	/**
