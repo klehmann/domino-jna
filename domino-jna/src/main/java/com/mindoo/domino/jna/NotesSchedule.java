@@ -168,7 +168,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 	 * @return exception or null
 	 */
 	public NotesError getError() {
-		short err = m_scheduleData==null ? null : m_scheduleData.error;
+		short err = m_scheduleData==null ? 0 : m_scheduleData.error;
 		return NotesErrorUtils.toNotesError(err);
 	}
 	
