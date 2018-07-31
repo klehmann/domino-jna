@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 
 import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
-import com.mindoo.domino.jna.NotesSearch.SearchCallback;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CreateDatabase;
@@ -2075,7 +2074,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * routine, and process the ID table after the search completes. ID tables are
 	 * guaranteed not to contain a given ID more than once.
 	 * 
-	 * @param db database to search in
 	 * @param searchFilter optional search scope as {@link NotesIDTable} or null
 	 * @param formula formula or null
 	 * @param columnFormulas map with programmatic column names (key) and formulas (value) with keys sorted in column order or null to output all items; automatically uses {@link Search#NOITEMNAMES} and {@link Search#SUMMARY} search flag
@@ -2087,7 +2085,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula,
+	public NotesTimeDate search(NotesIDTable searchFilter, final String formula,
 			LinkedHashMap<String,String> columnFormulas, String viewTitle,
 			final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since,
 			final SearchCallback callback) throws FormulaCompilationError {
