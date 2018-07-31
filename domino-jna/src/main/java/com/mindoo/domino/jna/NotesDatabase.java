@@ -2079,10 +2079,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param columnFormulas map with programmatic column names (key) and formulas (value) with keys sorted in column order or null to output all items; automatically uses {@link Search#NOITEMNAMES} and {@link Search#SUMMARY} search flag
 	 * @param viewTitle optional view title that will be returned for "@ ViewTitle" within the formula or null
 	 * @param searchFlags flags to control searching ({@link Search})
-	 * @param noteClassMask bitmask of {@link NoteClass} or {@link FileType} to search
+	 * @param noteClasses noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesIDTable, String, LinkedHashMap, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	public NotesTimeDate search(NotesIDTable searchFilter, final String formula,
