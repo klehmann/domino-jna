@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna</artifactId>
-	<version>0.9.19-SNAPSHOT</version>
+	<version>0.9.19</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA</name>
@@ -158,12 +158,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.8.1</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-collections4</artifactId>
 			<version>4.0</version>
@@ -189,15 +183,27 @@
 			<version>1.4.2</version>
 		</dependency>
 		<dependency>
+		    <groupId>com.ibm.icu</groupId>
+		    <artifactId>icu4j-charset</artifactId>
+		    <version>60.2</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 		    <groupId>joda-time</groupId>
 		    <artifactId>joda-time</artifactId>
 		    <version>2.9.9</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-		    <groupId>com.ibm.icu</groupId>
-		    <artifactId>icu4j-charset</artifactId>
-		    <version>60.2</version>
+			<groupId>org.mnode.ical4j</groupId>
+			<artifactId>ical4j</artifactId>
+			<version>1.0.7</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
