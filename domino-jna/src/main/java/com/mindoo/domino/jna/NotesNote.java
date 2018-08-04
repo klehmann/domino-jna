@@ -1,10 +1,12 @@
 package com.mindoo.domino.jna;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -4711,7 +4713,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			int startOffset=0;
 			Memory textMem = new Memory(NotesConstants.MAXPATH+1);
 			
-			StringBuilder htmlText = new StringBuilder();
+			ByteArrayOutputStream htmlTextLMBCSOut = new ByteArrayOutputStream();
 			
 			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
 				len.setValue(NotesConstants.MAXPATH);
@@ -4726,14 +4728,18 @@ public class NotesNote implements IRecyclableNotesObject {
 				NotesErrorUtils.checkResult(result);
 				
 				if (result == 0) {
-					textMem.setByte(len.getValue(), (byte) 0);
-					
-					String currText = NotesStringUtils.fromLMBCS(textMem, -1);
-					htmlText.append(currText);
+					byte[] byteArr = textMem.getByteArray(0, len.getValue());
+					try {
+						htmlTextLMBCSOut.write(byteArr);
+					} catch (IOException e) {
+						throw new NotesError(0, "Unexpected write error", e);
+					}
 					
 					startOffset += len.getValue();
 				}
 			}
+			
+			String htmlText = NotesStringUtils.fromLMBCS(htmlTextLMBCSOut.toByteArray());
 			
 			Memory refCount = new Memory(4);
 			
@@ -4882,7 +4888,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				}
 			}
 			
-			return new HtmlConversionResult(htmlText.toString(), references, options);
+			return new HtmlConversionResult(htmlText, references, options);
 		}
 		finally {
 			if (PlatformUtils.is64Bit()) {
