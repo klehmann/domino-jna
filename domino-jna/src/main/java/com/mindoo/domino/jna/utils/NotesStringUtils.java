@@ -199,6 +199,9 @@ public class NotesStringUtils {
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(byte[] data) {
+		if (data==null || data.length==0)
+			return "";
+		
 		int startOffset = 0;
 		
 		List<String> lines = new ArrayList<String>();
