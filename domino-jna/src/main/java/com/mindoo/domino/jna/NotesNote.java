@@ -4709,36 +4709,42 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 			
 			IntByReference len = new IntByReference();
-			len.setValue(NotesConstants.MAXPATH);
 			int startOffset=0;
-			Memory textMem = new Memory(NotesConstants.MAXPATH+1);
+			int bufSize = 4000;
+			int iLen = bufSize;
+			
+			byte[] bufArr = new byte[bufSize];
 			
 			ByteArrayOutputStream htmlTextLMBCSOut = new ByteArrayOutputStream();
 			
-			while (result==0 && len.getValue()>0 && startOffset<totalLen) {
-				len.setValue(NotesConstants.MAXPATH);
-				textMem.setByte(0, (byte) 0);
-				
-				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().HTMLGetText(hHTML64, startOffset, len, textMem);
-				}
-				else {
-					result = NotesNativeAPI32.get().HTMLGetText(hHTML32, startOffset, len, textMem);
-				}
-				NotesErrorUtils.checkResult(result);
-				
-				if (result == 0) {
-					byte[] byteArr = textMem.getByteArray(0, len.getValue());
-					try {
-						htmlTextLMBCSOut.write(byteArr);
-					} catch (IOException e) {
-						throw new NotesError(0, "Unexpected write error", e);
+			DisposableMemory textMem = new DisposableMemory(bufSize+1);
+			try {
+				while (result==0 && iLen>0 && startOffset<totalLen) {
+					len.setValue(bufSize);
+					textMem.setByte(0, (byte) 0);
+
+					if (PlatformUtils.is64Bit()) {
+						result = NotesNativeAPI64.get().HTMLGetText(hHTML64, startOffset, len, textMem);
 					}
-					
-					startOffset += len.getValue();
+					else {
+						result = NotesNativeAPI32.get().HTMLGetText(hHTML32, startOffset, len, textMem);
+					}
+					NotesErrorUtils.checkResult(result);
+
+					iLen = len.getValue();
+
+					if (result==0 && iLen > 0) {
+						textMem.read(0, bufArr, 0, iLen);
+						htmlTextLMBCSOut.write(bufArr, 0, iLen);
+
+						startOffset += iLen;
+					}
 				}
 			}
-			
+			finally {
+				textMem.dispose();
+			}
+
 			String htmlText = NotesStringUtils.fromLMBCS(htmlTextLMBCSOut.toByteArray());
 			
 			Memory refCount = new Memory(4);
