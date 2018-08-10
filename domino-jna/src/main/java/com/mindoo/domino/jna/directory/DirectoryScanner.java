@@ -228,7 +228,7 @@ public class DirectoryScanner {
 		return true;
 	}
 
-	public enum Action {Continue, Stop}
+	public static enum Action {Continue, Stop}
 	
 	/**
 	 * Implement this method to get notified about each directory entry found and be
