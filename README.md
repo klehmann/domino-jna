@@ -14,7 +14,7 @@ The project provides functionality that is not available in the classic Java API
 * read **design collection** with design elements in a database
 * **differential view reads** : on second view lookup, only read rows that have changed
 * support for view resorting (changing the collation in C API terms)
-* **direct attachment streaming** (IBM's Java API extracts files to temp disk space first to read attachment data)
+* **direct attachment streaming to create and extract files** (IBM's Java API extracts files to temp disk space first to read attachment data and only supports adding files stored on disk as document attachments)
 * basic APIs to read note (document) item values like String/Double/Calendar single and multiple values
 * several APIs to write item values and attachments (needs more work)
 * **richtext item reading**: convenience method to extract text content, advanced API to read all CD records (IRichTextNavigator)
