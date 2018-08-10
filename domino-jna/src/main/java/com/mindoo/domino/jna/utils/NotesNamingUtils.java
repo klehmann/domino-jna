@@ -82,6 +82,25 @@ public class NotesNamingUtils {
 	}
 	
 	/**
+	 * This function converts a list of distinguished names in abbreviated format to canonical format.
+	 * A fully distinguished name is in canonical format - it contains all possible naming components.
+	 * The abbreviated format of a distinguished name removes the labels from the naming components.
+	 * 
+	 * @param names list of names
+	 * @return list of names in canonical format
+	 */
+	public static List<String> toCanonicalNames(List<String> names) {
+		if (names==null)
+			return null;
+		
+		List<String> namesCanonical = new ArrayList<String>(names.size());
+		for (String currName : names) {
+			namesCanonical.add(toCanonicalName(currName));
+		}
+		return namesCanonical;
+	}
+	
+	/**
 	 * This function converts a distinguished name in abbreviated format to canonical format.
 	 * A fully distinguished name is in canonical format - it contains all possible naming components.
 	 * The abbreviated format of a distinguished name removes the labels from the naming components.
@@ -160,6 +179,25 @@ public class NotesNamingUtils {
 	}
 
 	/**
+	 * This function converts a list of distinguished names in canonical format to abbreviated format.
+	 * A fully distinguished name is in canonical format - it contains all possible naming components.
+	 * The abbreviated format of a distinguished name removes the labels from the naming components.
+	 * 
+	 * @param names list of names to convert
+	 * @return list of abbreviated names
+	 */
+	public static List<String> toAbbreviatedNames(List<String> names) {
+		if (names==null)
+			return null;
+		
+		List<String> namesAbbr = new ArrayList<String>(names.size());
+		for (String currName : names) {
+			namesAbbr.add(toAbbreviatedName(currName));
+		}
+		return namesAbbr;
+	}
+	
+	/**
 	 * Method to compare two Notes names. We compare the abbreviated forms of both names
 	 * ignoring the case
 	 * 
@@ -194,6 +232,23 @@ public class NotesNamingUtils {
 		else {
 			return firstPart;
 		}
+	}
+	
+	/**
+	 * Extracts the common name part of a list of abbreviated or canonical names
+	 * 
+	 * @param names list of abbreviated or canonical name
+	 * @return list of common names
+	 */
+	public static List<String> toCommonNames(List<String> names) {
+		if (names==null)
+			return null;
+		
+		List<String> namesAbbr = new ArrayList<String>(names.size());
+		for (String currName : names) {
+			namesAbbr.add(toCommonName(currName));
+		}
+		return namesAbbr;
 	}
 	
 	/**
