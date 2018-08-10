@@ -290,6 +290,8 @@ public interface INotesNativeAPI32 extends Library {
 			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			IntByReference rethNote);
+	@UndocumentedAPI
+	public short NSFNoteOpenByUNIDExtended(int hDB, NotesUniversalNoteIdStruct pUNID, int flags, IntByReference rtn);
 	public short NSFNoteClose(int hNote);
 	public short NSFNoteVerifySignature(
 			int  hNote,

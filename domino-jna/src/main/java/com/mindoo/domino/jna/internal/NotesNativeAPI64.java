@@ -290,6 +290,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			LongByReference rethNote);
+	public native short NSFNoteOpenByUNIDExtended(long hDB, NotesUniversalNoteIdStruct pUNID, int flags, LongByReference rtn);
 	public native short NSFNoteClose(long hNote);
 	public native short NSFNoteVerifySignature(
 			long  hNote,

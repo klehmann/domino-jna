@@ -2972,8 +2972,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * This function takes the Universal Note ID and reads the note into memory and returns
-	 * a handle to the in-memory copy.<br>
-	 * This function only supports the set of 16-bit WORD options described in the entry {@link OpenNote}.
+	 * a handle to the in-memory copy.
 
 	 * @param unid UNID
 	 * @param openFlags open flags
@@ -2982,12 +2981,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public NotesNote openNoteByUnid(String unid, EnumSet<OpenNote> openFlags) {
 		checkHandle();
 
-		short openFlagsBitmask = OpenNote.toBitMaskForOpen(openFlags);
+		int openFlagsBitmask = OpenNote.toBitMaskForOpenExt(openFlags);
 		NotesUniversalNoteIdStruct unidObj = NotesUniversalNoteIdStruct.fromString(unid);
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
-			short result = NotesNativeAPI64.get().NSFNoteOpenByUNID(m_hDB64, unidObj, openFlagsBitmask, rethNote);
+			short result = NotesNativeAPI64.get().NSFNoteOpenByUNIDExtended(m_hDB64, unidObj, openFlagsBitmask, rethNote);
 			NotesErrorUtils.checkResult(result);
 			
 			long hNote = rethNote.getValue();
@@ -2998,7 +2997,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		else {
 			IntByReference rethNote = new IntByReference();
-			short result = NotesNativeAPI32.get().NSFNoteOpenByUNID(m_hDB32, unidObj, openFlagsBitmask, rethNote);
+			short result = NotesNativeAPI32.get().NSFNoteOpenByUNIDExtended(m_hDB32, unidObj, openFlagsBitmask, rethNote);
 			NotesErrorUtils.checkResult(result);
 			
 			int hNote = rethNote.getValue();
