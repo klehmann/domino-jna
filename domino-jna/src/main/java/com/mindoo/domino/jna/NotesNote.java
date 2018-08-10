@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
-import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -21,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
@@ -1465,7 +1465,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		Pointer valuePtr = new Pointer(poolPtrLong);
 		
 		try {
-			List<Object> values = getItemValue(itemName, itemBlockId, valuePtr, valueLength);
+			List<Object> values = getItemValue(itemName, itemBlockId, valueBlockId, valuePtr, valueLength);
 			return values;
 		}
 		finally {
@@ -1503,12 +1503,13 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * 
 	 * @param notesAPI Notes API
 	 * @param itemName item name (for logging purpose)
-	 * @param NotesBlockIdStruct itemBlockId item block id
+	 * @param itemBlockId item block id
+	 * @param valueBlockId value block id
 	 * @param valuePtr pointer to the item value
 	 * @param valueLength item value length plus 2 bytes for the data type WORD
 	 * @return item value as list
 	 */
-	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, Pointer valuePtr, int valueLength) {
+	List<Object> getItemValue(String itemName, NotesBlockIdStruct itemBlockId, NotesBlockIdStruct valueBlockId, Pointer valuePtr, int valueLength) {
 		short dataType = valuePtr.getShort(0);
 		int dataTypeAsInt = (int) (dataType & 0xffff);
 		
@@ -1723,6 +1724,438 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Interface to create document attachments in-memory without 
+	 * the need to write files to disk.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IAttachmentProducer {
+		
+		/**
+		 * This method is called before creating the binary object in
+		 * the database to get a size estimation. The final size is adjusted
+		 * to the produced amount of data. Return an estimated file size
+		 * here to improve efficiency, otherwise we will do the first NSF object
+		 * allocation with a default size (1000 bytes) and auto-grow / -shrink
+		 * it based on the produced file data.
+		 * 
+		 * @return size estimation or -1 if unknown
+		 */
+		public int getSizeEstimation();
+		
+		/**
+		 * Implement this method to produce the file attachment data
+		 * 
+		 * @param out output stream
+		 * @throws IOException in case of I/O errors
+		 */
+		public void produceAttachment(OutputStream out) throws IOException;
+		
+	}
+	
+	/**
+	 * Creates a new attachment with streamed data. This method does not require the
+	 * file to be written to disk first like {@link #attachFile(String, String, Compression)},
+	 * but creates and auto-resizes an NSF binary object based on the data written in
+	 * {@link IAttachmentProducer#produceAttachment(OutputStream)}.
+	 * 
+	 * @param producer attachment producer
+	 * @param uniqueFileNameInNote filename that will be stored internally with the attachment, displayed when the attachment is not part of any richtext item (called "V2 attachment" in the Domino help), and subsequently used when selecting which attachment to extract or detach.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible. This function will be sure that the filename is really unique by appending _2, _3 etc. to the base filename, followed by the extension; use the returned NotesAttachment to get the filename we picked
+	 * @param fileCreated file creation date
+	 * @param fileModified file modified date
+	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
+	 */
+	public NotesAttachment attachFile(IAttachmentProducer producer, String uniqueFileNameInNote, 
+			Date fileCreated, Date fileModified) {
+		checkHandle();
+
+		//currently we do not support compression, because we could not find a Java OutputStream
+		//implementation for Huffman that produced compatible result and no implementation at all
+		//for LZ1 (tried LZW, but that did not work either)
+		final Compression compression = Compression.NONE;
+		
+		//make sure that the unique filename is really unique, since it will be used to return the NotesAttachment object
+		List<Object> existingFileItems = FormulaExecution.evaluate("@AttachmentNames", this);
+		String reallyUniqueFileName = uniqueFileNameInNote;
+		if (existingFileItems.contains(reallyUniqueFileName)) {
+			String newFileName=reallyUniqueFileName;
+			int idx = 1;
+			while (existingFileItems.contains(reallyUniqueFileName)) {
+				idx++;
+
+				int iPos = reallyUniqueFileName.lastIndexOf('.');
+				if (iPos==-1) {
+					newFileName = reallyUniqueFileName+"_"+idx;
+				}
+				else {
+					newFileName = reallyUniqueFileName.substring(0, iPos)+"_"+idx+reallyUniqueFileName.substring(iPos);
+				}
+				reallyUniqueFileName = newFileName;
+			}
+		}
+		
+		//use a default initial object size of 1000 bytes if nothing is specified
+		final int estimatedSize = producer.getSizeEstimation()<1 ? 1000 : producer.getSizeEstimation();
+		
+		final int bufferSize = 30000;
+		final byte[] buffer = new byte[bufferSize];
+		final AtomicInteger currBufferOffset = new AtomicInteger(0);
+
+		final AtomicInteger currFileSize = new AtomicInteger(0);
+
+		Memory fileItemNameMem = NotesStringUtils.toLMBCS("$FILE", false);
+		Memory reallyUniqueFileNameMem = NotesStringUtils.toLMBCS(reallyUniqueFileName, false);
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			//allocate memory buffer used to transfer written data to the NSF binary object
+			final LongByReference retBufferHandle = new LongByReference();
+			result = Mem64.OSMemAlloc((short) 0, bufferSize, retBufferHandle);
+			NotesErrorUtils.checkResult(result);
+			final IntByReference rtnRRV = new IntByReference();
+			try {
+				short type = 0; // 0 = attachment, store in DAOS if available
+
+				//allocate binary object with initial size
+				result = NotesNativeAPI64.get().NSFDbAllocObjectExtended2(getParent().getHandle64(), estimatedSize,
+						NotesConstants.NOTE_CLASS_DOCUMENT, (short) 0, type, rtnRRV);
+				NotesErrorUtils.checkResult(result);
+
+				try {
+					//call producer to write file data
+					OutputStream nsfObjectOutputStream = new OutputStream() {
+
+						@Override
+						public void write(int b) throws IOException {
+							//write byte value at current buffer array position
+							int iCurrBufferOffset = currBufferOffset.get();
+							buffer[iCurrBufferOffset] = (byte) (b & 0xff);
+
+							//check if buffer full
+							if ((iCurrBufferOffset+1) == bufferSize) {
+								//check if we need to grow the NSF object
+								int newObjectSize = currFileSize.get() + bufferSize;
+								if (newObjectSize > estimatedSize) {
+									short result = NotesNativeAPI64.get().NSFDbReallocObject(getParent().getHandle64(),
+											rtnRRV.getValue(), newObjectSize);
+									NotesErrorUtils.checkResult(result);
+								}
+
+								//copy buffer array data into memory buffer
+								Pointer ptrBuffer = Mem64.OSLockObject(retBufferHandle.getValue());
+								try {
+									ptrBuffer.write(0, buffer, 0, bufferSize);
+								}
+								finally {
+									Mem64.OSUnlockObject(retBufferHandle.getValue());
+								}
+
+								//write memory buffer to NSF object
+								short result = NotesNativeAPI64.get().NSFDbWriteObject(
+										getParent().getHandle64(),
+										rtnRRV.getValue(),
+										retBufferHandle.getValue(),
+										currFileSize.get(), bufferSize);
+								NotesErrorUtils.checkResult(result);
+
+								//increment NSF object offset by bufferSize
+								currFileSize.addAndGet(bufferSize);
+								//reset currBufferOffset
+								currBufferOffset.set(0);
+							}
+							else {
+								//buffer not full yet
+								
+								//increment buffer offset
+								currBufferOffset.incrementAndGet();
+							}
+						}
+
+					};
+
+					try {
+						if (compression == Compression.NONE) {
+							producer.produceAttachment(nsfObjectOutputStream);
+						}
+						else {
+							throw new IllegalArgumentException("Unsupported compression: "+compression);
+						}
+					}
+					finally {
+						nsfObjectOutputStream.close();
+					}
+					
+					int iCurrBufferOffset = currBufferOffset.get();
+					if (iCurrBufferOffset>0) {
+						//we need to write the remaining buffer data to the NSF object
+						
+						//set the correct total filesize
+						int finalFileSize = currFileSize.get() + iCurrBufferOffset;
+						result = NotesNativeAPI64.get().NSFDbReallocObject(getParent().getHandle64(),
+								rtnRRV.getValue(), finalFileSize);
+						NotesErrorUtils.checkResult(result);
+
+						//copy buffer array data into memory buffer
+						Pointer ptrBuffer = Mem64.OSLockObject(retBufferHandle.getValue());
+						try {
+							ptrBuffer.write(0, buffer, 0, iCurrBufferOffset);
+						}
+						finally {
+							Mem64.OSUnlockObject(retBufferHandle.getValue());
+						}
+						
+						//write memory buffer to NSF object
+						result = NotesNativeAPI64.get().NSFDbWriteObject(
+								getParent().getHandle64(),
+								rtnRRV.getValue(),
+								retBufferHandle.getValue(),
+								currFileSize.get(), iCurrBufferOffset);
+						NotesErrorUtils.checkResult(result);
+
+						currFileSize.set(finalFileSize);
+					}
+					else if (estimatedSize != currFileSize.get()) {
+						//make sure the object has the right size
+						result = NotesNativeAPI64.get().NSFDbReallocObject(getParent().getHandle64(),
+								rtnRRV.getValue(), currFileSize.get());
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				catch (Exception e) {
+					//delete the object in case of errors
+					result = NotesNativeAPI64.get().NSFDbFreeObject(getParent().getHandle64(), rtnRRV.getValue());
+					NotesErrorUtils.checkResult(result);
+					throw new NotesError(0, "Error writing binary NSF DB object for file "+reallyUniqueFileName, e);
+				}
+			}
+			finally {
+				Mem64.OSMemFree(retBufferHandle.getValue());
+			}
+
+			//allocate memory for the $FILE item value:
+			//datatype WORD + FILEOBJECT structure + unique filename
+			int sizeOfFileObjectWithFileName = (int) (2 + NotesConstants.fileObjectSize + reallyUniqueFileNameMem.size());
+			LongByReference retFileObjectWithFileNameHandle = new LongByReference();
+			result = Mem64.OSMemAlloc((short) 0, sizeOfFileObjectWithFileName, retFileObjectWithFileNameHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			//produce FILEOBJECT data structure
+			Pointer ptrFileObjectWithDatatype = Mem64.OSLockObject(retFileObjectWithFileNameHandle.getValue());
+			try {
+				//write datatype WORD
+				ptrFileObjectWithDatatype.setShort(0, (short) (NotesItem.TYPE_OBJECT & 0xffff));
+				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
+				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
+				fileObjectStruct.FileAttributes = 0;
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
+				fileObjectStruct.FileSize = currFileSize.get();
+				fileObjectStruct.Flags = 0;
+				fileObjectStruct.Header.RRV = rtnRRV.getValue();
+				fileObjectStruct.Header.ObjectType = NotesConstants.OBJECT_FILE;
+				
+				fileObjectStruct.write();
+				
+				//append unique filename
+				ptrFileObjectWithDatatype.share(2 + NotesConstants.fileObjectSize).write(0, reallyUniqueFileNameMem.getByteArray(0, (int) reallyUniqueFileNameMem.size()), 0, (int) reallyUniqueFileNameMem.size());
+			}
+			finally {
+				Mem64.OSUnlockObject(retFileObjectWithFileNameHandle.getValue());
+			}
+			
+			NotesBlockIdStruct.ByValue bhValue = NotesBlockIdStruct.ByValue.newInstance();
+			bhValue.pool = (int) retFileObjectWithFileNameHandle.getValue();
+
+			int fDealloc = 1;
+			//transfers ownership if the item value buffer to the note
+			result = NotesNativeAPI64.get().NSFItemAppendObject(m_hNote64,
+					NotesConstants.ITEM_SUMMARY,
+					fileItemNameMem,
+					(short) (fileItemNameMem.size() & 0xffff),
+					bhValue,
+					sizeOfFileObjectWithFileName,
+					fDealloc);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			//allocate memory buffer used to transfer written data to the NSF binary object
+			final IntByReference retBufferHandle = new IntByReference();
+			result = Mem32.OSMemAlloc((short) 0, bufferSize, retBufferHandle);
+			NotesErrorUtils.checkResult(result);
+			final IntByReference rtnRRV = new IntByReference();
+			try {
+				short type = 0; // 0 = attachment, store in DAOS if available
+
+				//allocate binary object with initial size
+				result = NotesNativeAPI32.get().NSFDbAllocObjectExtended2(getParent().getHandle32(), estimatedSize,
+						NotesConstants.NOTE_CLASS_DOCUMENT, (short) 0, type, rtnRRV);
+				NotesErrorUtils.checkResult(result);
+
+				try {
+					//call producer to write file data
+					OutputStream nsfObjectOutputStream = new OutputStream() {
+
+
+						@Override
+						public void write(int b) throws IOException {
+							//write byte value at current buffer array position
+							int iCurrBufferOffset = currBufferOffset.get();
+							buffer[iCurrBufferOffset] = (byte) (b & 0xff);
+
+							//check if buffer full
+							if ((iCurrBufferOffset+1) == bufferSize) {
+								//check if we need to grow the NSF object
+								int newObjectSize = currFileSize.get() + bufferSize;
+								if (newObjectSize > estimatedSize) {
+									short result = NotesNativeAPI32.get().NSFDbReallocObject(getParent().getHandle32(),
+											rtnRRV.getValue(), newObjectSize);
+									NotesErrorUtils.checkResult(result);
+								}
+
+								//copy buffer array data into memory buffer
+								Pointer ptrBuffer = Mem32.OSLockObject(retBufferHandle.getValue());
+								try {
+									ptrBuffer.write(0, buffer, 0, bufferSize);
+								}
+								finally {
+									Mem32.OSUnlockObject(retBufferHandle.getValue());
+								}
+
+								//write memory buffer to NSF object
+								short result = NotesNativeAPI32.get().NSFDbWriteObject(
+										getParent().getHandle32(),
+										rtnRRV.getValue(),
+										retBufferHandle.getValue(),
+										currFileSize.get(), bufferSize);
+								NotesErrorUtils.checkResult(result);
+
+								//increment NSF object offset by bufferSize
+								currFileSize.addAndGet(bufferSize);
+								//reset currBufferOffset
+								currBufferOffset.set(0);
+							}
+							else {
+								//buffer not full yet
+								
+								//increment buffer offset
+								currBufferOffset.incrementAndGet();
+							}
+						}
+					};
+					
+					try {
+						if (compression == Compression.NONE) {
+							producer.produceAttachment(nsfObjectOutputStream);
+						}
+						else {
+							throw new IllegalArgumentException("Unsupported compression: "+compression);
+						}
+					}
+					finally {
+						nsfObjectOutputStream.close();
+					}
+
+					int iCurrBufferOffset = currBufferOffset.get();
+					if (iCurrBufferOffset>0) {
+						//we need to write the remaining buffer data to the NSF object
+						
+						//set the correct total filesize
+						int finalFileSize = currFileSize.get() + iCurrBufferOffset;
+						result = NotesNativeAPI32.get().NSFDbReallocObject(getParent().getHandle32(),
+								rtnRRV.getValue(), finalFileSize);
+						NotesErrorUtils.checkResult(result);
+
+						//copy buffer array data into memory buffer
+						Pointer ptrBuffer = Mem32.OSLockObject(retBufferHandle.getValue());
+						try {
+							ptrBuffer.write(0, buffer, 0, iCurrBufferOffset);
+						}
+						finally {
+							Mem32.OSUnlockObject(retBufferHandle.getValue());
+						}
+						
+						//write memory buffer to NSF object
+						result = NotesNativeAPI32.get().NSFDbWriteObject(
+								getParent().getHandle32(),
+								rtnRRV.getValue(),
+								retBufferHandle.getValue(),
+								currFileSize.get(), iCurrBufferOffset);
+						NotesErrorUtils.checkResult(result);
+
+						currFileSize.set(finalFileSize);
+					}
+					else if (estimatedSize != currFileSize.get()) {
+						//make sure the object has the right size
+						result = NotesNativeAPI32.get().NSFDbReallocObject(getParent().getHandle32(),
+								rtnRRV.getValue(), currFileSize.get());
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				catch (Exception e) {
+					//delete the object in case of errors
+					result = NotesNativeAPI32.get().NSFDbFreeObject(getParent().getHandle32(), rtnRRV.getValue());
+					NotesErrorUtils.checkResult(result);
+					throw new NotesError(0, "Error writing binary NSF DB object for file "+reallyUniqueFileName, e);
+				}
+			}
+			finally {
+				Mem32.OSMemFree(retBufferHandle.getValue());
+			}
+
+			//allocate memory for the $FILE item value:
+			//datatype WORD + FILEOBJECT structure + unique filename
+			int sizeOfFileObjectWithFileName = (int) (2 + NotesConstants.fileObjectSize + reallyUniqueFileNameMem.size());
+			IntByReference retFileObjectWithFileNameHandle = new IntByReference();
+			result = Mem32.OSMemAlloc((short) 0, sizeOfFileObjectWithFileName, retFileObjectWithFileNameHandle);
+			NotesErrorUtils.checkResult(result);
+			
+			//produce FILEOBJECT data structure
+			Pointer ptrFileObjectWithDatatype = Mem32.OSLockObject(retFileObjectWithFileNameHandle.getValue());
+			try {
+				//write datatype WORD
+				ptrFileObjectWithDatatype.setShort(0, (short) (NotesItem.TYPE_OBJECT & 0xffff));
+				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
+				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
+				fileObjectStruct.FileAttributes = 0;
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
+				fileObjectStruct.FileSize = currFileSize.get();
+				fileObjectStruct.Flags = 0;
+				fileObjectStruct.Header.RRV = rtnRRV.getValue();
+				fileObjectStruct.Header.ObjectType = NotesConstants.OBJECT_FILE;
+				
+				fileObjectStruct.write();
+				
+				//append unique filename
+				ptrFileObjectWithDatatype.share(2 + NotesConstants.fileObjectSize).write(0, reallyUniqueFileNameMem.getByteArray(0, (int) reallyUniqueFileNameMem.size()), 0, (int) reallyUniqueFileNameMem.size());
+			}
+			finally {
+				Mem32.OSUnlockObject(retFileObjectWithFileNameHandle.getValue());
+			}
+			
+			NotesBlockIdStruct.ByValue bhValue = NotesBlockIdStruct.ByValue.newInstance();
+			bhValue.pool = (int) retFileObjectWithFileNameHandle.getValue();
+
+			int fDealloc = 1;
+			//transfers ownership if the item value buffer to the note
+			result = NotesNativeAPI32.get().NSFItemAppendObject(m_hNote32,
+					NotesConstants.ITEM_SUMMARY,
+					fileItemNameMem,
+					(short) (fileItemNameMem.size() & 0xffff),
+					bhValue,
+					sizeOfFileObjectWithFileName,
+					fDealloc);
+			NotesErrorUtils.checkResult(result);
+		}
+		
+		//load and return created attachment
+		NotesAttachment att = getAttachment(reallyUniqueFileName);
+		return att;
+	}
+	
+	/**
 	 * Attaches a disk file to a note.<br>
 	 * <br>
 	 * To accomplish this, the function creates an item of TYPE_OBJECT, sub-category OBJECT_FILE,
@@ -1844,7 +2277,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		valuePtr = new Pointer(poolPtrLong);
 		
 		try {
-			List<Object> values = getItemValue(itemName, item.getItemBlockId(), valuePtr, valueLength);
+			List<Object> values = getItemValue(itemName, item.getItemBlockId(), valueBlockId, valuePtr, valueLength);
 			return values;
 		}
 		finally {

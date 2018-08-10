@@ -498,6 +498,42 @@ public interface INotesNativeAPI64 extends Library {
 			int Offset,
 			int Length,
 			LongByReference rethBuffer);
+
+	public short NSFDbAllocObject(
+			long hDB,
+			int dwSize,
+			short Class,
+			short Privileges,
+			IntByReference retObjectID);
+	
+	public short NSFDbAllocObjectExtended2(long cDB,
+			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
+
+	public short NSFDbWriteObject(
+			long hDB,
+			int ObjectID,
+			long hBuffer,
+			int Offset,
+			int Length);
+	
+	public short NSFDbFreeObject(
+			long hDB,
+			int ObjectID);
+	
+	public short NSFDbReallocObject(
+			long hDB,
+			int ObjectID,
+			int NewSize);
+
+	public short NSFItemAppendObject(
+			long hNote,
+			short ItemFlags,
+			Memory Name,
+			short NameLength,
+			NotesBlockIdStruct.ByValue bhValue,
+			int ValueLength,
+			int fDealloc);
+	
 	public short NSFDbGetObjectSize(
 			long hDB,
 			int ObjectID,
@@ -1230,7 +1266,4 @@ public interface INotesNativeAPI64 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-//	STATUS LNPUBLIC CalEntryAction(DBHANDLE hDB, const char* pszUID, const char* pszRecurID, DWORD dwAction, 
-//			DWORD dwRange, const char* pszComments, PEXT_CALACTION_DATA pExtActionInfo, DWORD dwFlags, void* pCtx);
-
 }

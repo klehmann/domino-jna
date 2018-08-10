@@ -498,6 +498,33 @@ public interface INotesNativeAPI32 extends Library {
 			int Offset,
 			int Length,
 			IntByReference rethBuffer);
+	
+	public short NSFDbAllocObject(
+			int hDB,
+			int dwSize,
+			short Class,
+			short Privileges,
+			IntByReference retObjectID);
+	
+	public short NSFDbAllocObjectExtended2(int cDB,
+			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
+	
+	public short NSFDbWriteObject(
+			int hDB,
+			int ObjectID,
+			int hBuffer,
+			int Offset,
+			int Length);
+	
+	public short NSFDbFreeObject(
+			int hDB,
+			int ObjectID);
+	
+	public short NSFDbReallocObject(
+			int hDB,
+			int ObjectID,
+			int NewSize);
+
 	public short NSFDbGetObjectSize(
 			int hDB,
 			int ObjectID,
@@ -505,6 +532,16 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retSize,
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
+
+	public short NSFItemAppendObject(
+			int hNote,
+			short ItemFlags,
+			Memory Name,
+			short NameLength,
+			NotesBlockIdStruct.ByValue bhValue,
+			int ValueLength,
+			int fDealloc);
+	
 	public short NSFDbGetSpecialNoteID(
 			int hDB,
 			short Index,

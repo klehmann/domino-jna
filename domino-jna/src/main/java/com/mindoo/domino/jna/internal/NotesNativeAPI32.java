@@ -15,6 +15,7 @@ import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlComponentStruct;
 import com.sun.jna.Memory;
@@ -482,6 +483,14 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int Offset,
 			int Length,
 			IntByReference rethBuffer);
+	
+	public native short NSFDbAllocObject(int hDB, int dwSize, short Class, short Privileges, IntByReference retObjectID);
+	public native short NSFDbAllocObjectExtended2(int cDB, int size, short noteClass, short privs, short type,
+			IntByReference rtnRRV);
+	public native short NSFDbWriteObject(int hDB, int ObjectID, int hBuffer, int Offset, int Length);
+	public native short NSFDbFreeObject(int hDB, int ObjectID);
+	public native short NSFDbReallocObject(int hDB, int ObjectID, int NewSize);
+	
 	public native short NSFDbGetObjectSize(
 			int hDB,
 			int ObjectID,
@@ -489,6 +498,8 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			IntByReference retSize,
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
+	public native short NSFItemAppendObject(int hNote, short ItemFlags, Memory Name, short NameLength, ByValue bhValue,
+			int ValueLength, int fDealloc);
 	public native short NSFDbGetSpecialNoteID(
 			int hDB,
 			short Index,
