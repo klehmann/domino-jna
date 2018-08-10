@@ -95,8 +95,23 @@ public class LegacyAPIUtils {
 						//
 					}
 
+					String xspNativeFinderClassname = System.getProperty(IXSPNativeFinder.class.getName());
+					IXSPNativeFinder xspNativeFinder;
+					
+					if (!StringUtil.isEmpty(xspNativeFinderClassname)) {
+						Class<IXSPNativeFinder> xspNativeFinderClass =
+								(Class<IXSPNativeFinder>) Class.forName(xspNativeFinderClassname);
+						
+						xspNativeFinder = xspNativeFinderClass.newInstance();
+					}
+					else {
+						//use fallback, works when running in a plugin that has the
+						//com.ibm.domino.napi dependency
+						xspNativeFinder = new DefaultXSPNativeFinder();
+					}
+
 					try {
-						Class<?> xspNativeClass = Class.forName("com.ibm.domino.napi.c.xsp.XSPNative");
+						Class<?> xspNativeClass = xspNativeFinder.getXSPNativeClass();
 						try {
 							createXPageSession = xspNativeClass.getMethod("createXPageSession", String.class, Long.TYPE, Boolean.TYPE, Boolean.TYPE);
 						}
@@ -423,6 +438,19 @@ public class LegacyAPIUtils {
 	}
 
 	/**
+	 * Interface to provide a custom class that locates the class
+	 * com.ibm.domino.napi.c.xsp.XSPNative. Default implementation
+	 * just uses the JNA project's classloader to find it.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IXSPNativeFinder {
+		
+		public Class<?> getXSPNativeClass() throws ClassNotFoundException;
+		
+	}
+	
+	/**
 	 * Default implementation of {@link IBackendBridgeFinder} that uses
 	 * the JNA project's classloader to find the BackendBridge class.
 	 * 
@@ -437,11 +465,14 @@ public class LegacyAPIUtils {
 			
 			try {
 				Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
-				Method initLibrary = cClass.getMethod("initLibrary", String.class);
-				initLibrary.invoke(null, "");
-				
+				if (!jnotesLoaded) {
+					Method initLibrary = cClass.getMethod("initLibrary", String.class);
+					initLibrary.invoke(null, "");
+					jnotesLoaded=true;
+				}
+
 				napiClassloader = cClass.getClassLoader();
-				
+
 			} catch (ClassNotFoundException e) {
 				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the BackendBridge class", e);
 			} catch (NoSuchMethodException e) {
@@ -460,4 +491,40 @@ public class LegacyAPIUtils {
 		}
 	}
 	
+	private static volatile boolean jnotesLoaded = false;
+	
+	private static class DefaultXSPNativeFinder implements IXSPNativeFinder {
+
+		@Override
+		public Class<?> getXSPNativeClass() throws ClassNotFoundException {
+			//This class only works when lwpd.domino.napi.jar and lwpd.commons.jar are in the classpath
+			ClassLoader napiClassloader;
+			
+			try {
+				Class<?> cClass = Class.forName("com.ibm.domino.napi.c.C");
+				if (!jnotesLoaded) {
+					Method initLibrary = cClass.getMethod("initLibrary", String.class);
+					initLibrary.invoke(null, "");
+					jnotesLoaded = true;
+				}
+
+				napiClassloader = cClass.getClassLoader();
+				
+			} catch (ClassNotFoundException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			} catch (NoSuchMethodException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			} catch (SecurityException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			} catch (IllegalAccessException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			} catch (IllegalArgumentException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			} catch (InvocationTargetException e) {
+				throw new ClassNotFoundException("Unable to initialize the NAPI class which is required to access the XSPNative class", e);
+			}
+
+			return napiClassloader.loadClass("com.ibm.domino.napi.c.xsp.XSPNative");
+		}
+	}
 }
