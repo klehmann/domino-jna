@@ -102,6 +102,15 @@ public class NotesDbReplicaInfo implements IAdaptable {
 	}
 	
 	/**
+	 * Checks if the database design is hidden
+	 * 
+	 * @return true if hidden
+	 */
+	public boolean isDesignHidden() {
+		return (getFlags() & 0x0020) == 0x0020;
+	}
+	
+	/**
 	 * Automatic Replication Cutoff Interval (Days)
 	 * 
 	 * @return interval

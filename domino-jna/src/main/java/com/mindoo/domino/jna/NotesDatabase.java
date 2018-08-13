@@ -3149,6 +3149,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Checks if the database design is hidden
+	 * 
+	 * @return true if hidden
+	 */
+	public boolean isDesignHidden() {
+		return (getReplicaInfo().getFlags() & 0x0020) == 0x0020;
+	}
+
+	/**
 	 * Called once before any others but only if going to a server that is R6 or greater.
 	 * If {@link GetNotes#ORDER_BY_SIZE} is specified in options the two DWORD parameters, TotalSizeLow and TotalSizeHigh, provide the approximate total size of the bytes to be returned in the notes and objects. These values are intended to be used for progress indication
 	 * 
