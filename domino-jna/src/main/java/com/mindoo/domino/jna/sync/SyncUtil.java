@@ -366,7 +366,7 @@ public class SyncUtil {
 					}
 
 					@Override
-					public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch) {
+					public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 						
 						NotesOriginatorIdData oidData = searchMatch.getOIDData();
 						

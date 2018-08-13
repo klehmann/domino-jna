@@ -423,7 +423,7 @@ public class NotesSearch {
 
 						Action action;
 						if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
-							action = callback.deletionStubFound(db, searchMatch);
+							action = callback.deletionStubFound(db, searchMatch, itemTableData);
 						}
 						else {
 							if (!isMatch) {
@@ -624,7 +624,7 @@ public class NotesSearch {
 
 							Action action;
 							if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, searchMatch);
+								action = callback.deletionStubFound(db, searchMatch, itemTableData);
 							}
 							else {
 								if (!isMatch) {
@@ -689,7 +689,7 @@ public class NotesSearch {
 
 							Action action;
 							if (searchMatch.getNoteClass().contains(NoteClass.NOTIFYDELETION)) {
-								action = callback.deletionStubFound(db, searchMatch);
+								action = callback.deletionStubFound(db, searchMatch, itemTableData);
 							}
 							else {
 								if (!isMatch) {
@@ -890,9 +890,10 @@ public class NotesSearch {
 		 * 
 		 * @param parentDb parent database
 		 * @param searchMatch data about search match
+		 * @param summaryBufferData gives access to the note's summary buffer if {@link Search#SUMMARY} was specified; otherwise this value is null
 		 * @return either {@link Action#Continue} to go on searching or {@link Action#Stop} to stop
 		 */
-		public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch) {
+		public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 			return Action.Continue;
 		}
 		
