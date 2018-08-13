@@ -2460,5 +2460,9 @@ public String ERR_MSG_SCOS_FILE_SIZE = "\nSCOS database specification out of ran
 
 	public short ERR_IMPLICIT_SCHED_FAILED = (PKG_MAILMISC4+100);
 	public String ERR_MSG_IMPLICIT_SCHED_FAILED = "There was an error sending out notices to meeting participants.";
-	   
+
+	public short ERR_LZ1FAILED = PKG_MISC+146;
+	public String ERR_MSG_LZ1FAILED = "Could not compress buffer.";
+
+	
 }
