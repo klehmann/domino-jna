@@ -1265,5 +1265,15 @@ public interface INotesNativeAPI64 extends Library {
 			NotesCalendarActionDataStruct pExtActionInfo,
 			int dwFlags,
 			Pointer pCtx);
+
+	public short LZ1Compress(
+	        Pointer sin,
+	        Pointer sout,
+	        int insize,
+	        long hCompHT,
+	        IntByReference poutsize
+	        );
+
+	public short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
 	
 }

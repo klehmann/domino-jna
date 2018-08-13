@@ -1087,5 +1087,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	
 	public native short Schedule_GetNextDetails(long hCntnr, int hDetailObj, IntByReference rethNextDetailObj,
 			PointerByReference retpNextDetail);
+	
+	public native short LZ1Compress(Pointer sin, Pointer sout, int insize, long hCompHT, IntByReference poutsize);
+	public native short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
 }
 
