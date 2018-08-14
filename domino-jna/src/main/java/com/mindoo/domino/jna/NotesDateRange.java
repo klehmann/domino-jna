@@ -64,4 +64,10 @@ public class NotesDateRange {
 	public NotesTimeDate getEndDateTime() {
 		return m_endDateTime;
 	}
+	
+	@Override
+	public String toString() {
+		return "NotesDateRange [start="+m_startDateTime+", end="+m_endDateTime+"]";
+	}
+
 }
