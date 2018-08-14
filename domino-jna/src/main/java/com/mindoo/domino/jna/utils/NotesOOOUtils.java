@@ -214,6 +214,23 @@ public class NotesOOOUtils {
 		}
 		
 		/**
+		 * This function sets a flag which defines how to treat internet emails.<br>
+		 * <br>
+		 * This functional call is optional.<br>
+		 * If this flag is set to TRUE OOO notifications will not be generated for
+		 * email originating from the internet.<br>
+		 * The default for this flag is TRUE.
+		 * 
+		 * @param exclude true to exclude
+		 */
+		public void setExcludeInternet(boolean exclude) {
+			checkHandle();
+			
+			short result = NotesNativeAPI.get().OOOSetExcludeInternet(m_pOOOContext, exclude ? 1 : 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		
+		/**
 		 * Convenience method to check whether the OOO functionality is enabled. Calls
 		 * {@link #getState(Ref, Ref)} internally.
 		 * 
