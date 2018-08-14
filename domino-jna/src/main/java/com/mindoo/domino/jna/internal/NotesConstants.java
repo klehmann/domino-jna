@@ -2962,4 +2962,33 @@ This allows an Editor to assume some Designer-level access */
 	public int RANGE_REPEAT_ALL = 1;		/* Modifying all instances */
 	public int RANGE_REPEAT_PREV = 2;		/* Modifying current + previous */
 	public int RANGE_REPEAT_FUT = 3;		/* Modifying current + future */
+	
+	public short MIME_PART_VERSION = 2;
+	
+	/** Mime part has boundary. */
+	public int MIME_PART_HAS_BOUNDARY = 0x00000001;
+	/** Mime part has headers. */
+	public int MIME_PART_HAS_HEADERS = 0x00000002;
+	/** Mime part has body in database object. */
+	public int MIME_PART_BODY_IN_DBOBJECT = 0x00000004;
+	/** Mime part has shared database object. Used only with MIME_PART_BODY_IN_DBOBJECT. */
+	public int MIME_PART_SHARED_DBOBJECT = 0x00000008;	/*	Used only with MIME_PART_BODY_IN_DBOBJECT. */
+	/** Skip for conversion. */
+	public int MIME_PART_SKIP_FOR_CONVERSION = 0x00000010;	/* only used during MIME->CD conversion */
+
+	//The mime part type cPartType within the MIME_PART structure.
+	
+	/** Mime part type is a prolog. */
+	public byte MIME_PART_PROLOG = 1;
+	/** Mime part type is a body. */
+	public byte MIME_PART_BODY = 2;
+	/** Mime part type is a epilog. */
+	public byte MIME_PART_EPILOG = 3;
+	/** Mime part type is retrieve information. */
+	public byte MIME_PART_RETRIEVE_INFO = 4;
+	/** Mime part type is a message. */
+	public byte MIME_PART_MESSAGE = 5;
+	
+	public int OOOPROF_MAX_BODY_SIZE = 32767;		 // Buffers passed into OOOGetGeneralSubject should be this size
+	
 }

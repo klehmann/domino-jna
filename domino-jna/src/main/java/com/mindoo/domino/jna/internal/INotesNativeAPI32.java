@@ -1279,5 +1279,13 @@ public interface INotesNativeAPI32 extends Library {
 
 	public short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
 	
-	
+	public short OOOStartOperation(
+			Pointer pMailOwnerName,
+			Pointer pHomeMailServer,
+			int bHomeMailServer,
+			int hMailFile,
+			IntByReference hOOOContext,
+			PointerByReference pOOOOContext);
+	public short OOOEndOperation(int hOOContext, Pointer pOOOContext);
+
 }

@@ -1092,4 +1092,8 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	
 	public native short LZ1Compress(Pointer sin, Pointer sout, int insize, int hCompHT, IntByReference poutsize);
 	public native short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
+	
+	public native short OOOStartOperation(Pointer pMailOwnerName, Pointer pHomeMailServer, int bHomeMailServer, int hMailFile,
+			IntByReference hOOOContext, PointerByReference pOOOOContext);
+	public native short OOOEndOperation(int hOOContext, Pointer pOOOContext);
 }

@@ -595,4 +595,18 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			Pointer Buffer);
 
 	public native short CalGetRecurrenceID(ByValue tdInput, Memory pszRecurID, short wLenRecurId);
+	
+	public native short OOOInit();
+	public native short OOOTerm();
+	public native short OOOGetAwayPeriod(Pointer pOOOContext, NotesTimeDateStruct tdStartAway, NotesTimeDateStruct tdEndAway);
+	public native short OOOGetExcludeInternet(Pointer pOOOContext, IntByReference bExcludeInternet);
+	public native short OOOGetGeneralSubject(Pointer pOOOContext, Memory pGeneralSubject);
+	public native short OOOGetGeneralMessage(Pointer pOOOContext, Memory pGeneralMessage,
+			ShortByReference pGeneralMessageLen);
+	public native short OOOGetState(Pointer pOOOContext, ShortByReference retVersion, ShortByReference retState);
+	public native short OOOSetAwayPeriod(Pointer pOOOContext, ByValue tdStartAway, ByValue tdEndAway);
+	public native short OOOSetExcludeInternet(Pointer pOOOContext, int bExcludeInternet);
+	public native short OOOSetGeneralMessage(Pointer pOOOContext, Memory pGeneralMessage, short wGeneralMessageLen);
+	public native short OOOSetGeneralSubject(Pointer pOOOContext, Memory pGeneralSubject, int bDisplayReturnDate);
+	public native short OOOEnable(Pointer pOOOContext, int bState);
 }

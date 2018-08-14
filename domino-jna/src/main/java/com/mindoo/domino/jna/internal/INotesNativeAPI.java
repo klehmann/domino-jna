@@ -244,4 +244,55 @@ public interface INotesNativeAPI extends Library {
 			NotesTimeDateStruct.ByValue tdInput,
 			Memory pszRecurID,
 			short wLenRecurId);
+	
+	public short OOOInit();
+	
+	public short OOOTerm();
+
+	public short OOOEnable(
+			Pointer pOOOContext,
+			int bState);
+	
+	public short OOOGetAwayPeriod(
+			Pointer pOOOContext,
+			NotesTimeDateStruct tdStartAway,
+			NotesTimeDateStruct tdEndAway);
+	
+	public short OOOGetExcludeInternet(
+			Pointer pOOOContext,
+			IntByReference bExcludeInternet);
+	
+	public short OOOGetGeneralMessage(
+			Pointer pOOOContext,
+			Memory pGeneralMessage,
+			ShortByReference pGeneralMessageLen);
+	
+	public short OOOGetGeneralSubject(
+			Pointer pOOOContext,
+			Memory pGeneralSubject);
+	
+	public short OOOGetState(
+			Pointer pOOOContext,
+			ShortByReference retVersion,
+			ShortByReference retState);
+
+	public short OOOSetAwayPeriod(
+			Pointer pOOOContext,
+			NotesTimeDateStruct.ByValue tdStartAway,
+			NotesTimeDateStruct.ByValue tdEndAway);
+	
+	public short OOOSetExcludeInternet(
+			Pointer pOOOContext,
+			int bExcludeInternet);
+
+	public short OOOSetGeneralMessage(
+			Pointer pOOOContext,
+			Memory pGeneralMessage,
+			short wGeneralMessageLen);
+	
+	public short OOOSetGeneralSubject(
+			Pointer pOOOContext,
+			Memory pGeneralSubject,
+			int bDisplayReturnDate);
+
 }

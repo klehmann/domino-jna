@@ -6,6 +6,7 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
@@ -15,7 +16,6 @@ import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
-import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct.ByValue;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlComponentStruct;
 import com.sun.jna.Memory;
@@ -1090,5 +1090,9 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	
 	public native short LZ1Compress(Pointer sin, Pointer sout, int insize, long hCompHT, IntByReference poutsize);
 	public native short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
+	
+	public native short OOOStartOperation(Pointer pMailOwnerName, Pointer pHomeMailServer, int bHomeMailServer, long hMailFile,
+			LongByReference hOOOContext, PointerByReference pOOOOContext);
+	public native short OOOEndOperation(long hOOContext, Pointer pOOOContext);
 }
 
