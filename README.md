@@ -38,6 +38,7 @@ The project provides functionality that is not available in the classic Java API
 * APIs to **read extended busytime information** like UNID/start/end of busytime entries (not just the freetime search that IBM provides)
 * APIs to **create/read/update Domino appointments** via iCal format and the option to only output selected fields into the generated iCal (e.g. only start/end/summary) and full meeting workflow action support (accept/decline invitation etc.)
 * APIs to **read and modify the ECL**
+* APIs to **read and write Out-of-Office information (OOO) of any user** 
 
 **Please note:**
 
