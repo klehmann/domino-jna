@@ -446,7 +446,7 @@ public class NotesOOOUtils {
 		 * is the following text <i>AUTO: Katherine Smith is out of the office (returning 02/23/2009 10:12:17 AM)</i>.
 		 * 
 		 * @param subject string that will appear as the subject line of the OOO notification
-		 * @param displayReturnDate Boolean which controls whether (“returning <date>”) appears on the subject line
+		 * @param displayReturnDate Boolean which controls whether (“returning &lt;date&gt;”) appears on the subject line
 		 */
 		public void setGeneralSubject(String subject, boolean displayReturnDate) {
 			checkHandle();
