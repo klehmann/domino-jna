@@ -1266,6 +1266,7 @@ public interface INotesNativeAPI64 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 
+	@UndocumentedAPI
 	public short LZ1Compress(
 	        Pointer sin,
 	        Pointer sout,
@@ -1274,6 +1275,7 @@ public interface INotesNativeAPI64 extends Library {
 	        IntByReference poutsize
 	        );
 
+	@UndocumentedAPI
 	public short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
 
 	public short OOOStartOperation(
@@ -1285,5 +1287,9 @@ public interface INotesNativeAPI64 extends Library {
 			PointerByReference pOOOOContext);
 
 	public short OOOEndOperation(long hOOContext, Pointer pOOOContext);
+
+	@UndocumentedAPI
+//	public short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, LongByReference hFilter);
+	public short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, IntByReference hFilter);
 
 }
