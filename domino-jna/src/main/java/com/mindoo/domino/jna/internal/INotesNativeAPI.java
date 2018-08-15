@@ -295,4 +295,9 @@ public interface INotesNativeAPI extends Library {
 			Memory pGeneralSubject,
 			int bDisplayReturnDate);
 
+	public short OSGetExtIntlFormat(
+			byte item,
+			byte index,
+			Memory buff,
+			short bufSize);
 }

@@ -609,4 +609,6 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short OOOSetGeneralMessage(Pointer pOOOContext, Memory pGeneralMessage, short wGeneralMessageLen);
 	public native short OOOSetGeneralSubject(Pointer pOOOContext, Memory pGeneralSubject, int bDisplayReturnDate);
 	public native short OOOEnable(Pointer pOOOContext, int bState);
+	
+	public native short OSGetExtIntlFormat(byte item, byte index, Memory buff, short bufSize);
 }
