@@ -2991,4 +2991,24 @@ This allows an Editor to assume some Designer-level access */
 	
 	public int OOOPROF_MAX_BODY_SIZE = 32767;		 // Buffers passed into OOOGetGeneralSubject should be this size
 	
+	/* Item values to pass into OSGetExtIntlFormat(..)  */
+	public byte EXT_AM_STRING = 1;	/* Request for AM String */
+	public byte EXT_PM_STRING = 2;	/* Request for PM String */
+	public byte EXT_CURRENCY_STRING = 3;	/* Request for Currency String */
+	public byte MONTH_NAMES = 4;	/* Request for Month Names */
+	public byte ABBR_MONTH_NAMES = 5;	/* Request for abbreviated month names */
+	public byte WEEKDAY_NAMES = 6;	/* Request for weekday names */
+	public byte ABBR_WEEKDAY_NAMES = 7;	/* Request for abbreviated weekday names */
+	public byte CALENDARTYPE	 = 8;	/* Request for Calendar Type, see CALENDAR_XXX types below */
+	public byte ERANAME = 9;	/* Request for Asian Native Calendar Name */
+	public byte ABBRERANAME = 10;  /* Request for abbreviated Asian Native Calendar Name*/
+
+	/* CalendarType */
+	public byte CALENDAR_NONE = 0;
+	public byte CALENDAR_JAPAN = 1;
+	public byte CALENDAR_TAIWAN = 2;
+	public byte CALENDAR_THAI = 3;
+	public byte CALENDAR_KOREA = 4;
+
+	
 }
