@@ -120,6 +120,9 @@ public interface INotesNativeAPI64 extends Library {
 			int  dwSize,
 			LongByReference retHandle);
 
+	@Deprecated
+	public short OSMemGetType(long handle);
+	
 	public short NSFItemGetText(
 			long  note_handle,
 			Memory item_name,

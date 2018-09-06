@@ -118,6 +118,9 @@ public interface INotesNativeAPI32 extends Library {
 			short  BlkType,
 			int  dwSize,
 			IntByReference retHandle);
+	
+	@Deprecated
+	public short OSMemGetType(int handle);
 
 	public short NSFItemGetText(
 			int  note_handle,

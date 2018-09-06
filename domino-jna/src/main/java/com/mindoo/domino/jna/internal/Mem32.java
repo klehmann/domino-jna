@@ -71,6 +71,10 @@ public class Mem32 {
 		return NotesNativeAPI32.get().OSMemAlloc(BlkType, dwSize, retHandle);
 	}
 
+	public static short OSMemGetTyoe(int handle) {
+		return NotesNativeAPI32.get().OSMemGetType(handle);
+	}
+
 	public static short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle) {
 		return NotesNativeAPI32.get().OSMemoryAllocate(dwtype, size, retHandle);
 	}

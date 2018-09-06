@@ -120,7 +120,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			short  BlkType,
 			int  dwSize,
 			LongByReference retHandle);
-
+	public native short OSMemGetType(long handle);
+	
 	public native short NSFItemGetText(
 			long  note_handle,
 			Memory item_name,
@@ -1094,5 +1095,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short OOOStartOperation(Pointer pMailOwnerName, Pointer pHomeMailServer, int bHomeMailServer, long hMailFile,
 			LongByReference hOOOContext, PointerByReference pOOOOContext);
 	public native short OOOEndOperation(long hOOContext, Pointer pOOOContext);
+	
+	public native short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, IntByReference hFilter);
+	
 }
 
