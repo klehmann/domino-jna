@@ -10,6 +10,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.EnumSet;
 
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.sun.jna.Memory;
@@ -231,10 +232,47 @@ public class DumpUtil {
 	}
 	
 	/**
+	 * Specified which type of handle data to dump
+	 */
+	public static enum MemDump {
+		PRIVATE(0x00000000),
+		SHARED(0x00000001),
+		/** Dump binary content of the allocated memory */
+		CONTENTS(0x00000002),
+		POOL(0x00000004),
+		/** Only dump our process's shared and private. */
+		PROCESS(0x00000008),
+		/** dump OSLocal stuff */
+		LOCAL(0x00000010),
+		COMMANDLINE(0x00000020),
+		FULL(0x00000040);
+		
+		private int type;
+		
+		private MemDump(int type) {
+			this.type = type;
+		}
+		
+		private int getType() {
+			return this.type;
+		}
+		
+	};
+	
+	/**
 	 * Writes information about the currently accolated memory handles to disk
 	 * (&lt;notesdata&gt;/IBM_TECHNICAL_SUPPORT/memory_*.dmp).
+	 * 
+	 * @param flags data to dump
+	 * @param blkType dump blocks of this type, 0 for all 
 	 */
-	public static void dumpHandleTable() {
-		NotesNativeAPI.get().DEBUGDumpHandleTable(0x8, 0, 0);
+	public static void dumpHandleTable(EnumSet<MemDump> flags, int blkType) {
+		int typeAsInt = 0;
+		
+		for (MemDump currType : flags) {
+			typeAsInt = typeAsInt | currType.getType();
+		}
+		
+		NotesNativeAPI.get().DEBUGDumpHandleTable(typeAsInt, (short) (blkType & 0xffff));
 	}
 }
