@@ -61,7 +61,8 @@ public interface INotesNativeAPI extends Library {
 	public long OSGetEnvironmentLong(Memory variableName);
 	public void OSSetEnvironmentVariable(Memory variableName, Memory Value);
 	public void OSSetEnvironmentInt(Memory variableName, int Value);
-
+	public short OSGetEnvironmentSeqNo();
+	
 	public short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
 
 	public boolean TimeLocalToGM(Memory timePtr);
@@ -301,6 +302,6 @@ public interface INotesNativeAPI extends Library {
 			Memory buff,
 			short bufSize);
 	
-	public void DEBUGDumpHandleTable(int arg0, int arg1, int reserved);
+	public void DEBUGDumpHandleTable(int flags, short blkType);
 
 }

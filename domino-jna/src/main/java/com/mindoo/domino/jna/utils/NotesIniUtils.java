@@ -114,4 +114,13 @@ public class NotesIniUtils {
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
 		NotesNativeAPI.get().OSSetEnvironmentInt(variableNameMem, value);
 	}
+	
+	/**
+	 * Returns a word indicating the notes.ini vars changed
+	 * 
+	 * @return Notes.ini sequence number
+	 */
+	public static short getEnvironmentSeqNo() {
+		return NotesNativeAPI.get().OSGetEnvironmentSeqNo();
+	}
 }

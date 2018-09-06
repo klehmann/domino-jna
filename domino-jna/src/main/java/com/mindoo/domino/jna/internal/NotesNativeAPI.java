@@ -418,7 +418,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native long OSGetEnvironmentLong(Memory variableName);
 	public native void OSSetEnvironmentVariable(Memory variableName, Memory Value);
 	public native void OSSetEnvironmentInt(Memory variableName, int Value);
-
+	public native short OSGetEnvironmentSeqNo();
+	
 	public native short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
 
 	public native boolean TimeLocalToGM(Memory timePtr);
@@ -613,6 +614,6 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short OSGetExtIntlFormat(byte item, byte index, Memory buff, short bufSize);
 	
 	@Override
-	public native void DEBUGDumpHandleTable(int arg0, int arg1, int arg2);
+	public native void DEBUGDumpHandleTable(int flags, short blkType);
 
 }
