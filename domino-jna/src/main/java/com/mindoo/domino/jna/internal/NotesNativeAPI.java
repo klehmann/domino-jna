@@ -611,4 +611,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short OOOEnable(Pointer pOOOContext, int bState);
 	
 	public native short OSGetExtIntlFormat(byte item, byte index, Memory buff, short bufSize);
+	
+	@Override
+	public native void DEBUGDumpHandleTable(int arg0, int arg1, int arg2);
+
 }

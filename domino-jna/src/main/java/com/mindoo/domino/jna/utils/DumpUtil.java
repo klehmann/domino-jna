@@ -11,6 +11,7 @@ import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -227,5 +228,13 @@ public class DumpUtil {
 			i += cols;
 		}
 		return sb.toString();
+	}
+	
+	/**
+	 * Writes information about the currently accolated memory handles to disk
+	 * (&lt;notesdata&gt;/IBM_TECHNICAL_SUPPORT/memory_*.dmp).
+	 */
+	public static void dumpHandleTable() {
+		NotesNativeAPI.get().DEBUGDumpHandleTable(0x8, 0, 0);
 	}
 }

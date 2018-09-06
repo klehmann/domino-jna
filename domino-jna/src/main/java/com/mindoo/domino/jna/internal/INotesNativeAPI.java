@@ -300,4 +300,7 @@ public interface INotesNativeAPI extends Library {
 			byte index,
 			Memory buff,
 			short bufSize);
+	
+	public void DEBUGDumpHandleTable(int arg0, int arg1, int reserved);
+
 }
