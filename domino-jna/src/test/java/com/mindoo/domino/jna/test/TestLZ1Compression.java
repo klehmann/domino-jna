@@ -12,7 +12,6 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.LZ1CompressOutputStream;
-import com.mindoo.domino.jna.utils.LZ1Decompress;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 import lotus.domino.Session;
