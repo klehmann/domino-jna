@@ -23,8 +23,14 @@ public enum BlkType {
 	BLK_SDK(0x0132),
 	BLK_FILE_EXISTANCE_CACHE(0x01b8),
 	BLK_DA_SERVER_TABLE(0x031a),
+	BLK_TIMELIST(0x8608),
+	BLK_CLIENT(0x8803),
+	BLK_SERVER(0x8901),
+	BLK_SV_STATS(0x8934),
+	BLK_NSF_UBM_GTABLE_POINTERS(0x02dc),
+	BLK_MQ_PROCDATA(0x02e6),
 	UNKNOWN(0);
-
+			
 	private int blkType;
 
 	private BlkType(int blkType) {
