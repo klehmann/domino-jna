@@ -1589,7 +1589,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
 		}
-		if (result==1028) {
+		if (result==1028 || result==17412) {
 			//Entry not found in index
 			return null;
 		}
