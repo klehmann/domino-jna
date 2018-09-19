@@ -1292,8 +1292,5 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference hOOOContext,
 			PointerByReference pOOOOContext);
 	public short OOOEndOperation(int hOOContext, Pointer pOOOContext);
-
-	@UndocumentedAPI
-	public short NSFGetSoftDeletedViewFilter(int hViewDB, int hDataDB, int viewNoteID, IntByReference hFilter);
 	
 }

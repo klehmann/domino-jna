@@ -1096,7 +1096,5 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			LongByReference hOOOContext, PointerByReference pOOOOContext);
 	public native short OOOEndOperation(long hOOContext, Pointer pOOOContext);
 	
-	public native short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, IntByReference hFilter);
-	
 }
 
