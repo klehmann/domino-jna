@@ -284,9 +284,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				m_passNamesListToDbOpen = true;
 			}
 		}
-		if (m_passNamesListToDbOpen || m_passNamesListToViewOpen) {
-			m_namesList.setNoRecycle();
-		}
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference hDB = new LongByReference();
@@ -812,6 +809,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
 					m_hDB64=0;
+					if (m_namesList!=null && !m_namesList.isFreed()) {
+						m_namesList.free();
+					}
 				}
 			}
 			else {
@@ -820,6 +820,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
 					m_hDB32=0;
+					if (m_namesList!=null && !m_namesList.isFreed()) {
+						m_namesList.free();
+					}
 				}
 			}
 			
@@ -985,6 +988,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		short result;
 		NotesCollection newCol;
+		
+		if (m_namesList!=null && m_namesList.isFreed()) {
+			throw new NotesError(0, "Unexpected state: internal names list has already been recycled");
+		}
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference hCollection = new LongByReference();
@@ -1582,7 +1589,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
 		}
-		if (result==1028) {
+		if (result==1028 || result==17412) {
 			//Entry not found in index
 			return null;
 		}

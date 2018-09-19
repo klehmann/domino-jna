@@ -1,5 +1,10 @@
 package com.mindoo.domino.jna.internal;
 
+/**
+ * Collection of known memory block types, work in progress
+ * 
+ * @author Karsten Lehmann
+ */
 public enum BlkType {
 	BLK_LOCAL_BLOCK(0x0168),
 	BLK_LOCAL(0x4129),
@@ -23,8 +28,18 @@ public enum BlkType {
 	BLK_SDK(0x0132),
 	BLK_FILE_EXISTANCE_CACHE(0x01b8),
 	BLK_DA_SERVER_TABLE(0x031a),
+	BLK_TIMELIST(0x8608),
+	BLK_CLIENT(0x8803),
+	BLK_SERVER(0x8901),
+	BLK_SV_STATS(0x8934),
+	BLK_NSF_UBM_GTABLE_POINTERS(0x02dc),
+	BLK_MQ_PROCDATA(0x02e6),
+	BLK_GROUPS_NAMES_LIST(0x0a29),
+	BLK_HTTP_USERINFO(0x3a2f),
+	BLK_NEW_NOTE(0x0221),
+	BLK_AGENT_STATS_TOPN(0x2e17),
 	UNKNOWN(0);
-
+	
 	private int blkType;
 
 	private BlkType(int blkType) {
