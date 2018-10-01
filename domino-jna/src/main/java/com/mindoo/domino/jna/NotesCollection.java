@@ -3312,14 +3312,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 			idTable.recycle();
 		}
 	}
-	
+
 	/**
 	 * Returns the total number of documents in the view
 	 * 
 	 * @return document count
 	 */
 	public int getDocumentCount() {
-		return getCollectionData().getDocCount();
+		checkHandle();
+		
+		IntByReference retDocCount = new IntByReference();
+		short result;
+		//use lightweight function that reads the count from the note id index (fast)
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NIFGetCollectionDocCountLW(m_hCollection64, retDocCount);
+		}
+		else {
+			result = NotesNativeAPI32.get().NIFGetCollectionDocCountLW(m_hCollection32, retDocCount);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return retDocCount.getValue();
 	}
 	
 	/**

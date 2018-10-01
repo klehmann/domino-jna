@@ -600,7 +600,8 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NIFGetCollectionData(
 			int hCollection,
 			IntByReference rethCollData);
-
+	public native short NIFGetCollectionDocCountLW(int hCol, IntByReference pDocct);
+	
 	public native short NSFTransactionBegin(int hDB, int flags);
 	public native short NSFTransactionCommit(int hDB, int flags);
 	public native short NSFTransactionRollback(int hDB);

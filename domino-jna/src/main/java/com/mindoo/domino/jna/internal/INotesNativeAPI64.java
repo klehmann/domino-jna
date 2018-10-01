@@ -655,6 +655,7 @@ public interface INotesNativeAPI64 extends Library {
 	public short NIFGetCollectionData(
 			long hCollection,
 			LongByReference rethCollData);
+	public short NIFGetCollectionDocCountLW(long hCol, IntByReference pDocct);
 
 	@UndocumentedAPI
 	public short NSFTransactionBegin(long hDB, int flags);

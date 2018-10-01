@@ -595,6 +595,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NIFGetCollectionData(
 			long hCollection,
 			LongByReference rethCollData);
+	public native short NIFGetCollectionDocCountLW(long hCol, IntByReference pDocct);
 
 	public native short NSFTransactionBegin(long hDB, int flags);
 	public native short NSFTransactionCommit(long hDB, int flags);
