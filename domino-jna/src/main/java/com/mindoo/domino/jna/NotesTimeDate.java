@@ -143,6 +143,18 @@ public class NotesTimeDate implements Comparable<NotesTimeDate> {
 	}
 	
 	/**
+	 * Constructs a new date-only date/time object
+	 * 
+	 * @param year year
+	 * @param month month
+	 * @param day day
+	 */
+	public NotesTimeDate(int year, int month, int day) {
+		this(year, month, day, 0, 0, 0, 0, TimeZone.getDefault());
+		setAnyTime();
+	}
+	
+	/**
 	 * Creates a new instance
 	 * 
 	 * @param adaptable object providing a supported data object for the time/date state
