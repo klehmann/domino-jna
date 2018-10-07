@@ -1344,6 +1344,30 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Fast method to count view entries taking read access rights into account.<br>
+	 * <br>
+	 * Traverses the view index from start to end with the specified navigation strategy
+	 * counting the visited and readable rows. As navigation strategy, use
+	 * {@link Navigate#NEXT_NONCATEGORY} to move from one document to the next,
+	 * {@link Navigate#NEXT_CATEGORY} to move between categories only or
+	 * {@link Navigate#NEXT_SELECTED} to move between selected entries previously set via
+	 * {@link NotesCollection#select(Collection, boolean)}.
+	 * 
+	 * @param navigator navigation strategory
+	 * @return number of entries visited
+	 */
+	public int getEntryCount(Navigate navigator) {
+		EnumSet<Navigate> skipNavigator = EnumSet.of(Navigate.CONTINUE);
+		skipNavigator.add(navigator);
+		//start at position "0" (right before the first view entry),
+		//and skip over the whole view counting entries and not reading any row data
+		NotesViewLookupResultData skipResult = readEntries(new NotesCollectionPosition("0"),
+				skipNavigator, Integer.MAX_VALUE,
+				EnumSet.of(Navigate.CURRENT), 0, EnumSet.of(ReadMask.NOTEID));
+		return skipResult.getSkipCount();
+	}
+	
+	/**
 	 * Very fast scan function that populates a {@link NotesIDTable} with note ids in the
 	 * collection. Uses an undocumented C API call internally. Since the {@link NotesIDTable}
 	 * is sorted in ascending note id order, this method does not keep the original view order.
