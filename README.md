@@ -260,6 +260,8 @@ When using the API in XPages applications, wrapping the code in `NotesGC.runWith
 * [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
 * [New APIs for Domino JNA project, now available for XPages development](http://www.mindoo.com/web/blog.nsf/dx/16.01.2017082125KLEAMY.htm?opendocument&comments)
 * [Explore the hidden parts of an application](https://www.eknori.de/2018-01-29/explore-the-hidden-parts-of-an-application-ibmchampion/)
+* [Query Domino data and faceted search with Domino JNA (part 1) by Mark Leusink](http://linqed.eu/2018/10/02/query-domino-data-and-faceted-search-with-domino-jna-part-1/)
+* [Query Domino data and faceted search with Domino JNA (part 2) by Mark Leusink](http://linqed.eu/2018/10/08/query-domino-data-and-faceted-search-with-domino-jna-part-2/)
 
 ## Next steps
 This project is not done yet, this is just the beginning.
