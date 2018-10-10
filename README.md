@@ -4,7 +4,7 @@ Cross-platform access to IBM Notes/Domino C API methods from Java
 ## Features
 The project provides functionality that is not available in the classic Java API of IBM Notes/Domino or that is poorly implemented, for example:
 
-* **run DQL (Domino Query Language) queries against databases** and return the result dynamically sorted
+* **run DQL (Domino Query Language) queries against databases** on Domino V10 and return the result dynamically sorted
 * **view lookups using different key formats** (e.g. strings, numbers, dates, date ranges) and equality/**inequality searches (e.g. find less or greater than a search key)**
 * **decodes all available types of view column data types** (string, string list, number, number list, datetime, datetime list) **and row data** (e.g. just note id, UNID, counts, unread flag etc.)
 * read view data as **another Notes user**
@@ -29,10 +29,10 @@ The project provides functionality that is not available in the classic Java API
 * searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does**
 * quick reading of files and folders in the Domino data directory or in subdirectories (IBM's DbDirectory is slow for many DBs and does not support subdirectory scanning)
 * **run agents bypassing ECL checks**, pass an in-memory document for data exchange readable as `Session.DocumentContext` and redirect Agent output to a Java `Writer`
-* read/write replication data (replica id and flags)
+* read/write replication data (change replica id and flags)
 * clearing the replication history
 * fast noteid / UNID bulk conversion with lookup of "modified in this file" property (part of the note OID - originator id)
-* compute @Usernameslist values for any Notes user
+* compute @Usernameslist values for any Notes user on local and remote server
 * faster **formula execution on documents** with document modified/selected/deleted by formula check
 * **SSO token computation** (with tokens also working on Websphere)
 * APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
