@@ -57,11 +57,13 @@ public enum OpenDatabase {
 	 * If the input server is not a member of a cluster or if the database is not replicated on other
 	 * servers in the cluster, then this flag will have no effect.
 	 */
-	CLUSTER_FAILOVER(NotesConstants.DBOPEN_CLUSTER_FAILOVER);
+	CLUSTER_FAILOVER(NotesConstants.DBOPEN_CLUSTER_FAILOVER),
+	
+	FULL_ACCESS(1048576);
 
 	private int m_val;
 
-	OpenDatabase(short val) {
+	OpenDatabase(int val) {
 		m_val = val;
 	}
 
@@ -73,7 +75,7 @@ public enum OpenDatabase {
 		int result = 0;
 		if (openFlagSet != null) {
 			for (OpenDatabase currNav : values()) {
-				if (currNav.getValue() > 0xffff) {
+				if (((int)(currNav.getValue() & 0xffff)) > 0xffff) {
 					//skip ext flags
 					continue;
 				}

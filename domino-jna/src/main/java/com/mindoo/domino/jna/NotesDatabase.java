@@ -24,6 +24,7 @@ import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
+import com.mindoo.domino.jna.constants.DBQuery;
 import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
@@ -38,6 +39,7 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
+import com.mindoo.domino.jna.dql.DQL.DQLTerm;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -51,7 +53,9 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32V1000;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
@@ -269,8 +273,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		//setting authenticated flag for the user is required when running on the server
-		NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
-
+		if (openFlags!=null && openFlags.contains(OpenDatabase.FULL_ACCESS)) {
+			NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.FullAdminAccess,
+					Privileges.Authenticated));
+		}
+		else {
+			NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
+		}
+		
 		m_passNamesListToViewOpen = false;
 		m_passNamesListToDbOpen = false;
 		if (m_namesList!=null) {
@@ -4595,4 +4605,135 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		return false;
 	}
+	
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
+	 * <br>
+	 * <b><u>Warning:</u><br>
+	 * Method is crashing the V10 beta 2 server on DQL parsing issues,
+	 * e.g. for <code>"(Type  = 'Person') and (Lastname = 'Lehmann')"</code> which the
+	 * parser cannot process. <code>"Type = 'Person' and Lastname = 'Lehmann'"</code>
+	 * works fine.</b>
+	 * 
+	 * @param query Domino query (DQL) generated via {@link DQL} factory class
+	 * @param flags controlling execution, see {@link DBQuery}
+	 * @param maxDocsScanned maximum number of document scans allowed
+	 * @param maxEntriesScanned maximum number of view entries processed allows
+	 * @param maxMsecs max milliseconds of executiion allow 
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(DQLTerm query, EnumSet<DBQuery> flags,
+			int maxDocsScanned, int maxEntriesScanned, int maxMsecs) {
+		
+		return query(query.toString(), flags, maxDocsScanned, maxEntriesScanned,
+				maxMsecs);
+	}
+	
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
+	 * <br>
+	 * <b><u>Warning:</u><br>
+	 * Method is crashing the V10 beta 2 server on DQL parsing issues,
+	 * e.g. for <code>"(Type  = 'Person') and (Lastname = 'Lehmann')"</code> which the
+	 * parser cannot process. <code>"Type = 'Person' and Lastname = 'Lehmann'"</code>
+	 * works fine.</b>
+	 * 
+	 * @param query Domino query (DQL) as a single string (max 64K in length) 
+	 * @param flags controlling execution, see {@link DBQuery}
+	 * @param maxDocsScanned maximum number of document scans allowed
+	 * @param maxEntriesScanned maximum number of view entries processed allows
+	 * @param maxMsecs max milliseconds of executiion allow 
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(String query, EnumSet<DBQuery> flags,
+			int maxDocsScanned, int maxEntriesScanned, int maxMsecs) {
+		checkHandle();
+		
+		Memory queryMem = NotesStringUtils.toLMBCS(query, true);
+		int flagsAsInt = flags==null ? 0 : DBQuery.toBitMask(flags);
+		
+		NotesIDTable idTable = null;
+		String errorTxt = "";
+		String explainTxt = "";
+		
+		IntByReference retError = new IntByReference();
+		retError.setValue(0);
+		IntByReference retExplain = new IntByReference();
+		retExplain.setValue(0);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference retResults = new LongByReference();
+			retResults.setValue(0);
+			
+			result = NotesNativeAPI64V1000.get().NSFQueryDB(m_hDB64, queryMem,
+					flagsAsInt, maxDocsScanned, maxEntriesScanned, maxMsecs, retResults, 
+					retError, retExplain);
+			NotesErrorUtils.checkResult(result);
+			
+			if (retResults.getValue()!=0) {
+				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
+			}
+			
+			if (retError.getValue()!=0) {
+				Pointer ptr = Mem64.OSMemoryLock(retError.getValue());
+				try {
+					errorTxt = NotesStringUtils.fromLMBCS(ptr, -1);
+				}
+				finally {
+					Mem64.OSMemoryUnlock(retError.getValue());
+					Mem64.OSMemoryFree(retError.getValue());
+				}
+			}
+			if (retExplain.getValue()!=0) {
+				Pointer ptr = Mem64.OSMemoryLock(retExplain.getValue());
+				try {
+					explainTxt = NotesStringUtils.fromLMBCS(ptr, -1);
+				}
+				finally {
+					Mem64.OSMemoryUnlock(retExplain.getValue());
+					Mem64.OSMemoryFree(retExplain.getValue());
+				}
+			}
+		}
+		else {
+			IntByReference retResults = new IntByReference();
+			retResults.setValue(0);
+			
+			result = NotesNativeAPI32V1000.get().NSFQueryDB(m_hDB32, queryMem,
+					flagsAsInt, maxDocsScanned, maxEntriesScanned, maxMsecs, retResults, 
+					retError, retExplain);
+			NotesErrorUtils.checkResult(result);
+			
+			if (retResults.getValue()!=0) {
+				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
+			}
+			
+			if (retError.getValue()!=0) {
+				Pointer ptr = Mem32.OSMemoryLock(retError.getValue());
+				try {
+					errorTxt = NotesStringUtils.fromLMBCS(ptr, -1);
+				}
+				finally {
+					Mem32.OSMemoryUnlock(retError.getValue());
+					Mem32.OSMemoryFree(retError.getValue());
+				}
+			}
+			if (retExplain.getValue()!=0) {
+				Pointer ptr = Mem32.OSMemoryLock(retExplain.getValue());
+				try {
+					explainTxt = NotesStringUtils.fromLMBCS(ptr, -1);
+				}
+				finally {
+					Mem32.OSMemoryUnlock(retExplain.getValue());
+					Mem32.OSMemoryFree(retExplain.getValue());
+				}
+			}
+		}
+		
+		return new NotesDbQueryResult(this, query, idTable, explainTxt, errorTxt);
+	}
+
 }
