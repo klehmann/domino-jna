@@ -1683,6 +1683,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (readSingleColumnName!=null) {
 			//make sure that we actually read any column values
 			if (!useReturnMask.contains(ReadMask.SUMMARY) && !useReturnMask.contains(ReadMask.SUMMARYVALUES)) {
+				useReturnMask = useReturnMask.clone();
 				useReturnMask.add(ReadMask.SUMMARYVALUES);
 			}
 		}
@@ -1832,6 +1833,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 
 				if (useReturnMask.contains(ReadMask.INIT_POS_NOTEID)) {
 					//make sure to only use this flag on the first lookup call
+					useReturnMask = useReturnMask.clone();
 					useReturnMask.remove(ReadMask.INIT_POS_NOTEID);
 				}
 				
@@ -1885,6 +1887,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 						}
 						return result;
 					}
+				}
+				
+				if (!data.hasMoreToDo()) {
+					//no more data to read
+					result = callback.lookupDone(result);
+					
+					if (dataCache!=null && retDiffTime!=null) {
+						if (!entriesToUpdateCache.isEmpty()) {
+							dataCache.addCacheValues(useReturnMask, retDiffTime, entriesToUpdateCache);
+						}
+						callback.setNewDiffTime(retDiffTime);
+					}
+
+					return result;
 				}
 			}
 
@@ -3294,6 +3310,26 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * This method adds a list of note ids stored in a {@link NotesIDTable}
+	 * to the selected list. Method is expected to run faster than
+	 * {@link #select(Collection, boolean)} because the C API handles copying
+	 * the note ids between IDTables.
+	 * 
+	 * @param selectedNoteIds {@link NotesIDTable} with note ids
+	 * @param clearPrevSelection true to clear the previous selection
+	 */
+	public void select(NotesIDTable selectedNoteIds, boolean clearPrevSelection) {
+		NotesIDTable selectedList = getSelectedList();
+		if (clearPrevSelection) {
+			selectedList.clear();
+		}
+		selectedList.addTable(selectedNoteIds);
+		
+		//push selection changes to remote servers
+		updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+	}
+	
+	/**
 	 * This function runs a selection formula on every document of this collection.
 	 * Documents matching the selection formula get added to the selected list.<br>
 	 * After calling this method, the selected documents can then be read via
@@ -3307,7 +3343,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		NotesIDTable idTable = new NotesIDTable();
 		try {
 			//collect all ids of this collection
-			getAllIds(Navigate.NEXT_NONCATEGORY, true, idTable);
+			getAllIds(Navigate.NEXT, false, idTable);
 			
 			final Set<Integer> retIds = new TreeSet<Integer>();
 			
