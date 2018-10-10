@@ -4,6 +4,7 @@ Cross-platform access to IBM Notes/Domino C API methods from Java
 ## Features
 The project provides functionality that is not available in the classic Java API of IBM Notes/Domino or that is poorly implemented, for example:
 
+* **run DQL (Domino Query Language) queries against databases** and return the result dynamically sorted
 * **view lookups using different key formats** (e.g. strings, numbers, dates, date ranges) and equality/**inequality searches (e.g. find less or greater than a search key)**
 * **decodes all available types of view column data types** (string, string list, number, number list, datetime, datetime list) **and row data** (e.g. just note id, UNID, counts, unread flag etc.)
 * read view data as **another Notes user**
