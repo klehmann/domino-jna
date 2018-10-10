@@ -1,26 +1,36 @@
 package com.mindoo.domino.jna.test;
 
+//import all static builder methods on DQL class (e.g. "item" / "and" / "or" etc.)
 import static com.mindoo.domino.jna.dql.DQL.*;
 
 import java.util.EnumSet;
+import java.util.List;
 
 import org.junit.Test;
 
+import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesCollection.Direction;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDbQueryResult;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.DBQuery;
+import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.dql.DQL.DQLTerm;
 
 import lotus.domino.Session;
 
 /**
- * Tests cases for DQL query engine
+ * Tests cases for DQL query building and execution, requires Domino V10.
  * 
  * @author Karsten Lehmann
  */
 public class TestDQL extends BaseJNATestClass {
 
+	/**
+	 * Some tests for the DQL query builder
+	 */
 	@Test
 	public void testDQLFormatting() {
 		
@@ -87,6 +97,10 @@ public class TestDQL extends BaseJNATestClass {
 
 	}
 	
+	/**
+	 * Demonstrates how to run a DQL query, project the result
+	 * onto a view to output a sorted list of document items
+	 */
 	@Test
 	public void testDQLSearch() {
 
@@ -95,24 +109,75 @@ public class TestDQL extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase db = getFakeNamesDb();
-						
-//				String query = "(Type = 'Person')";
-//				String query = "Lastname = 'Abbott' and Firstname > 'E'";
-//				String query = "Lastname = 'Abbott' and Firstname > 'B'";
-//				String query = "(Lastname = 'Abbott') and (Firstname > 'B')";
 
-				DQLTerm testTerm = and(
+				//build query Lastname='Abbott' and Firstname>'B'
+				DQLTerm dqlQuery = and(
 						item("Lastname").isEqualTo("Abbott"),
 						item("Firstname").isGreaterThan("B")
 						);
 
-				NotesDbQueryResult queryResult =
-						db.query(testTerm, EnumSet.of(DBQuery.EXPLAIN), 500000, 500000, 30000);
+				//execute DQL search
+				System.out.println("Running DQL query: "+dqlQuery);
 				
-				System.out.println("Explain:\n"+queryResult.getExplainText());
-				System.out.println("Error:\n"+queryResult.getErrorText());
-				System.out.println("IDTable: "+queryResult.getIDTable());
+//				NotesDbQueryResult queryResult = db.query(dqlQuery);
+				NotesDbQueryResult queryResult = db.query(dqlQuery, EnumSet.of(DBQuery.EXPLAIN));
+				
+				//output some data about the query execution, e.g. the amount
+				//if seconds it took to produce the result
+				System.out.println("DQL result:\n"+queryResult);
+				System.out.println("Explain text:\n"+queryResult.getExplainText());
+				System.out.println("IDTable with results: "+queryResult.getIDTable());
 
+				//now let's display some data for the matching note ids
+				
+				//open view with sortable columns Lastname/Firstname
+				NotesCollection peopleView = db.openCollectionByName("($lkPeopleGenericData1)");
+				//set result sorting (column must be sortable via click)
+				peopleView.resortView("Firstname", Direction.Descending);
+				
+				//change view selection to our DQL result
+				boolean clearPrevSelection = true;
+				peopleView.select(queryResult.getIDTable(), clearPrevSelection);
+				
+				//parameter for paging
+				int offset = 0;
+				int pageSize = Integer.MAX_VALUE; //load all entries in selection
+				
+				long t0=System.currentTimeMillis();
+				
+				//read all selected view entries
+				List<NotesViewEntryData> entries = peopleView.getAllEntries(
+						// startpos="0" means one row above first row
+						"0",
+						//skip = 1 means move to the first relevant row from startpos + paging offset
+						1 + offset,
+						//use navigation strategy NEXT_SELECTED to only return selected entries
+						EnumSet.of(Navigate.NEXT_SELECTED),
+						//number of entries to buffer with one read call
+						//(still limited by the 64k overall buffer size)
+						pageSize,
+						//we want to read the note id and the column values
+						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARYVALUES),
+						//generic callback that produces NotesViewEntryData objects;
+						//here you can use your own subclasses of "ViewLookupCallback"
+						//to produce something else, e.g. JSON objects or populate POJO's with the data
+						new NotesCollection.EntriesAsListCallback(pageSize));
+				
+				long t1=System.currentTimeMillis();
+				System.out.println(entries.size()+" view rows selected in "+(t1-t0)+"ms");
+				
+				//print the result
+				System.out.println("Selected view data:");
+				System.out.println("===================");
+				System.out.println("Index\tNoteId\t\tData");
+				
+				for (int i=0; i<entries.size(); i++) {
+					NotesViewEntryData currEntry = entries.get(i);
+					
+					System.out.println("#"+(i+1)+"\t"+currEntry.getNoteId()+"\t\t"+
+							currEntry.get("Lastname")+", "+currEntry.getAsNameAbbreviated("Firstname"));
+				}
+				
 				return null;
 			}
 		});

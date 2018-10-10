@@ -4608,12 +4608,30 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * Runs a DQL query against the documents in the database.<br>
-	 * <br>
-	 * <b><u>Warning:</u><br>
-	 * Method is crashing the V10 beta 2 server on DQL parsing issues,
-	 * e.g. for <code>"(Type  = 'Person') and (Lastname = 'Lehmann')"</code> which the
-	 * parser cannot process. <code>"Type = 'Person' and Lastname = 'Lehmann'"</code>
-	 * works fine.</b>
+	 * 
+	 * @param query Domino query (DQL) generated via {@link DQL} factory class
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(DQLTerm query) {
+		return query(query.toString(), null, 0, 0,
+				0);
+	}
+
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
+	 * 
+	 * @param query Domino query (DQL) generated via {@link DQL} factory class
+	 * @param flags controlling execution, see {@link DBQuery}
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(DQLTerm query, EnumSet<DBQuery> flags) {
+		return query(query, flags, 0, 0, 0);
+	}
+	
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
 	 * 
 	 * @param query Domino query (DQL) generated via {@link DQL} factory class
 	 * @param flags controlling execution, see {@link DBQuery}
@@ -4632,12 +4650,32 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * Runs a DQL query against the documents in the database.<br>
-	 * <br>
-	 * <b><u>Warning:</u><br>
-	 * Method is crashing the V10 beta 2 server on DQL parsing issues,
-	 * e.g. for <code>"(Type  = 'Person') and (Lastname = 'Lehmann')"</code> which the
-	 * parser cannot process. <code>"Type = 'Person' and Lastname = 'Lehmann'"</code>
-	 * works fine.</b>
+	 * 
+	 * @param query Domino query (DQL) as a single string (max 64K in length) 
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(String query) {
+		return query(query, null, 0, 0, 0);
+	}
+	
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
+	 * 
+	 * @param query Domino query (DQL) as a single string (max 64K in length) 
+	 * @param flags controlling execution, see {@link DBQuery}
+	 * @param maxDocsScanned maximum number of document scans allowed
+	 * @param maxEntriesScanned maximum number of view entries processed allows
+	 * @param maxMsecs max milliseconds of executiion allow 
+	 * @return query result
+	 * @since V10
+	 */
+	public NotesDbQueryResult query(String query, EnumSet<DBQuery> flags) {
+		return query(query, flags, 0, 0, 0);
+	}
+
+	/**
+	 * Runs a DQL query against the documents in the database.<br>
 	 * 
 	 * @param query Domino query (DQL) as a single string (max 64K in length) 
 	 * @param flags controlling execution, see {@link DBQuery}
@@ -4663,6 +4701,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		IntByReference retExplain = new IntByReference();
 		retExplain.setValue(0);
 		
+		long t0=System.currentTimeMillis();
+		
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			LongByReference retResults = new LongByReference();
@@ -4671,11 +4711,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = NotesNativeAPI64V1000.get().NSFQueryDB(m_hDB64, queryMem,
 					flagsAsInt, maxDocsScanned, maxEntriesScanned, maxMsecs, retResults, 
 					retError, retExplain);
-			NotesErrorUtils.checkResult(result);
-			
-			if (retResults.getValue()!=0) {
-				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
-			}
 			
 			if (retError.getValue()!=0) {
 				Pointer ptr = Mem64.OSMemoryLock(retError.getValue());
@@ -4687,6 +4722,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					Mem64.OSMemoryFree(retError.getValue());
 				}
 			}
+
+			if (result!=0) {
+				if (!StringUtil.isEmpty(errorTxt)) {
+					throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+				}
+				else {
+					NotesErrorUtils.checkResult(result);
+				}
+			}
+			
+			if (retResults.getValue()!=0) {
+				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
+			}
+			
 			if (retExplain.getValue()!=0) {
 				Pointer ptr = Mem64.OSMemoryLock(retExplain.getValue());
 				try {
@@ -4705,11 +4754,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = NotesNativeAPI32V1000.get().NSFQueryDB(m_hDB32, queryMem,
 					flagsAsInt, maxDocsScanned, maxEntriesScanned, maxMsecs, retResults, 
 					retError, retExplain);
-			NotesErrorUtils.checkResult(result);
-			
-			if (retResults.getValue()!=0) {
-				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
-			}
 			
 			if (retError.getValue()!=0) {
 				Pointer ptr = Mem32.OSMemoryLock(retError.getValue());
@@ -4721,6 +4765,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					Mem32.OSMemoryFree(retError.getValue());
 				}
 			}
+
+			if (result!=0) {
+				if (!StringUtil.isEmpty(errorTxt)) {
+					throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+				}
+				else {
+					NotesErrorUtils.checkResult(result);
+				}
+			}
+			
+			if (retResults.getValue()!=0) {
+				idTable = (NotesIDTable) new NotesIDTable(retResults.getValue(), false);
+			}
+			
 			if (retExplain.getValue()!=0) {
 				Pointer ptr = Mem32.OSMemoryLock(retExplain.getValue());
 				try {
@@ -4732,8 +4790,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 		}
+		long t1=System.currentTimeMillis();
 		
-		return new NotesDbQueryResult(this, query, idTable, explainTxt, errorTxt);
+		return new NotesDbQueryResult(this, query, idTable, explainTxt, t1-t0);
 	}
-
 }
