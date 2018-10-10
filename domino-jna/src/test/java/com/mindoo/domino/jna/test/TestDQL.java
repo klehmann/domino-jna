@@ -119,8 +119,22 @@ public class TestDQL extends BaseJNATestClass {
 				//execute DQL search
 				System.out.println("Running DQL query: "+dqlQuery);
 				
-//				NotesDbQueryResult queryResult = db.query(dqlQuery);
-				NotesDbQueryResult queryResult = db.query(dqlQuery, EnumSet.of(DBQuery.EXPLAIN));
+				NotesDbQueryResult queryResult;
+				
+				//run query without returning EXPLAIN text, use defaults for limits
+				//queryResult = db.query(dqlQuery);
+				
+				//run query with EXPLAIN text,, use defaults for limits
+				queryResult = db.query(dqlQuery, EnumSet.of(DBQuery.EXPLAIN));
+				
+				//run query with EXPLAIN text and custom limits
+				//int maxDocsScanned = 1000;
+				//int maxViewEntriesScanned = 1000;
+				//int maxMsecs = 5*1000;
+				//queryResult = db.query(dqlQuery, EnumSet.of(DBQuery.EXPLAIN),
+				//		maxDocsScanned,
+				//		maxViewEntriesScanned,
+				//		maxMsecs);
 				
 				//output some data about the query execution, e.g. the amount
 				//if seconds it took to produce the result
