@@ -39,6 +39,7 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
+import com.mindoo.domino.jna.dql.DQL;
 import com.mindoo.domino.jna.dql.DQL.DQLTerm;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
@@ -4664,9 +4665,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param query Domino query (DQL) as a single string (max 64K in length) 
 	 * @param flags controlling execution, see {@link DBQuery}
-	 * @param maxDocsScanned maximum number of document scans allowed
-	 * @param maxEntriesScanned maximum number of view entries processed allows
-	 * @param maxMsecs max milliseconds of executiion allow 
 	 * @return query result
 	 * @since V10
 	 */

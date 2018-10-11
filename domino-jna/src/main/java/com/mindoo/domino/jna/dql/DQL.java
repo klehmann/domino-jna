@@ -7,46 +7,86 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesDbQueryResult;
+import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesTimeDate;
 
 /**
  * Utility class to programmatically compose syntactically correct
- * DQL queries. For best code quality, use a static import like this<br>
+ * DQL queries and prevent malicous content injection (we hopefully
+ * catch all possible threats like using quote characters in search
+ * values).<br>
+ * <br>
+ * For best code quality, use a static import like this<br>
  * <br>
  * <code>
  * import static com.mindoo.domino.jna.dql.DQL.*;
  * </code>
  * <br><br>
- * to import all static methods of this class.
+ * to import all static methods of this class.<br>
+ * Then you can use methods like {@link #item(String)}, {@link #in(String...)},
+ * {@link #inAll(String...)} or {@link #view(String)}
+ * directly without the prefix <code>DQL."</code>:<br>
+ * <br>
+ * <code>
+ * DQLTerm dqlQuery = and(<br>
+ * &nbsp;&nbsp;item("Lastname").isEqualTo("Abbott"),<br>
+ * &nbsp;&nbsp;item("Firstname").isGreaterThan("B")<br>
+ * );<br>
+ * </code>
+ * The returned {@link DQLTerm} object can be passed to one of the query
+ * methods in {@link NotesDatabase}, e.g. {@link NotesDatabase#query(DQLTerm, java.util.EnumSet)}
+ * to receive a {@link NotesDbQueryResult} containing a {@link NotesIDTable}
+ * with note ids of matching documents (and some statics like how long
+ * it took to compute the result).<br>
+ * See the provided sample code to find out how to project this result
+ * onto a view to dynamically sort the documents.<br>
+ * <br>
+ * To see the resulting DQL query string, simple call {@link DQLTerm#toString()}.
  * 
  * @author Karsten Lehmann
  */
 public class DQL {
-
-	// Order_origin in (‘London’, ‘LA’, ‘Tokyo’) AND date_origin > @dt(‘20160511’) or partno = 388388
-	
-	//  ( In all (‘Soon to be special’, ‘Main View’) or order_no > 12751 and order_no < 14334 ) and sales_person = ‘Trudi Ayton’
-	
-	//  ‘Soon to be special’.Status = ‘Shipping’ and ( order_origin = ‘LA’ or
-	//   sales_person in (‘Chad Keighley’, ‘Jeff Chantel’, ‘Louis Cawlfield’, ‘Mariel Nathanson’))
-
+	/**
+	 * Use this method to filter for documents with a specific item
+	 * value
+	 * 
+	 * @param itemName item name
+	 * @return object to define the item value and relation (e.g. isEqual to)
+	 */
 	public static NamedItem item(String itemName) {
 		return new NamedItem(itemName);
 	}
 	
+	/**
+	 * Use this method to filter for documents with a specific view
+	 * column value
+	 * 
+	 * @param viewName view name
+	 * @return object to define which column to filter
+	 */
 	public static NamedView view(String viewName) {
 		return new NamedView(viewName);
 	}
 	
+	/**
+	 * Creates a search term to find documents that exist in at least
+	 * one of the specified views.
+	 * 
+	 * @param views view names (V10.0 does not support alias names)
+	 * @return DQL term
+	 */
 	public static InViewsOrFoldersTerm in(String...views) {
 		return new InViewsOrFoldersTerm(views, false);
 	}
 	
 	/**
+	 * Creates a search term to find documents that exist in multiple
+	 * views
 	 * 
-	 * @param view
-	 * @param moreViews
-	 * @return
+	 * @param views view names (V10.0 does not support alias names)
+	 * @return DQL term
 	 */
 	public static InViewsOrFoldersTerm inAll(String... views) {
 		return new InViewsOrFoldersTerm(views, true);
@@ -66,7 +106,7 @@ public class DQL {
 		public abstract String toString();
 	}
 	
-	private static class InViewsOrFoldersTerm extends DQLTerm {
+	public static class InViewsOrFoldersTerm extends DQLTerm {
 		private String[] m_viewNames;
 		private boolean m_matchAll;
 		
@@ -113,6 +153,13 @@ public class DQL {
 			return m_viewName;
 		}
 		
+		/**
+		 * Method to define the column for which we want to
+		 * filter the value
+		 * 
+		 * @param columnName view column name
+		 * @return object to define the column value and relation (e.g. isEqualTo)
+		 */
 		public NamedViewColumn column(String columnName) {
 			return new NamedViewColumn(this, columnName);
 		}
@@ -343,14 +390,29 @@ public class DQL {
 
 	}
 	
+	/**
+	 * Use this method to filter by @ModifiedInThisFile value
+	 * 
+	 * @return object to define a date value and relation (e.g. isGreaterThan / isLess)
+	 */
 	public static SpecialValue modifiedInThisFile() {
 		return new SpecialValue(SpecialValueType.MODIFIEDINTHISFLE);
 	}
 
+	/**
+	 * Use this method to filter by @DocumentUniqueId value
+	 * 
+	 * @return object to define the UNID and isEqual relation
+	 */
 	public static SpecialValue documentUniqueId() {
 		return new SpecialValue(SpecialValueType.DOCUMENTUNIQUEID);
 	}
 
+	/**
+	 * Use this method to filter by @Created value
+	 * 
+	 * @return object to define the creation date to compare with and relation (e.g. isGreaterThan)
+	 */
 	public static SpecialValue created() {
 		return new SpecialValue(SpecialValueType.CREATED);
 	}
@@ -642,7 +704,6 @@ public class DQL {
 			throw new IllegalArgumentException("Unexpected quote character in item name: "+itemName);
 		}
 		
-		//TODO implement
 		return itemName;
 	}
 	
@@ -674,7 +735,6 @@ public class DQL {
 			throw new IllegalArgumentException("Unexpected newline character in string value: "+strVal);
 		}
 		
-		//TODO implement properly
 		return strVal
 				.replace("'", "''");
 	}

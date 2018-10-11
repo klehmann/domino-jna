@@ -2,7 +2,7 @@ package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
 
-import com.ibm.designer.domino.napi.NotesDatabase;
+import com.mindoo.domino.jna.NotesDatabase;
 
 /**
  * Flags to query {@link NotesDatabase} data using DQL
