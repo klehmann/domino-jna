@@ -23,10 +23,12 @@ import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
+import com.mindoo.domino.jna.NotesMIMEPart.PartType;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
+import com.mindoo.domino.jna.constants.MimePartOptions;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.UpdateNote;
@@ -65,6 +67,7 @@ import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
 import com.mindoo.domino.jna.internal.structs.NotesLSCompileErrorInfoStruct;
+import com.mindoo.domino.jna.internal.structs.NotesMIMEPartStruct;
 import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
@@ -387,24 +390,29 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void setUNID(String newUnid) {
 		checkHandle();
-		
-		Memory retOid = new Memory(NotesConstants.oidSize);
-		retOid.clear();
-		
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
+
+		DisposableMemory retOid = new DisposableMemory(NotesConstants.oidSize);
+		try {
+			retOid.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
+			}
+			NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
+			oidStruct.read();
+			oidStruct.setUNID(newUnid);
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteSetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteSetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
+			}
 		}
-		else {
-			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
-		}
-		NotesOriginatorIdStruct oidStruct = NotesOriginatorIdStruct.newInstance(retOid);
-		oidStruct.read();
-		oidStruct.setUNID(newUnid);
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteSetInfo(m_hNote64, NotesConstants._NOTE_OID, retOid);
-		}
-		else {
-			NotesNativeAPI32.get().NSFNoteSetInfo(m_hNote32, NotesConstants._NOTE_OID, retOid);
+		finally {
+			retOid.dispose();
 		}
 	}
 	
@@ -415,22 +423,54 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public Calendar getLastModified() {
 		checkHandle();
-		
-		Memory retModified = new Memory(NotesConstants.timeDateSize);
-		retModified.clear();
-		
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_MODIFIED, retModified);
+
+		DisposableMemory retModified = new DisposableMemory(NotesConstants.timeDateSize);
+		try {
+			retModified.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_MODIFIED, retModified);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_MODIFIED, retModified);
+			}
+			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
+			td.read();
+			Calendar cal = td.toCalendar();
+			return cal;
 		}
-		else {
-			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_MODIFIED, retModified);
+		finally {
+			retModified.dispose();
 		}
-		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
-		td.read();
-		Calendar cal = td.toCalendar();
-		return cal;
 	}
 
+	/**
+	 * Returns the last modified date of the note
+	 * 
+	 * @return last modified date as {@link NotesTimeDate}
+	 */
+	public NotesTimeDate getLastModifiedAsTimeDate() {
+		checkHandle();
+
+		DisposableMemory retModified = new DisposableMemory(NotesConstants.timeDateSize);
+		try {
+			retModified.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_MODIFIED, retModified);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_MODIFIED, retModified);
+			}
+			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
+			td.read();
+			return new NotesTimeDate(td.Innards);
+		}
+		finally {
+			retModified.dispose();
+		}
+	}
+	
 	/**
 	 * Returns the creation date of this note
 	 * 
@@ -475,44 +515,103 @@ public class NotesNote implements IRecyclableNotesObject {
 	public Calendar getLastAccessed() {
 		checkHandle();
 		
-		Memory retModified = new Memory(NotesConstants.timeDateSize);
-		retModified.clear();
+		DisposableMemory retAccessed = new DisposableMemory(NotesConstants.timeDateSize);
+		try {
+			retAccessed.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ACCESSED, retAccessed);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ACCESSED, retAccessed);
+			}
+			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retAccessed);
+			td.read();
+			Calendar cal = td.toCalendar();
+			return cal;
+		}
+		finally {
+			retAccessed.dispose();
+		}
+	}
+
+	/**
+	 * Returns the last access date of the note
+	 * 
+	 * @return last access date as {@link NotesTimeDate}
+	 */
+	public NotesTimeDate getLastAccessedAsTimeDate() {
+		checkHandle();
+		
+		DisposableMemory retAccessed = new DisposableMemory(NotesConstants.timeDateSize);
+		try {
+			retAccessed.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ACCESSED, retAccessed);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ACCESSED, retAccessed);
+			}
+			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retAccessed);
+			td.read();
+			return new NotesTimeDate(td.Innards);
+		}
+		finally {
+			retAccessed.dispose();
+		}
+	}
+	
+	/**
+	 * Returns the date/time when the note got added to the NSF instance
+	 * 
+	 * @return added to file time
+	 */
+	public Calendar getAddedToFileTime() {
+		checkHandle();
+		
+		Memory retAddedToFile = new Memory(NotesConstants.timeDateSize);
+		retAddedToFile.clear();
 		
 		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ACCESSED, retModified);
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ADDED_TO_FILE, retAddedToFile);
 		}
 		else {
-			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ACCESSED, retModified);
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ADDED_TO_FILE, retAddedToFile);
 		}
-		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
+		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retAddedToFile);
 		td.read();
 		Calendar cal = td.toCalendar();
 		return cal;
 	}
 
 	/**
-	 * Returns the last access date of the note
+	 * Returns the date/time when the note got added to the NSF instance
 	 * 
-	 * @return last access date
+	 * @return added to file time as {@link NotesTimeDate}
 	 */
-	public Calendar getAddedToFileTime() {
+	public NotesTimeDate getAddedToFileTimeAsTimeDate() {
 		checkHandle();
 		
-		Memory retModified = new Memory(NotesConstants.timeDateSize);
-		retModified.clear();
-		
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ADDED_TO_FILE, retModified);
-		}
-		else {
-			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ADDED_TO_FILE, retModified);
-		}
-		NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
-		td.read();
-		Calendar cal = td.toCalendar();
-		return cal;
-	}
+		DisposableMemory retAddedToFile = new DisposableMemory(NotesConstants.timeDateSize);
+		try {
+			retAddedToFile.clear();
 
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_ADDED_TO_FILE, retAddedToFile);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_ADDED_TO_FILE, retAddedToFile);
+			}
+			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retAddedToFile);
+			td.read();
+			return new NotesTimeDate(td.Innards);
+		}
+		finally {
+			retAddedToFile.dispose();
+		}
+	}
+	
 	/**
 	 * The NOTE_FLAG_READONLY bit indicates that the note is Read-Only for the current user.<br>
 	 * If a note contains an author names field, and the name of the user opening the
@@ -1550,6 +1649,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			supportedType = true;
 		}
+		else if (dataTypeAsInt == NotesItem.TYPE_MIME_PART) {
+			supportedType = true;
+		}
 		
 		if (!supportedType) {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
@@ -1717,6 +1819,60 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_UNAVAILABLE) {
 			return Collections.emptyList();
+		}
+		else if (dataTypeAsInt == NotesItem.TYPE_MIME_PART) {
+			NotesMIMEPartStruct mimePartStruct = NotesMIMEPartStruct.newInstance(valueDataPtr);
+			mimePartStruct.read();
+			
+			int iByteCount = (int) (mimePartStruct.wByteCount & 0xffff);
+			int iBoundaryLen = (int) (mimePartStruct.wBoundaryLen & 0xffff);
+			int iHeadersLen = (int) (mimePartStruct.wHeadersLen & 0xffff);
+			
+			Pointer mimeBoundaryStrPtr = valueDataPtr.share(NotesConstants.mimePartSize);
+			String boundaryStr = NotesStringUtils.fromLMBCS(mimeBoundaryStrPtr, iBoundaryLen);
+			while (boundaryStr.startsWith("\r\n")) {
+				boundaryStr = boundaryStr.substring(2);
+			}
+			while (boundaryStr.endsWith("\r\n")) {
+				boundaryStr = boundaryStr.substring(0, boundaryStr.length()-2);
+			}
+
+			Pointer mimeHeadersPtr = mimeBoundaryStrPtr.share((int) (mimePartStruct.wBoundaryLen & 0xffff));
+			String headers = NotesStringUtils.fromLMBCS(mimeHeadersPtr, iHeadersLen);
+
+			Pointer mimeDataPtr = mimeHeadersPtr.share((int) (mimePartStruct.wHeadersLen & 0xffff));
+			byte[] data = mimeDataPtr.getByteArray(0, iByteCount - iBoundaryLen - iHeadersLen);
+			
+			EnumSet<MimePartOptions> options = EnumSet.noneOf(MimePartOptions.class);
+			
+			for (MimePartOptions currOpt : MimePartOptions.values()) {
+				if ((mimePartStruct.dwFlags & currOpt.getValue()) == currOpt.getValue()) {
+					options.add(currOpt);
+				}
+			}
+			
+			byte cPartType = mimePartStruct.cPartType;
+			PartType partType;
+			if (cPartType==NotesConstants.MIME_PART_PROLOG) {
+				partType = PartType.PROLOG;
+			}
+			else if (cPartType==NotesConstants.MIME_PART_BODY) {
+				partType = PartType.BODY;
+			}
+			else if (cPartType==NotesConstants.MIME_PART_EPILOG) {
+				partType = PartType.EPILOG;
+			}
+			else if (cPartType==NotesConstants.MIME_PART_RETRIEVE_INFO) {
+				partType = PartType.RETRIEVE_INFO;
+			}
+			else if (cPartType==NotesConstants.MIME_PART_MESSAGE) {
+				partType = PartType.MESSAGE;
+			}
+			else {
+				partType = null;
+			}
+			NotesMIMEPart mimePart = new NotesMIMEPart(this, options, partType, boundaryStr, headers, data);
+			return Arrays.asList((Object) mimePart);
 		}
 		else {
 			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);

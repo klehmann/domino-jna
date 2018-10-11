@@ -8,6 +8,7 @@ import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemValueTableStruct;
+import com.mindoo.domino.jna.internal.structs.NotesMIMEPartStruct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesObjectDescriptorStruct;
@@ -108,7 +109,8 @@ public interface NotesConstants {
 	public final int notesViewColumnFormat5Size = NotesViewColumnFormat5Struct.newInstance().size();
 	public final int notesSearchMatch32Size = NotesSearchMatch32Struct.newInstance().size();
 	public final int notesSearchMatch64Size = NotesSearchMatch64Struct.newInstance().size();
-	
+	public final int mimePartSize = NotesMIMEPartStruct.newInstance().size();
+
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
