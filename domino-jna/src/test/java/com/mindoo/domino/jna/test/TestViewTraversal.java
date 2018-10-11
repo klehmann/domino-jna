@@ -20,6 +20,7 @@ import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Find;
 import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 
@@ -43,6 +44,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				NotesDatabase dbData = getFakeNamesDb();
 				
 				NotesCollection colFromDbData = dbData.openCollectionByName("People");
+				
 				colFromDbData.update();
 
 				List<NotesViewEntryData> entries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), 10, EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), new EntriesAsListCallback(10));
@@ -53,7 +55,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				//try to read a value by column title; the programmatic name for this column is different ($17)
 				String name = firstEntry.getAsString("name", null);
 				Assert.assertTrue("Name value can be read", name!=null);
-				
+								
 				return null;
 			}
 		});
@@ -237,8 +239,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 								ReadMask.NOTEUNID);
 				
 				//flush remotely fetched index of view by opening it localy in dbView
-				NotesCollection colFromDbViewWithLocalData = dbView.openCollectionByName("People");
-				colFromDbViewWithLocalData.update();
+				NotesCollection colFromDbViewWithLocalData = dbView.openCollectionByName("People", EnumSet.of(OpenCollection.REBUILD_INDEX));
 				
 				List<NotesViewEntryData> entriesFromDbViewLocally = colFromDbViewWithLocalData.getAllEntries("0", 1,
 						EnumSet.of(Navigate.NEXT_PEER),
@@ -249,12 +250,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 				colFromDbViewWithLocalData.recycle();
 				
 				//now open it with reference to external db (works like a private view)
-				NotesCollection colFromDbView = dbView.openCollectionByNameWithExternalData(dbData, "People");
-				colFromDbView.update();
-				//TODO find out why we need to to this update/recycle/reopen sequence here; without it, we get 39788 instead of 39995 entries on the first run
-				colFromDbView.recycle();
-				colFromDbView = dbView.openCollectionByNameWithExternalData(dbData, "People");
-				colFromDbView.update();
+				NotesCollection colFromDbView = dbView.openCollectionByNameWithExternalData(dbData, "People", EnumSet.of(OpenCollection.REBUILD_INDEX));
 				
 				//and open the same view in the external database
 				NotesCollection colFromDbData = dbData.openCollectionByName("People");
@@ -323,6 +319,7 @@ public class TestViewTraversal extends BaseJNATestClass {
 
 				//read all note ids from the collection
 				LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(Navigate.NEXT_NONCATEGORY);
+				System.out.println("All ids in People view: "+allIds.size());
 				Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
 				
 				//pick random note ids
@@ -333,13 +330,28 @@ public class TestViewTraversal extends BaseJNATestClass {
 					pickedNoteIds.add(randomNoteId);
 				}
 				
-				//populate selected list (only works locally)
-				NotesIDTable selectedList = colFromDbData.getSelectedList();
-				selectedList.clear();
-				selectedList.addNotes(pickedNoteIds);
+				//populate selected list
+				colFromDbData.select(pickedNoteIds, true);
 
-				//for remote databases, re-send modified SelectedList
-				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+				//run multiple times to compare durations
+				for (int i=0; i<3; i++) {
+					long t0=System.currentTimeMillis();
+					int countSelectedEntries = colFromDbData.getEntryCount(Navigate.NEXT_SELECTED);
+					long t1=System.currentTimeMillis();
+					System.out.println("#1 Number of readable selected entries read in "+(t1-t0)+"ms: "+countSelectedEntries);
+				}
+
+				for (int i=0; i<3; i++) {
+					NotesIDTable idTable = new NotesIDTable();
+					
+					long t0=System.currentTimeMillis();
+					colFromDbData.getAllIds(Navigate.NEXT_SELECTED, true, idTable);
+					int countSelectedEntries = idTable.getCount();
+					long t1=System.currentTimeMillis();
+					
+					idTable.recycle();
+					System.out.println("#2 Number of readable selected entries read in "+(t1-t0)+"ms: "+countSelectedEntries);
+				}
 
 				//next, traverse selected entries only
 				List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries("0", 1,
@@ -426,6 +438,28 @@ public class TestViewTraversal extends BaseJNATestClass {
 				NotesDatabase dbData = getFakeNamesDb();
 				NotesCollection colFromDbData = dbData.openCollectionByName("CompaniesHierarchical");
 				colFromDbData.update();
+
+				NotesIDTable filterTable = colFromDbData.getSelectedList();
+				filterTable.clear();
+				filterTable.addNote(0xE332);
+				
+				colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+				
+				for (int i=0; i<5; i++) {
+					NotesIDTable retTable = new NotesIDTable();
+					NotesIDTable retTable2 = new NotesIDTable();
+					long t0=System.currentTimeMillis();
+					colFromDbData.getAllIds(Navigate.NEXT, false, retTable);
+					long t1=System.currentTimeMillis();
+					System.out.println("Total: "+retTable.getCount()+" docs in "+(t1-t0)+"ms");
+					
+					colFromDbData.getAllIds(Navigate.NEXT, true, retTable2);
+					long t2=System.currentTimeMillis();
+					System.out.println("Total: "+retTable2.getCount()+" docs in "+(t2-t1)+"ms");
+					
+					retTable.recycle();
+					retTable2.recycle();
+				}
 
 				int maxLevelFound;
 				
@@ -538,9 +572,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 						
 						//col_createdmodified - datelist
 						Object createdModified = currEntry.get("col_createdmodified");
-						if (createdModified!=null)
+						if (createdModified!=null) {
 							Assert.assertTrue("Datelist column contains correct datatype", (createdModified instanceof List && isListOfType((List<?>)createdModified, Calendar.class)));
-						
+						}
 						
 						//HTTPPasswordChangeDate - datetime
 						Object httpPwdChangeDate = currEntry.get("HTTPPasswordChangeDate");
@@ -554,8 +588,9 @@ public class TestViewTraversal extends BaseJNATestClass {
 						
 						//col_createdmodifiedrange - daterange
 						Object createModifiedRange = currEntry.get("col_createdmodifiedrange");
-						if (createModifiedRange!=null)
+						if (createModifiedRange!=null) {
 							Assert.assertTrue("Daterange column of note unid "+currEntry.getUNID()+" contains correct datatype", createModifiedRange!=null && (createModifiedRange instanceof List && isListOfType((List<?>)createModifiedRange, Calendar[].class)));
+						}
 					}
 				}
 				
