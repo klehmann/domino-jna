@@ -700,9 +700,17 @@ public class NotesViewEntryData {
 				if (currListValue instanceof LMBCSString) {
 					valAsList.set(i, ((LMBCSString)currListValue).getValue());
 				}
-				else if (val instanceof NotesTimeDate) {
+				else if (currListValue instanceof NotesTimeDate) {
 					if (convertNotesTimeDateToCalendar) {
-						valAsList.set(i, ((NotesTimeDate)val).toCalendar());
+						valAsList.set(i, ((NotesTimeDate)currListValue).toCalendar());
+					}
+				}
+				else if (currListValue instanceof NotesDateRange) {
+					if (convertNotesTimeDateToCalendar) {
+						NotesTimeDate startDateTime = ((NotesDateRange)currListValue).getStartDateTime();
+						NotesTimeDate endDateTime = ((NotesDateRange)currListValue).getEndDateTime();
+						
+						valAsList.set(i, new Calendar[] {startDateTime.toCalendar(), endDateTime.toCalendar()});
 					}
 				}
 			}
@@ -713,6 +721,14 @@ public class NotesViewEntryData {
 		else if (val instanceof NotesTimeDate) {
 			if (convertNotesTimeDateToCalendar) {
 				val = ((NotesTimeDate)val).toCalendar();
+			}
+		}
+		else if (val instanceof NotesDateRange) {
+			if (convertNotesTimeDateToCalendar) {
+				NotesTimeDate startDateTime = ((NotesDateRange)val).getStartDateTime();
+				NotesTimeDate endDateTime = ((NotesDateRange)val).getEndDateTime();
+				
+				val = new Calendar[] {startDateTime.toCalendar(), endDateTime.toCalendar()};
 			}
 		}
 		return val;
