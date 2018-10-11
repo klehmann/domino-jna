@@ -124,7 +124,7 @@ public class TestDQL extends BaseJNATestClass {
 				//run query without returning EXPLAIN text, use defaults for limits
 				//queryResult = db.query(dqlQuery);
 				
-				//run query with EXPLAIN text,, use defaults for limits
+				//run query with EXPLAIN text, use defaults for limits
 				queryResult = db.query(dqlQuery, EnumSet.of(DBQuery.EXPLAIN));
 				
 				//run query with EXPLAIN text and custom limits
@@ -137,7 +137,7 @@ public class TestDQL extends BaseJNATestClass {
 				//		maxMsecs);
 				
 				//output some data about the query execution, e.g. the amount
-				//if seconds it took to produce the result
+				//of seconds it took to produce the result
 				System.out.println("DQL result:\n"+queryResult);
 				System.out.println("Explain text:\n"+queryResult.getExplainText());
 				System.out.println("IDTable with results: "+queryResult.getIDTable());
@@ -153,7 +153,7 @@ public class TestDQL extends BaseJNATestClass {
 				boolean clearPrevSelection = true;
 				peopleView.select(queryResult.getIDTable(), clearPrevSelection);
 				
-				//parameter for paging
+				//parameter for paging, useful for web apps (here we just read all rows)
 				int offset = 0;
 				int pageSize = Integer.MAX_VALUE; //load all entries in selection
 				
@@ -188,8 +188,12 @@ public class TestDQL extends BaseJNATestClass {
 				for (int i=0; i<entries.size(); i++) {
 					NotesViewEntryData currEntry = entries.get(i);
 					
-					System.out.println("#"+(i+1)+"\t"+currEntry.getNoteId()+"\t\t"+
-							currEntry.get("Lastname")+", "+currEntry.getAsNameAbbreviated("Firstname"));
+					System.out.println(
+							"#"+(i+1)+"\t"+
+							currEntry.getNoteId()+"\t\t"+
+							currEntry.get("Lastname")+", "+
+							currEntry.getAsNameAbbreviated("Firstname")
+							);
 				}
 				
 				return null;
