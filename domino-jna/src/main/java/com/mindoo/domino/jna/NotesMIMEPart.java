@@ -33,7 +33,7 @@ public class NotesMIMEPart {
 	private LinkedHashMap<String,String> m_headersParsed;
 	private byte[] m_data;
 	
-	public NotesMIMEPart(NotesNote parentNote, EnumSet<MimePartOptions> options, PartType partType, String boundaryStr, String headers, byte[] data) {
+	NotesMIMEPart(NotesNote parentNote, EnumSet<MimePartOptions> options, PartType partType, String boundaryStr, String headers, byte[] data) {
 		m_parentNote = parentNote;
 		m_options = options;
 		m_partType = partType;
