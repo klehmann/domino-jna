@@ -192,7 +192,7 @@ public class TestDQL extends BaseJNATestClass {
 							"#"+(i+1)+"\t"+
 							currEntry.getNoteId()+"\t\t"+
 							currEntry.get("Lastname")+", "+
-							currEntry.getAsNameAbbreviated("Firstname")
+							currEntry.get("Firstname")
 							);
 				}
 				
