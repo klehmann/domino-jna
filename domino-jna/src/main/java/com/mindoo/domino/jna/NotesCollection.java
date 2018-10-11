@@ -1888,20 +1888,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 						return result;
 					}
 				}
-				
-				if (!data.hasMoreToDo()) {
-					//no more data to read
-					result = callback.lookupDone(result);
-					
-					if (dataCache!=null && retDiffTime!=null) {
-						if (!entriesToUpdateCache.isEmpty()) {
-							dataCache.addCacheValues(useReturnMask, retDiffTime, entriesToUpdateCache);
-						}
-						callback.setNewDiffTime(retDiffTime);
-					}
-
-					return result;
-				}
 			}
 
 			if (dataCache!=null && retDiffTime!=null) {
