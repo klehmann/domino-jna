@@ -1376,7 +1376,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Please note:<br>
 	 * With <code>filterTable</code> set to <code>false</code> and by using the navigator {@link Navigate#NEXT},
 	 * it is more likely for the used C API function to reuse a cached ID table of all the note ids in
-	 * the view, resulting in much better performance.
+	 * the view, resulting in much better performance. <b>It's important that the response hierarchy
+	 * flag is disable in the view design for this optimization to work.</b>
 	 * 
 	 * @param navigator use {@link Navigate#NEXT} to read documents and categories, {@link Navigate#NEXT_CATEGORY} to only read categories and {@link Navigate#NEXT_NONCATEGORY} to only read documents
 	 * @param filterTable true to filter the ID table to entries visible for the current user
