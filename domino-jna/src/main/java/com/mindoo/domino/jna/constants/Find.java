@@ -68,6 +68,9 @@ public enum Find {
 	/** Qualifies LESS_THAN and GREATER_THAN to mean LESS_THAN_OR_EQUAL and GREATER_THAN_OR_EQUAL */
 	EQUAL(0x0800),
 	
+	/** Server will not count entries if set (ONLY used in client/server transaction) */ 
+	NOCOUNT_ENTRIES(0x0010),
+	
 	/** Overlapping ranges match, and values within a range match. This symbol is
 	 * valid for fields of type TYPE_TIME_RANGE and TYPE_NUMBER_RANGE. Therefore
 	 * it should only be used with NIFFindByKey. */
