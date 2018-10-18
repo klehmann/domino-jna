@@ -178,15 +178,15 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 			}
 		}
 		
+		tumbler = new int[32];
+		
 		if (posStr==null || posStr.length()==0 || "0".equals(posStr)) {
 			level = 0;
-			tumbler = new int[32];
 			tumbler[0] = 0;
 		}
 		else {
 			String[] parts = posStr.split("\\.");
 			level = (short) (parts.length-1);
-			tumbler = new int[32];
 			for (int i=0; i<parts.length; i++) {
 				tumbler[i] = Integer.parseInt(parts[i]);
 			}
