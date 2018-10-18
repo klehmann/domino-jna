@@ -74,11 +74,19 @@ public class NotesCollectionPosition implements IAdaptable {
 		NotesCollectionPositionStruct struct = adaptable.getAdapter(NotesCollectionPositionStruct.class);
 		if (struct!=null) {
 			this.struct = struct;
+			this.level = struct.Level;
+			this.minLevel = struct.MinLevel;
+			this.maxLevel = struct.MaxLevel;
+			this.tumbler = struct.Tumbler;
 			return;
 		}
 		Pointer p = adaptable.getAdapter(Pointer.class);
 		if (p!=null) {
 			this.struct = NotesCollectionPositionStruct.newInstance(p);
+			this.level = this.struct.Level;
+			this.minLevel = this.struct.MinLevel;
+			this.maxLevel = this.struct.MaxLevel;
+			this.tumbler = this.struct.Tumbler;
 			return;
 		}
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
