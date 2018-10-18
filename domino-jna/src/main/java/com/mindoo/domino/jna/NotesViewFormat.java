@@ -2,6 +2,7 @@ package com.mindoo.domino.jna;
 
 import java.util.List;
 
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat2Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat4Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat5Struct;
@@ -60,5 +61,36 @@ public class NotesViewFormat {
 	public int getColumnCount() {
 		return m_columns.size();
 	}
+
+	public boolean isHierarchical() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_FLAG_FLATINDEX) == 0;
+	}
 	
+	public boolean isConflict() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_FLAG_CONFLICT) == NotesConstants.VIEW_TABLE_FLAG_CONFLICT;
+	}
+
+	public boolean isCollapsed() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_FLAG_COLLAPSED) == NotesConstants.VIEW_TABLE_FLAG_COLLAPSED;
+	}
+	
+	public boolean isGotoTopOnOpen() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_GOTO_TOP_ON_OPEN) == NotesConstants.VIEW_TABLE_GOTO_TOP_ON_OPEN;
+	}
+
+	public boolean isGotoTopOnRefresh() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_GOTO_TOP_ON_REFRESH) == NotesConstants.VIEW_TABLE_GOTO_TOP_ON_REFRESH;
+	}
+
+	public boolean isGotoBottomOnOpen() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_GOTO_BOTTOM_ON_OPEN) == NotesConstants.VIEW_TABLE_GOTO_BOTTOM_ON_OPEN;
+	}
+
+	public boolean isGotoBottomOnRefresh() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_GOTO_BOTTOM_ON_REFRESH) == NotesConstants.VIEW_TABLE_GOTO_BOTTOM_ON_REFRESH;
+	}
+
+	public boolean isExtendLastColumn() {
+		return (m_flagsV1 & NotesConstants.VIEW_TABLE_EXTEND_LAST_COLUMN) == NotesConstants.VIEW_TABLE_EXTEND_LAST_COLUMN;
+	}
 }

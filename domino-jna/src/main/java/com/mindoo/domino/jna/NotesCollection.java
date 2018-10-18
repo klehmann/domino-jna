@@ -98,7 +98,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, int hCollection, int viewNoteId, String viewUNID,
+	NotesCollection(NotesDatabase parentDb, int hCollection, int viewNoteId, String viewUNID,
 			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
@@ -127,7 +127,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param unreadTable id table for the unread list
 	 * @param asUserCanonical user used to read the collection data
 	 */
-	public NotesCollection(NotesDatabase parentDb, long hCollection, int viewNoteId, String viewUNID,
+	NotesCollection(NotesDatabase parentDb, long hCollection, int viewNoteId, String viewUNID,
 			NotesIDTable collapsedList, NotesIDTable selectedList, NotesIDTable unreadTable, String asUserCanonical) {
 		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
@@ -2870,6 +2870,18 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Decodes the view format and column information
+	 * 
+	 * @return view format
+	 */
+	private NotesViewFormat getViewFormat() {
+		if (m_viewFormat==null) {
+			scanColumns();
+		}
+		return m_viewFormat;
+	}
+
+	/**
 	 * Returns an iterator of all available columns for which we can read column values
 	 * (e.g. does not return static column names)
 	 * 
@@ -2899,10 +2911,89 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return number of columns
 	 */
 	public int getNumberOfColumns() {
-		if (m_viewFormat==null) {
-			scanColumns();
-		}
-		return m_viewFormat.getColumns().size();
+		return getViewFormat().getColumns().size();
+	}
+	
+	/**
+	 * Returns true if response document hierarchy is displayed in the view.
+	 * 
+	 * @return true for response hierarchy, false for flat view
+	 */
+	public boolean isHierarchical() {
+		return getViewFormat().isHierarchical();
+	}
+	
+	/**
+	 * Returns true if conflict documents are displayed in the view
+	 * 
+	 * @return true to show conflicts
+	 */
+	public boolean isConflict() {
+		return getViewFormat().isConflict();
+	}
+	
+	/**
+	 * Returns true if view should be collapsed by default
+	 * 
+	 * @return true if collapsed
+	 */
+	public boolean isCollapsed() {
+		return getViewFormat().isCollapsed();
+	}
+	
+	/**
+	 * Position to top when view is opened.
+	 * 
+	 * @return to go position to top
+	 */
+	public boolean isGotoTopOnOpen() {
+		return getViewFormat().isGotoTopOnOpen();
+	}
+
+	/**
+	 * Position to top when view is refreshed (as if the user pressed
+	 * F9 and Ctrl-Home). When both {@link #isGotoTopOnRefresh()}
+	 * and {@link #isGotoBottomOnRefresh()} are set, the view will be
+	 * refreshed from the current top row (as if the user pressed F9).
+	 * When both flags are clear, automatic refresh of display on update
+	 * notification is disabled. In this case, the refresh indicator will be displayed
+	 * 
+	 * @return true to go to top
+	 */
+	public boolean isGotoTopOnRefresh() {
+		return getViewFormat().isGotoTopOnRefresh();
+	}
+
+	/**
+	 * Position to bottom when view is opened.
+	 * 
+	 * @return true to go to bottom
+	 */
+	public boolean isGotoBottomOnOpen() {
+		return getViewFormat().isGotoBottomOnOpen();
+	}
+
+	/**
+	 *  Position to bottom when view is refreshed (as if the user pressed
+	 *  F9 and Ctrl-End). When both {@link #isGotoTopOnRefresh()}
+	 *  and {@link #isGotoBottomOnRefresh()} are set, the view will be
+	 *  refreshed from the current top row (as if the user pressed F9).
+	 *  When both flags are clear, automatic refresh of display on update
+	 *  notification is disabled. In this case, the refresh indicator will be displayed.
+	 *  
+	 * @return true to go to bottom
+	 */
+	public boolean isGotoBottomOnRefresh() {
+		return getViewFormat().isGotoBottomOnRefresh();
+	}
+
+	/**
+	 * TRUE if last column should be extended to fit the window width.
+	 * 
+	 * @return extend flag
+	 */
+	public boolean isExtendLastColumn() {
+		return getViewFormat().isExtendLastColumn();
 	}
 	
 	/**
@@ -3004,10 +3095,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return column
 	 */
 	public NotesViewColumn getColumn(int columnIndex) {
-		if (m_viewFormat==null) {
-			scanColumns();
-		}
-		return m_viewFormat.getColumns().get(columnIndex);
+		return getViewFormat().getColumns().get(columnIndex);
 	}
 	
 	/**
@@ -3016,10 +3104,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return view columns
 	 */
 	public List<NotesViewColumn> getColumns() {
-		if (m_viewFormat==null) {
-			scanColumns();
-		}
-		return Collections.unmodifiableList(m_viewFormat.getColumns());
+		return Collections.unmodifiableList(getViewFormat().getColumns());
 	}
 	
 	/**
