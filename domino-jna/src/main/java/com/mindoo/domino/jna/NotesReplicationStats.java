@@ -14,7 +14,7 @@ import com.sun.jna.Pointer;
 public class NotesReplicationStats {
 	private ReplServStatsStruct m_struct;
 	
-	public NotesReplicationStats(IAdaptable adaptable) {
+	NotesReplicationStats(IAdaptable adaptable) {
 		ReplServStatsStruct struct = adaptable.getAdapter(ReplServStatsStruct.class);
 		if (struct!=null) {
 			m_struct = struct;

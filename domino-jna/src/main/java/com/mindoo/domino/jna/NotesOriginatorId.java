@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna;
 
+import java.util.Arrays;
+
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Pointer;
@@ -46,57 +48,102 @@ import com.sun.jna.Structure;
  * the document was last edited and saved.
  */
 public class NotesOriginatorId implements IAdaptable {
+	private String unid;
+	private int sequence;
+	/** C type : TIMEDATE */
+	private NotesTimeDate sequenceTime;
+	
+	/** structure is lazily created */
 	private NotesOriginatorIdStruct m_struct;
 	
 	public NotesOriginatorId(IAdaptable adaptable) {
 		NotesOriginatorIdStruct struct = adaptable.getAdapter(NotesOriginatorIdStruct.class);
 		if (struct!=null) {
 			m_struct = struct;
+			this.unid = m_struct.getUNIDAsString();
+			this.sequence = m_struct.Sequence;
+			this.sequenceTime = m_struct.SequenceTime==null ? null : new NotesTimeDate(m_struct.SequenceTime);
 			return;
 		}
 		Pointer p = adaptable.getAdapter(Pointer.class);
 		if (p!=null) {
 			m_struct = NotesOriginatorIdStruct.newInstance(p);
+			m_struct.read();
+			this.unid = m_struct.getUNIDAsString();
+			this.sequence = m_struct.Sequence;
+			this.sequenceTime = m_struct.SequenceTime==null ? null : new NotesTimeDate(m_struct.SequenceTime);
 			return;
 		}
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
 	
 	public NotesOriginatorId(String unid, int sequence, NotesTimeDate sequenceTime) {
-		m_struct = NotesOriginatorIdStruct.newInstance();
-		m_struct.setUNID(unid);
-		m_struct.Sequence = sequence;
-		m_struct.SequenceTime = NotesTimeDateStruct.newInstance(sequenceTime.getInnards());
-		m_struct.write();
+		this.unid = unid;
+		this.sequence = sequence;
+		this.sequenceTime = sequenceTime;
 	}
 	
 	public NotesOriginatorId(String unid, int sequence, int[] sequenceTimeInnards) {
-		m_struct = NotesOriginatorIdStruct.newInstance();
-		m_struct.setUNID(unid);
-		m_struct.Sequence = sequence;
-		m_struct.SequenceTime = NotesTimeDateStruct.newInstance(sequenceTimeInnards);
-		m_struct.write();
+		this.unid = unid;
+		this.sequence = sequence;
+		this.sequenceTime = new NotesTimeDate(sequenceTimeInnards);
 	}
 	
 	public NotesTimeDate getFile() {
-		return m_struct.File==null ? null : new NotesTimeDate(m_struct.File);
+		//creating structure converts UNID to file/note
+		NotesOriginatorIdStruct struct = getAdapter(NotesOriginatorIdStruct.class);
+		if (struct==null)
+			throw new IllegalStateException("NotesOriginatorIdStruct expected not to be null");
+		
+		if (struct.File!=null) {
+			return new NotesTimeDate(struct.File.Innards);
+		}
+		return null;
 	}
 
 	public NotesTimeDate getNote() {
-		return m_struct.Note==null ? null : new NotesTimeDate(m_struct.Note);
+		//creating structure converts UNID to file/note
+		NotesOriginatorIdStruct struct = getAdapter(NotesOriginatorIdStruct.class);
+		if (struct==null)
+			throw new IllegalStateException("NotesOriginatorIdStruct expected not to be null");
+		
+		if (struct.Note!=null) {
+			return new NotesTimeDate(struct.Note.Innards);
+		}
+		return null;
 	}
 
 	public int getSequence() {
-		return m_struct.Sequence;
+		if (m_struct!=null) {
+			this.sequence = m_struct.Sequence;
+		}
+		return this.sequence;
 	}
 	
 	public NotesTimeDate getSequenceTime() {
-		return m_struct.SequenceTime==null ? null : new NotesTimeDate(m_struct.SequenceTime);
+		if (this.m_struct!=null && this.m_struct.SequenceTime!=null) {
+			if (this.sequenceTime==null ||
+					Arrays.equals(this.sequenceTime.getInnardsNoClone(), this.m_struct.SequenceTime.Innards)) {
+				
+				this.sequenceTime = new NotesTimeDate(this.m_struct.SequenceTime.Innards);
+			}
+		}
+		return this.sequenceTime;
 	}
 
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
 		if (clazz == NotesOriginatorIdStruct.class || clazz == Structure.class) {
+			if (m_struct==null) {
+				m_struct = NotesOriginatorIdStruct.newInstance();
+				m_struct.Sequence = this.sequence;
+				m_struct.SequenceTime = this.sequenceTime==null ? null : this.sequenceTime.getAdapter(NotesTimeDateStruct.class);
+				
+				if (this.unid!=null) {
+					m_struct.setUNID(this.unid);
+				}
+				m_struct.write();
+			}
 			return (T) m_struct;
 		}
 		return null;
@@ -108,6 +155,10 @@ public class NotesOriginatorId implements IAdaptable {
 	 * @return UNID
 	 */
 	public NotesUniversalNoteId getUNID() {
+		NotesOriginatorIdStruct struct = getAdapter(NotesOriginatorIdStruct.class);
+		if (struct==null)
+			throw new IllegalStateException("NotesOriginatorIdStruct expected not to be null");
+		
 		return new NotesUniversalNoteId(m_struct.getUNID());
 	}
 	
@@ -117,7 +168,15 @@ public class NotesOriginatorId implements IAdaptable {
 	 * @return UNID
 	 */
 	public String getUNIDAsString() {
-		return m_struct.getUNIDAsString();
+		if (this.unid==null) {
+			NotesOriginatorIdStruct struct = getAdapter(NotesOriginatorIdStruct.class);
+			if (struct==null)
+				throw new IllegalStateException("NotesOriginatorIdStruct expected not to be null");
+
+			this.unid = struct.getUNIDAsString();
+		}
+		return this.unid;
+
 	}
 	
 	@Override

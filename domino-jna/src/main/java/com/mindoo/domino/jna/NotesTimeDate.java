@@ -22,7 +22,7 @@ import com.sun.jna.ptr.ShortByReference;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate implements Comparable<NotesTimeDate> {
+public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	private int[] m_innards = new int[2];
 	private NotesTimeDateStruct m_structReused;
 	
@@ -175,15 +175,15 @@ public class NotesTimeDate implements Comparable<NotesTimeDate> {
 		}
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
-	
-	private NotesTimeDate(NotesTimeDateStruct struct) {
-		m_innards = struct.Innards.clone();
-	}
-	
-	NotesTimeDate(Pointer peer) {
-		m_innards = peer.getIntArray(0, 2);
-	}
 
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (NotesTimeDateStruct.class.equals(clazz)) {
+			return (T) lazilyCreateStruct();
+		}
+		return null;
+	}
+	
 	private NotesTimeDateStruct lazilyCreateStruct() {
 		if (m_structReused==null) {
 			m_structReused = NotesTimeDateStruct.newInstance();

@@ -39,7 +39,7 @@ public class NotesAttachment {
 	private NotesBlockIdStruct m_itemBlockId;
 	private int m_rrv;
 	
-	public NotesAttachment(String fileName, Compression compression, short fileFlags, int fileSize,
+	NotesAttachment(String fileName, Compression compression, short fileFlags, int fileSize,
 			NotesTimeDate fileCreated, NotesTimeDate fileModified, NotesNote parentNote,
 			NotesBlockIdStruct itemBlockId, int rrv) {
 		m_fileName = fileName;

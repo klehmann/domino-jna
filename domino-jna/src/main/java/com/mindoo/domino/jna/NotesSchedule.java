@@ -40,7 +40,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 	private NotesScheduleStruct m_scheduleData;
 	private String m_owner;
 	
-	public NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, long hSchedule64) {
+	NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, long hSchedule64) {
 		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_parent = parent;
@@ -49,7 +49,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		m_owner = owner;
 	}
 
-	public NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, int hSchedule32) {
+	NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, int hSchedule32) {
 		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_parent = parent;

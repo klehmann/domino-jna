@@ -5,6 +5,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -27,16 +28,18 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 	private int m_hCntnr32;
 	private boolean m_noRecycle;
 	
-	public NotesScheduleContainer(long hCntnr64) {
-		if (!PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 64bit only");
-		m_hCntnr64 = hCntnr64;
-	}
-
-	public NotesScheduleContainer(int hCntnr32) {
-		if (PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 32bit only");
-		m_hCntnr32 = hCntnr32;
+	public NotesScheduleContainer(IAdaptable adaptable) {
+		Handle hdl = adaptable.getAdapter(Handle.class);
+		if (hdl!=null) {
+			if (PlatformUtils.is64Bit()) {
+				m_hCntnr64 = hdl.getHandle64();
+			}
+			else {
+				m_hCntnr32 = hdl.getHandle32();
+			}
+			return;
+		}
+		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 
 	public void setNoRecycle() {

@@ -12,7 +12,7 @@ public class NotesFTIndexStats {
 	private int m_docsDeleted;
 	private int m_bytesIndexed;
 	
-	public NotesFTIndexStats(int docsAdded, int docsUpdated, int docsDeleted, int bytesIndexed) {
+	NotesFTIndexStats(int docsAdded, int docsUpdated, int docsDeleted, int bytesIndexed) {
 		m_docsAdded = docsAdded;
 		m_docsUpdated = docsUpdated;
 		m_docsDeleted = docsDeleted;

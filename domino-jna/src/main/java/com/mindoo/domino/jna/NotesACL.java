@@ -36,14 +36,14 @@ public class NotesACL implements IAllocatedMemory {
 	private long m_hACL64;
 	private int m_hACL32;
 	
-	public NotesACL(NotesDatabase parentDb, long hACL) {
+	NotesACL(NotesDatabase parentDb, long hACL) {
 		if (!PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_parentDb = parentDb;
 		m_hACL64 = hACL;
 	}
 	
-	public NotesACL(NotesDatabase parentDb, int hACL) {
+	NotesACL(NotesDatabase parentDb, int hACL) {
 		if (PlatformUtils.is64Bit())
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_parentDb = parentDb;

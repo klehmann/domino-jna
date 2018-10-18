@@ -19,7 +19,7 @@ public class NotesBuildVersion {
 	/** Fixpack version installed on machine */
 	private int m_fixpackNumber;
 
-	public NotesBuildVersion(int majorVersion, int minorVersion, int qmrNumber, int qmuNumber, int hotfixNumber, int flags, int fixpackNumber, int Spare[]) {
+	NotesBuildVersion(int majorVersion, int minorVersion, int qmrNumber, int qmuNumber, int hotfixNumber, int flags, int fixpackNumber, int Spare[]) {
 		m_majorVersion = majorVersion;
 		m_minorVersion = minorVersion;
 		m_qmrNumber = qmrNumber;

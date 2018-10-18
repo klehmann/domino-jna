@@ -9,6 +9,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
@@ -32,18 +33,18 @@ public class NotesNamesList implements IAllocatedMemory {
 	private List<String> m_names;
 	private boolean m_noRecycle;
 
-	public NotesNamesList(int handle) {
-		if (PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor not available in 64 bit");
-		
-		m_handle32 = handle;
-	}
-
-	public NotesNamesList(long handle) {
-		if (!PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor not available in 32 bit");
-		
-		m_handle64 = handle;
+	public NotesNamesList(IAdaptable adaptable) {
+		Handle hdl = adaptable.getAdapter(Handle.class);
+		if (hdl!=null) {
+			if (PlatformUtils.is64Bit()) {
+				m_handle64 = hdl.getHandle64();
+			}
+			else {
+				m_handle32 = hdl.getHandle32();
+			}
+			return;
+		}
+		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 
 	public void setNoRecycle() {

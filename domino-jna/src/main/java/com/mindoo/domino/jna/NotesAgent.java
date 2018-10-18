@@ -38,13 +38,13 @@ public class NotesAgent implements IRecyclableNotesObject {
 	private long m_hAgentB64;
 	private NotesNote m_agentNote;
 	
-	public NotesAgent(NotesDatabase parentDb, int hNoteId, int hAgent) {
+	NotesAgent(NotesDatabase parentDb, int hNoteId, int hAgent) {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB32 = hAgent;
 	}
 
-	public NotesAgent(NotesDatabase parentDb, int hNoteId, long hAgent) {
+	NotesAgent(NotesDatabase parentDb, int hNoteId, long hAgent) {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB64 = hAgent;

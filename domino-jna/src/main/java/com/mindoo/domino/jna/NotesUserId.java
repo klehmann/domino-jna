@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna;
 
+import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
@@ -11,28 +13,20 @@ public class NotesUserId  {
 	private long m_memHandle64;
 	private int m_memHandle32;
 	
-	/**
-	 * Creates a new instance
-	 * 
-	 * @param hKFC id handle
-	 */
-	public NotesUserId(long hKFC) {
-		if (!PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 64bit only");
-		m_memHandle64 = hKFC;
+	public NotesUserId(IAdaptable adaptable) {
+		Handle hdl = adaptable.getAdapter(Handle.class);
+		if (hdl!=null) {
+			if (PlatformUtils.is64Bit()) {
+				m_memHandle64 = hdl.getHandle64();
+			}
+			else {
+				m_memHandle32 = hdl.getHandle32();
+			}
+			return;
+		}
+		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
-
-	/**
-	 * Creates a new instance
-	 * 
-	 * @param hKFC id handle
-	 */
-	public NotesUserId(int hKFC) {
-		if (PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 32bit only");
-		m_memHandle32 = hKFC;
-	}
-
+	
 	/**
 	 * Returns the handle to the in-memory ID for 32 bit
 	 * 

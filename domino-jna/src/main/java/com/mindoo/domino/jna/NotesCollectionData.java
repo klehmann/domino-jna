@@ -41,7 +41,7 @@ public class NotesCollectionData {
 	public short m_btreeDepth;
 	private IItemValueTableData[] m_itemValueTables;
 	
-	public NotesCollectionData(int docCount, int docTotalSize, int btreeLeafNodes, short btreeDepth, IItemValueTableData[] itemValueTables) {
+	NotesCollectionData(int docCount, int docTotalSize, int btreeLeafNodes, short btreeDepth, IItemValueTableData[] itemValueTables) {
 		m_docCount = docCount;
 		m_docTotalSize = docTotalSize;
 		m_btreeLeafNodes = btreeLeafNodes;

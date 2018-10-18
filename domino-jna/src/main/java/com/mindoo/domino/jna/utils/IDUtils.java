@@ -7,10 +7,11 @@ import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Handle;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.internal.NotesConstants;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -58,12 +59,12 @@ public class IDUtils {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethKFC = new LongByReference();
 			_getUserIdFromVault(userName, password, null, rethKFC, null, serverName);
-			userId = new NotesUserId(rethKFC.getValue());
+			userId = new NotesUserId(new Handle(rethKFC.getValue()));
 		}
 		else {
 			IntByReference rethKFC = new IntByReference();
 			_getUserIdFromVault(userName, password, null, null, rethKFC, serverName);
-			userId = new NotesUserId(rethKFC.getValue());
+			userId = new NotesUserId(new Handle(rethKFC.getValue()));
 		}
 		return userId;
 	}
@@ -605,7 +606,7 @@ public class IDUtils {
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				NotesUserId id = new NotesUserId(phKFC64.getValue());
+				NotesUserId id = new NotesUserId(new Handle(phKFC64.getValue()));
 				//invoke callback code
 				return callback.accessId(id);
 			}
@@ -622,7 +623,7 @@ public class IDUtils {
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				NotesUserId id = new NotesUserId(phKFC32.getValue());
+				NotesUserId id = new NotesUserId(new Handle(phKFC32.getValue()));
 				//invoke callback code
 				return callback.accessId(id);
 			}
