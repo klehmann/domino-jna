@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna;
 
+import java.util.Arrays;
+
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.sun.jna.Pointer;
@@ -39,28 +41,47 @@ import com.sun.jna.Structure;
  * @author Karsten Lehmann
  */
 public class NotesCollectionPosition implements IAdaptable {
-	private NotesCollectionPositionStruct m_struct;
+	/** # levels -1 in tumbler */
+	private int level;
+
+	/**
+	 * MINIMUM level that this position is allowed to be nagivated to. This is
+	 * useful to navigate a subtree using all navigator codes. This field is
+	 * IGNORED unless the NAVIGATE_MINLEVEL flag is enabled (for backward
+	 * compatibility)
+	 */
+	private int minLevel;
+
+	/**
+	 * MAXIMUM level that this position is allowed to be nagivated to. This is
+	 * useful to navigate a subtree using all navigator codes. This field is
+	 * IGNORED unless the NAVIGATE_MAXLEVEL flag is enabled (for backward
+	 * compatibility)
+	 */
+	private int maxLevel;
+	
+	/**
+	 * Current tumbler (1.2.3, etc)<br>
+	 * C type : DWORD[32]
+	 */
+	private int[] tumbler = new int[32];
+
+	private String toString;
+	
+	private NotesCollectionPositionStruct struct;
 	
 	public NotesCollectionPosition(IAdaptable adaptable) {
 		NotesCollectionPositionStruct struct = adaptable.getAdapter(NotesCollectionPositionStruct.class);
 		if (struct!=null) {
-			m_struct = struct;
+			this.struct = struct;
 			return;
 		}
 		Pointer p = adaptable.getAdapter(Pointer.class);
 		if (p!=null) {
-			m_struct = NotesCollectionPositionStruct.newInstance(p);
+			this.struct = NotesCollectionPositionStruct.newInstance(p);
 			return;
 		}
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
-	}
-	
-	private NotesCollectionPosition(NotesCollectionPositionStruct struct) {
-		m_struct = struct;
-	}
-	
-	private NotesCollectionPosition(Pointer p) {
-		this(NotesCollectionPositionStruct.newInstance(p));
 	}
 	
 	/**
@@ -72,24 +93,21 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @param tumbler array with position information [index level0, index level1, ...], e.g. [1,2,3], up to 32 entries
 	 */
 	public NotesCollectionPosition(int level, int minLevel, int maxLevel, final int tumbler[]) {
-		this(NotesCollectionPositionStruct.newInstance());
-		
-		m_struct.Level = (short) (level & 0xffff);
-		m_struct.MinLevel = (byte) (minLevel & 0xff);
-		m_struct.MaxLevel = (byte) (maxLevel & 0xff);
+		this.level = level;
+		this.minLevel = minLevel;
+		this.maxLevel = maxLevel;
 		if (tumbler.length>32) {
 			throw new IllegalArgumentException("Tumbler array exceeds the maximum size ("+tumbler.length+" > 32)");
 		}
-		
-		for (int i=0; i<m_struct.Tumbler.length; i++) {
+		this.tumbler = new int[32];
+		for (int i=0; i<this.tumbler.length; i++) {
 			if (i < tumbler.length) {
-				m_struct.Tumbler[i] = tumbler[i];
+				this.tumbler[i] = tumbler[i];
 			}
 			else {
-				m_struct.Tumbler[i] = 0;
+				this.tumbler[i] = 0;
 			}
 		}
-		m_struct.write();
 	}
 	
 	/**
@@ -102,13 +120,48 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @param posStr position string
 	 */
 	public NotesCollectionPosition(String posStr) {
-		this(NotesCollectionPositionStruct.toPosition(posStr));
+		int iPos = posStr.indexOf("|");
+		if (iPos!=-1) {
+			//optional addition to the classic position string: |minlevel-maxlevel
+			String minMaxStr = posStr.substring(iPos+1);
+			posStr = posStr.substring(0, iPos);
+			
+			iPos = minMaxStr.indexOf("-");
+			if (iPos!=-1) {
+				minLevel = Byte.parseByte(minMaxStr.substring(0, iPos));
+				maxLevel = Byte.parseByte(minMaxStr.substring(iPos+1));
+			}
+		}
+		
+		tumbler = new int[32];
+
+		if (posStr==null || posStr.length()==0 || "0".equals(posStr)) {
+			level = 0;
+			tumbler[0] = 0;
+			this.toString = "0";
+		}
+		else {
+			String[] parts = posStr.split("\\.");
+			level = (short) (parts.length-1);
+			for (int i=0; i<parts.length; i++) {
+				tumbler[i] = Integer.parseInt(parts[i]);
+			}
+			this.toString = posStr;
+		}
 	}
 	
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
 		if (clazz == NotesCollectionPositionStruct.class || clazz == Structure.class) {
-			return (T) m_struct;
+			if (this.struct==null) {
+				this.struct = NotesCollectionPositionStruct.newInstance();
+				this.struct.Level = (short) (this.level & 0xffff);
+				this.struct.MinLevel = (byte) (this.minLevel & 0xff);
+				this.struct.MaxLevel = (byte) (this.maxLevel & 0xff);
+				this.struct.Tumbler = this.tumbler.clone();
+				this.struct.write();
+			}
+			return (T) this.struct;
 		}
 		return null;
 	}
@@ -119,7 +172,11 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @return levels
 	 */
 	public int getLevel() {
-		return (int) (m_struct.Level & 0xffff);
+		if (this.struct!=null) {
+			//get current struct value, is changed by NIFReadEntries
+			this.level = (int) (this.struct.Level & 0xffff);
+		}
+		return this.level;
 	}
 	
 	/**
@@ -131,7 +188,11 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @return min level
 	 */
 	public int getMinLevel() {
-		return (int) (m_struct.MinLevel & 0xffff);
+		if (this.struct!=null) {
+			//get current struct value, is changed by NIFReadEntries
+			this.minLevel = (this.struct.MinLevel & 0xffff);
+		}
+		return this.minLevel;
 	}
 	
 	/**
@@ -143,8 +204,11 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @param level min level
 	 */
 	public void setMinLevel(int level) {
-		m_struct.MinLevel = (byte) (level & 0xff);
-		m_struct.write();
+		this.minLevel = level;
+		if (this.struct!=null) {
+			this.struct.MinLevel = (byte) (level & 0xff);
+			this.struct.write();
+		}
 	}
 	
 	/**
@@ -156,7 +220,11 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @return max level
 	 */
 	public int getMaxLevel() {
-		return (int) (m_struct.MaxLevel & 0xffff);
+		if (this.struct!=null) {
+			//get current struct value, is changed by NIFReadEntries
+			this.maxLevel = (this.struct.MaxLevel & 0xffff);
+		}
+		return this.maxLevel;
 	}
 	
 	/**
@@ -168,9 +236,13 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @param level max level
 	 */
 	public void setMaxLevel(int level) {
-		m_struct.MaxLevel = (byte) (level & 0xff);
-		m_struct.write();
+		this.maxLevel = level;
+		if (this.struct!=null) {
+			this.struct.MaxLevel = (byte) (level & 0xff);
+			this.struct.write();
+		}
 	}
+	
 	/**
 	 * Returns the index position at each view level
 	 * 
@@ -178,9 +250,13 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * @return position starting with 1 if not restricted by reader fields
 	 */
 	public int getTumbler(int level) {
-		return m_struct.Tumbler[level];
+		if (this.struct!=null) {
+			//get current struct value, is changed by NIFReadEntries
+			this.tumbler = this.struct.Tumbler;
+		}
+		return this.tumbler[level];
 	}
-	
+
 	/**
 	 * Converts the position object to a position string like "1.2.3".<br>
 	 * <br>
@@ -192,8 +268,48 @@ public class NotesCollectionPosition implements IAdaptable {
 	 * 
 	 * @return position string
 	 */
-	public String toPosString() {
-		return m_struct.toPosString();
+	@Override
+	public String toString() {
+		boolean recalc;
+		//cache if cached value needs to be recalculated
+		if (this.toString==null) {
+			recalc = true;
+		}
+		else if (this.struct!=null && (this.level != this.struct.Level ||
+				this.minLevel != this.struct.MinLevel ||
+				this.maxLevel != this.struct.MaxLevel ||
+				!Arrays.equals(this.tumbler, this.struct.Tumbler))) {
+			recalc = true;
+		}
+		else {
+			recalc = false;
+		}
+		
+		if (recalc) {
+			StringBuilder sb = new StringBuilder();
+			
+			int level = this.getLevel();
+			if (level==0) {
+				sb.append('0');
+			}
+			else {
+				for (int i=0; i<=level; i++) {
+					if (sb.length() > 0) {
+						sb.append('.');
+					}
+					sb.append(this.getTumbler(i));
+				}
+			}
+			
+			int currentMinLevel = this.getMinLevel();
+			int currentMaxLevel = this.getMaxLevel();
+			
+			if (currentMinLevel!=0 || currentMaxLevel!=0) {
+				sb.append("|").append(currentMinLevel).append("-").append(currentMaxLevel);
+			}
+			toString = sb.toString();
+		}
+		return toString;
 	}
 
 }
