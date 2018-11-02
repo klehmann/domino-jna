@@ -263,6 +263,7 @@ When using the API in XPages applications, wrapping the code in `NotesGC.runWith
 * [Explore the hidden parts of an application](https://www.eknori.de/2018-01-29/explore-the-hidden-parts-of-an-application-ibmchampion/)
 * [Query Domino data and faceted search with Domino JNA (part 1) by Mark Leusink](http://linqed.eu/2018/10/02/query-domino-data-and-faceted-search-with-domino-jna-part-1/)
 * [Query Domino data and faceted search with Domino JNA (part 2) by Mark Leusink](http://linqed.eu/2018/10/08/query-domino-data-and-faceted-search-with-domino-jna-part-2/)
+* [Query Domino data with Domino JNA (part 3): REST API and infinite scroll by Mark Leusink](http://linqed.eu/2018/11/02/query-domino-data-with-domino-jna-part-3-rest-api-and-infinite-scroll/)
 
 ## Next steps
 This project is not done yet, this is just the beginning.
