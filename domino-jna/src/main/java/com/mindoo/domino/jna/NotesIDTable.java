@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback.Action;
@@ -90,7 +91,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * ranges of IDs. The ID list does not have to be sorted, this is
 	 * checked and done (if required) internally.
 	 * 
-	 * @param ids IDs to add
+	 * @param ids IDs to add; for slightly better performance, use a Set implementing {@link SortedSet}, e.g. a {@link TreeSet} without comparator
 	 */
 	public NotesIDTable(Collection<Integer> ids) {
 		this();
@@ -108,7 +109,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 */
 	public NotesIDTable(int [] ids) {
 		this();
-		List<Integer> idsAsList = new ArrayList<Integer>(ids.length);
+		Set<Integer> idsAsList = new TreeSet<Integer>();
 		for (int i=0; i<ids.length; i++) {
 			idsAsList.add(Integer.valueOf(ids[i]));
 		}
@@ -270,7 +271,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	/**
 	 * Adds a set of note ids to this id table
 	 * 
-	 * @param noteIds ids to add
+	 * @param noteIds ids to add; for slightly better performance, use a Set implementing {@link SortedSet}, e.g. a {@link TreeSet} without comparator
 	 */
 	public void addNotes(Collection<Integer> noteIds) {
 		boolean addToEnd = false;
@@ -285,27 +286,33 @@ public class NotesIDTable implements IRecyclableNotesObject {
 	 * Method to add a list of note ids. Method is private to prevent
 	 * wrong usage by setting <i>addToEnd</i> to true when it's not ok.
 	 * 
-	 * @param noteIds ids to add
+	 * @param noteIds ids to add; for slightly better performance, use a Set implementing {@link SortedSet}, e.g. a {@link TreeSet} without comparator
 	 * @param addToEnd set to true if we can <b>guarantee</b> that the ids we add are higher that the highest IDs in the table
 	 */
 	private void addNotes(Collection<Integer> noteIds, boolean addToEnd) {
 		checkHandle();
 		
 		//check if Set is already sorted
-		Integer lastVal = null;
-		Iterator<Integer> idsIt = noteIds.iterator();
 		boolean isSorted = true;
-		while (idsIt.hasNext()) {
-			Integer currVal = idsIt.next();
-			if (lastVal!=null && currVal!=null) {
-				if (lastVal.intValue() > currVal.intValue()) {
-					isSorted = false;
-					break;
-				}
-
-			}
-			lastVal = currVal;
+		if (noteIds instanceof SortedSet && ((SortedSet<Integer>)noteIds).comparator()==null) {
+			//set is already sorted by natural ordering, we can skip the following loop to verify ordering
 		}
+		else {
+			Integer lastVal = null;
+			Iterator<Integer> idsIt = noteIds.iterator();
+			while (idsIt.hasNext()) {
+				Integer currVal = idsIt.next();
+				if (lastVal!=null && currVal!=null) {
+					if (lastVal.intValue() > currVal.intValue()) {
+						isSorted = false;
+						break;
+					}
+
+				}
+				lastVal = currVal;
+			}
+		}
+		
 		Integer[] noteIdsArr = noteIds.toArray(new Integer[noteIds.size()]);
 		if (!isSorted) {
 			Arrays.sort(noteIdsArr);
@@ -313,7 +320,7 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		
 		LinkedList<Integer> currIdRange = new LinkedList<Integer>();
 		
-		//find consecutive id ranges
+		//find consecutive id ranges to reduce number of insert operations (insert ranges)
 		for (int i=0; i<noteIdsArr.length; i++) {
 			int currNoteId = noteIdsArr[i];
 			if (currIdRange.isEmpty()) {
@@ -333,7 +340,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 						
 						if (PlatformUtils.is64Bit()) {
 							result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
-							
 						}
 						else {
 							result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
@@ -358,7 +364,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				
 				if (PlatformUtils.is64Bit()) {
 					result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
-					
 				}
 				else {
 					result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
