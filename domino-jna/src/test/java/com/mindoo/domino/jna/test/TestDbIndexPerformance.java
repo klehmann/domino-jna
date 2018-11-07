@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.test;
 
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -18,7 +19,6 @@ import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 
-import edu.emory.mathcs.backport.java.util.concurrent.atomic.AtomicInteger;
 import lotus.domino.Session;
 
 /**
