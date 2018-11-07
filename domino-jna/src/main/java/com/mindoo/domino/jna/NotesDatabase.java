@@ -14,7 +14,9 @@ import java.util.Formatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +49,9 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.INotesNativeAPI32;
+import com.mindoo.domino.jna.internal.INotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -62,11 +67,14 @@ import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
+import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableExt;
+import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableLock;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
+import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -4791,5 +4799,154 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		long t1=System.currentTimeMillis();
 		
 		return new NotesDbQueryResult(this, query, idTable, explainTxt, t1-t0);
+	}
+	
+	/**
+	 * The extended version of the Item Definition Table for a database contains
+	 * the number of items, name and type of all the items defined in that database.<br>
+	 * <br>
+	 * Examples are field names, form names, design names, and formula labels.<br>
+	 * Applications can obtain a copy of the extended version of the Item Definition
+	 * Table by calling this method.
+	 * 
+	 * @return item definition table with case-insensitive key access
+	 */
+	public NavigableMap<String,Integer> getItemDefinitionTable() {
+		NavigableMap<String,Integer> table = new TreeMap<String,Integer>(new CaseInsensitiveStringComparator());
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			INotesNativeAPI64 api = NotesNativeAPI64.get();
+			
+			LongByReference retItemNameTable = new LongByReference();
+			result = api.NSFDbItemDefTableExt(m_hDB64, retItemNameTable);
+			NotesErrorUtils.checkResult(result);
+			
+			long retItemNameTableAsLong = retItemNameTable.getValue();
+			Pointer pItemDefExt = Mem64.OSLockObject(retItemNameTableAsLong);
+			try {
+				NotesItemDefinitionTableExt itemDefTableExt = NotesItemDefinitionTableExt.newInstance(pItemDefExt);
+				itemDefTableExt.read();
+				
+				NotesItemDefinitionTableLock itemDefTableLock = NotesItemDefinitionTableLock.newInstance();
+				
+				result = api.NSFItemDefExtLock(pItemDefExt, itemDefTableLock);
+				NotesErrorUtils.checkResult(result);
+				try {
+					IntByReference retNumEntries = new IntByReference();
+					result = api.NSFItemDefExtEntries(itemDefTableLock, retNumEntries);
+					NotesErrorUtils.checkResult(result);
+					
+					int iNumEntries = retNumEntries.getValue();
+					
+					ShortByReference retItemType = new ShortByReference();
+					ShortByReference retItemNameLength = new ShortByReference();
+					//implemented this like the sample code for NSFDbItemDefTableExt
+					//provided in the C API documentation, but it looks like the following
+					//128 byte buffer is never used, instead the NSFItemDefExtGetEntry
+					//call redirects the pointer stored in retItemNamePtr to
+					//the item name in memory
+					DisposableMemory retItemName = new DisposableMemory(128);
+					DisposableMemory retItemNamePtr = new DisposableMemory(Pointer.SIZE);
+					retItemNamePtr.setPointer(0, retItemName);
+					
+					try {
+						for (int i=0; i<iNumEntries; i++) {
+							retItemName.clear();
+							
+							result = api.NSFItemDefExtGetEntry(itemDefTableLock, i, retItemType,
+									retItemNameLength, retItemNamePtr);
+							NotesErrorUtils.checkResult(result);
+							
+							//grab the current pointer stored in retItemNamePtr;
+							//using retItemName here did not work, because the
+							//value of retItemNamePtr got redirected
+							String currItemName = NotesStringUtils.fromLMBCS(
+									new Pointer(retItemNamePtr.getLong(0)),
+									(int) (retItemNameLength.getValue() & 0xffff));
+							int itemTypeAsInt = (int) (retItemType.getValue() & 0xffff);
+							
+							table.put(currItemName, Integer.valueOf(itemTypeAsInt));
+						}
+					}
+					finally {
+						retItemName.dispose();
+						retItemNamePtr.dispose();
+					}
+				}
+				finally {
+					result = api.NSFItemDefExtUnlock(itemDefTableExt, itemDefTableLock);
+				}
+			}
+			finally {
+				Mem64.OSUnlockObject(retItemNameTable.getValue());
+				Mem64.OSMemFree(retItemNameTable.getValue());
+			}
+		}
+		else {
+			INotesNativeAPI32 api = NotesNativeAPI32.get();
+			
+			IntByReference retItemNameTable = new IntByReference();
+			result = api.NSFDbItemDefTableExt(m_hDB32, retItemNameTable);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer pItemDefExt = Mem32.OSLockObject(retItemNameTable.getValue());
+			try {
+				NotesItemDefinitionTableExt itemDefTableExt = NotesItemDefinitionTableExt.newInstance(pItemDefExt);
+				itemDefTableExt.read();
+				NotesItemDefinitionTableLock itemDefTableLock = NotesItemDefinitionTableLock.newInstance();
+				
+				result = api.NSFItemDefExtLock(pItemDefExt, itemDefTableLock);
+				NotesErrorUtils.checkResult(result);
+				try {
+					IntByReference retNumEntries = new IntByReference();
+					result = api.NSFItemDefExtEntries(itemDefTableLock, retNumEntries);
+					NotesErrorUtils.checkResult(result);
+					
+					int iNumEntries = retNumEntries.getValue();
+					
+					ShortByReference retItemType = new ShortByReference();
+					ShortByReference retItemNameLength = new ShortByReference();
+					//implemented this like the sample code for NSFDbItemDefTableExt
+					//provided in the C API documentation, but it looks like the following
+					//128 byte buffer is never used, instead the NSFItemDefExtGetEntry
+					//call redirects the pointer stored in retItemNamePtr to
+					//the item name in memory
+					DisposableMemory retItemName = new DisposableMemory(128);
+					DisposableMemory retItemNamePtr = new DisposableMemory(Pointer.SIZE);
+					retItemNamePtr.setPointer(0, retItemName);
+					
+					try {
+						for (int i=0; i<iNumEntries; i++) {
+							result = api.NSFItemDefExtGetEntry(itemDefTableLock, i, retItemType,
+									retItemNameLength, retItemNamePtr);
+							NotesErrorUtils.checkResult(result);
+							
+							//grab the current pointer stored in retItemNamePtr;
+							//using retItemName here did not work, because the
+							//value of retItemNamePtr got redirected
+							String currItemName = NotesStringUtils.fromLMBCS(
+									new Pointer(retItemNamePtr.getLong(0)),
+									(int) (retItemNameLength.getValue() & 0xffff));
+							int itemTypeAsInt = (int) (retItemType.getValue() & 0xffff);
+							
+							table.put(currItemName, Integer.valueOf(itemTypeAsInt));
+						}
+					}
+					finally {
+						retItemName.dispose();
+						retItemNamePtr.dispose();
+					}
+				}
+				finally {
+					result = api.NSFItemDefExtUnlock(itemDefTableExt, itemDefTableLock);
+				}
+			}
+			finally {
+				Mem32.OSUnlockObject(retItemNameTable.getValue());
+				Mem32.OSMemFree(retItemNameTable.getValue());
+			}
+		}
+		return table;
 	}
 }

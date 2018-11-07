@@ -3012,5 +3012,6 @@ This allows an Editor to assume some Designer-level access */
 	public byte CALENDAR_THAI = 3;
 	public byte CALENDAR_KOREA = 4;
 
+	public static int MAX_ITEMDEF_SEGMENTS = 25;
 	
 }

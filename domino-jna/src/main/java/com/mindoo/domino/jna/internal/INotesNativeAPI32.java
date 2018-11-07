@@ -9,6 +9,8 @@ import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
+import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableExt;
+import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableLock;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -1294,4 +1296,29 @@ public interface INotesNativeAPI32 extends Library {
 			PointerByReference pOOOOContext);
 	public short OOOEndOperation(int hOOContext, Pointer pOOOContext);
 	
+	public short NSFDbItemDefTableExt(
+			int hDB,
+			IntByReference retItemNameTable);
+	
+	public short NSFItemDefExtLock(
+			Pointer pItemDefTable,
+			NotesItemDefinitionTableLock ItemDefTableLock);
+
+	public short NSFItemDefExtEntries(
+			NotesItemDefinitionTableLock ItemDefTableLock,
+			IntByReference NumEntries);
+	
+	public short NSFItemDefExtGetEntry(
+			NotesItemDefinitionTableLock ItemDefTableLock,
+			int ItemNum,
+			ShortByReference ItemType,
+			ShortByReference ItemLength,
+			Pointer ItemName);
+	
+	public short NSFItemDefExtUnlock(
+			NotesItemDefinitionTableExt ItemDefTable,
+			NotesItemDefinitionTableLock ItemDefTableLock);
+	
+	public short NSFItemDefExtFree(
+			NotesItemDefinitionTableExt ItemDeftable);
 }
