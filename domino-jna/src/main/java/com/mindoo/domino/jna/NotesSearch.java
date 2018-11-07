@@ -365,9 +365,15 @@ public class NotesSearch {
 			throw new NotesError(0, "Database already recycled");
 		}
 
-		if (searchFilter instanceof NotesIDTable && since==null) {
-			//since must have any value to make this work in NSFSearchExtended3, so we use 1.1.1900
-			since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
+		if (searchFilter instanceof NotesIDTable) {
+			if (since==null) {
+				//in R9, since must have any value to make this work in NSFSearchExtended3, so we use 1.1.1900
+				since = NotesDateTimeUtils.dateToTimeDate(new Date(1900-1900, 1-1, 1, 0, 0, 0));
+			}
+			if (StringUtil.isEmpty(viewTitle)) {
+				//in R9, view title cannot be empty if filtering with IDTable
+				viewTitle = "-";
+			}
 		}
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
@@ -464,7 +470,7 @@ public class NotesSearch {
 			try {
 				final NotesTimeDateStruct retUntil = NotesTimeDateStruct.newInstance();
 
-				final Memory viewTitleBuf = viewTitle!=null ? NotesStringUtils.toLMBCS(viewTitle, true) : null;
+				final Memory viewTitleBuf = NotesStringUtils.toLMBCS(viewTitle==null ? "" : viewTitle, true);
 
 				int hFilter=0;
 				int filterFlags=NotesConstants.SEARCH_FILTER_NONE;
