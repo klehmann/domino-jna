@@ -46,6 +46,12 @@ public class LMBCSString {
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof LMBCSString) {
+			LMBCSString otherLMBCSStr = (LMBCSString) obj;
+			
+			if (m_hashCode!=0 && otherLMBCSStr.m_hashCode!=0 && m_hashCode!=otherLMBCSStr.m_hashCode) {
+				return false;
+			}
+			
 			boolean equal = Arrays.equals(m_data, ((LMBCSString)obj).m_data);
 			return equal;
 		}
