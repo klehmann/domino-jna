@@ -36,6 +36,27 @@ import lotus.domino.Session;
 public class TestViewTraversal extends BaseJNATestClass {
 
 	@Test
+	public void testViewTraversal_readNoteIdAndPosition() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection colFromDbData = dbData.openCollectionByName("People");
+
+				for (int i=0; i<3; i++) {
+					long t0=System.currentTimeMillis();
+					List<NotesViewEntryData> entries = colFromDbData.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT_NONCATEGORY),
+							Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID, ReadMask.INDEXPOSITION), new NotesCollection.EntriesAsListCallback(Integer.MAX_VALUE));
+					long t1=System.currentTimeMillis();
+					System.out.println("It took "+(t1-t0)+"ms to read "+entries.size()+" note ids and index positions");
+				}
+				return null;
+			}
+		});
+	};
+	
+	@Test
 	public void testViewTraversal_columnTitleLookup() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -774,4 +795,53 @@ public class TestViewTraversal extends BaseJNATestClass {
 		return true;
 	}
 
+	@Test
+	public void testSelectedEntryCountWithPaging() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase dbData = getFakeNamesDb();
+				NotesCollection peopleView = dbData.openCollectionByName("People");
+				NotesIDTable idsInView = new NotesIDTable();
+				peopleView.getAllIds(Navigate.NEXT, false, idsInView);
+				
+				int[] idsInViewAsArr = idsInView.toArray();
+				
+				int firstId = idsInViewAsArr[0];
+				int secondId = idsInViewAsArr[1];
+				int lastId = idsInViewAsArr[idsInViewAsArr.length-1];
+				
+				
+				peopleView.select(Arrays.asList(firstId, secondId, lastId), true);
+
+				int NUM_PER_PAGE = 50;
+				
+				List<NotesViewEntryData> viewEntries = peopleView.getAllEntries("0", 1,
+						EnumSet.of(Navigate.NEXT_SELECTED), NUM_PER_PAGE,
+						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARYVALUES),
+						new EntriesAsListCallback(NUM_PER_PAGE));
+				
+				Assert.assertEquals("No duplicate or missing rows returned", 3, viewEntries.size());
+				
+				Set<Integer> returnedIds = new HashSet<Integer>();
+				
+				for(int i=0; i<viewEntries.size(); i++) {
+					NotesViewEntryData currEntry = viewEntries.get(i);
+					returnedIds.add(currEntry.getNoteId());
+					
+					System.out.println("#"+i+"\t"+currEntry.getNoteId()+"\t"+currEntry.getColumnDataAsMap());
+				}
+
+				Assert.assertTrue("Looked returned first filter id", returnedIds.contains(firstId));
+				Assert.assertTrue("Looked returned second filter id", returnedIds.contains(secondId));
+				Assert.assertTrue("Looked returned last filter id", returnedIds.contains(lastId));
+				
+				return null;
+			}
+
+		});
+	
+	}
 }
