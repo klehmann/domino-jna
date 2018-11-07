@@ -1,6 +1,5 @@
 package com.mindoo.domino.jna.test;
 
-import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 
@@ -85,7 +84,7 @@ public class TestDbIndexPerformance extends BaseJNATestClass {
 							Assert.assertTrue("Firstname not empty", firstName!=null && firstName.length()>0);
 							String lastName = summaryBufferData.getAsString("lastname", "");
 							Assert.assertTrue("Lastname not empty", lastName!=null && lastName.length()>0);
-							Calendar created = summaryBufferData.getAsCalendar("created", null);
+							NotesTimeDate created = summaryBufferData.getAsTimeDate("created", null);
 							Assert.assertNotNull("Creation date is not null", created);
 
 							cnt.incrementAndGet();
