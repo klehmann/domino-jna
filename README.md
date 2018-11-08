@@ -284,9 +284,11 @@ Copyright by [Mindoo GmbH](http://www.mindoo.com)
 The code uses the following open source projects:
 
 [metadata-extractor](https://github.com/drewnoakes/metadata-extractor)
-available under Apache 2.0 license
+for image file metadata extraction, available under Apache 2.0 license
 
 [Apache Commons Collections 4](https://commons.apache.org/proper/commons-collections/)
-available under Apache 2.0 license
+for case insensitive maps, available under Apache 2.0 license
 
+[ICU4J](http://site.icu-project.org/home/why-use-icu4j)
+for LMBCS - Java String conversion without C API calls, [license](https://github.com/unicode-org/icu/blob/master/icu4c/LICENSE)
 
