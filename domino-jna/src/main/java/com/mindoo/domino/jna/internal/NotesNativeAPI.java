@@ -616,4 +616,5 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	@Override
 	public native void DEBUGDumpHandleTable(int flags, short blkType);
 
+	public native short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
 }

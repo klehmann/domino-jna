@@ -304,4 +304,5 @@ public interface INotesNativeAPI extends Library {
 	
 	public void DEBUGDumpHandleTable(int flags, short blkType);
 
+	public short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
 }

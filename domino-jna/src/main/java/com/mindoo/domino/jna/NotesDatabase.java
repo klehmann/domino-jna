@@ -516,6 +516,41 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		return m_acl;
 	}
+
+	/**
+	 * Locate and return name of template for a given template name.
+	 * 
+	 * @param templateName name of template to find
+	 * @return path to DB which is the template for this template name
+	 */
+	public static String findDatabaseByTemplateName(String templateName) {
+		return findDatabaseByTemplateName(templateName, (String) null);
+	}
+	
+	/**
+	 * Locate and return name of template for a given template name.
+	 * 
+	 * @param templateName name of template to find
+	 * @param excludeDbPath optional db path to exclude during search
+	 * @return path to DB which is the template for this template name or null if not found
+	 */
+	public static String findDatabaseByTemplateName(String templateName, String excludeDbPath) {
+		Memory templateNameMem = NotesStringUtils.toLMBCS(templateName, true);
+		Memory excludeDbPathMem = NotesStringUtils.toLMBCS(excludeDbPath==null ? "" : excludeDbPath, true);
+		DisposableMemory retDbPath = new DisposableMemory(256);
+		try {
+			short result = NotesNativeAPI.get().DesignFindTemplate(templateNameMem,
+					excludeDbPathMem, retDbPath);
+			if (result==1028) //entry not found in index
+				return null;
+			NotesErrorUtils.checkResult(result);
+			
+			return NotesStringUtils.fromLMBCS(retDbPath, -1);
+		}
+		finally {
+			retDbPath.dispose();
+		}
+	}
 	
 	/**
 	 * Searches for a database by its replica id in the data directory (and subdirectories) specified by this
