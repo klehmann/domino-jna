@@ -252,7 +252,7 @@ public class NotesCalendarUtils {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			String uid = NotesStringUtils.fromLMBCS(retUID, 1);
+			String uid = NotesStringUtils.fromLMBCS(retUID, -1);
 			return uid;
 		}
 		finally {
@@ -302,7 +302,7 @@ public class NotesCalendarUtils {
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			String uid = NotesStringUtils.fromLMBCS(retUID, 1);
+			String uid = NotesStringUtils.fromLMBCS(retUID, -1);
 			return uid;
 		}
 		finally {
