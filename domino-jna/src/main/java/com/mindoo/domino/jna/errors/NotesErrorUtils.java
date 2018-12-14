@@ -50,7 +50,7 @@ public class NotesErrorUtils {
 		catch (Throwable e) {
 			return new NotesError(result, "ERR "+status);
 		}
-		return new NotesError(result, message + " (error code: "+status+(isRemoteError ? ", remote server error" : "")+", raw error with all flags: "+result+ ")");
+		return new NotesError((int) (status & 0xffff), message + " (error code: "+status+(isRemoteError ? ", remote server error" : "")+", raw error with all flags: "+result+ ")");
 	}
 	
 	/**
