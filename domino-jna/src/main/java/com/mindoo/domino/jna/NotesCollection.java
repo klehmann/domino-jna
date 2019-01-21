@@ -1715,7 +1715,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		while (true) {
 			runs++;
-			int indexModifiedBeforeGettingStartPos = getIndexModifiedSequenceNo();
+			int initialIndexModified = getIndexModifiedSequenceNo();
 			
 			String startPosStr = startPosRetriever.getStartPosition();
 			if (StringUtil.isEmpty(startPosStr)) {
@@ -1726,7 +1726,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			int indexModifiedAfterGettingStartPos = getIndexModifiedSequenceNo();
 
-			if (indexModifiedBeforeGettingStartPos != indexModifiedAfterGettingStartPos) {
+			if (initialIndexModified != indexModifiedAfterGettingStartPos) {
 				//view index was changed while reading; restart scan
 				Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
 				if (retryAction==Action.Stop) {
@@ -1773,6 +1773,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			List<NotesViewEntryData> entriesToUpdateCache = dataCache==null ? null : new ArrayList<NotesViewEntryData>();
 			
+			boolean innerLoopLeftByViewMod = false;
+
 			while (true) {
 				if (preloadEntryCount==0) {
 					break;
@@ -1822,14 +1824,15 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				int indexModifiedAfterDataLookup = getIndexModifiedSequenceNo();
 
-				if (indexModifiedAfterGettingStartPos != indexModifiedAfterDataLookup) {
+				if (initialIndexModified != indexModifiedAfterDataLookup) {
 					//view index was changed while reading; restart scan
 					Action retryAction = callback.retryingReadBecauseViewIndexChanged(runs, System.currentTimeMillis() - t0);
 					if (retryAction==Action.Stop) {
 						return null;
 					}
 					update();
-					continue;
+					innerLoopLeftByViewMod = true;
+					break;
 				}
 
 				if (useReturnMask.contains(ReadMask.INIT_POS_NOTEID)) {
@@ -1889,6 +1892,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 						return result;
 					}
 				}
+			}
+
+			if (innerLoopLeftByViewMod) {
+				continue;
 			}
 
 			if (dataCache!=null && retDiffTime!=null) {
