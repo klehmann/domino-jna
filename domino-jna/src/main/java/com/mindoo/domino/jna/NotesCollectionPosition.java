@@ -294,26 +294,21 @@ public class NotesCollectionPosition implements IAdaptable {
 		}
 		
 		if (recalc) {
+			int level = this.getLevel();
+			int minLevel = this.getMinLevel();
+			int maxLevel = this.getMaxLevel();
+			
 			StringBuilder sb = new StringBuilder();
 			
-			int level = this.getLevel();
-			if (level==0) {
-				sb.append('0');
-			}
-			else {
-				for (int i=0; i<=level; i++) {
-					if (sb.length() > 0) {
-						sb.append('.');
-					}
-					sb.append(this.getTumbler(i));
+			for (int i=0; i<=level; i++) {
+				if (sb.length() > 0) {
+					sb.append('.');
 				}
+				sb.append(this.getTumbler(i));
 			}
 			
-			int currentMinLevel = this.getMinLevel();
-			int currentMaxLevel = this.getMaxLevel();
-			
-			if (currentMinLevel!=0 || currentMaxLevel!=0) {
-				sb.append("|").append(currentMinLevel).append("-").append(currentMaxLevel);
+			if (minLevel!=0 || maxLevel!=0) {
+				sb.append("|").append(minLevel).append("-").append(maxLevel);
 			}
 			toString = sb.toString();
 		}

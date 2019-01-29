@@ -161,7 +161,7 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 	 */
 	public static NotesCollectionPositionStruct toPosition(String posStr) {
 		short level;
-		int[] tumbler;
+		final int[] tumbler = new int[32];
 		byte minLevel = 0;
 		byte maxLevel = 0;
 		
@@ -177,8 +177,6 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 				maxLevel = Byte.parseByte(minMaxStr.substring(iPos+1));
 			}
 		}
-		
-		tumbler = new int[32];
 		
 		if (posStr==null || posStr.length()==0 || "0".equals(posStr)) {
 			level = 0;
@@ -196,9 +194,6 @@ public class NotesCollectionPositionStruct extends BaseStructure implements IAda
 		pos.Level = level;
 		pos.MinLevel = minLevel;
 		pos.MaxLevel = maxLevel;
-		for (int i=0; i<pos.Tumbler.length; i++) {
-			pos.Tumbler[i] = 0;
-		}
 		for (int i=0; i<tumbler.length; i++) {
 			pos.Tumbler[i] = tumbler[i];
 		}
