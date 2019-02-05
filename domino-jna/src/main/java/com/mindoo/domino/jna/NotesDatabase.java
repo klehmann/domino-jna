@@ -4984,4 +4984,106 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		return table;
 	}
+	
+	/**
+	 * Open a profile document.<br>
+	 * <br>
+	 * If a profile for the specified profile name/user pair does not exist,
+	 * one is created.<br>
+	 * <br>
+	 * Author access is the minimum access required to create a profile document.
+	 * 
+	 * @param profileName Name of the profile
+	 * @return profile note
+	 */
+	public NotesProfileNote getProfileNote(String profileName) {
+		return getProfileNote(profileName, (String) null);
+	}
+	
+	/**
+	 * Open a profile document.<br>
+	 * <br>
+	 * If a profile for the specified profile name/user pair does not exist,
+	 * one is created.<br>
+	 * <br>
+	 * Author access is the minimum access required to create a profile document.
+	 * 
+	 * @param profileName Name of the profile
+	 * @param userName Name of the user of this profile.  Optional - may be NULL or empty string
+	 * @return profile note
+	 */
+	public NotesProfileNote getProfileNote(String profileName, String userName) {
+		checkHandle();
+		
+		Memory profileNameMem = NotesStringUtils.toLMBCS(profileName, false);
+		Memory userNameMem = StringUtil.isEmpty(userName) ? null : NotesStringUtils.toLMBCS(userName, false);
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethProfileNote = new LongByReference();
+			
+			short result = NotesNativeAPI64.get().NSFProfileOpen(m_hDB64, profileNameMem,
+					(short) (profileNameMem.size() & 0xffff), userNameMem,
+					(short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)), (short) 1, rethProfileNote);
+			NotesErrorUtils.checkResult(result);
+
+			long hNote = rethProfileNote.getValue();
+			if (hNote==0) {
+				return null;
+			}
+			NotesProfileNote profileNote = new NotesProfileNote(this, hNote);
+			NotesGC.__objectCreated(NotesNote.class, profileNote);
+			return profileNote;
+		}
+		else {
+			IntByReference rethProfileNote = new IntByReference();
+			
+			short result = NotesNativeAPI32.get().NSFProfileOpen(m_hDB32, profileNameMem,
+					(short) (profileNameMem.size() & 0xffff), userNameMem,
+					(short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)), (short) 1, rethProfileNote);
+			NotesErrorUtils.checkResult(result);
+
+			int hNote = rethProfileNote.getValue();
+			if (hNote==0) {
+				return null;
+			}
+			NotesProfileNote profileNote = new NotesProfileNote(this, hNote);
+			NotesGC.__objectCreated(NotesNote.class, profileNote);
+			return profileNote;
+		}
+	}
+	
+	/**
+	 * Delete a profile document from the database. 
+	 * 
+	 * @param profileName Name of the profile.
+	 */
+	public void removeProfileNote(String profileName) {
+		removeProfileNote(profileName, (String) null);
+	}
+	
+	/**
+	 * Delete a profile document from the database. 
+	 * 
+	 * @param profileName Name of the profile.
+	 * @param userName  Name of the user of this profile.  Optional - may be NULL or empty string
+	 */
+	public void removeProfileNote(String profileName, String userName) {
+		checkHandle();
+		
+		Memory profileNameMem = NotesStringUtils.toLMBCS(profileName, false);
+		Memory userNameMem = StringUtil.isEmpty(userName) ? null : NotesStringUtils.toLMBCS(userName, false);
+
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFProfileDelete(m_hDB64, profileNameMem,
+					(short) (profileNameMem.size() & 0xffff),
+					userNameMem, (short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)));
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = NotesNativeAPI32.get().NSFProfileDelete(m_hDB32, profileNameMem,
+					(short) (profileNameMem.size() & 0xffff),
+					userNameMem, (short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)));
+			NotesErrorUtils.checkResult(result);
+		}
+	}
 }
