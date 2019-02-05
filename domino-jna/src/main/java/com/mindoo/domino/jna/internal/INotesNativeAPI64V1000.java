@@ -14,4 +14,7 @@ public interface INotesNativeAPI64V1000 {
 	@UndocumentedAPI
 	public short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, IntByReference hFilter);
 
+	@UndocumentedAPI
+	public short NSFDbLargeSummaryEnabled(long hDB);
+
 }

@@ -31,6 +31,10 @@ public class NotesNativeAPI32V1000 implements INotesNativeAPI32V1000 {
 	@Override
 	public native short NSFGetSoftDeletedViewFilter(int hViewDB, int hDataDB, int viewNoteID, IntByReference hFilter);
 	
+	@Override
+	public native short NSFDbLargeSummaryEnabled(int hDB);
+	
+	
 	/**
 	 * Returns the API instance used to call native Domino C API methods for 32 bit
 	 * 

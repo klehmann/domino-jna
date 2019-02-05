@@ -5086,4 +5086,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
+	
+	/**
+	 * Method to check if large summary buffer support has been enabled
+	 * for this database
+	 * 
+	 * @return true if enabled
+	 * @since V10
+	 */
+	public boolean isLargeSummaryEnabled() {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			return NotesNativeAPI64V1000.get().NSFDbLargeSummaryEnabled(m_hDB64) == 1;
+		}
+		else {
+			return NotesNativeAPI32V1000.get().NSFDbLargeSummaryEnabled(m_hDB32) == 1;
+		}
+	}
 }
