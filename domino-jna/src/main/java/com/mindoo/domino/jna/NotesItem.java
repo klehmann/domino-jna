@@ -593,6 +593,27 @@ public class NotesItem {
 	}
 	
 	/**
+	 * Searches all {@link #TYPE_MIME_PART} items on the note to see if
+	 * the given $File item contains MIME part data.
+	 * 
+	 * @return true if item contains MIME part data
+	 */
+	public boolean isMimePart() {
+		getParent().checkHandle();
+		
+		NotesBlockIdStruct.ByValue blockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		blockIdByVal.block = m_itemBlockId.block;
+		blockIdByVal.pool = m_itemBlockId.pool;
+		
+		if (PlatformUtils.is64Bit()) {
+			return NotesNativeAPI64.get().NSFIsFileItemMimePart(getParent().getHandle64(), blockIdByVal) == 1;
+		}
+		else {
+			return NotesNativeAPI32.get().NSFIsFileItemMimePart(getParent().getHandle32(), blockIdByVal) == 1;
+		}
+	}
+	
+	/**
 	 * Use this function to read the last date/time this item was modified as {@link Calendar}.<br>
 	 * <br>
 	 * If the item has not been modified since creation, the method returns null.

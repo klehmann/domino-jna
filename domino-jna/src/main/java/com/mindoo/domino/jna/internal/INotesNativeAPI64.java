@@ -330,6 +330,8 @@ public interface INotesNativeAPI64 extends Library {
 	public short NSFNoteHasMIME(long hNote);
 	public short NSFNoteHasMIMEPart(long hNote);
 	@UndocumentedAPI
+	public short NSFIsFileItemMimePart(long hNote, NotesBlockIdStruct.ByValue bhFileItem);
+	@UndocumentedAPI
 	public short NSFNoteHasReadersField(long hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public short NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -849,7 +851,13 @@ public interface INotesNativeAPI64 extends Library {
 			short Datatype,
 			Pointer Value,
 			int ValueLength);
-
+	public short NSFProfileDelete(
+			long hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			Memory UserName,
+			short UserNameLength);
+	
 	public short SECKFMOpen(LongByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 
