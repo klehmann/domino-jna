@@ -677,6 +677,40 @@ public class NotesItem {
 	}
 	
 	/**
+	 * Copies this item to another note and renames it.
+	 * 
+	 * @param targetNote target note
+	 * @param newItemName name of the item copy
+	 * @param overwrite true to overwrite an existing item in the target note; otherwise, the target note may contain multiple items with the same name
+	 */
+	public void copyToNote(NotesNote targetNote, String newItemName, boolean overwrite) {
+		m_parentNote.checkHandle();
+		targetNote.checkHandle();
+
+		if (overwrite) {
+			if (targetNote.hasItem(newItemName)) {
+				targetNote.removeItem(newItemName);
+			}
+		}
+		Memory newItemNameMem = NotesStringUtils.toLMBCS(newItemName, true);
+		
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		itemBlockIdByVal.pool = m_itemBlockId.pool;
+		itemBlockIdByVal.block = m_itemBlockId.block;
+		
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().NSFItemCopyAndRename(targetNote.getHandle64(),
+					itemBlockIdByVal, newItemNameMem);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = NotesNativeAPI32.get().NSFItemCopyAndRename(targetNote.getHandle32(),
+					itemBlockIdByVal, newItemNameMem);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
 	 * Removes the item from the parent note
 	 */
 	public void remove() {

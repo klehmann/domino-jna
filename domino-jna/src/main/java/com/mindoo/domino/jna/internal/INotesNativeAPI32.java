@@ -404,7 +404,9 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethNote);
 	
 	public short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
-
+	@UndocumentedAPI
+	public short NSFItemCopyAndRename (int hNote, NotesBlockIdStruct.ByValue bhItem, Memory pszNewItemName);
+	
 	public short IDCreateTable (int alignment, IntByReference rethTable);
 	public short IDDestroyTable(int hTable);
 	public short IDInsert (int hTable, int id, IntByReference retfInserted);

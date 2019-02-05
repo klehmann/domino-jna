@@ -392,6 +392,8 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			LongByReference rethLockers, IntByReference retLength, LongByReference rethNote);
 	
 	public native short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	public native short NSFItemCopyAndRename(long hNote, ByValue bhItem, Memory pszNewItemName);
+	
 	public native short IDCreateTable (int alignment, LongByReference rethTable);
 	public native short IDDestroyTable(long hTable);
 	public native short IDInsert (long hTable, int id, IntByReference retfInserted);

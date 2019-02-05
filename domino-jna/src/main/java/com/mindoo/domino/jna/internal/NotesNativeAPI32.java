@@ -393,6 +393,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			IntByReference rethLockers, IntByReference retLength, IntByReference rethNote);
 	
 	public native short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	public native short NSFItemCopyAndRename(int hNote, ByValue bhItem, Memory pszNewItemName);
 
 	public native short IDCreateTable (int alignment, IntByReference rethTable);
 	public native short IDDestroyTable(int hTable);
