@@ -10,6 +10,7 @@ import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -613,6 +614,49 @@ public class NotesItem {
 		}
 	}
 	
+	/**
+	 * Given a MIME part item, check it to see if its content is in a file.<br>
+	 * If so, return the filename or null otherwise.
+	 * 
+	 * @return filename or null
+	 */
+	public String getFilenameIfMimePartInFile() {
+		getParent().checkHandle();
+
+		NotesBlockIdStruct.ByValue blockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		blockIdByVal.block = m_itemBlockId.block;
+		blockIdByVal.pool = m_itemBlockId.pool;
+
+		DisposableMemory retFilenameMem = new DisposableMemory(NotesConstants.MAXPATH);
+		try {
+			if (PlatformUtils.is64Bit()) {
+				if (NotesNativeAPI64.get().NSFIsMimePartInFile(getParent().getHandle64(), blockIdByVal,
+						retFilenameMem, (short) (NotesConstants.MAXPATH & 0xffff)) == 1) {
+					
+					String fileName = NotesStringUtils.fromLMBCS(retFilenameMem, -1);
+					return fileName;
+				}
+				else {
+					return null;
+				}
+			}
+			else {
+				if (NotesNativeAPI32.get().NSFIsMimePartInFile(getParent().getHandle32(), blockIdByVal,
+						retFilenameMem, (short) (NotesConstants.MAXPATH & 0xffff)) == 1) {
+					
+					String fileName = NotesStringUtils.fromLMBCS(retFilenameMem, -1);
+					return fileName;
+				}
+				else {
+					return null;
+				}
+			}
+		}
+		finally {
+			retFilenameMem.dispose();
+		}
+	}
+
 	/**
 	 * Use this function to read the last date/time this item was modified as {@link Calendar}.<br>
 	 * <br>

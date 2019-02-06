@@ -330,6 +330,8 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFNoteHasMIMEPart(int hNote);
 	@UndocumentedAPI
 	public short NSFIsFileItemMimePart(int hNote, NotesBlockIdStruct.ByValue bhFileItem);
+	@UndocumentedAPI
+	public short NSFIsMimePartInFile(int hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 	
 	@UndocumentedAPI
 	public short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);

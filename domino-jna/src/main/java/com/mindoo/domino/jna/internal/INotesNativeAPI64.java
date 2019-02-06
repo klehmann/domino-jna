@@ -332,6 +332,9 @@ public interface INotesNativeAPI64 extends Library {
 	@UndocumentedAPI
 	public short NSFIsFileItemMimePart(long hNote, NotesBlockIdStruct.ByValue bhFileItem);
 	@UndocumentedAPI
+	public short NSFIsMimePartInFile(long hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
+
+	@UndocumentedAPI
 	public short NSFNoteHasReadersField(long hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public short NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,

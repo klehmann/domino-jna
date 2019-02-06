@@ -328,6 +328,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFNoteHasMIME(int hNote);
 	public native short NSFNoteHasMIMEPart(int hNote);
 	public native short NSFIsFileItemMimePart(int hNote, ByValue bhFileItem);
+	public native short NSFIsMimePartInFile(int hNote, ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 	
 	public native short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public native short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
