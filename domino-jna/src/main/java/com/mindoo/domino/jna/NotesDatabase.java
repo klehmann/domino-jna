@@ -2951,6 +2951,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenSoftDelete(m_hDB64, noteId, 0, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			long hNote = rethNote.getValue();
@@ -2962,6 +2965,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenSoftDelete(m_hDB32, noteId, 0, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			int hNote = rethNote.getValue();
@@ -2990,7 +2996,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param noteId The note ID of the note that you want to open.
 	 * @param openFlags Flags that control the manner in which the note is opened. This, in turn, controls what information about the note is available to you and how it is structured. The flags are defined in {@link OpenNote}.
-	 * @return note
+	 * @return note or null if not found
 	 */
 	public NotesNote openNoteById(int noteId, EnumSet<OpenNote> openFlags) {
 		checkHandle();
@@ -3000,6 +3006,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenExt(m_hDB64, noteId, openFlagsBitmask, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			long hNote = rethNote.getValue();
@@ -3011,6 +3020,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenExt(m_hDB32, noteId, openFlagsBitmask, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			int hNote = rethNote.getValue();
@@ -3037,7 +3049,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 	 * @param unid UNID
 	 * @param openFlags open flags
-	 * @return note
+	 * @return note or null if not found
 	 */
 	public NotesNote openNoteByUnid(String unid, EnumSet<OpenNote> openFlags) {
 		checkHandle();
@@ -3048,6 +3060,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenByUNIDExtended(m_hDB64, unidObj, openFlagsBitmask, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			long hNote = rethNote.getValue();
@@ -3059,6 +3074,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenByUNIDExtended(m_hDB32, unidObj, openFlagsBitmask, rethNote);
+			if (result==1028) {
+				return null;
+			}
 			NotesErrorUtils.checkResult(result);
 			
 			int hNote = rethNote.getValue();
