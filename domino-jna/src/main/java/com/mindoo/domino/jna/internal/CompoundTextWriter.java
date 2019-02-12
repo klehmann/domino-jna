@@ -300,11 +300,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			dwFlags = dwFlags | NotesConstants.COMP_PARA_LINE;
 		}
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().CompoundTextAddTextExt(m_handle64, dwStyleID, fontId, txtMem, (int) txtMem.size(),
+			result = NotesNativeAPI64.get().CompoundTextAddTextExt(m_handle64, dwStyleID, fontId, txtMem, txtMem==null ? 0 : (int) txtMem.size(),
 					lineDelimMem, dwFlags, nlsInfoPtr);
 		}
 		else {
-			result = NotesNativeAPI32.get().CompoundTextAddTextExt(m_handle32, dwStyleID, fontId, txtMem, (int) txtMem.size(),
+			result = NotesNativeAPI32.get().CompoundTextAddTextExt(m_handle32, dwStyleID, fontId, txtMem, txtMem==null ? 0 : (int) txtMem.size(),
 					lineDelimMem, dwFlags, nlsInfoPtr);
 		}
 		NotesErrorUtils.checkResult(result);
