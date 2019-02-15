@@ -45,7 +45,8 @@ public enum ReadMask {
 	INDEXPOSITION(0x00004000),
 	/** Return "short" (build 110 or earlier) COLLECTIONPOSITIONS */ 
 	SHORT_COLPOS(0x00010000),
-	/** IndexPos.Tumbler[0] is a NOTEID for initial position */ 
+	/** IndexPos.Tumbler[0] is a NOTEID for initial position
+	 * (looks like this only works with document note ids, categories return err 1028 entry not found) */ 
 	INIT_POS_NOTEID(0x00020000),
 	/** Return the column values of the entry in the collection */
 	SUMMARYVALUES(0x00002000),
