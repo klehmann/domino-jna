@@ -1527,58 +1527,138 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
 			final ViewLookupCallback<T> callback) {
 		
-		final String[] categoryPos = new String[1];
-		
-		IStartPositionRetriever catPosRetriever = new IStartPositionRetriever() {
+		return getAllEntriesInCategory(new Object[] {category}, skipCount, returnNav, diffTime,
+				diffIDTable, preloadEntryCount, returnMask, callback);
+	}
 
-			@Override
-			public String getStartPosition() {
-				//find category entry using NIFFindByKeyExtended2 with flag FIND_CATEGORY_MATCH
-				NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.MATCH_CATEGORYORLEAF,
-						Find.REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
-						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), category);
-				
-				if (catLkResult.getReturnCount()==0) {
-					//category not found
-					return null;
-				}
-				
-				categoryPos[0] = catLkResult.getPosition();
-				if (StringUtil.isEmpty(categoryPos[0])) {
-					//category not found
-					return null;
-				}
-				else {
-					return categoryPos[0];
-				}
-			}
-		};
-		
-		EnumSet<ReadMask> useReturnMask = returnMask.clone();
-		//make sure that we get the entry position for the range check
-		useReturnMask.add(ReadMask.INDEXPOSITION);
+	/**
+	 * The method reads a number of entries located under a specified category from the collection/view.
+	 * We internally takes care of view index changes while reading view data and restarts reading
+	 * if such a change has been detected.
+	 * 
+	 * @param <T> result data type
+	 * 
+	 * @param categoryLevels array with category structure lookup key, e.g. ["level1\level2"] if a category column value is a string or [2019,5] if there are multiple category columns containining numbers like year and cw
+	 * @param skipCount number of entries to skip
+	 * @param returnNav navigator to specify how to move in the collection
+	 * @param diffTime If non-null, this is a "differential view read" meaning that the caller wants
+	 * 				us to optimize things by only returning full information for notes which have
+	 * 				changed (or are new) in the view, return just NoteIDs for notes which haven't
+	 * 				changed since this time and return a deleted ID table for notes which may be
+	 * 				known by the caller and have been deleted since DiffTime.
+	 * 				<b>Please note that "differential view reads" do only work in views without permutations (no columns with "show multiple values as separate entries" set) according to IBM. Otherwise, all the view data is always returned.</b>
+	 * @param diffIDTable If DiffTime is non-null and DiffIDTable is not null it provides a
+	 * 				list of notes which the caller has current information on.  We use this to
+	 * 				know which notes we can return shortened information for (i.e., just the NoteID)
+	 * 				and what notes we might have to include in the returned DelNoteIDTable.
+	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
+	 * @param returnMask values to extract
+	 * @param callback callback that is called for each entry read from the collection
+	 * @return lookup result
+	 */
+	public <T> T getAllEntriesInCategory(final Object[] categoryLevels, int skipCount, EnumSet<Navigate> returnNav,
+			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
+			final ViewLookupCallback<T> callback) {
 
-		return getAllEntries(catPosRetriever, skipCount, returnNav,
-				preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
+		EnumSet<Navigate> useReturnNav = returnNav.clone();
+		if (useReturnNav.contains(Navigate.ALL_DESCENDANTS)) {
+			//replace with NEXT to get proper results when the data to be read does not
+			//fit into the buffer and we need a second NIFReadEntries call; we make
+			//sure not to leave the category in our own code
+			useReturnNav.remove(Navigate.ALL_DESCENDANTS);
+			useReturnNav.add(Navigate.NEXT);
+		}
+
+		while (true) {
+			int initialIndexMod = getIndexModifiedSequenceNo();
 			
-			@Override
-			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
-					NotesViewEntryData entryData) {
-				
-				//check if this entry is still one of the descendants of the category entry
-				String entryPos = entryData.getPositionStr();
-				if (entryPos.equals(categoryPos[0])) {
-					//skip category entry
-					return Action.Continue;
-				}
-				else if (entryPos.startsWith(categoryPos[0])) {
-					return super.entryRead(result, entryData);
-				}
-				else {
-					return Action.Stop;
-				}
+			//find category entry
+			NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.MATCH_CATEGORYORLEAF,
+					Find.REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
+					EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), categoryLevels);
+			
+			if (catLkResult.getReturnCount()==0) {
+				//category not found
+				T result = callback.startingLookup();
+				result = callback.lookupDone(result);
+				return result;
 			}
-		});
+			
+			final String catPos = catLkResult.getPosition();
+			if (StringUtil.isEmpty(catPos)) {
+				//category not found
+				T result = callback.startingLookup();
+				result = callback.lookupDone(result);
+				return result;
+			}
+			
+			boolean shouldGotoChild = false;
+			if (useReturnNav.contains(Navigate.NEXT_PEER)) {
+				shouldGotoChild = true;
+			}
+			
+			String startReadingPos;
+			if (shouldGotoChild) {
+				//goto first child
+				List<NotesViewEntryData> childAsList = getAllEntries(catPos, 1, EnumSet.of(Navigate.CHILD), 1,
+						EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY, ReadMask.INDEXPOSITION), new NotesCollection.EntriesAsListCallback(1));
+				
+				int modCountAfterFindChild = getIndexModifiedSequenceNo();
+				
+				if (initialIndexMod != modCountAfterFindChild) {
+					//retry, index changed
+					continue;
+				}
+				
+				if (childAsList.isEmpty()) {
+					//empty category entry, all hidden
+					T result = callback.startingLookup();
+					result = callback.lookupDone(result);
+					return result;
+				}
+				
+				NotesViewEntryData childEntry = childAsList.get(0);
+				startReadingPos = childEntry.getPositionStr();
+			}
+			else {
+				startReadingPos = catPos;
+			}
+			
+			EnumSet<ReadMask> useReturnMask = returnMask.clone();
+			//make sure that we get the entry position for the range check
+			useReturnMask.add(ReadMask.INDEXPOSITION);
+
+			
+			T data = getAllEntries(startReadingPos, skipCount, useReturnNav,
+					preloadEntryCount, useReturnMask, new ViewLookupCallbackWrapper<T>(callback) {
+				
+				@Override
+				public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(T result,
+						NotesViewEntryData entryData) {
+					
+					//check if this entry is still one of the descendants of the category entry
+					String entryPos = entryData.getPositionStr();
+					if (entryPos.equals(catPos)) {
+						//skip category entry
+						return Action.Continue;
+					}
+					if (entryPos.startsWith(catPos)) {
+						return super.entryRead(result, entryData);
+					}
+					else {
+						return Action.Stop;
+					}
+				}
+			});
+			
+			int modCountAfterDataRead = getIndexModifiedSequenceNo();
+			if (initialIndexMod != modCountAfterDataRead) {
+				//retry, index changed
+				continue;
+			}
+			
+			return data;
+		}
 	}
 
 	/**
@@ -2695,14 +2775,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
 					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
 			
-			NotesErrorUtils.checkResult(result);
+			if (result!=1028) {
+				NotesErrorUtils.checkResult(result);
+			}
 			
 			int indexModifiedSequenceNo = retModifiedTimeStruct.Innards[0]; //getIndexModifiedSequenceNo();
 			
 			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
 
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
-			if (iBufLength==0) {
+			if (iBufLength==0 || result==1028) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
 						retSignalFlags.getValue(), null, indexModifiedSequenceNo, new NotesTimeDate(retDiffTimeStruct));
@@ -2725,13 +2807,16 @@ public class NotesCollection implements IRecyclableNotesObject {
 					diffTimeStruct, diffIDTable==null ? 0 : diffIDTable.getHandle32(), columnNumber==null ? NotesConstants.MAXDWORD : columnNumber, flags, retBuffer, retBufferLength,
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
 					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
-			NotesErrorUtils.checkResult(result);
-			
+
+			if (result!=1028) {
+				NotesErrorUtils.checkResult(result);
+			}
 			int indexModifiedSequenceNo = retModifiedTimeStruct.Innards[0]; //getIndexModifiedSequenceNo();
 
 			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
 			
-			if (retBufferLength.getValue()==0) {
+			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
+			if (iBufLength==0 || result==1028) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
 						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTimeWrap);
