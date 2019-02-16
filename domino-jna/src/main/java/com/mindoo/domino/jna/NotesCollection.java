@@ -1556,7 +1556,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param callback callback that is called for each entry read from the collection
 	 * @return lookup result
 	 */
-	public <T> T getAllEntriesInCategory(final Object[] categoryLevels, int skipCount, EnumSet<Navigate> returnNav,
+	public <T> T getAllEntriesInCategory(final Object[] categoryLevels, int skipCount, final EnumSet<Navigate> returnNav,
 			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
 			final ViewLookupCallback<T> callback) {
 
@@ -1638,7 +1638,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					
 					//check if this entry is still one of the descendants of the category entry
 					String entryPos = entryData.getPositionStr();
-					if (entryPos.equals(catPos)) {
+					if (entryPos.equals(catPos) && !returnNav.contains(Navigate.CURRENT)) {
 						//skip category entry
 						return Action.Continue;
 					}
