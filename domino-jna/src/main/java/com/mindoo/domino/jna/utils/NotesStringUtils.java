@@ -302,6 +302,34 @@ public class NotesStringUtils {
 	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
 	 */
 	public static Memory toLMBCS(String inStr, boolean addNull, boolean replaceLineBreaks) {
+		return toLMBCS(inStr, addNull, replaceLineBreaks, false);
+	}
+
+	/**
+	 * Converts a string to LMBCS format. Does not internally cache the computation result
+	 * because it is unlikely that the same data will be converted again. Call
+	 * {@link DisposableMemory#dispose()} on the returned object if possible to quickly
+	 * free up memory.
+	 * 
+	 * @param inStr string
+	 * @param addNull tre to terminate the string with a null byte
+	 * @param replaceLineBreaks true to replace linebreaks with null bytes
+	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
+	 */
+	public static DisposableMemory toLMBCSNoCache(String inStr, boolean addNull, boolean replaceLineBreaks) {
+		return (DisposableMemory) toLMBCS(inStr, addNull, replaceLineBreaks, true);
+	}
+
+	/**
+	 * Converts a string to LMBCS format
+	 * 
+	 * @param inStr string
+	 * @param addNull tre to terminate the string with a null byte
+	 * @param replaceLineBreaks true to replace linebreaks with null bytes
+	 * @param noCache true to not write the result to an internal cache; in this cache, the method returns a {@link DisposableMemory} object
+	 * @return encoded string in memory, might be a shared copy if the string could be find in the cache
+	 */
+	private static Memory toLMBCS(String inStr, boolean addNull, boolean replaceLineBreaks, boolean noCache) {
 		if (inStr==null)
 			return null;
 		
@@ -316,26 +344,29 @@ public class NotesStringUtils {
 			}
 		}
 		
-		Memory cachedMem;
-		if (addNull) {
-			if (replaceLineBreaks) {
-				cachedMem = m_string2LMBCSCacheWithNullReplacedLinebreaks.get(inStr);
-			}
-			else {
-				cachedMem = m_string2LMBCSCacheWithNullOrigLinebreaks.get(inStr);
-			}
-		}
-		else {
-			if (replaceLineBreaks) {
-				cachedMem = m_string2LMBCSCacheWithoutNullReplacedLinebreaks.get(inStr);
-			}
-			else {
-				cachedMem = m_string2LMBCSCacheWithoutNullOrigLinebreaks.get(inStr);
-			}
-		}
 		
-		if (cachedMem!=null) {
-			return cachedMem;
+		if (!noCache) {
+			Memory cachedMem;
+			if (addNull) {
+				if (replaceLineBreaks) {
+					cachedMem = m_string2LMBCSCacheWithNullReplacedLinebreaks.get(inStr);
+				}
+				else {
+					cachedMem = m_string2LMBCSCacheWithNullOrigLinebreaks.get(inStr);
+				}
+			}
+			else {
+				if (replaceLineBreaks) {
+					cachedMem = m_string2LMBCSCacheWithoutNullReplacedLinebreaks.get(inStr);
+				}
+				else {
+					cachedMem = m_string2LMBCSCacheWithoutNullOrigLinebreaks.get(inStr);
+				}
+			}
+			
+			if (cachedMem!=null) {
+				return cachedMem;
+			}
 		}
 		
 		if (inStr.contains("\n")) {
@@ -370,36 +401,59 @@ public class NotesStringUtils {
 			
 			if (addNull) {
 				int limit = bOut.size();
-				ReadOnlyMemory m = new ReadOnlyMemory(limit + 1);
+				
+				Memory m;
+				if (noCache) {
+					m = new DisposableMemory(limit + 1);
+				}
+				else {
+					m = new ReadOnlyMemory(limit + 1);
+				}
+				
 				byte[] data = bOut.toByteArray();
 				m.write(0, data, 0, data.length);
 				m.setByte(limit, (byte) 0);
-				m.seal();
-
-				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					if (replaceLineBreaks) {
-						m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
-					}
-					else {
-						m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+				
+				if (!noCache) {
+					((ReadOnlyMemory)m).seal();
+					
+					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+						if (replaceLineBreaks) {
+							m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
+						}
+						else {
+							m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+						}
 					}
 				}
+
 				return m;
 			}
 			else {
-				ReadOnlyMemory m = new ReadOnlyMemory(bOut.size());
+				Memory m;
+				if (noCache) {
+					m = new DisposableMemory(bOut.size());
+				}
+				else {
+					m = new ReadOnlyMemory(bOut.size());
+				}
+
 				byte[] data = bOut.toByteArray();
 				m.write(0, data, 0, data.length);
-				m.seal();
 				
-				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					if (replaceLineBreaks) {
-						m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
-					}
-					else {
-						m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+				if (!noCache) {
+					((ReadOnlyMemory)m).seal();
+					
+					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+						if (replaceLineBreaks) {
+							m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
+						}
+						else {
+							m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+						}
 					}
 				}
+				
 				return m;
 			}
 		}
@@ -410,7 +464,14 @@ public class NotesStringUtils {
 			if (addNull) {
 				int limit = byteBuf.limit();
 				
-				ReadOnlyMemory m = new ReadOnlyMemory(limit + 1);
+				Memory m;
+				if (noCache) {
+					m = new DisposableMemory(limit + 1);
+				}
+				else {
+					m = new ReadOnlyMemory(limit + 1);
+				}
+				
 				if (byteBuf.hasArray()) {
 					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
 				}
@@ -419,23 +480,36 @@ public class NotesStringUtils {
 					byteBuf.get(dataArr);
 					m.write(0, dataArr, 0, dataArr.length);
 				}
-				m.setByte(limit, (byte) 0);
-				m.seal();
 				
-				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					if (replaceLineBreaks) {
-						m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
-					}
-					else {
-						m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+				m.setByte(limit, (byte) 0);
+				
+				if (!noCache) {
+					((ReadOnlyMemory)m).seal();
+					
+					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+						if (replaceLineBreaks) {
+							m_string2LMBCSCacheWithNullReplacedLinebreaks.put(inStr, m);
+						}
+						else {
+							m_string2LMBCSCacheWithNullOrigLinebreaks.put(inStr, m);
+						}
 					}
 				}
+				
 				return m;
 			}
 			else {
 				int limit = byteBuf.limit();
 				
-				ReadOnlyMemory m = new ReadOnlyMemory(limit);
+				Memory m;
+				
+				if (noCache) {
+					m = new DisposableMemory(limit);
+				}
+				else {
+					m = new ReadOnlyMemory(limit);
+				}
+				
 				if (byteBuf.hasArray()) {
 					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
 				}
@@ -444,16 +518,20 @@ public class NotesStringUtils {
 					byteBuf.get(dataArr);
 					m.write(0, dataArr, 0, dataArr.length);
 				}
-				m.seal();
 				
-				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-					if (replaceLineBreaks) {
-						m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
-					}
-					else {
-						m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+				if (!noCache) {
+					((ReadOnlyMemory)m).seal();
+					
+					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+						if (replaceLineBreaks) {
+							m_string2LMBCSCacheWithoutNullReplacedLinebreaks.put(inStr, m);
+						}
+						else {
+							m_string2LMBCSCacheWithoutNullOrigLinebreaks.put(inStr, m);
+						}
 					}
 				}
+				
 				return m;
 			}
 		}
