@@ -95,6 +95,28 @@ public class NotesCollectionPosition implements IAdaptable {
 	/**
 	 * Creates a new instance
 	 * 
+	 * @param tumbler array with position information [index level0, index level1, ...], e.g. [1,2,3], up to 32 entries
+	 */
+	public NotesCollectionPosition(int[] tumbler) {
+		this(computeLevel(tumbler), 0, 0, tumbler);
+	}
+	
+	private static int computeLevel(int[] tumbler) {
+		if (tumbler[0]==0) {
+			return 0;
+		}
+		
+		for (int i=1; i<tumbler.length; i++) {
+			if (tumbler[i]==0) {
+				return i-1;
+			}
+		}
+		return tumbler.length-1;
+	}
+	
+	/**
+	 * Creates a new instance
+	 * 
 	 * @param level level in the view, use 0 for first level
 	 * @param minLevel min level, see {@link #setMinLevel(int)}
 	 * @param maxLevel max level, see {@link #setMaxLevel(int)}
