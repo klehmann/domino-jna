@@ -954,8 +954,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Locates a note in the collection
 	 * 
 	 * @param noteId note id
-	 * @return collection position
-	 * @throws NotesError if not found
+	 * @return collection position or empty string if not found
 	 */
 	public String locateNote(int noteId) {
 		checkHandle();
@@ -968,6 +967,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFLocateNote(m_hCollection32, foundPos, noteId);
 		}
+		if (result==1028) {
+			return "";
+		}
 		NotesErrorUtils.checkResult(result);
 		return foundPos.toPosString();
 	}
@@ -976,8 +978,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Locates a note in the collection
 	 * 
 	 * @param noteId note id as hex string
-	 * @return collection position
-	 * @throws NotesError if not found
+	 * @return collection position or empty string if not found
 	 */
 	public String locateNote(String noteId) {
 		return locateNote(Integer.parseInt(noteId, 16));
