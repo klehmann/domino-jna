@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2370,6 +2372,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Convenience method to convert a single note unid to a note id. Currently only calls
+	 * the bulk function {@link NotesDatabase#toNoteIds(String[], Map, Set)}.
+	 * 
+	 * @param unid UNID
+	 * @return note id or 0 if not found
+	 */
+	public int toNoteId(String unid) {
+		Map<String,Integer> retNoteIdsByUnid = new HashMap<String, Integer>(1);
+		Set<String> retNoteUnidsNotFound = new HashSet<String>(1);
+		toNoteIds(new String[] {unid}, retNoteIdsByUnid, retNoteUnidsNotFound);
+		
+		Integer noteId = retNoteIdsByUnid.get(unid);
+		return noteId!=null ? noteId.intValue() : 0;
+	}
+	
+	/**
 	 * Convenience method to convert note unids to note ids.
 	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(String[])}.
 	 * 
@@ -2389,6 +2407,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					retNoteUnidsNotFound.add(noteUnids[i]);
 			}
 		}
+	}
+	
+	/**
+	 * Convenience method to convert a single note id to a UNID. Currently
+	 * only calls the bulk function {@link NotesDatabase#toUnids(int[], Map, Set)}.
+	 * 
+	 * @param noteId note id to look up
+	 * @return resolved UNID or null if not found
+	 */
+	public String toUnid(int noteId) {
+		Map<Integer,String> retUnidsByNoteId = new HashMap<Integer, String>(1);
+		Set<Integer> retNoteIdsNotFound = new HashSet<Integer>(1);
+		toUnids(new int[] {noteId}, retUnidsByNoteId, retNoteIdsNotFound);
+		return retUnidsByNoteId.get(noteId);
 	}
 	
 	/**
