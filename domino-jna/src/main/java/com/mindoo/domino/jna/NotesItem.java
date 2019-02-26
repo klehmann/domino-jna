@@ -115,6 +115,45 @@ public class NotesItem {
 	}
 
 	/**
+	 * This function converts the input {@link NotesItem#TYPE_RFC822_TEXT} item in an open
+	 * note to its pre-V5 equivalent; i.e. to {@link NotesItem#TYPE_TEXT}, {@lin NotesItem#TYPE_TEXT_LIST},
+	 * or {@link NotesItem#TYPE_TIME}.<br>
+	 * <br>
+	 * It does not update the Domino database; to update the database, call NSFNoteUpdate.<br>
+	 * <br>
+	 * convertRFC822TextItem converts the named input item to the appropriate pre-V5 item type.<br>
+	 * <br>
+	 * For example, we convert the PostedDate {@link NotesItem#TYPE_RFC822_TEXT} item to a
+	 * {@link NotesItem#TYPE_TIME} item.
+	 */
+	public void convertRFC822TextItem() {
+		m_parentNote.checkHandle();
+		
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		itemBlockIdByVal.pool = m_itemBlockId.pool;
+		itemBlockIdByVal.block = m_itemBlockId.block;
+
+		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		valueBlockIdByVal.pool = m_valueBlockId.pool;
+		valueBlockIdByVal.block = m_valueBlockId.block;
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertRFC822TextItemByBLOCKID(m_parentNote.getHandle64(), itemBlockIdByVal,
+					valueBlockIdByVal);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertRFC822TextItemByBLOCKID(m_parentNote.getHandle32(), itemBlockIdByVal,
+					valueBlockIdByVal);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		//force datatype and seq number reload
+		m_itemFlagsLoaded = false;
+		loadItemNameAndFlags();
+	}
+	
+	/**
 	 * Returns the parent note for this item
 	 * 
 	 * @return note
