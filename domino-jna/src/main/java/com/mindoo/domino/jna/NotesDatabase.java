@@ -76,10 +76,14 @@ import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
+import com.mindoo.domino.jna.transactions.ITransactionCallable;
+import com.mindoo.domino.jna.transactions.Transactions;
 import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
+import com.mindoo.domino.jna.utils.ExceptionUtil;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
+import com.mindoo.domino.jna.utils.NotesIniUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -635,6 +639,28 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		short optionsShort = CreateDatabase.toBitMask(options);
 		short result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Reads the mail file location from the Notes Client Notes.ini and opens the mail database
+	 * with {@link OpenDatabase#CLUSTER_FAILOVER} flag.
+	 * 
+	 * @return mail database or null when running on server or there is no mail file info in Notes.ini ("MailServer" / "MailFile" lines)
+	 */
+	public static NotesDatabase openMailDatabase() {
+		if (IDUtils.isOnServer()) {
+			return null;
+		}
+		
+		String mailServer = NotesIniUtils.getEnvironmentString("MailServer");
+		String mailFile = NotesIniUtils.getEnvironmentString("MailFile");
+		
+		if (StringUtil.isEmpty(mailFile)) {
+			return null;
+		}
+		
+		NotesDatabase dbMail = new NotesDatabase(mailServer, mailFile, (String) null, EnumSet.of(OpenDatabase.CLUSTER_FAILOVER));
+		return dbMail;
 	}
 	
 	/**
@@ -1913,6 +1939,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return isRemote==1;
 	}
 	
+	/**
+	 * Checks whether the database has been opened with full access {@link OpenDatabase#FULL_ACCESS}
+	 * 
+	 * @return true if full access
+	 */
+	public boolean hasFullAccess() {
+		short hasFullAccess;
+		if (PlatformUtils.is64Bit()) {
+			hasFullAccess = NotesNativeAPI64.get().NSFDbHasFullAccess(m_hDB64);
+		}
+		else {
+			hasFullAccess = NotesNativeAPI32.get().NSFDbHasFullAccess(m_hDB32);
+		}
+		return hasFullAccess==1; 
+	}
 	/**
 	 * This routine returns the last time a database was full text indexed.
 	 * It can also be used to determine if a database is full text indexed.
@@ -5154,4 +5195,103 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			return NotesNativeAPI32V1000.get().NSFDbLargeSummaryEnabled(m_hDB32) == 1;
 		}
 	}
+	
+	/**
+	 * This method locks the database against concurrent updaters
+	 * (e.g. other code calling this method at the same time) and
+	 * executes the specified {@link ITransactionCallable} within an active
+	 * DB transaction. If errors occur during execution, the transaction is rolled back.<br>
+	 * See {@link Transactions} for details about the NSF transaction concept NTA - Nested Top Actions.<br>
+	 * <br>
+	 * Readers can still access the database while is it locked. But
+	 * if you modify notes during callable execution, any concurrent code reading
+	 * the notes is blocked until the transaction is either committed or aborted.
+	 * 
+	 * @param callable callable to execute
+	 * @return computation result
+	 */
+	public <T> T runWithDbLock(ITransactionCallable<T> callable) {
+		checkHandle();
+		
+		short result;
+		
+		ShortByReference statusInOut = new ShortByReference();
+		statusInOut.setValue((short) 0);
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFDbLock(m_hDB64);
+			NotesErrorUtils.checkResult(result);
+			
+			Exception executionEx = null;
+			T val = null;
+			try {
+				val = callable.runInDbTransaction(this);
+			}
+			catch (Exception e) {
+				executionEx = e;
+				
+				NotesError nEx = ExceptionUtil.findCauseOfType(e, NotesError.class);
+				if (nEx!=null) {
+					statusInOut.setValue((short) (nEx.getId() & 0xffff));
+				}
+				else {
+					statusInOut.setValue(INotesErrorConstants.ERR_CANCEL);
+				}
+			}
+			finally {
+				//rolls back if statusInOut!=0 and writes its own status code in statusInOut if
+				//there are errors unlocking
+				NotesNativeAPI64.get().NSFDbUnlock(m_hDB64, statusInOut);
+			}
+			
+			if (executionEx instanceof RuntimeException) {
+				throw (RuntimeException) executionEx;
+			}
+			else if (executionEx!=null) {
+				throw new NotesError(0, "Error executing code with active DB lock", executionEx);
+			}
+			
+			NotesErrorUtils.checkResult(statusInOut.getValue());
+			
+			return val;
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFDbLock(m_hDB32);
+			NotesErrorUtils.checkResult(result);
+			
+			Exception executionEx = null;
+			T val = null;
+			try {
+				val = callable.runInDbTransaction(this);
+			}
+			catch (Exception e) {
+				executionEx = e;
+				
+				NotesError nEx = ExceptionUtil.findCauseOfType(e, NotesError.class);
+				if (nEx!=null) {
+					statusInOut.setValue((short) (nEx.getId() & 0xffff));
+				}
+				else {
+					statusInOut.setValue(INotesErrorConstants.ERR_CANCEL);
+				}
+			}
+			finally {
+				//rolls back if statusInOut!=0 and writes its own status code in statusInOut if
+				//there are errors unlocking
+				NotesNativeAPI32.get().NSFDbUnlock(m_hDB32, statusInOut);
+			}
+			
+			if (executionEx instanceof RuntimeException) {
+				throw (RuntimeException) executionEx;
+			}
+			else if (executionEx!=null) {
+				throw new NotesError(0, "Error executing code with active DB lock", executionEx);
+			}
+			
+			NotesErrorUtils.checkResult(statusInOut.getValue());
+			
+			return val;
+		}
+	}
+	
 }
