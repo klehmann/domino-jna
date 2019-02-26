@@ -617,4 +617,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native void DEBUGDumpHandleTable(int flags, short blkType);
 
 	public native short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
+	
+	public native short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
+	
 }

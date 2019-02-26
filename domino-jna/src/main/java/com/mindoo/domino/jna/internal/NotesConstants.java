@@ -3014,4 +3014,28 @@ This allows an Editor to assume some Designer-level access */
 
 	public static int MAX_ITEMDEF_SEGMENTS = 25;
 	
+	/** Open the Stream for Read  */
+	public int MIME_STREAM_OPEN_READ = 0x00000001;
+	/** Open the Stream for Write */
+	public int MIME_STREAM_OPEN_WRITE = 0x00000002;
+
+	/** Include MIME Headers */
+	public int MIME_STREAM_MIME_INCLUDE_HEADERS = 0x00000010;
+	/** Include RFC822 Headers */
+	public int MIME_STREAM_RFC2822_INCLUDE_HEADERS = 0x00000020;
+
+	/** Include RFC822, MIME Headers      */
+	public int MIME_STREAM_INCLUDE_HEADERS = (MIME_STREAM_MIME_INCLUDE_HEADERS|MIME_STREAM_RFC2822_INCLUDE_HEADERS);
+
+	public int MIME_STREAM_SUCCESS = 0;
+	public int MIME_STREAM_EOS = 1;
+	public int MIME_STREAM_IO = 2;
+
+	/*	Define the MIME stream itemize options. */
+	public int MIME_STREAM_NO_DELETE_ATTACHMENTS	 = 0x00000001;
+	public int MIME_STREAM_ITEMIZE_HEADERS = 0x00000002;
+	public int MIME_STREAM_ITEMIZE_BODY = 0x00000004;
+
+	public int MIME_STREAM_ITEMIZE_FULL = (MIME_STREAM_ITEMIZE_HEADERS|MIME_STREAM_ITEMIZE_BODY);
+
 }

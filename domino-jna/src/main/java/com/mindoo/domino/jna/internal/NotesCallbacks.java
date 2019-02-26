@@ -145,6 +145,10 @@ public interface NotesCallbacks {
 		short invoke(Pointer pCDField, short phase, short error, int hErrorText, short wErrorTextSize, Pointer ctx);
 	}
 
+	interface b32_NSFGetAllFolderChangesCallback extends Callback {
+		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable, int removedNoteTable);
+	}
+
 	/**
 	 * Callback used by NSFDbGetNotes
 	 */
@@ -183,6 +187,10 @@ public interface NotesCallbacks {
 	
 	interface LSCompilerErrorProc extends Callback {
 		short invoke(Pointer pInfo, Pointer pCtx);
+	}
+
+	interface b64_NSFGetAllFolderChangesCallback extends Callback {
+		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable, long removedNoteTable);
 	}
 
 }

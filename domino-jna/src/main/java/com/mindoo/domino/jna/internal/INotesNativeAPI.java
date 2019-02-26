@@ -302,7 +302,13 @@ public interface INotesNativeAPI extends Library {
 			Memory buff,
 			short bufSize);
 	
+	@UndocumentedAPI
 	public void DEBUGDumpHandleTable(int flags, short blkType);
 
+	@UndocumentedAPI
 	public short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
+
+	@UndocumentedAPI
+	public short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
+
 }

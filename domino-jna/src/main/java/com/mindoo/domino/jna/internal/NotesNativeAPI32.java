@@ -4,6 +4,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.b32_NSFGetAllFolderChangesCallback;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct.ByValue;
@@ -330,6 +331,32 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFIsFileItemMimePart(int hNote, ByValue bhFileItem);
 	public native short NSFIsMimePartInFile(int hNote, ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 	
+	public native short NSFMimePartCreateStream(int hNote, Memory pchItemName, short wItemNameLen, short wPartType,
+			int dwFlags, IntByReference phCtx);
+	public native short NSFMimePartAppendStream(int hCtx, Memory pchData, short wDataLen);
+	public native short NSFMimePartAppendFileToStream(int hCtx, Memory pszFilename);
+	public native short NSFMimePartAppendObjectToStream(int hCtx, Memory pszAttachmentName);
+	public native short NSFMimePartCloseStream(int hCtx, short bUpdate);
+	public native short MIMEStreamOpen(
+			int hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwOpenFlags,
+			IntByReference rethMIMEStream);
+	public native int MIMEStreamPutLine(
+			Memory pszLine,
+			int hMIMEStream);
+	public native short MIMEStreamItemize(
+			int hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwFlags,
+			int hMIMEStream);
+	public native int MIMEStreamWrite(Pointer pchData, int uiDataLen, int hMIMEStream);
+	public native void MIMEStreamClose(
+			int hMIMEStream);
+	public native short MIMEConvertRFC822TextItemByBLOCKID(int hNote, ByValue bhItem, ByValue bhValue);
+
 	public native short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public native short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -518,6 +545,8 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
 	public native short NSFDbIsRemote(int hDb);
+	public native short NSFDbHasFullAccess(int hDb);
+	
 	public native short NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	public native short NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
 	public native short NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
@@ -723,6 +752,13 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int  viewNoteID,
 			int  flags,
 			IntByReference hTable);
+	
+	public native short NSFGetAllFolderChanges(int hViewDB, int hDataDB, NotesTimeDateStruct since, int flags,
+			b32_NSFGetAllFolderChangesCallback Callback, Pointer Param, NotesTimeDateStruct until);
+
+	public native short NSFGetFolderChanges(int hViewDB, int hDataDB, int viewNoteID, NotesTimeDateStruct since, int Flags,
+			IntByReference addedNoteTable, IntByReference removedNoteTable);
+	
 	public native short FolderDocAdd(
 			int  hDataDB,
 			int  hFolderDB,
@@ -1051,6 +1087,9 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	
 	public native short NSFDbModeGet(int hDB, ShortByReference retMode);
 	
+	public native short NSFDbLock(int hDb);
+	public native void NSFDbUnlock(int hDb, ShortByReference statusInOut);
+	
 	public native short CalCreateEntry(int hDB, Memory pszCalEntry, int dwFlags, IntByReference hRetUID, Pointer pCtx);
 	
 	public native short CalUpdateEntry(int hDB, Memory pszCalEntry, Memory pszUID, Memory pszRecurID, Memory pszComments,
@@ -1133,4 +1172,8 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	
 	public native short NSFItemDefExtFree(
 			NotesItemDefinitionTableExt ItemDeftable);
+	
+	public native short NSFRemoteConsole(Memory ServerName, Memory ConsoleCommand, IntByReference hResponseText);
+	
+	
 }

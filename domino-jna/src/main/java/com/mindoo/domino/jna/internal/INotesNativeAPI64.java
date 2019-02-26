@@ -334,6 +334,54 @@ public interface INotesNativeAPI64 extends Library {
 	@UndocumentedAPI
 	public short NSFIsMimePartInFile(long hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 
+	public short NSFMimePartCreateStream(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			short wPartType,
+			int dwFlags,
+			LongByReference phCtx);
+	
+	public short NSFMimePartAppendStream(
+			long hCtx,
+			Memory pchData,
+			short wDataLen);
+	
+	public short NSFMimePartAppendFileToStream(
+			long hCtx,
+			Memory pszFilename);
+	public short NSFMimePartAppendObjectToStream(
+			long hCtx,
+			Memory pszAttachmentName);
+	public short NSFMimePartCloseStream(
+			long hCtx,
+			short bUpdate);
+	public short MIMEStreamOpen(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwOpenFlags,
+			LongByReference rethMIMEStream);
+	public int MIMEStreamPutLine(
+			Memory pszLine,
+			long hMIMEStream);
+	public short MIMEStreamItemize(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwFlags,
+			long hMIMEStream);
+	public int MIMEStreamWrite(
+			Pointer pchData,
+			int uiDataLen,
+			long hMIMEStream);
+	public void MIMEStreamClose(
+			long hMIMEStream);
+	public short MIMEConvertRFC822TextItemByBLOCKID(
+			long hNote,
+			NotesBlockIdStruct.ByValue bhItem,
+			NotesBlockIdStruct.ByValue bhValue);
+
 	@UndocumentedAPI
 	public short NSFNoteHasReadersField(long hNote, NotesBlockIdStruct bhFirstReadersItem);
 	public short NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
@@ -565,6 +613,8 @@ public interface INotesNativeAPI64 extends Library {
 			Memory retExpandedPathName);
 	@UndocumentedAPI
 	public short NSFDbIsRemote(long hDb);
+	@UndocumentedAPI
+	public short NSFDbHasFullAccess(long hDb);
 	public short NSFDbSpaceUsage(long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	public short NSFDbSpaceUsageScaled (long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
 	@UndocumentedAPI
@@ -580,6 +630,10 @@ public interface INotesNativeAPI64 extends Library {
 	public short NSFDbModeGet(
 			long  hDB,
 			ShortByReference retMode);
+	@UndocumentedAPI
+	public short NSFDbLock(long hDb);
+	@UndocumentedAPI
+	public void NSFDbUnlock(long hDb, ShortByReference statusInOut);
 
 	public short NSFBuildNamesList(Memory UserName, int dwFlags, LongByReference rethNamesList);
 	@UndocumentedAPI
@@ -794,6 +848,25 @@ public interface INotesNativeAPI64 extends Library {
 			int  viewNoteID,
 			int  flags,
 			LongByReference hTable);
+	
+	public short NSFGetAllFolderChanges(
+			long hViewDB,
+			long hDataDB,
+			NotesTimeDateStruct since,
+			int flags,
+			NotesCallbacks.b64_NSFGetAllFolderChangesCallback Callback,
+			Pointer Param,
+			NotesTimeDateStruct until);
+
+	public short NSFGetFolderChanges(
+			long hViewDB,
+			long hDataDB,
+			int viewNoteID,
+			NotesTimeDateStruct since,
+			int Flags,
+			LongByReference addedNoteTable,
+			LongByReference removedNoteTable);
+	
 	public short FolderDocAdd(
 			long  hDataDB,
 			long  hFolderDB,
@@ -1333,4 +1406,9 @@ public interface INotesNativeAPI64 extends Library {
 	
 	public short NSFItemDefExtFree(
 			NotesItemDefinitionTableExt ItemDeftable);
+	
+	public short NSFRemoteConsole(
+			Memory ServerName,
+			Memory ConsoleCommand,
+			LongByReference hResponseText);
 }
