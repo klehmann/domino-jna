@@ -1575,7 +1575,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			//find category entry
 			NotesViewLookupResultData catLkResult = findByKeyExtended2(EnumSet.of(Find.MATCH_CATEGORYORLEAF,
-					Find.REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES),
+					Find.REFRESH_FIRST, Find.RETURN_DWORD, Find.AND_READ_MATCHES, Find.CASE_INSENSITIVE),
 					EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARY), categoryLevels);
 			
 			if (catLkResult.getReturnCount()==0) {
