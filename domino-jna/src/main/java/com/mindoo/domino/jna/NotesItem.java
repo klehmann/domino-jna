@@ -116,7 +116,7 @@ public class NotesItem {
 
 	/**
 	 * This function converts the input {@link NotesItem#TYPE_RFC822_TEXT} item in an open
-	 * note to its pre-V5 equivalent; i.e. to {@link NotesItem#TYPE_TEXT}, {@lin NotesItem#TYPE_TEXT_LIST},
+	 * note to its pre-V5 equivalent; i.e. to {@link NotesItem#TYPE_TEXT}, {@link NotesItem#TYPE_TEXT_LIST},
 	 * or {@link NotesItem#TYPE_TIME}.<br>
 	 * <br>
 	 * It does not update the Domino database; to update the database, call NSFNoteUpdate.<br>
