@@ -162,7 +162,7 @@ public class NotesViewEntryData {
 			else {
 				//special case for views which have "show response hierarchy" = false:
 				//here the response column value is missing
-				return m_columnValues.length>=2 && m_columnValues[m_columnValues.length-1] != null;
+				return m_columnValues.length>=1 && m_columnValues[m_columnValues.length-1] != null;
 			}
 		}
 		else if (m_summaryData!=null) {
