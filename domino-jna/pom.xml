@@ -205,9 +205,9 @@
 			<version>1.0.7</version>
 		</dependency>
 		<dependency>
-		    <groupId>javax.mail</groupId>
-		    <artifactId>javax.mail-api</artifactId>
-		    <version>1.6.2</version>
+		    <groupId>com.sun.mail</groupId>
+		    <artifactId>javax.mail</artifactId>
+		    <version>1.5.2</version>
 		</dependency>
 		<dependency>
 		    <groupId>org.apache.commons</groupId>
