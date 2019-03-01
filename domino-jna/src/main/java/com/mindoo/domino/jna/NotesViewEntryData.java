@@ -153,7 +153,17 @@ public class NotesViewEntryData {
 		//C API documentation regarding conflict flags in views
 		//VIEW_TABLE_FLAG_CONFLICT	  -  Replication conflicts will be flagged. If TRUE, the '$Conflict' item must be SECOND-TO-LAST in the list of summary items for this view.
 		if (m_columnValues!=null) {
-			return m_columnValues.length>=2 && m_columnValues[m_columnValues.length-2] != null;
+			if (!m_parentCollection.isConflict()) {
+				return false;
+			}
+			else if (m_parentCollection.isHierarchical()) {
+				return m_columnValues.length>=2 && m_columnValues[m_columnValues.length-2] != null;
+			}
+			else {
+				//special case for views which have "show response hierarchy" = false:
+				//here the response column value is missing
+				return m_columnValues.length>=2 && m_columnValues[m_columnValues.length-1] != null;
+			}
 		}
 		else if (m_summaryData!=null) {
 			return m_summaryData.get("$Conflict") != null;
@@ -171,7 +181,13 @@ public class NotesViewEntryData {
 		//C API documentation regarding response flags in views
 		//VIEW_TABLE_FLAG_FLATINDEX	  -  Do not index hierarchically If FALSE, the '$REF' item must be LAST in the list of summary items for this view.
 		if (m_columnValues!=null) {
-			return m_columnValues.length>=1 && m_columnValues[m_columnValues.length-1] != null;
+			if (m_parentCollection.isHierarchical()) {
+				return m_columnValues.length>=1 && m_columnValues[m_columnValues.length-1] != null;
+			}
+			else {
+				//fallback to isConflict as this is the only info we have
+				return isConflict();
+			}
 		}
 		else if (m_summaryData!=null) {
 			return m_summaryData.get("$Ref") != null;
@@ -486,6 +502,10 @@ public class NotesViewEntryData {
 	 */
 	public void setColumnValues(Object[] itemValues) {
 		m_columnValues = itemValues;
+	}
+	
+	public Object[] getColumnValues() {
+		return m_columnValues;
 	}
 	
 	/**
