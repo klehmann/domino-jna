@@ -466,6 +466,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * support signal flags for FindByKey */
 	public static final int SIGNAL_NOT_SUPPORTED = 0x0080;
 	
+    /** The view contains documents with readers fields */
+	public static final int SIGNAL_VIEW_HASPRIVS = 0x0100;
+
+
 	/**	Mask that defines all "sharing conflicts", which are cases when
 	the database or collection has changed out from under the user. */
 	public static final int SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);

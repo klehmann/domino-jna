@@ -183,6 +183,15 @@ public class NotesViewLookupResultData {
 		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_TIME_RELATIVE) == NotesConstants.SIGNAL_VIEW_TIME_RELATIVE;
 	}
 	
+	/**
+	 * Returns whether the view contains documents with reader fields
+	 * 
+	 * @return true if reader fields
+	 */
+	public boolean hasDocsWithReaderFields() {
+		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_HASPRIVS) == NotesConstants.SIGNAL_VIEW_HASPRIVS;
+	}
+	
 	/**	
 	 * Mask that defines all "sharing conflicts" except for {@link #isDatabaseModified()}.
 	 * This can be used in combination with {@link #isViewTimeRelative()} to tell if
