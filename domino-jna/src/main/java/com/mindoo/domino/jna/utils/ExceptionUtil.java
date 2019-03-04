@@ -34,6 +34,8 @@ public class ExceptionUtil {
 	 * @param t exception
 	 * @param exceptionClass exception class to look for
 	 * @return exception or null if not found
+	 * 
+	 * @param <T> type of exception
 	 */
 	public static <T extends Throwable> T findCauseOfType(Throwable t, Class<? extends Throwable> exceptionClass) {
 		if (exceptionClass.isInstance(t))
