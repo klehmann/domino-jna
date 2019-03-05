@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.gc;
 
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -391,6 +392,14 @@ public class NotesGC {
 		}
 	}
 
+	/**
+	 * Use this method to store your own custom values for the duration of the
+	 * current {@link NotesGC#runWithAutoGC(Callable)} execution block.
+	 * 
+	 * @param key key
+	 * @param value value, implement interface {@link IDisposableCustomValue} to get called for disposal
+	 * @return previous value
+	 */
 	public static Object setCustomValue(String key, Object value) {
 		Map<String,Object> map = m_activeAutoGCCustomValues.get();
 		if (map==null) {
@@ -399,6 +408,14 @@ public class NotesGC {
 		return map.put(key, value);
 	}
 	
+	/**
+	 * Reads a custom value stored via {@link #setCustomValue(String, Object)}
+	 * for the duration of the current {@link #runWithAutoGC(Callable)}
+	 * execution block.
+	 * 
+	 * @param key
+	 * @return value or null if not set
+	 */
 	public static Object getCustomValue(String key) {
 		Map<String,Object> map = m_activeAutoGCCustomValues.get();
 		if (map==null) {
@@ -407,6 +424,12 @@ public class NotesGC {
 		return map.get(key);
 	}
 	
+	/**
+	 * Tests if a custom value has been set via {@link #setCustomValue(String, Object)}.
+	 * 
+	 * @param key key
+	 * @return true if value is set
+	 */
 	public boolean hasCustomValue(String key) {
 		Map<String,Object> map = m_activeAutoGCCustomValues.get();
 		if (map==null) {
@@ -625,10 +648,48 @@ public class NotesGC {
 						}
 					}
 				}
+				
+				Map<String,Object> customValues = m_activeAutoGCCustomValues.get();
+				if (customValues!=null) {
+					cleanupCustomValues(customValues);
+					customValues.clear();
+				}
 				m_activeAutoGCCustomValues.set(null);
 				m_activeAutoGC.set(null);
 				m_writeDebugMessages.set(Boolean.FALSE);
 			}
 		}
 	}
+	
+	private static void cleanupCustomValues(Map<String, Object> customValues) {
+		for (Entry<String,Object> currEntry : customValues.entrySet()) {
+			Object currVal = currEntry.getValue();
+			if (currVal instanceof IDisposableCustomValue) {
+				try {
+					((IDisposableCustomValue)currVal).dispose();
+				}
+				catch (Exception e) {
+					//give access to this exception via special (optional) PrintWriter,
+					//but continue with the loop
+					Object out = customValues.get("NotesGC.CustomValueDisposeOut");
+					if (out instanceof PrintWriter) {
+						e.printStackTrace((PrintWriter) out);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * When using {@link NotesGC#setCustomValue(String, Object)} to store your own
+	 * values, use this
+	 * interface for your value to get called for disposal when the {@link NotesGC#runWithAutoGC(Callable)}
+	 * block is finished. Otherwise the value is just removed from the intermap map.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IDisposableCustomValue {
+		public void dispose();
+	}
+
 }
