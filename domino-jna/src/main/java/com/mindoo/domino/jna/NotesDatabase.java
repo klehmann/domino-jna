@@ -975,12 +975,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param viewName name of the view/collection
 	 * @param openFlagSet open flags, see {@link OpenCollection}
-	 * @return collection
+	 * @return collection or null if not found
 	 */
 	public NotesCollection openCollectionByName(String viewName, EnumSet<OpenCollection> openFlagSet) {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
+		if (viewNoteId==0) {
+			return null;
+		}
 		return openCollection(viewNoteId, openFlagSet);
 	}
 
@@ -1007,12 +1010,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param dbData database containing the data to populate the collection
 	 * @param viewName name of the view/collection
 	 * @param openFlagSet open flags, see {@link OpenCollection}
-	 * @return collection
+	 * @return collection or null if not found
 	 */
 	public NotesCollection openCollectionByNameWithExternalData(NotesDatabase dbData, String viewName, EnumSet<OpenCollection> openFlagSet) {
 		checkHandle();
 		
 		int viewNoteId = findCollection(viewName);
+		if (viewNoteId==0) {
+			return null;
+		}
 		return openCollectionWithExternalData(dbData, viewNoteId, openFlagSet);
 	}
 
@@ -1157,7 +1163,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Lookup method to find a collection
 	 * 
 	 * @param collectionName collection name
-	 * @return note id of collection
+	 * @return note id of collection or 0 if not found
 	 */
 	public int findCollection(String collectionName) {
 		checkHandle();
@@ -1174,6 +1180,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
 		}
+		
+		if (result==1028) { //view not found
+			return 0;
+		}
+		
 		//throws an error if view cannot be found:
 		NotesErrorUtils.checkResult(result);
 
@@ -1447,7 +1458,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Opens the default collection for the database
 	 * 
-	 * @return default collection
+	 * @return default collection or null if not found
 	 */
 	public NotesCollection openDefaultCollection() {
 		checkHandle();
@@ -1461,9 +1472,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_VIEW) & 0xffff), retNoteID);
 		}
+		if (result==1028) { //not found
+			return null;
+		}
 		NotesErrorUtils.checkResult(result);
 		int noteId = retNoteID.getValue();
-		
+		if (noteId==0) {
+			return null;
+		}
 		NotesCollection col = openCollection(noteId, null);
 		return col;
 	}
@@ -1471,7 +1487,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * Returns the icon note
 	 * 
-	 * @return icon note
+	 * @return icon note or null if not found
 	 */
 	public NotesNote openIconNote() {
 		checkHandle();
@@ -1485,15 +1501,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_ICON) & 0xffff), retNoteID);
 		}
+		if (result==1028) { //not found
+			return null;
+		}
 		NotesErrorUtils.checkResult(result);
 		int noteId = retNoteID.getValue();
+		if (noteId==0) {
+			return null;
+		}
 		return openNoteById(noteId);
 	}
 	
 	/**
 	 * Returns the note of the default form
 	 * 
-	 * @return default form note
+	 * @return default form note or null if not found
 	 */
 	public NotesNote openDefaultFormNote() {
 		checkHandle();
@@ -1507,15 +1529,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_FORM) & 0xffff), retNoteID);
 		}
+		if (result==1028) { //not found
+			return null;
+		}
 		NotesErrorUtils.checkResult(result);
 		int noteId = retNoteID.getValue();
+		if (noteId==0) {
+			return null;
+		}
 		return openNoteById(noteId);
 	}
 	
 	/**
 	 * Returns the database info note
 	 * 
-	 * @return info note
+	 * @return info note or null if not found
 	 */
 	public NotesNote openDatabaseInfoNote() {
 		checkHandle();
@@ -1529,15 +1557,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_INFO) & 0xffff), retNoteID);
 		}
+		if (result==1028) { //not found
+			return null;
+		}
 		NotesErrorUtils.checkResult(result);
 		int noteId = retNoteID.getValue();
+		if (noteId==0) {
+			return null;
+		}
 		return openNoteById(noteId);
 	}
 	
 	/**
 	 * Returns the database help note
 	 * 
-	 * @return help note
+	 * @return help note or null if not found
 	 */
 	public NotesNote openDatabaseHelpNote() {
 		checkHandle();
@@ -1551,8 +1585,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_HELP) & 0xffff), retNoteID);
 		}
+		if (result==1028) { //not found
+			return null;
+		}
 		NotesErrorUtils.checkResult(result);
 		int noteId = retNoteID.getValue();
+		if (noteId==0) {
+			return null;
+		}
 		return openNoteById(noteId);
 	}
 	
