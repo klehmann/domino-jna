@@ -994,27 +994,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public LinkedHashSet<Integer> getAllIdsByKey(EnumSet<Find> findFlags, Object... keys) {
 		LinkedHashSet<Integer> noteIds = getAllEntriesByKey(findFlags, EnumSet.of(ReadMask.NOTEID), 
-				new ViewLookupCallback<LinkedHashSet<Integer>>() {
-
-			@Override
-			public LinkedHashSet<Integer> startingLookup() {
-				return new LinkedHashSet<Integer>();
-			}
-
-			@Override
-			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
-					LinkedHashSet<Integer> result, NotesViewEntryData entryData) {
-				
-				result.add(entryData.getNoteId());
-				return Action.Continue;
-			}
-			
-			@Override
-			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
-				return result;
-			}
-
-		}, keys);
+				new NoteIdsAsOrderedSetCallback(Integer.MAX_VALUE), keys);
 		return noteIds;
 	}
 	
@@ -1345,6 +1325,72 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Subclass of {@link ViewLookupCallback} that stores the the note ids of read collection entries
+	 * in a {@link LinkedHashSet}, a {@link Set} that keeps the insertion order.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static class NoteIdsAsOrderedSetCallback extends ViewLookupCallback<LinkedHashSet<Integer>> {
+		private int m_maxEntries;
+
+		public NoteIdsAsOrderedSetCallback(int maxEntries) {
+			m_maxEntries = maxEntries;
+		}
+
+		@Override
+		public LinkedHashSet<Integer> startingLookup() {
+			return new LinkedHashSet<Integer>();
+		}
+
+		@Override
+		public Action entryRead(LinkedHashSet<Integer> result, NotesViewEntryData entryData) {
+			if (m_maxEntries==0) {
+				return Action.Stop;
+			}
+
+			int noteId = entryData.getNoteId();
+			if (noteId != 0) {
+				if (!isAccepted(noteId)) {
+					//ignore this note id
+					return Action.Continue;
+				}
+
+				//add note id to result list
+				result.add(noteId);
+				
+				if (result.size() >= m_maxEntries) {
+					//stop the lookup, we have enough data
+					return Action.Stop;
+				}
+				else {
+					//go on reading the view
+					return Action.Continue;
+				}
+			}
+			else {
+				return Action.Continue;
+			}
+		}
+
+		/**
+		 * Override this method to filter note ids
+		 * 
+		 * @param noteId current note id
+		 * @return true if note id should be added to the result
+		 */
+		protected boolean isAccepted(int noteId) {
+			return true;
+		}
+		
+		@Override
+		public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
+			return result;
+		}
+		
+		
+	}
+	
+	/**
 	 * Fast method to count view entries taking read access rights into account.<br>
 	 * <br>
 	 * Traverses the view index from start to end with the specified navigation strategy
@@ -1406,27 +1452,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return set of note ids, sorted by occurence in the collection
 	 */
 	public LinkedHashSet<Integer> getAllIds(Navigate navigator) {
-		LinkedHashSet<Integer> ids = getAllEntries("0", 1, EnumSet.of(navigator), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new ViewLookupCallback<LinkedHashSet<Integer>>() {
-
-			@Override
-			public LinkedHashSet<Integer> startingLookup() {
-				return new LinkedHashSet<Integer>();
-			}
-
-			@Override
-			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
-					LinkedHashSet<Integer> ctx, NotesViewEntryData entryData) {
-				
-				ctx.add(entryData.getNoteId());
-				return Action.Continue;
-			}
-			
-			@Override
-			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
-				return result;
-			}
-			
-		});
+		LinkedHashSet<Integer> ids = getAllEntries("0", 1, EnumSet.of(navigator), Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID), new NoteIdsAsOrderedSetCallback(Integer.MAX_VALUE));
 		return ids;
 	}
 	
@@ -1456,7 +1482,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @return lookup result
 	 */
 	
@@ -1476,27 +1502,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public LinkedHashSet<Integer> getAllIdsInCategory(String category, EnumSet<Navigate> returnNav) {
 		return getAllEntriesInCategory(category, 0, returnNav, Integer.MAX_VALUE, EnumSet.of(ReadMask.NOTEID),
-				new ViewLookupCallback<LinkedHashSet<Integer>>() {
-
-			@Override
-			public LinkedHashSet<Integer> startingLookup() {
-				return new LinkedHashSet<Integer>();
-			}
-
-			@Override
-			public com.mindoo.domino.jna.NotesCollection.ViewLookupCallback.Action entryRead(
-					LinkedHashSet<Integer> ctx, NotesViewEntryData entryData) {
-
-				ctx.add(entryData.getNoteId());
-				return Action.Continue;
-			}
-
-			@Override
-			public LinkedHashSet<Integer> lookupDone(LinkedHashSet<Integer> result) {
-				return result;
-			}
-
-		});
+				new NoteIdsAsOrderedSetCallback(Integer.MAX_VALUE));
 	}
 
 	/**
@@ -1521,7 +1527,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 				and what notes we might have to include in the returned DelNoteIDTable.
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @return lookup result
 	 */
 	public <T> T getAllEntriesInCategory(final String category, int skipCount, EnumSet<Navigate> returnNav,
@@ -1554,7 +1560,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 				and what notes we might have to include in the returned DelNoteIDTable.
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @return lookup result
 	 */
 	public <T> T getAllEntriesInCategory(final Object[] categoryLevels, int skipCount, final EnumSet<Navigate> returnNav,
@@ -1673,7 +1679,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @return lookup result
 	 * 
 	 * @param <T> type of lookup result object
@@ -1700,7 +1706,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param returnNav navigator to specify how to move in the collection
 	 * @param preloadEntryCount amount of entries that is read from the view; if a filter is specified, this should be higher than returnCount
 	 * @param returnMask values to extract
-	 * @param callback callback that is called for each entry read from the collection
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @return lookup result
 	 * 
 	 * @param <T> type of lookup result object
@@ -2011,7 +2017,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param findFlags find flags, see {@link Find}
 	 * @param returnMask values to be returned
-	 * @param callback lookup callback
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
 	 * @param keys lookup keys
 	 * @return lookup result
 	 * 
