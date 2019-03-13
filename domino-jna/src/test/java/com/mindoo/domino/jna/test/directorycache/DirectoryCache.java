@@ -28,7 +28,7 @@ import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
 import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
- * Cache to store persons of a NAB database in an in-memory cache, uses incremental NSF searches
+ * Cache to store persons of a NAB database in an in-memory map, uses incremental NSF searches
  * to keep the cache up to date and provides very fast name lookups.
  * 
  * @author Karsten Lehmann
