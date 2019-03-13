@@ -27,6 +27,12 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
 import com.mindoo.domino.jna.utils.StringUtil;
 
+/**
+ * Cache to store persons of a NAB database in an in-memory cache, uses incremental NSF searches
+ * to keep the cache up to date and provides very fast name lookups.
+ * 
+ * @author Karsten Lehmann
+ */
 public class DirectoryCache {
 	public static final String ITEMS_USER_LASTNAME = "Lastname";
 	public static final String ITEMS_USER_FIRSTNAME = "Firstname";
@@ -44,7 +50,11 @@ public class DirectoryCache {
 
 	private LinkedHashMap<String,String> m_columns;
 
+	//our cache, currently only hashed by UNID; could be enhanced with additional
+	//lookup names that get updated in the addtoCache / removeFromCache methods;
+	//for simplicity we scan the whole cache map in this sample when doing name lookups
 	private Map<String,DirectoryUser> m_cachedDirectoryUsersByUNID;
+	// R/W lock to coordinate cache access between readers and writers
 	private ReadWriteLock m_cachedDirectoryUsersByUNIDLock;
 
 	private NotesTimeDate m_lastSyncTimeDate;
@@ -103,6 +113,7 @@ public class DirectoryCache {
 		NotesDatabase db = (NotesDatabase) NotesGC.getCustomValue(cacheKey);
 		if (db==null || db.isRecycled()) {
 			try {
+				//open database as the ID user
 				db = new NotesDatabase(m_serverAbbr, m_filePath, (String) null);
 			}
 			catch (NotesError e) {
@@ -180,6 +191,7 @@ public class DirectoryCache {
 						IItemTableData summaryBufferData) {
 
 					added.incrementAndGet();
+					//overwrites any previously entries for this UNID in the cache:
 					addToCache(parentDb, searchMatch, summaryBufferData);
 					return Action.Continue;
 				}
@@ -188,6 +200,8 @@ public class DirectoryCache {
 				public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch,
 						IItemTableData summaryBufferData) {
 
+					//note has been deleted in the database; can be any document, but make
+					//sure to have it removed from the cache if it's in there
 					DirectoryUser oldUser = removeFromCache(searchMatch, summaryBufferData);
 					if (oldUser!=null) {
 						removed.incrementAndGet();
@@ -199,6 +213,8 @@ public class DirectoryCache {
 				public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch,
 						IItemTableData summaryBufferData) {
 
+					//note may have changed so that it does not match the search formula anymore;
+					//make sure to have it removed from the cache
 					DirectoryUser oldUser = removeFromCache(searchMatch, summaryBufferData);
 					if (oldUser!=null) {
 						removed.incrementAndGet();
