@@ -165,7 +165,6 @@ public class NotesNote implements IRecyclableNotesObject {
 			else {
 				m_hNote32 = (int) docHandle;
 			}
-			NotesGC.__objectCreated(NotesNote.class, this);
 			setNoRecycle();
 			m_legacyDocRef = legacyDoc;
 			
