@@ -721,6 +721,10 @@ public class NotesNote implements IRecyclableNotesObject {
 
 	@Override
 	public boolean isRecycled() {
+		if (m_legacyDocRef!=null && isRecycled(m_legacyDocRef)) {
+			return true;
+		}
+
 		if (PlatformUtils.is64Bit()) {
 			return m_hNote64==0;
 		}
