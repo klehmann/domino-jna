@@ -744,8 +744,15 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	void checkHandle() {
-		if (m_legacyDocRef!=null && isRecycled(m_legacyDocRef))
-			throw new NotesError(0, "Wrapped legacy document already recycled");
+		if (m_legacyDocRef!=null) {
+			if (isRecycled(m_legacyDocRef)) {
+				throw new NotesError(0, "Wrapped legacy document already recycled");
+			}
+			else {
+				//note not registered in our GC, so skip the following handle check
+				return;
+			}
+		}
 		
 		if (PlatformUtils.is64Bit()) {
 			if (m_hNote64==0)
