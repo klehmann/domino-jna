@@ -87,6 +87,17 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		this(createCalendar(year, month, day, hour, minute, second, millis, zone));
 	}
 
+	/**
+	 * Constructs a new date/time by merging the date and time part of two other {@link NotesTimeDate} objects
+	 * 
+	 * @param date date part
+	 * @param time time part
+	 */
+	public NotesTimeDate(NotesTimeDate date, NotesTimeDate time) {
+		m_innards[0] = time.getInnardsNoClone()[0]; // time part
+		m_innards[1] = date.getInnardsNoClone()[1]; // date part
+	}
+
 	private static Calendar createCalendar(int year, int month, int day, int hour, int minute, int second, int millis, TimeZone zone) {
 		Calendar cal = Calendar.getInstance();
 		cal.set(Calendar.YEAR, year);
