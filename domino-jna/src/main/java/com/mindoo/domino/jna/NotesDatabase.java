@@ -1203,6 +1203,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		checkHandle();
 		
 		EnumSet<FTSearch> searchOptions = EnumSet.of(FTSearch.RET_IDTABLE);
+		if (filterIDTable!=null) {
+			searchOptions.add(FTSearch.REFINE);
+		}
 		int searchOptionsBitMask = FTSearch.toBitMask(searchOptions);
 		
 		if (PlatformUtils.is64Bit()) {
