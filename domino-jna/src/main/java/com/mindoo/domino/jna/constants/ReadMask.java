@@ -65,7 +65,7 @@ public enum ReadMask {
 	INDEXCHILDREN_NOCATS(0x00400000),
 	/** DWORD/WORD of # descendants below entry - not done for categories */ 
 	INDEXDESCENDANTS_NOCATS(0x00800000),
-	/** Return the readers list as field "$c1$" in the summary buffer;
+	/** Return the readers list as field "$C1$" in the summary buffer;
 	 * requires {@link ReadMask#SUMMARY} to be set as well.
 	 * Value can be read via {@link NotesViewEntryData#getReadersList()} */ 
 	RETURN_READERSLIST(0x01000000),

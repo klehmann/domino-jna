@@ -578,7 +578,7 @@ public class NotesViewEntryData {
 	 * @return readers or null if not read
 	 */
 	public List<String> getReadersList() {
-		Object readersList = get("$c1$");
+		Object readersList = get("$C1$");
 		if (readersList instanceof List) {
 			return (List<String>) readersList;
 		}
