@@ -447,13 +447,19 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return list of roles, not null
 	 */
 	public List<String> queryAccessRoles(String userName) {
-		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_server, userName);
+		NotesNamesList namesList = null;
 		try {
+			namesList = NotesNamingUtils.buildNamesList(m_server, userName);
 			List<String> roles = getACL().lookupAccess(namesList).getRoles();
 			return roles;
 		}
+		catch (NotesError e) {
+			throw new NotesError(e.getId(), "Error computing roles for "+userName+" on server \""+m_server+"\"", e);
+		}
 		finally {
-			namesList.free();
+			if (namesList!=null) {
+				namesList.free();
+			}
 		}
 	}
 	
