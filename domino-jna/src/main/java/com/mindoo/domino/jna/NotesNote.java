@@ -3380,6 +3380,28 @@ public class NotesNote implements IRecyclableNotesObject {
 		return replaceItemValue(itemName, EnumSet.of(ItemType.SUMMARY), value);
 	}
 
+	private static String dumpValueType(Object value) {
+		if (value instanceof List) {
+			List valueList = (List) value;
+			StringBuilder sb = new StringBuilder();
+			sb.append(value.getClass().getName()).append(" [");
+			for (int i=0; i<valueList.size(); i++) {
+				if (i>0) {
+					sb.append(", ");
+				}
+				sb.append(dumpValueType(valueList.get(i)));
+			}
+			sb.append("]");
+			return sb.toString();
+		}
+		else if (value!=null) {
+			return value.getClass().getName();
+		}
+		else {
+			return "null";
+		}
+	}
+
 	/**
 	 * Removes any existing field with the specified name and creates a new one with the specified value.<br>
 	 * We support the following value types:
@@ -3402,7 +3424,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public NotesItem replaceItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
 		if (!hasSupportedItemObjectType(value)) {
-			throw new IllegalArgumentException("Unsupported value type: "+(value==null ? "null" : value.getClass().getName()));
+			throw new IllegalArgumentException("Unsupported value type: "+dumpValueType(value));
 		}
 		
 		while (hasItem(itemName)) {
