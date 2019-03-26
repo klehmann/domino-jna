@@ -257,7 +257,10 @@ public class NotesStringUtils {
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(Pointer inPtr, int textLen) {
-		if (textLen==-1) {
+		if (textLen==0) {
+			return "";
+		}
+		else if (textLen==-1) {
 			textLen = getNullTerminatedLength(inPtr);
 			CharBuffer charBuf = LMBCSCharset.decode(inPtr.getByteBuffer(0, textLen));
 			String str = charBuf.toString();
