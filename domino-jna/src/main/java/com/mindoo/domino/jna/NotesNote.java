@@ -1348,8 +1348,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (lengthAsInt==0) {
 				strList.add("");
 			}
-			String strVal = NotesStringUtils.fromLMBCS(retItemValueMem, lengthAsInt);
-			strList.add(strVal);
+			else {
+				String strVal = NotesStringUtils.fromLMBCS(retItemValueMem, lengthAsInt);
+				strList.add(strVal);
+			}
 		}
 		return strList;
 	}
