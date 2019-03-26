@@ -497,6 +497,10 @@ public class NotesNamingUtils {
 		if (userName==null)
 			throw new NullPointerException("Name cannot be null");
 		
+		if (server==null || "".equals(server)) {
+			return buildNamesList(userName);
+		}
+
 		//make sure that server and username are canonical
 		userName = toCanonicalName(userName);
 		server = toCanonicalName(server);
