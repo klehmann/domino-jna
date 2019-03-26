@@ -1,9 +1,8 @@
 package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.commons.collections4.map.HashedMap;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
 
@@ -76,7 +75,7 @@ public enum NoteClass {
 	SINGLE_INSTANCE(NotesConstants.NOTE_CLASS_SINGLE_INSTANCE);
 
 	private int m_val;
-	private static Map<Integer,NoteClass> classesByValue = new HashedMap<Integer, NoteClass>();
+	private static Map<Integer,NoteClass> classesByValue = new HashMap<Integer, NoteClass>();
 	static {
 		for (NoteClass currClass : values()) {
 			classesByValue.put(currClass.getValue(), currClass);
