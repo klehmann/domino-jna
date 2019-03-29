@@ -24,6 +24,7 @@ import org.flywaydb.core.api.MigrationVersion;
 import org.json.JSONArray;
 
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.sync.ISyncTarget;
@@ -399,6 +400,11 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		}
 	}
 
+	@Override
+	public NotesIDTable getInitialNoteIdFilter() {
+		return null;
+	}
+	
 	public String getLastSyncSelectionFormula() {
 		PreparedStatement readFormulaStmt = null;
 
