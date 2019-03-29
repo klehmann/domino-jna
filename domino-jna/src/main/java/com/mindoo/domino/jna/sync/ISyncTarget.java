@@ -6,8 +6,11 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.Navigate;
 
 /**
  * Interface for a sync target that receives source database changes incrementally.
@@ -80,6 +83,17 @@ public interface ISyncTarget<CTX> {
 	 * @return list of originator ids in target (containing UNID / sequence no / sequence time of synced data) so that we can compare what is missing or outdated in the target
 	 */
 	public Collection<NotesOriginatorIdData> scanTargetData(CTX ctx);
+	
+	/**
+	 * Implement this method to return an IDTable of note ids used to improve
+	 * performance of the first sync run, e.g. by using the content of a view
+	 * (read via {@link NotesCollection#getAllIds(com.mindoo.domino.jna.constants.Navigate, boolean, NotesIDTable)}
+	 * with {@link Navigate#NEXT} and <code>false</code> for the filter parameter
+	 * (see Javadoc of that method for details how to make this call ultrafast)
+	 * 
+	 * @return optional id table to filter first sync run or null (default)
+	 */
+	public NotesIDTable getInitialNoteIdFilter();
 	
 	/**
 	 * Return here whether we should read just the summary buffer data for notes matching

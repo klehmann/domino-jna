@@ -23,6 +23,7 @@ import com.googlecode.cqengine.query.Query;
 import com.googlecode.cqengine.query.option.QueryOptions;
 import com.googlecode.cqengine.resultset.ResultSet;
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.sync.ISyncTarget;
@@ -96,6 +97,11 @@ public abstract class AbstractCQEngineSyncTarget<T extends BaseIndexObject, CTX>
 	 */
 	protected void addIndices(IndexedCollection<T> collection) {
 		//
+	}
+	
+	@Override
+	public NotesIDTable getInitialNoteIdFilter() {
+		return null;
 	}
 	
 	@Override
