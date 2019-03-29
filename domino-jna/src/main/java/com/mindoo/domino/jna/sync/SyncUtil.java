@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.logging.Level;
 
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesNote;
@@ -19,6 +20,7 @@ import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.Search;
@@ -252,6 +254,11 @@ public class SyncUtil {
 				}
 				else {
 					//all ok, target is empty
+					
+					//use an optional id table with known note ids that match the selection formula,
+					//e.g. quickly read from a view index to speed up first indexing and ignore
+					//irrelevant notes
+					searchFilter = getInitialNoteIdFilter();
 				}
 			}
 			else {
@@ -404,6 +411,19 @@ public class SyncUtil {
 				searchFilter.recycle();
 			}
 		}
+	}
+
+	/**
+	 * Implement this method to return an IDTable of note ids used to improve
+	 * performance of the first sync run, e.g. by using the content of a view
+	 * (read via {@link NotesCollection#getAllIds(com.mindoo.domino.jna.constants.Navigate, boolean, NotesIDTable)}
+	 * with {@link Navigate#NEXT} and <code>false</code> for the filter parameter
+	 * (see Javadoc of that method for details how to make this call ultrafast)
+	 * 
+	 * @return optional id table to filter first sync run or null (default)
+	 */
+	protected static NotesIDTable getInitialNoteIdFilter() {
+		return null;
 	}
 	
 }
