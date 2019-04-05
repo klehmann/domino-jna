@@ -1181,10 +1181,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), viewNoteID, 0);
 		}
 		else {
-			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), viewNoteID, 0);
 		}
 		
 		if ((result & NotesConstants.ERR_MASK)==1028) { //view not found
@@ -1675,7 +1675,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		Memory flagsPatternMem = null;
 		if (noteType == NoteClass.VIEW) {
-			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS, true);
+			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true);
 		}
 		else if (noteType == NoteClass.FILTER) {
 			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true);
