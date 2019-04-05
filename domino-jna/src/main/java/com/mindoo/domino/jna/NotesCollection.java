@@ -967,7 +967,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFLocateNote(m_hCollection32, foundPos, noteId);
 		}
-		if (result==1028) {
+		if ((result & NotesConstants.ERR_MASK)==1028) {
 			return "";
 		}
 		NotesErrorUtils.checkResult(result);
@@ -2268,7 +2268,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			
 			result = NotesNativeAPI64.get().NIFFindByKeyExtended2(m_hCollection64, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
 			
-			if (result == 1028 || result == 17412) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			NotesErrorUtils.checkResult(result);
@@ -2303,7 +2303,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			IntByReference retSequence = new IntByReference();
 			
 			result = NotesNativeAPI32.get().NIFFindByKeyExtended2(m_hCollection32, keyBuffer, findFlagsBitMask, returnMaskBitMask, retIndexPos, retNumMatches, retSignalFlags, retBuffer, retSequence);
-			if (result == 1028 || result == 17412) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0), 0, 0, retSignalFlags.getValue(), null, retSequence.getValue(), null);
 			}
 			NotesErrorUtils.checkResult(result);
@@ -2431,7 +2431,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 			result = NotesNativeAPI32.get().NIFFindByKey(m_hCollection32, keyBuffer, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
-		if (result == 1028 || result == 17412) {
+		if ((result & NotesConstants.ERR_MASK)==1028) {
 			return new FindResult("", 0, canFindExactNumberOfMatches(findFlags));
 		}
 		
@@ -2517,7 +2517,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindByName(m_hCollection32, nameLMBCS, findFlagsBitMask, retIndexPos, retNumMatches);
 		}
-		if (result == 1028 || result == 17412) {
+		if ((result & NotesConstants.ERR_MASK)==1028) {
 			return new FindResult("", 0, canFindExactNumberOfMatches(findFlags));
 		}
 
@@ -2782,7 +2782,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
 					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
 			
-			if (result!=1028) {
+			if ((result & NotesConstants.ERR_MASK)!=1028) {
 				NotesErrorUtils.checkResult(result);
 			}
 			
@@ -2791,7 +2791,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
 
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
-			if (iBufLength==0 || result==1028) {
+			if (iBufLength==0 || ((result & NotesConstants.ERR_MASK)==1028)) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
 						retSignalFlags.getValue(), null, indexModifiedSequenceNo, new NotesTimeDate(retDiffTimeStruct));
@@ -2815,7 +2815,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 					retNumEntriesSkipped, retNumEntriesReturned, retSignalFlags,
 					retDiffTimeStruct, retModifiedTimeStruct, retSequence);
 
-			if (result!=1028) {
+			if ((result & NotesConstants.ERR_MASK)!=1028) {
 				NotesErrorUtils.checkResult(result);
 			}
 			int indexModifiedSequenceNo = retModifiedTimeStruct.Innards[0]; //getIndexModifiedSequenceNo();
@@ -2823,7 +2823,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			NotesTimeDate retDiffTimeWrap = new NotesTimeDate(retDiffTimeStruct);
 			
 			int iBufLength = (int) (retBufferLength.getValue() & 0xffff);
-			if (iBufLength==0 || result==1028) {
+			if (iBufLength==0 || ((result & NotesConstants.ERR_MASK)==1028)) {
 				return new NotesViewLookupResultData(null, new ArrayList<NotesViewEntryData>(0),
 						retNumEntriesSkipped.getValue(), retNumEntriesReturned.getValue(),
 						retSignalFlags.getValue(), null, indexModifiedSequenceNo, retDiffTimeWrap);

@@ -553,7 +553,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		try {
 			short result = NotesNativeAPI.get().DesignFindTemplate(templateNameMem,
 					excludeDbPathMem, retDbPath);
-			if (result==1028) //entry not found in index
+			if ((result & NotesConstants.ERR_MASK)==1028) //entry not found in index
 				return null;
 			NotesErrorUtils.checkResult(result);
 			
@@ -1187,7 +1187,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS, true), viewNoteID, 0);
 		}
 		
-		if (result==1028) { //view not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //view not found
 			return 0;
 		}
 		
@@ -1481,7 +1481,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_VIEW) & 0xffff), retNoteID);
 		}
-		if (result==1028) { //not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //not found
 			return null;
 		}
 		NotesErrorUtils.checkResult(result);
@@ -1510,7 +1510,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_ICON) & 0xffff), retNoteID);
 		}
-		if (result==1028) { //not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //not found
 			return null;
 		}
 		NotesErrorUtils.checkResult(result);
@@ -1538,7 +1538,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_FORM) & 0xffff), retNoteID);
 		}
-		if (result==1028) { //not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //not found
 			return null;
 		}
 		NotesErrorUtils.checkResult(result);
@@ -1566,7 +1566,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_INFO) & 0xffff), retNoteID);
 		}
-		if (result==1028) { //not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //not found
 			return null;
 		}
 		NotesErrorUtils.checkResult(result);
@@ -1594,7 +1594,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NSFDbGetSpecialNoteID(m_hDB32, (short) ((NotesConstants.SPECIAL_ID_NOTE | NotesConstants.NOTE_CLASS_HELP) & 0xffff), retNoteID);
 		}
-		if (result==1028) { //not found
+		if ((result & NotesConstants.ERR_MASK)==1028) { //not found
 			return null;
 		}
 		NotesErrorUtils.checkResult(result);
@@ -1651,16 +1651,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return note, null if not found
 	 */
 	public NotesNote findDesignNote(String name, NoteClass noteType) {
-		try {
-			int noteId = findDesignNoteId(name, noteType);
-			return openNoteById(noteId);
+		int noteId = findDesignNoteId(name, noteType);
+		if (noteId==0) {
+			return null;
 		}
-		catch (NotesError e) {
-			if (e.getId() == 1028)
-				return null;
-			else
-				throw e;
-		}
+		return openNoteById(noteId);
 	}
 	
 	/**
@@ -1668,8 +1663,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param name name
 	 * @param noteType type of design note
-	 * @return note id
-	 * @throws NotesError with id 1028 if note cannot be found
+	 * @return note id or 0 if not found
 	 */
 	public int findDesignNoteId(String name, NoteClass noteType) {
 		checkHandle();
@@ -1694,6 +1688,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, nameMem, noteTypeShort, flagsPatternMem, retNoteID, 0);
 		}
+		
+		if ((result & NotesConstants.ERR_MASK)==1028) {
+			return 0;
+		}
+		
 		NotesErrorUtils.checkResult(result);
 		
 		int noteId = retNoteID.getValue();
@@ -1720,7 +1719,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
 		}
-		if (result==1028 || result==17412) {
+		if ((result & NotesConstants.ERR_MASK)==1028) {
 			//Entry not found in index
 			return null;
 		}
@@ -3073,7 +3072,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenSoftDelete(m_hDB64, noteId, 0, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
@@ -3087,7 +3086,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenSoftDelete(m_hDB32, noteId, 0, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
@@ -3128,7 +3127,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenExt(m_hDB64, noteId, openFlagsBitmask, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
@@ -3142,7 +3141,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenExt(m_hDB32, noteId, openFlagsBitmask, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
@@ -3182,7 +3181,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNote = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFNoteOpenByUNIDExtended(m_hDB64, unidObj, openFlagsBitmask, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);
@@ -3196,7 +3195,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			IntByReference rethNote = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFNoteOpenByUNIDExtended(m_hDB32, unidObj, openFlagsBitmask, rethNote);
-			if (result==1028) {
+			if ((result & NotesConstants.ERR_MASK)==1028) {
 				return null;
 			}
 			NotesErrorUtils.checkResult(result);

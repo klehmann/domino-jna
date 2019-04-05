@@ -573,7 +573,7 @@ public class NotesCalendarUtils {
 							remainingToRead, dwReturnMask, dwReturnMaskExt, null, hRetCalData,
 							retCalBufferLength, hRetUIDData, retNumEntriesProcessed, retSignalFlags, 0, null);
 					
-					if (result==1028) { //no data found
+					if ((result & NotesConstants.ERR_MASK)==1028) { //no data found
 						return;
 					}
 					NotesErrorUtils.checkResult(result);
@@ -640,7 +640,7 @@ public class NotesCalendarUtils {
 							remainingToRead, dwReturnMask, dwReturnMaskExt, null, hRetCalData,
 							retCalBufferLength, hRetUIDData, retNumEntriesProcessed, retSignalFlags, 0, null);
 					
-					if (result==1028) { //no data found
+					if ((result & NotesConstants.ERR_MASK)==1028) { //no data found
 						return;
 					}
 
