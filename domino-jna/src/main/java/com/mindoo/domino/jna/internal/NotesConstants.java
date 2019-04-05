@@ -398,7 +398,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	/** display only views and folder; version filtering */
 	public static final String DFLAGPAT_VIEWS_AND_FOLDERS = "-G40n^";
-	/** display only views and folder; all notes & web */
+	/** display only views and folder; all notes &amp; web */
 	public static final String DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN = "-G40^";
 	/** display things that are runnable; version filtering */
 	public static final String DFLAGPAT_TOOLSRUNMACRO = "-QXMBESIst5nmz{";
