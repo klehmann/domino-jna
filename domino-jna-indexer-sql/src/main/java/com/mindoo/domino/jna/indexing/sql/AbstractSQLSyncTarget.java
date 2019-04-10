@@ -121,6 +121,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	 * @author Karsten Lehmann
 	 */
 	public static class SyncContext {
+		private ISyncTarget<AbstractSQLSyncTarget.SyncContext> target;
 		private String dbId;
 		private long startDateTime;
 		private long endDateTime;
@@ -134,9 +135,76 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 		private PreparedStatement m_stmtUpdateDominoDoc;
 		private PreparedStatement m_stmtDeleteAllDominoDocReaders;
 		
-		public SyncContext() {
+		public SyncContext(ISyncTarget<AbstractSQLSyncTarget.SyncContext> target) {
+			this.target = target;
 		}
 
+		public void dispose() {
+			if (m_stmtFindDominoDocByUnid!=null) {
+				try {
+					m_stmtFindDominoDocByUnid.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtFindDominoDocByUnid = null;
+			}
+			
+			if (m_stmtInsertDominoDoc!=null) {
+				try {
+					m_stmtInsertDominoDoc.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtInsertDominoDoc = null;
+			}
+			
+			if (m_stmtRemoveDominoDocByUnid!=null) {
+				try {
+					m_stmtRemoveDominoDocByUnid.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtRemoveDominoDocByUnid = null;
+			}
+
+			if (m_stmtUpdateDominoDoc!=null) {
+				try {
+					m_stmtUpdateDominoDoc.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtUpdateDominoDoc = null;
+			}
+			
+			if (m_stmtRemoveDominoDocByUnid!=null) {
+				try {
+					m_stmtRemoveDominoDocByUnid.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtRemoveDominoDocByUnid = null;
+			}
+			
+			if (m_stmtInsertDominoDocReaders!=null) {
+				try {
+					m_stmtInsertDominoDocReaders.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtInsertDominoDocReaders = null;
+			}
+			
+			if (m_stmtDeleteAllDominoDocReaders!=null) {
+				try {
+					m_stmtDeleteAllDominoDocReaders.close();
+				} catch (SQLException e1) {
+					target.log(Level.SEVERE, "Error closing statement", e1);
+				}
+				m_stmtDeleteAllDominoDocReaders = null;
+			}
+			this.target = null;
+		}
+		
 		public String getDbId() {
 			return dbId;
 		}
@@ -489,7 +557,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 	}
 
 	public SyncContext startingSync(String dbReplicaId) {
-		SyncContext ctx = new SyncContext();
+		SyncContext ctx = new SyncContext(this);
 		ctx.setStartDateTime(System.currentTimeMillis());
 		ctx.setDbId(dbReplicaId);
 		
@@ -1068,26 +1136,7 @@ public abstract class AbstractSQLSyncTarget implements ISyncTarget<AbstractSQLSy
 			throw new SqlSyncException("Error committing current transaction", e);
 		}
 		
-		try {
-			ctx.getStatementFindDominoDocByUnid().close();
-		} catch (SQLException e1) {
-			log(Level.SEVERE, "Error closing statement", e1);
-		}
-		try {
-			ctx.getStatementInsertDominoDoc().close();
-		} catch (SQLException e1) {
-			log(Level.SEVERE, "Error closing statement", e1);
-		}
-		try {
-			ctx.getStatementRemoveDominoDocByUnid().close();
-		} catch (SQLException e1) {
-			log(Level.SEVERE, "Error closing statement", e1);
-		}
-		try {
-			ctx.getStatementUpdateDominoDoc().close();
-		} catch (SQLException e1) {
-			log(Level.SEVERE, "Error closing statement", e1);
-		}
+		ctx.dispose();
 	}
 
 	/**
