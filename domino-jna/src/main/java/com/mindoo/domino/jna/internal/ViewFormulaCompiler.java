@@ -96,12 +96,12 @@ public class ViewFormulaCompiler {
 		if (PlatformUtils.is64Bit()) {
 			hViewFormula64 = rethViewFormula64.getValue();
 			if (hViewFormula64==0)
-				throw new IllegalStateException("Selection formula handle is null");
+				throw new IllegalStateException("Selection formula handle is 0 for formula: "+selectionFormula);
 		}
 		else {
 			hViewFormula32 = rethViewFormula32.getValue();
 			if (hViewFormula32==0)
-				throw new IllegalStateException("Selection formula handle is null");
+				throw new IllegalStateException("Selection formula handle is 0 for formula: "+selectionFormula);
 		}
 
 		if (columnItemNamesAndFormulas!=null) {
@@ -182,6 +182,9 @@ public class ViewFormulaCompiler {
 
 						if (PlatformUtils.is64Bit()) {
 							hColumnFormula64 = rethColumnFormula64.getValue();
+							if (hColumnFormula64==0)
+								throw new IllegalStateException("Column formula handle is 0 for formula: "+columnFormula);
+							
 							columnFormulaHandlesToDisposeOnError64.add(hColumnFormula64);
 							
 							//merge formulas
@@ -190,6 +193,9 @@ public class ViewFormulaCompiler {
 						}
 						else {
 							hColumnFormula32 = rethColumnFormula32.getValue();
+							if (hColumnFormula32==0)
+								throw new IllegalStateException("Column formula handle is 0 for formula: "+columnFormula);
+							
 							columnFormulaHandlesToDisposeOnError32.add(hColumnFormula32);
 							
 							//merge formulas
