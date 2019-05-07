@@ -1135,40 +1135,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return text value
 	 */
 	public String getItemValueString(String itemName) {
-		checkHandle();
-
-		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
-		DisposableMemory retItemValueMem = stringretBuffer.get();
-		if (retItemValueMem==null || retItemValueMem.isDisposed()) {
-			retItemValueMem = new DisposableMemory(DEFAULT_STRINGRETVALUE_LENGTH);
-			stringretBuffer.set(retItemValueMem);
+		List<Object> values = getItemValue(itemName);
+		if (values!=null && !values.isEmpty() && values.get(0) instanceof String) {
+			return (String) values.get(0);
 		}
-		
-		short length;
-		if (PlatformUtils.is64Bit()) {
-			length = NotesNativeAPI64.get().NSFItemGetText(m_hNote64, itemNameMem, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
-			if (length == (retItemValueMem.size()-1)) {
-				retItemValueMem.dispose();
-				retItemValueMem = new DisposableMemory(MAX_STRINGRETVALUE_LENGTH);
-				stringretBuffer.set(retItemValueMem);
-				length = NotesNativeAPI64.get().NSFItemGetText(m_hNote64, itemNameMem, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
-			}
-		}
-		else {
-			length = NotesNativeAPI32.get().NSFItemGetText(m_hNote32, itemNameMem, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
-			if (length == (retItemValueMem.size()-1)) {
-				retItemValueMem.dispose();
-				retItemValueMem = new DisposableMemory(MAX_STRINGRETVALUE_LENGTH);
-				stringretBuffer.set(retItemValueMem);
-				length = NotesNativeAPI32.get().NSFItemGetText(m_hNote32, itemNameMem, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
-			}
-		}
-		int lengthAsInt = (int) length & 0xffff;
-		if (lengthAsInt==0) {
-			return "";
-		}
-		String strVal = NotesStringUtils.fromLMBCS(retItemValueMem, lengthAsInt);
-		return strVal;
+		return "";
 	}
 	
 	/**
