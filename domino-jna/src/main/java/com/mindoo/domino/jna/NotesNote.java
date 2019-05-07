@@ -1135,11 +1135,57 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return text value
 	 */
 	public String getItemValueString(String itemName) {
-		List<Object> values = getItemValue(itemName);
-		if (values!=null && !values.isEmpty() && values.get(0) instanceof String) {
-			return (String) values.get(0);
+		checkHandle();
+
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
+
+		short nrOfValues;
+		if (PlatformUtils.is64Bit()) {
+			nrOfValues = NotesNativeAPI64.get().NSFItemGetTextListEntries(m_hNote64, itemNameMem);
 		}
-		return "";
+		else {
+			nrOfValues = NotesNativeAPI32.get().NSFItemGetTextListEntries(m_hNote32, itemNameMem);
+		}
+		
+		int nrOfValuesAsInt = (int) (nrOfValues & 0xffff);
+		
+		if (nrOfValuesAsInt==0) {
+			return "";
+		}
+		
+		DisposableMemory retItemValueMem = new DisposableMemory(DEFAULT_STRINGRETVALUE_LENGTH);
+		try {
+			short length;
+			
+			if (PlatformUtils.is64Bit()) {
+				length = NotesNativeAPI64.get().NSFItemGetTextListEntry(m_hNote64, itemNameMem, (short) 0, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
+				if (length == (retItemValueMem.size()-1)) {
+					retItemValueMem.dispose();
+					retItemValueMem = new DisposableMemory(MAX_STRINGRETVALUE_LENGTH);
+					length = NotesNativeAPI64.get().NSFItemGetTextListEntry(m_hNote64, itemNameMem, (short) 0, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
+				}
+			}
+			else {
+				length = NotesNativeAPI32.get().NSFItemGetTextListEntry(m_hNote32, itemNameMem, (short) 0, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
+				if (length == (retItemValueMem.size()-1)) {
+					retItemValueMem.dispose();
+					retItemValueMem = new DisposableMemory(MAX_STRINGRETVALUE_LENGTH);
+					length = NotesNativeAPI32.get().NSFItemGetTextListEntry(m_hNote32, itemNameMem, (short) 0, retItemValueMem, (short) (retItemValueMem.size() & 0xffff));
+				}
+			}
+
+			int lengthAsInt = (int) length & 0xffff;
+			if (lengthAsInt==0) {
+				return "";
+			}
+			else {
+				String strVal = NotesStringUtils.fromLMBCS(retItemValueMem, lengthAsInt);
+				return strVal;
+			}
+		}
+		finally {
+			retItemValueMem.dispose();
+		}
 	}
 	
 	/**
