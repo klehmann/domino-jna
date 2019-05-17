@@ -28,6 +28,9 @@ public enum UpdateNote {
 	 * This flag is appropriate for both updating and deleting a note. */
 	NOCOMMIT(0x0004),
 	
+	/** do not update seq/sequence time on update (used when updating notes in the replicator) */
+	REPLICA(0x0008),
+
 	/** Do not maintain revision history. This flag is appropriate for updating a note only. */
 	NOREVISION(0x0100),
 	
@@ -46,6 +49,9 @@ public enum UpdateNote {
 	 * problems when replicated. The documents themselves will not exist in the
 	 * database and therefore cannot be opened. */
 	NOSTUB(0x0200),
+	
+	/** avoid queuing the update to the real time replicator and the streaming cluster replicator */
+	RTR(0x0800),
 	
 	/** Compute incremental note info. */
 	INCREMENTAL(0x4000),

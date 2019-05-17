@@ -324,12 +324,17 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public static final short UPDATE_NAME_KEY_WARNING = 0x0002;
 	/** do NOT do a database commit after update */
 	public static final short UPDATE_NOCOMMIT = 0x0004;
+	/** do not update seq/sequence time on update */
+	public static final short UPDATE_REPLICA = 0x0008;
 	/** do NOT maintain revision history */
 	public static final short UPDATE_NOREVISION = 0x0100;
 	/** update body but leave no trace of note in file if deleted */
 	public static final short UPDATE_NOSTUB = 0x0200;
 	/** Compute incremental note info */
 	public static final short UPDATE_INCREMENTAL = 0x4000;
+	/** avoid queuing the update to the real time replicator and the streaming cluster replicator */
+	public static final short UPDATE_RTR = 0x0800;
+	
 	/* update body DELETED */
 	public static final short UPDATE_DELETED = (short) (0x8000 & 0xffff);
 	/* Obsolete; but in SDK */
