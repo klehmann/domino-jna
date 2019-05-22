@@ -120,6 +120,36 @@ public class NotesOriginatorId implements IAdaptable {
 		return this.sequence;
 	}
 	
+	public void setSequence(int newSeq) {
+		if (m_struct!=null) {
+			m_struct = NotesOriginatorIdStruct.newInstance();
+		}
+		m_struct.Sequence = newSeq;
+		this.sequence = newSeq;
+		
+		//make sture SequenceTime has a value
+		if (m_struct.SequenceTime==null) {
+			m_struct.SequenceTime = NotesTimeDateStruct.newInstance();
+			m_struct.SequenceTime.setNow();
+			this.sequenceTime = new NotesTimeDate(m_struct.SequenceTime);
+		}
+		m_struct.write();
+	}
+	
+	public void setSequenceTime(NotesTimeDate td) {
+		if (m_struct!=null) {
+			m_struct = NotesOriginatorIdStruct.newInstance();
+		}
+		if (m_struct.SequenceTime==null) {
+			m_struct.SequenceTime = NotesTimeDateStruct.newInstance();
+		}
+		m_struct.SequenceTime.Innards[0] = td.getInnardsNoClone()[0];
+		m_struct.SequenceTime.Innards[1] = td.getInnardsNoClone()[1];
+		m_struct.SequenceTime.write();
+		m_struct.write();
+		this.sequenceTime = new NotesTimeDate(td.getInnardsNoClone());
+	}
+	
 	public NotesTimeDate getSequenceTime() {
 		if (this.m_struct!=null && this.m_struct.SequenceTime!=null) {
 			if (this.sequenceTime==null ||

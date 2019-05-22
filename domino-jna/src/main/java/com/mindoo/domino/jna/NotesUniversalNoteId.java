@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
@@ -68,6 +69,42 @@ public class NotesUniversalNoteId implements IAdaptable {
 
 	public NotesTimeDate getNote() {
 		return m_struct.Note==null ? null : new NotesTimeDate(m_struct.Note);
+	}
+
+	/**
+	 * Changes the Note part of the universal id
+	 * 
+	 * @param td new value for Note
+	 */
+	public void setNote(NotesTimeDate td) {
+		if (m_struct==null) {
+			m_struct = NotesUniversalNoteIdStruct.newInstance();
+		}
+		if (m_struct.Note==null) {
+			m_struct.Note = NotesTimeDateStruct.newInstance();
+		}
+		m_struct.Note.Innards[0] = td.getInnardsNoClone()[0];
+		m_struct.Note.Innards[1] = td.getInnardsNoClone()[1];
+		m_struct.Note.write();
+		m_struct.write();
+	}
+
+	/**
+	 * Changes the File part of the universal id
+	 * 
+	 * @param td new value for File
+	 */
+	public void setFile(NotesTimeDate td) {
+		if (m_struct==null) {
+			m_struct = NotesUniversalNoteIdStruct.newInstance();
+		}
+		if (m_struct.File==null) {
+			m_struct.File = NotesTimeDateStruct.newInstance();
+		}
+		m_struct.File.Innards[0] = td.getInnardsNoClone()[0];
+		m_struct.File.Innards[1] = td.getInnardsNoClone()[1];
+		m_struct.File.write();
+		m_struct.write();
 	}
 
 	@Override

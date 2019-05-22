@@ -63,6 +63,9 @@ public enum UpdateNote {
 	 * flag when it calls NSFNoteUpdate in the process of writing the deletion stub to the disk. */
 	DELETED(0x8000),
 	
+	/** Do not change the modified time on save */
+	KEEP_MODTIME(0x00020000),
+	
 	/** Obsolete. Allow duplicate items of the same name. This flag is appropriate for updating a note only. */
 	DUPLICATE(0),
 	
