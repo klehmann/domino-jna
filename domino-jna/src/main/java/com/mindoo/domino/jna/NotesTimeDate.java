@@ -161,8 +161,9 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 * @param day day
 	 */
 	public NotesTimeDate(int year, int month, int day) {
-		this(year, month, day, 0, 0, 0, 0, TimeZone.getDefault());
-		setAnyTime();
+		Calendar cal = createCalendar(year, month, day, 0, 0, 0, 0, TimeZone.getDefault());
+		NotesDateTimeUtils.setAnyTime(cal);
+		m_innards = NotesDateTimeUtils.calendarToInnards(cal);
 	}
 	
 	/**
