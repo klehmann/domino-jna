@@ -37,6 +37,7 @@ Bundle-ClassPath: lib/commons-collections4-4.0.jar,
  lib/concurrentlinkedhashmap-lru-1.4.2.jar,
  lib/icu4j-60.2.jar,
  lib/icu4j-charset-60.2.jar,
+ lib/javax.mail-1.5.2.jar,
  .
 Bundle-Activator: com.mindoo.domino.jna.xsp.internal.DominoJNAActivator
 Eclipse-BundleShape: dir
