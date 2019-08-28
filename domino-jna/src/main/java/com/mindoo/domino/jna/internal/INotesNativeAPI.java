@@ -41,6 +41,8 @@ public interface INotesNativeAPI extends Library {
 
 	public short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
 	public short OSTranslate(short translateMode, Pointer in, short inLength, Memory out, short outLength);
+	public int OSTranslate32(short translateMode, Memory in, int inLength, Memory out, int outLength);
+	public int OSTranslate32(short translateMode, Pointer in, int inLength, Memory out, int outLength);
 
 	public short OSLoadString(int hModule, short StringCode, Memory retBuffer, short BufferLength);
 	public short OSLoadString(long hModule, short StringCode, Memory retBuffer, short BufferLength);
@@ -311,4 +313,9 @@ public interface INotesNativeAPI extends Library {
 	@UndocumentedAPI
 	public short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
 
+	public void StatTraverse(
+			Memory Facility,
+			Memory StatName,
+			NotesCallbacks.STATTRAVERSEPROC  Routine,
+			Pointer Context);
 }

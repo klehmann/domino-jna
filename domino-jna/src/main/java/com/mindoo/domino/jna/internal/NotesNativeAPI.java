@@ -20,6 +20,7 @@ import java.util.Map;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.STATTRAVERSEPROC;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -399,6 +400,10 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	public native short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
 	public native short OSTranslate(short translateMode, Pointer in, short inLength, Memory out, short outLength);
+	@UndocumentedAPI
+	public native int OSTranslate32(short translateMode, Memory in, int inLength, Memory out, int outLength);
+	@UndocumentedAPI
+	public native int OSTranslate32(short translateMode, Pointer in, int inLength, Memory out, int outLength);
 
 	public native short OSLoadString(int hModule, short StringCode, Memory retBuffer, short BufferLength);
 	public native short OSLoadString(long hModule, short StringCode, Memory retBuffer, short BufferLength);
@@ -619,5 +624,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
 	
 	public native short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
+
+	public native void StatTraverse(Memory Facility, Memory StatName, STATTRAVERSEPROC Routine, Pointer Context);
 	
 }

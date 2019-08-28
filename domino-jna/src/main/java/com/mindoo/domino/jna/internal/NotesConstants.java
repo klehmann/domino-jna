@@ -3049,4 +3049,20 @@ This allows an Editor to assume some Designer-level access */
 
 	public int MIME_STREAM_ITEMIZE_FULL = (MIME_STREAM_ITEMIZE_HEADERS|MIME_STREAM_ITEMIZE_BODY);
 
+	/*	Value type constants */
+
+	public short VT_LONG	 = 0;
+	public short VT_TEXT	 = 1;
+	public short VT_TIMEDATE = 2;
+	public short VT_NUMBER = 3;
+
+	/*	Flags for StatUpdate */
+
+	/** Statistic is unique */
+	public short ST_UNIQUE = 0x0001;
+	/** Add to VT_LONG statistic, don't replace */
+	public short ST_ADDITIVE	 = 0x0002;
+	/** Statistic is resetable to 0 */
+	public short ST_RESETABLE = 0x0003;
+
 }

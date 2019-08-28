@@ -193,4 +193,7 @@ public interface NotesCallbacks {
 		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable, long removedNoteTable);
 	}
 
+	interface STATTRAVERSEPROC extends Callback {
+		short invoke(Pointer ctx, Pointer facility, Pointer statName, short valueType, Pointer value);
+	}
 }
