@@ -1414,4 +1414,10 @@ public interface INotesNativeAPI32 extends Library {
 			Memory ConsoleCommand,
 			IntByReference hResponseText);
 	
+	public short NSFGetServerStats(
+			Memory serverName,
+			Memory facility,
+			Memory statName,
+			IntByReference rethTable,
+			IntByReference retTableSize);
 }

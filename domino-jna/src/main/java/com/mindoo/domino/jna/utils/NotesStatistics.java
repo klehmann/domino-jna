@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -9,15 +10,22 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks.STATTRAVERSEPROC;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.STATTRAVERSEPROCWin32;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 
 /**
- * Utility class to read server statistics
+ * Utility class to read client and server statistics
  * 
  * @author Karsten Lehmann
  */
@@ -122,32 +130,123 @@ public class NotesStatistics {
 	 * 
 	 * @return statistics
 	 */
-	public static NotesStatistics retrieveStatistics() {
-		return retrieveStatistics((String) null, (String) null);
+	public static NotesStatistics retrieveLocalStatistics() {
+		return retrieveLocalStatistics((String) null, (String) null);
 	}
 
 	/**
 	 * This function reads statistics for the specified facility
 	 * 
-	 * @param facility facility, e.g. {@link #STATPKG_NSF}
+	 * @param facility facility, e.g. {@link #STATPKG_NSF} or null for all
 	 * @return statistics
 	 */
-	public static NotesStatistics retrieveStatistics(String facility) {
-		return retrieveStatistics(facility, (String) null);
+	public static NotesStatistics retrieveLocalStatistics(String facility) {
+		return retrieveLocalStatistics(facility, (String) null);
 	}
 
 	/**
-	 * This function reads a single statistic value for a facility
+	 * Request the specified information from the named server.<br>
+	 * <br>
+	 * Statistics are identified by a Facility name (see {@link #STATPKG_OS} etc. for Domino facilities) and a statistic Name.<br>
 	 * 
-	 * @param facility facility, e.g. {@link #STATPKG_NSF} or {@link #STATPKG_REPLICA}
-	 * @param statName name of statistic
+	 * @param server server
+	 * @param facility facility, e.g. {@link #STATPKG_NSF} or null for all
+	 * @return statistics formatted as string
+	 */
+	public static String retrieveRemoteStatisticsAsString(String server) {
+		return retrieveRemoteStatisticsAsString(server, (String) null, (String) null);
+	}
+	
+	/**
+	 * Request the specified information from the named server.<br>
+	 * <br>
+	 * Statistics are identified by a Facility name (see {@link #STATPKG_OS} etc. for Domino facilities) and a statistic Name.<br>
+	 * 
+	 * @param server server
+	 * @param facility facility, e.g. {@link #STATPKG_NSF} or null for all
+	 * @return statistics formatted as string
+	 */
+	public static String retrieveRemoteStatisticsAsString(String server, String facility) {
+		return retrieveRemoteStatisticsAsString(server, (String) null, (String) null);
+	}
+	
+	/**
+	 * Request the specified information from the named server.<br>
+	 * <br>
+	 * Statistics are identified by a Facility name (see {@link #STATPKG_OS} etc. for Domino facilities) and a statistic Name.<br>
+	 * 
+	 * @param server server
+	 * @param facility facility, e.g. {@link #STATPKG_NSF} or null for all
+	 * @param statName name of statistic or null for all
+	 * @return statistics formatted as string
+	 */
+	public static String retrieveRemoteStatisticsAsString(String server, String facility, String statName) {
+		String serverCanonical = NotesNamingUtils.toCanonicalName(server);
+		
+		Memory serverCanonicalMem = NotesStringUtils.toLMBCS(serverCanonical, true);
+		Memory facilityMem = NotesStringUtils.toLMBCS(facility, true);
+		Memory statNameMem = NotesStringUtils.toLMBCS(statName, true);
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethTable = new LongByReference();
+			IntByReference retTableSize = new IntByReference();
+			
+			short result = NotesNativeAPI64.get().NSFGetServerStats(serverCanonicalMem, facilityMem, statNameMem, rethTable, retTableSize);
+			NotesErrorUtils.checkResult(result);
+			
+			long hTable = rethTable.getValue();
+			if (hTable==0) {
+				return "";
+			}
+			int tableSize = retTableSize.getValue();
+			
+			Pointer ptrTable = Mem64.OSLockObject(hTable);
+			try {
+				String statsStr = NotesStringUtils.fromLMBCS(ptrTable, tableSize);
+				return statsStr;
+			}
+			finally {
+				Mem64.OSUnlockObject(hTable);
+				Mem64.OSMemFree(hTable);
+			}
+		}
+		else {
+			IntByReference rethTable = new IntByReference();
+			IntByReference retTableSize = new IntByReference();
+			
+			short result = NotesNativeAPI32.get().NSFGetServerStats(statNameMem, facilityMem, statNameMem, rethTable, retTableSize);
+			NotesErrorUtils.checkResult(result);
+			
+			int hTable = rethTable.getValue();
+			if (hTable==0) {
+				return "";
+			}
+			int tableSize = retTableSize.getValue();
+			
+			Pointer ptrTable = Mem32.OSMemoryLock(hTable);
+			try {
+				String statsStr = NotesStringUtils.fromLMBCS(ptrTable, tableSize);
+				return statsStr;
+			}
+			finally {
+				Mem32.OSMemoryUnlock(hTable);
+				Mem32.OSMemFree(hTable);
+			}
+		}
+	}
+
+	/**
+	 * This function reads statistic values for one or all facilities
+	 * 
+	 * @param facility facility, e.g. {@link #STATPKG_NSF} or {@link #STATPKG_REPLICA} or null for all
+	 * @param statName name of statistic or null for all
 	 * @return statistics
 	 */
-	public static NotesStatistics retrieveStatistics(String facility, String statName) {
+	public static NotesStatistics retrieveLocalStatistics(String facility, String statName) {
 		Memory facilityMem = NotesStringUtils.toLMBCS(facility, true);
 		Memory statNameMem = NotesStringUtils.toLMBCS(statName, true);
 
-		final Map<String,Map<String,Object>> statsByFacility = new LinkedHashMap<String, Map<String,Object>>();
+		final Map<String,List<Pair<String,Object>>> statsByFacility = new LinkedHashMap<String, List<Pair<String,Object>>>();
 
 		STATTRAVERSEPROC callback;
 		if (PlatformUtils.isWin32()) {
@@ -195,12 +294,12 @@ public class NotesStatistics {
 						}
 					}
 
-					Map<String,Object> statsForFacility = statsByFacility.get(facility);
+					List<Pair<String,Object>> statsForFacility = statsByFacility.get(facility);
 					if (statsForFacility==null) {
-						statsForFacility = new LinkedHashMap<String, Object>();
+						statsForFacility = new ArrayList<Pair<String,Object>>();
 						statsByFacility.put(facility, statsForFacility);
 					}
-					statsForFacility.put(statName, decodedValue);
+					statsForFacility.add(new Pair<String,Object>(statName, decodedValue));
 
 					return 0;
 				}
@@ -251,12 +350,12 @@ public class NotesStatistics {
 						}
 					}
 
-					Map<String,Object> statsForFacility = statsByFacility.get(facility);
+					List<Pair<String,Object>> statsForFacility = statsByFacility.get(facility);
 					if (statsForFacility==null) {
-						statsForFacility = new LinkedHashMap<String, Object>();
+						statsForFacility = new ArrayList<Pair<String,Object>>();
 						statsByFacility.put(facility, statsForFacility);
 					}
-					statsForFacility.put(statName, decodedValue);
+					statsForFacility.add(new Pair<String,Object>(statName, decodedValue));
 
 					return 0;
 				}};
@@ -264,44 +363,62 @@ public class NotesStatistics {
 
 		NotesNativeAPI.get().StatTraverse(facilityMem, statNameMem, callback, null);
 
-		return new NotesStatistics(statsByFacility);
+		return new NotesStatistics("", statsByFacility);
 	}
 
-	private Map<String,Map<String,Object>> m_data;
+	private String m_server;
+	private Map<String,List<Pair<String,Object>>> m_data;
 	private String m_toString;
 	
-	private NotesStatistics(Map<String,Map<String,Object>> data) {
+	private NotesStatistics(String server, Map<String,List<Pair<String,Object>>> data) {
+		m_server = server;
 		m_data = data;
 	}
 
+	public String getServer() {
+		return m_server;
+	}
+	
 	public Iterator<String> getFacilityNames() {
 		return m_data.keySet().iterator();
 	}
 
 	/**
-	 * Reads all statistics of the specified facility
+	 * Returns all statistics for the specified facility
 	 * 
 	 * @param facility facility
-	 * @return stats map or null if not read
+	 * @return list of statistics
 	 */
-	public Map<String,Object> getData(String facility) {
-		Map<String,Object> facilityData = m_data.get(facility);
-		return facilityData==null ? null : Collections.unmodifiableMap(facilityData);
+	public Iterable<Pair<String,Object>> statsForFacility(String facility) {
+		return statsForFacility(facility, (String) null);
 	}
-
+	
 	/**
-	 * Method to check if a stats value has been read for a facility
+	 * Returns all statistics for the specified facility and stat name
 	 * 
 	 * @param facility facility
-	 * @param statName name of statistic
-	 * @return true if value exists
+	 * @param statName stat name
+	 * @return list of statistics
 	 */
-	public boolean hasData(String facility, String statName) {
-		Map<String,Object> facilityData = m_data.get(facility);
-		if (facilityData!=null) {
-			return facilityData.containsKey(statName);
+	public Iterable<Pair<String,Object>> statsForFacility(String facility, String statName) {
+		List<Pair<String,Object>> stats = m_data.get(facility);
+		if (stats!=null) {
+			if (statName==null) {
+				return stats;
+			}
+			else {
+				List<Pair<String,Object>> filteredStats = new ArrayList<Pair<String,Object>>();
+				for (Pair<String,Object> currEntry : stats) {
+					if (statName.equals(currEntry.getValue1())) {
+						filteredStats.add(currEntry);
+					}
+				}
+				return filteredStats;
+			}
 		}
-		return false;
+		else {
+			return Collections.emptyList();
+		}
 	}
 
 	/**
@@ -311,10 +428,10 @@ public class NotesStatistics {
 	 * @param statName name of statistic
 	 * @return value or null if not read
 	 */
-	public Object getData(String facility, String statName) {
-		Map<String,Object> facilityData = m_data.get(facility);
-		if (facilityData!=null) {
-			return facilityData.get(statName);
+	public Object getFirstStatForFacility(String facility, String statName) {
+		List<Pair<String,Object>> stats = m_data.get(facility);
+		if (stats!=null && !stats.isEmpty()) {
+			return stats.get(0).getValue2();
 		}
 		return null;
 	}
@@ -323,22 +440,32 @@ public class NotesStatistics {
 	public String toString() {
 		if (m_toString==null) {
 			StringBuilder sb = new StringBuilder();
-			for (Entry<String,Map<String,Object>> currFacitityStatsEntry : m_data.entrySet()) {
+			for (Entry<String,List<Pair<String,Object>>> currFacitityStatsEntry : m_data.entrySet()) {
 				String currFacility = currFacitityStatsEntry.getKey();
-				Map<String,Object> currFacilityStats = currFacitityStatsEntry.getValue();
+				List<Pair<String,Object>> currFacilityStats = currFacitityStatsEntry.getValue();
 				
-				if (sb.length()>0) {
-					sb.append("\n\n");
-				}
-				sb.append(currFacility).append("\n");
-				sb.append(StringUtil.repeat('=', currFacility.length()));
-				sb.append("\n\n");
-				
-				for (Entry<String,Object> currStatEntry : currFacilityStats.entrySet()) {
-					String currStatName = currStatEntry.getKey();
-					Object currStatValue = currStatEntry.getValue();
+				for (Pair<String,Object> currStatEntry : currFacilityStats) {
+					String currStatName = currStatEntry.getValue1();
+					Object currStatValue = currStatEntry.getValue2();
 					
-					sb.append(currStatName).append(":" ).append(currStatValue).append("\n");
+					sb.append(currFacility).append(".").append(currStatName).append("\t");
+					if (currStatValue instanceof Double) {
+						String dblAsStr = String.format("%.12f",((Double)currStatValue));
+						while (dblAsStr.endsWith("0")) {
+							dblAsStr = dblAsStr.substring(0,dblAsStr.length()-1);
+						}
+						if (dblAsStr.endsWith(",")) {
+							dblAsStr = dblAsStr.substring(0, dblAsStr.length()-1);
+						}
+						if (dblAsStr.endsWith(".")) {
+							dblAsStr = dblAsStr.substring(0, dblAsStr.length()-1);
+						}
+						sb.append(dblAsStr);
+					}
+					else {
+						sb.append(currStatValue);
+					}
+					sb.append("\n");
 				}
 			}
 			m_toString = sb.toString();

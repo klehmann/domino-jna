@@ -1175,5 +1175,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	
 	public native short NSFRemoteConsole(Memory ServerName, Memory ConsoleCommand, IntByReference hResponseText);
 	
+	public native short NSFGetServerStats(Memory serverName, Memory facility, Memory statName, IntByReference rethTable,
+			IntByReference retTableSize);
 	
 }

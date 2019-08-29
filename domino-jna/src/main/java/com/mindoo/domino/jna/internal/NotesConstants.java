@@ -499,6 +499,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	public static final short OS_TRANSLATE_UNICODE_TO_LMBCS = 23;
 	public static final short OS_TRANSLATE_UTF8_TO_LMBCS = 24;
 
+	public static final int MAXSPRINTF = 256;
 	public static final int MAXPATH = 256;
 	public static final short MAXUSERNAME	= 256;			/* Maximum user name */
 	
