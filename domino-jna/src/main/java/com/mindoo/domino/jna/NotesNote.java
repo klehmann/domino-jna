@@ -4817,9 +4817,17 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	public enum HtmlConvertOption {
+		/** Forces all sections to be expanded, regardless of their expansion in the Notes® rich text fields. */
 		ForceSectionExpand,
+		/** Forces alternate formatting of tables with tabbed sections.<br>
+		 * All of the tabs are displayed at the same time, one below the other, with the tab labels included as headers. */
 		RowAtATimeTableAlt,
-		ForceOutlineExpand;
+		/** Forces all outlines to be expanded, regardless of their expansion in the Notes rich text. */
+		ForceOutlineExpand,
+		/** Disables passthru HTML, treating the HTML as plain text. */
+		DisablePassThruHTML,
+		/** Preserves Notes intraline whitespace (spaces between characters). */
+		TextExactSpacing;
 		
 		public static String[] toStringArray(EnumSet<HtmlConvertOption> options) {
 			List<String> optionsAsStrList = new ArrayList<String>(options.size());
