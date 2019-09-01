@@ -4827,7 +4827,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		/** Disables passthru HTML, treating the HTML as plain text. */
 		DisablePassThruHTML,
 		/** Preserves Notes intraline whitespace (spaces between characters). */
-		TextExactSpacing;
+		TextExactSpacing,
+		/** use styles instead of <FONT> tags */
+		FontConversion,
+		/** enable new code for better representation of indented lists */
+		ListFidelity;
 		
 		public static String[] toStringArray(EnumSet<HtmlConvertOption> options) {
 			List<String> optionsAsStrList = new ArrayList<String>(options.size());
