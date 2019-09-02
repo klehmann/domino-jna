@@ -84,6 +84,7 @@ public class NotesStatistics {
 	public static final String STATPKG_LOTUSSCRIPT = "LotusScript";
 	/** Used by DBMaintTool (in compact dir) */
 	public static final String STATPKG_DBMT = "DBMT";
+	public static final String STATPKG_HTTP = "HTTP";
 
 	public List<String> ALL_FACILITIES = Arrays.asList(
 			STATPKG_OS,
@@ -122,7 +123,8 @@ public class NotesStatistics {
 			STATPKG_FA,
 			STATPKG_DAOS,
 			STATPKG_LOTUSSCRIPT,
-			STATPKG_DBMT
+			STATPKG_DBMT,
+			STATPKG_HTTP
 			);
 	
 	/**
