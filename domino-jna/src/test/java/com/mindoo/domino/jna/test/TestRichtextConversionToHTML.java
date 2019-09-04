@@ -117,14 +117,14 @@ public class TestRichtextConversionToHTML extends BaseJNATestClass {
 					}
 				}
 				
-				//convert the Body item to HTML format
 				IHtmlConversionResult convResult;
 				if (itemName==null) {
+					//convert the specified item to HTML format
 					convResult = note.convertNoteToHtml(convOptions);
 				}
 				else {
+					//convert the whole note with its form to HTML format
 					convResult = note.convertItemToHtml(itemName, convOptions);
-					
 				}
 
 				//get body content as HTML:
