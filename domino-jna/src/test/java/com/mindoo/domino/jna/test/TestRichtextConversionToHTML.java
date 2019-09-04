@@ -201,6 +201,11 @@ public class TestRichtextConversionToHTML extends BaseJNATestClass {
 					}
 				}
 				
+				if (!bodyAsHTML.startsWith("<html")) {
+					//add a HTML header to define that the file was written with UTF-8 encoding
+					bodyAsHTML = "<html><head><meta charset=\"utf-8\"></head><body>" + bodyAsHTML + "</body></html>";
+				}
+				
 				//as last step, write the modified HTML content to disk
 				FileOutputStream fBodyOut = new FileOutputStream(bodyHtmlFile);
 				try {
