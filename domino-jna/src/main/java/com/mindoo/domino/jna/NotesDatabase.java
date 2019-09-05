@@ -7,6 +7,7 @@ import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
@@ -1066,7 +1067,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
+	public NotesCollection openCollectionWithExternalData(NotesDatabase dataDb, int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
 		checkHandle();
 		
 		Memory viewUNID = new Memory(16);
@@ -1462,6 +1463,39 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public NotesCollection openDesignCollection() {
 		NotesCollection col = openCollection(NotesConstants.NOTE_ID_SPECIAL | NotesConstants.NOTE_CLASS_DESIGN, null);
 		return col;
+	}
+	
+	/**
+	 * Returns basic information about all views in the database, read from
+	 * the design collection.
+	 * 
+	 * @return view info
+	 */
+	public List<NotesCollectionSummary> getAllCollections() {
+		NotesCollection designCol = openDesignCollection();
+
+		List<NotesCollectionSummary> collections = designCol.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT),
+				Integer.MAX_VALUE, EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID, ReadMask.NOTECLASS),
+				new NotesCollection.ViewLookupCallback<List<NotesCollectionSummary>>() {
+
+			@Override
+			public List<NotesCollectionSummary> startingLookup() {
+				return new ArrayList<NotesCollectionSummary>();
+			}
+
+			@Override
+			public Action entryRead(List<NotesCollectionSummary> result, NotesViewEntryData entryData) {
+				result.add(new NotesCollectionSummary(entryData));
+				return Action.Continue;
+			}
+
+			@Override
+			public List<NotesCollectionSummary> lookupDone(List<NotesCollectionSummary> result) {
+				return result;
+			}
+
+		});
+		return collections;
 	}
 	
 	/**
