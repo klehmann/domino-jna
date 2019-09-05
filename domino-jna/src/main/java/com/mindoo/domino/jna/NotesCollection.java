@@ -3166,31 +3166,30 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		//read view columns
 		List<Object> viewFormatList = viewNote.getItemValue("$VIEWFORMAT");
-		if (!(viewFormatList!=null && !viewFormatList.isEmpty()))
-			throw new AssertionError("View note with UNID "+m_viewUNID+" has item $VIEWFORMAT");
-		
-		NotesViewFormat format = (NotesViewFormat) viewFormatList.get(0);
-		m_viewFormat = format;
-		List<NotesViewColumn> columns = format.getColumns();
-		
-		for (int i=0; i<columns.size(); i++) {
-			NotesViewColumn currCol = columns.get(i);
-			String currItemName = currCol.getItemName();
-			String currItemNameLC = currItemName.toLowerCase(Locale.ENGLISH);
-			String currTitle = currCol.getTitle();
-			String currTitleLC = currTitle.toLowerCase(Locale.ENGLISH);
+		if (viewFormatList!=null && !viewFormatList.isEmpty()) {
+			NotesViewFormat format = (NotesViewFormat) viewFormatList.get(0);
+			m_viewFormat = format;
+			List<NotesViewColumn> columns = format.getColumns();
 			
-			int currColumnValuesIndex = currCol.getColumnValuesIndex();
-			
-			m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
-			m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
+			for (int i=0; i<columns.size(); i++) {
+				NotesViewColumn currCol = columns.get(i);
+				String currItemName = currCol.getItemName();
+				String currItemNameLC = currItemName.toLowerCase(Locale.ENGLISH);
+				String currTitle = currCol.getTitle();
+				String currTitleLC = currTitle.toLowerCase(Locale.ENGLISH);
+				
+				int currColumnValuesIndex = currCol.getColumnValuesIndex();
+				
+				m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
+				m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
 
-			m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
-			m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
-			m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
+				m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
+				m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
+				m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
 
-			boolean isCategory = currCol.isCategory();
-			m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
+				boolean isCategory = currCol.isCategory();
+				m_columnIsCategoryByIndex.put(currColumnValuesIndex, isCategory);
+			}
 		}
 	}
 	
