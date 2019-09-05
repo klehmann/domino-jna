@@ -1497,6 +1497,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 
 		});
+		designCol.recycle();
 		return collections;
 	}
 	
