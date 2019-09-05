@@ -517,8 +517,7 @@ public class NotesViewEntryData {
 	 */
 	public Iterator<String> getColumnNames() {
 		if ((m_parentCollection.getNoteId() & NotesConstants.NOTE_ID_SPECIAL) == NotesConstants.NOTE_ID_SPECIAL) {
-			//special collection (e.g. design collection) where we cannot use the legacy API to read
-			//the column names
+			//special collection (e.g. design collection) where we cannot read the column names from the design element
 			if (m_summaryData!=null) {
 				//if we have used ReadMask.SUMMARY to read the data, we can take the summary map keys
 				return m_summaryData.keySet().iterator();
