@@ -1485,7 +1485,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 			@Override
 			public Action entryRead(List<NotesCollectionSummary> result, NotesViewEntryData entryData) {
-				result.add(new NotesCollectionSummary(entryData));
+				if (entryData.getNoteClass() == 8) { // NoteClass.VIEW
+					result.add(new NotesCollectionSummary(entryData));
+				}
 				return Action.Continue;
 			}
 
