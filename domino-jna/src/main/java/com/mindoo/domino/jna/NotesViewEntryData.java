@@ -5,6 +5,7 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -561,6 +562,15 @@ public class NotesViewEntryData {
 				String currColName = colNames.next();
 				Object currColValue = get(currColName);
 				
+				if (isPreferNotesTimeDates()) {
+					if (currColValue instanceof Calendar) {
+						currColValue = new NotesTimeDate((Calendar) currColValue);
+					}
+					else if (currColValue instanceof Date) {
+						currColValue = new NotesTimeDate((Date) currColValue);
+					}
+				}
+				
 				data.put(currColName, currColValue);
 			}
 			m_convertedDataRef = new SoftReference<Map<String,Object>>(data);
@@ -940,6 +950,12 @@ public class NotesViewEntryData {
 		Object val = get(columnName, false);
 		if (val instanceof NotesTimeDate) {
 			return (NotesTimeDate) val;
+		}
+		else if (val instanceof Calendar) {
+			return new NotesTimeDate((Calendar) val);
+		}
+		else if (val instanceof Date) {
+			return new NotesTimeDate((Date) val);
 		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
