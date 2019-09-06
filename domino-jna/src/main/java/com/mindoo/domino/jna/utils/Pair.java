@@ -63,6 +63,11 @@ public class Pair<V1,V2> {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "Pair [value1=" + value1 + ", value2=" + value2 + "]";
+	}
 	
 	
 }
