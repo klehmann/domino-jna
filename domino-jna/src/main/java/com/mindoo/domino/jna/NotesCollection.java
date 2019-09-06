@@ -33,6 +33,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -784,7 +785,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param options FTSearch flags
 	 * @return search result
 	 */
-	public SearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options) {
+	public NotesFTSearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options) {
 		return ftSearch(query, limit, options, null);
 	}
 	
@@ -799,7 +800,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param filterIDTable optional ID table to refine the search
 	 * @return search result
 	 */
-	public SearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
+	public NotesFTSearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
 		clearSearch();
 		
 		if (limit<0 || limit>65535)
@@ -821,6 +822,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 		IntByReference retNumDocs = new IntByReference();
+		IntByReference retNumHits = new IntByReference();
 		
 		//always filter view data
 		EnumSet<FTSearch> optionsWithView = options.clone();
@@ -833,9 +835,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 		
 		short limitShort = (short) (limit & 0xffff);
 		
+		List<String> highlightStrings = null;
+		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethResults = new LongByReference();
-			result = NotesNativeAPI64.get().FTSearch(
+			LongByReference rethStrings = new LongByReference();
+			
+			int start = 0;
+			int count = 0;
+			short arg = 0;
+			long hNames = 0;
+			
+			long t0=System.currentTimeMillis();
+			
+			result = NotesNativeAPI64.get().FTSearchExt(
 					m_hDB64,
 					m_activeFTSearchHandle64,
 					m_hCollection64,
@@ -844,29 +857,90 @@ public class NotesCollection implements IRecyclableNotesObject {
 					limitShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle64(),
 					retNumDocs,
-					new Memory(Pointer.SIZE), // Reserved field
-					rethResults);
+					rethStrings,
+					rethResults,
+					retNumHits,
+					start,
+					count,
+					arg,
+					hNames);
+			long t1=System.currentTimeMillis();
+			
 			if (result == 3874) {
 				//handle special error code: no documents found
-				return new SearchResult(null, 0);
+				return new NotesFTSearchResult(null, 0, 0, null, null, t1-t0);
 			}
 			NotesErrorUtils.checkResult(result);
 			
+			if (optionsWithView.contains(FTSearch.EXT_RET_HL)) {
+				//decode highlights
+				long hStrings = rethStrings.getValue();
+				if (hStrings!=0) {
+					Pointer ptr = Mem64.OSLockObject(hStrings);
+					try {
+						short varLength = ptr.getShort(0);
+						ptr = ptr.share(2);
+						short flags = ptr.getShort(0);
+						ptr = ptr.share(2);
+						
+						String strHighlights = NotesStringUtils.fromLMBCS(ptr, (int) (varLength & 0xffff));
+						
+						highlightStrings = new ArrayList<String>();
+						StringTokenizerExt st = new StringTokenizerExt(strHighlights, "\n");
+						while (st.hasMoreTokens()) {
+							String currToken = st.nextToken();
+							if (!StringUtil.isEmpty(currToken)) {
+								highlightStrings.add(currToken);
+							}
+						}
+					}
+					finally {
+						Mem64.OSUnlockObject(hStrings);
+						Mem64.OSMemFree(hStrings);
+					}
+				}
+			}
+
 			NotesIDTable resultsIdTable = null;
+			List<NoteIdWithScore> matchesWithScore = null;
 
-			long hResults = rethResults.getValue();
-			if (hResults!=0) {
-				resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+			if (optionsWithView.contains(FTSearch.RET_IDTABLE)) {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+				}
+				if (resultsIdTable==null) {
+					resultsIdTable = new NotesIDTable();
+				}
 			}
-			if (options.contains(FTSearch.RET_IDTABLE) && resultsIdTable==null) {
-				resultsIdTable = new NotesIDTable();
+			else {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					Pointer ptr = Mem64.OSLockObject(hResults);
+					try {
+						matchesWithScore = FTSearchResultsDecoder.decodeNoteIdsWithStoreSearchResult(ptr, optionsWithView);
+					}
+					finally {
+						Mem64.OSUnlockObject(hResults);
+						Mem64.OSMemFree(hResults);
+					}
+				}
 			}
-
-			return new SearchResult(resultsIdTable, retNumDocs.getValue());
+			
+			return new NotesFTSearchResult(resultsIdTable, retNumDocs.getValue(), retNumHits.getValue(), highlightStrings, matchesWithScore,
+					t1-t0);
 		}
 		else {
 			IntByReference rethResults = new IntByReference();
-			result = NotesNativeAPI32.get().FTSearch(
+			IntByReference rethStrings = new IntByReference();
+			int start = 0;
+			int count = 0;
+			short arg = 0;
+			int hNames = 0;
+			
+			long t0=System.currentTimeMillis();
+			
+			result = NotesNativeAPI32.get().FTSearchExt(
 					m_hDB32,
 					m_activeFTSearchHandle32,
 					m_hCollection32,
@@ -875,51 +949,79 @@ public class NotesCollection implements IRecyclableNotesObject {
 					limitShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle32(),
 					retNumDocs,
-					new Memory(Pointer.SIZE), // Reserved field
-					rethResults);
+					rethStrings,
+					rethResults,
+					retNumHits,
+					start,
+					count,
+					arg,
+					hNames);
+			long t1=System.currentTimeMillis();
 			
 			if (result == 3874) {
 				//handle special error code: no documents found
-				return new SearchResult(null, 0);
+				return new NotesFTSearchResult(null, 0, 0, null, null, t1-t0);
 			}
 			NotesErrorUtils.checkResult(result);
 			
-			NotesIDTable resultsIdTable = null;
-			
-			int hResults = rethResults.getValue();
-			if (hResults!=0) {
-				resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+			if (optionsWithView.contains(FTSearch.EXT_RET_HL)) {
+				//decode highlights
+				long hStrings = rethStrings.getValue();
+				if (hStrings!=0) {
+					Pointer ptr = Mem64.OSLockObject(hStrings);
+					try {
+						short varLength = ptr.getShort(0);
+						ptr = ptr.share(2);
+						short flags = ptr.getShort(0);
+						ptr = ptr.share(2);
+						
+						String strHighlights = NotesStringUtils.fromLMBCS(ptr, (int) (varLength & 0xffff));
+						
+						highlightStrings = new ArrayList<String>();
+						StringTokenizerExt st = new StringTokenizerExt(strHighlights, "\n");
+						while (st.hasMoreTokens()) {
+							String currToken = st.nextToken();
+							if (!StringUtil.isEmpty(currToken)) {
+								highlightStrings.add(currToken);
+							}
+						}
+					}
+					finally {
+						Mem64.OSUnlockObject(hStrings);
+						Mem64.OSMemFree(hStrings);
+					}
+				}
 			}
-			if (options.contains(FTSearch.RET_IDTABLE) && resultsIdTable==null) {
-				resultsIdTable = new NotesIDTable();
+			
+			NotesIDTable resultsIdTable = null;
+			List<NoteIdWithScore> matchesWithScore = null;
+
+			if (optionsWithView.contains(FTSearch.RET_IDTABLE)) {
+				int hResults = rethResults.getValue();
+				if (hResults!=0) {
+					resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+				}
+				if (resultsIdTable==null) {
+					resultsIdTable = new NotesIDTable();
+				}
+			}
+			else {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					Pointer ptr = Mem64.OSLockObject(hResults);
+					try {
+						matchesWithScore = FTSearchResultsDecoder.decodeNoteIdsWithStoreSearchResult(ptr, optionsWithView);
+					}
+					finally {
+						Mem64.OSUnlockObject(hResults);
+						Mem64.OSMemFree(hResults);
+					}
+				}
 			}
 
-			return new SearchResult(resultsIdTable, retNumDocs.getValue());
+			return new NotesFTSearchResult(resultsIdTable, retNumDocs.getValue(), retNumHits.getValue(), highlightStrings, matchesWithScore,
+					t1-t0);
 		}
-	}
-	
-	/**
-	 * Container for a FT search result
-	 * 
-	 * @author Karsten Lehmann
-	 */
-	public static class SearchResult {
-		private NotesIDTable m_matchesIDTable;
-		private int m_numDocs;
-		
-		public SearchResult(NotesIDTable matchesIDTable, int numDocs) {
-			m_matchesIDTable = matchesIDTable;
-			m_numDocs = numDocs;
-		}
-		
-		public int getNumDocs() {
-			return m_numDocs;
-		}
-		
-		public NotesIDTable getMatches() {
-			return m_matchesIDTable;
-		}
-		
 	}
 	
 	/**

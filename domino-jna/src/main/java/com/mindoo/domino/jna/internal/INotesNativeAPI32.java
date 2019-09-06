@@ -793,6 +793,25 @@ public interface INotesNativeAPI32 extends Library {
 			Memory reserved,
 			IntByReference rethResults);
 
+	@UndocumentedAPI
+	public short FTSearchExt(
+			int hDB,
+			IntByReference phSearch,
+			int hColl,
+			Memory query,
+			int options,
+			short limit,
+			int hRefineIDTable,
+			IntByReference retNumDocs,
+			IntByReference rethStrings,
+			IntByReference rethResults,
+			IntByReference retNumHits,
+			int start,
+			int count,
+			short arg,
+			int hNames
+			);
+	
 	public short NSFFormulaCompile(
 			Memory FormulaName,
 			short FormulaNameLength,

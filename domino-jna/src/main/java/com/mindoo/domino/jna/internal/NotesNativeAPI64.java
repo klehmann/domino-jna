@@ -694,6 +694,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			Memory reserved,
 			LongByReference rethResults);
 
+	public native short FTSearchExt(long hDB, LongByReference phSearch, long hColl, Memory query, int options, short limit,
+			long hRefineIDTable, IntByReference retNumDocs, LongByReference rethStrings, LongByReference rethResults,
+			IntByReference retNumHits, int start, int count, short arg, long hNames);
+	
 	public native short NSFFormulaCompile(
 			Memory FormulaName,
 			short FormulaNameLength,

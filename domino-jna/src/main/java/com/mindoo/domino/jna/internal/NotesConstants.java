@@ -3066,4 +3066,13 @@ This allows an Editor to assume some Designer-level access */
 	/** Statistic is resetable to 0 */
 	public short ST_RESETABLE = 0x0003;
 
+	/*	Define search results data structure */
+
+	/** Array of scores follows */
+	public short FT_RESULTS_SCORES = 0x0001;
+	/** Search results are series of FT_SEARCH_RESULT_ENTRY structures */
+	public short FT_RESULTS_EXPANDED = 0x0002;
+	/** Url expanded format returned by FTSearchExt only */
+	public short FT_RESULTS_URL = 0x0004;
+
 }

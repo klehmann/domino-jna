@@ -23,7 +23,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.mindoo.domino.jna.NotesCollection.SearchResult;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback.Action;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
@@ -53,6 +52,7 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
 import com.mindoo.domino.jna.internal.INotesNativeAPI32;
 import com.mindoo.domino.jna.internal.INotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Mem32;
@@ -91,6 +91,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
+import com.mindoo.domino.jna.utils.StringTokenizerExt;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -1199,21 +1200,47 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Performance a fulltext search in the database
+	 * Performs a fulltext search in the database
 	 * 
 	 * @param query fulltext query
 	 * @param limit Maximum number of documents to return.  Use 0 to return the maximum number of results for the search
 	 * @param filterIDTable optional ID table to further refine the search.  Use null if this is not required.
 	 * @return search result
 	 */
-	public SearchResult ftSearch(String query, short limit, NotesIDTable filterIDTable) {
-		checkHandle();
-		
+	public NotesFTSearchResult ftSearch(String query, int limit, NotesIDTable filterIDTable) {
+		//always return IDTable for database wide searches
 		EnumSet<FTSearch> searchOptions = EnumSet.of(FTSearch.RET_IDTABLE);
+		return ftSearchExt(query, limit, searchOptions, filterIDTable, 0, 0);
+	}
+	
+	/**
+	 * Performs a fulltext search in the database with advanced options.<br>
+	 * FTSearchExt is a superset of {@link #ftSearch(String, int, NotesIDTable)}.
+	 * 
+	 * @param query fulltext query
+	 * @param limit Maximum number of documents to return (max. 65535). Use 0 to return the maximum number of results for the search
+	 * @param filterIDTable optional ID table to further refine the search.  Use null if this is not required.
+	 * @param start the starting document number for the paged result. For the non-paged result, set this item to 0. For the paged result, set this item to a non-zero number.
+	 * @param count number of documents to return for the paged result.
+	 * @param arg paged results additional argument (not sure what this means)
+	 * @return search result
+	 */
+	public NotesFTSearchResult ftSearchExt(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable, int start, int count) {
+		checkHandle();
+
+		if (limit<0 || limit>65535)
+			throw new IllegalArgumentException("Limit must be between 0 and 65535 (WORD datatype in C API)");
+
+		EnumSet<FTSearch> searchOptionsToUse = options.clone();
 		if (filterIDTable!=null) {
-			searchOptions.add(FTSearch.REFINE);
+			//automatically set refine option if id table is not null
+			searchOptionsToUse.add(FTSearch.REFINE);
 		}
-		int searchOptionsBitMask = FTSearch.toBitMask(searchOptions);
+		int searchOptionsBitMask = FTSearch.toBitMask(searchOptionsToUse);
+		
+		short limitAsShort = limit>65535 ? (short) 0xffff : ((short) (limit & 0xffff));
+		
+		List<String> highlightStrings = null;
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethSearch = new LongByReference();
@@ -1225,28 +1252,89 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			IntByReference retNumDocs = new IntByReference();
 			LongByReference rethResults = new LongByReference();
 			
-			result = NotesNativeAPI64.get().FTSearch(
-					m_hDB64,
-					rethSearch,
-					0,
-					queryLMBCS,
-					searchOptionsBitMask,
-					limit,
+			LongByReference rethStrings = new LongByReference();
+			IntByReference retNumHits = new IntByReference();
+			short arg = 0;
+			long hNames = 0;
+			
+			long t0=System.currentTimeMillis();
+			
+			result = NotesNativeAPI64.get().FTSearchExt(m_hDB64, 
+					rethSearch, 0,
+					queryLMBCS, searchOptionsBitMask,
+					limitAsShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle64(),
-					retNumDocs,
-					new Memory(Pointer.SIZE), // Reserved field
-					rethResults);
+							retNumDocs, rethStrings, rethResults, retNumHits, start, count, arg, hNames);
+			
+			long t1=System.currentTimeMillis();
+
 			if (result==3874) { //no documents found
 				result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
 				NotesErrorUtils.checkResult(result);
-				return new SearchResult(new NotesIDTable(), 0);
+				return new NotesFTSearchResult(new NotesIDTable(), 0, 0, null, null, t1-t0);
 			}
 			NotesErrorUtils.checkResult(result);
-
+			
+			if (searchOptionsToUse.contains(FTSearch.EXT_RET_HL)) {
+				//decode highlights
+				long hStrings = rethStrings.getValue();
+				if (hStrings!=0) {
+					Pointer ptr = Mem64.OSLockObject(hStrings);
+					try {
+						short varLength = ptr.getShort(0);
+						ptr = ptr.share(2);
+						short flags = ptr.getShort(0);
+						ptr = ptr.share(2);
+						
+						String strHighlights = NotesStringUtils.fromLMBCS(ptr, (int) (varLength & 0xffff));
+						
+						highlightStrings = new ArrayList<String>();
+						StringTokenizerExt st = new StringTokenizerExt(strHighlights, "\n");
+						while (st.hasMoreTokens()) {
+							String currToken = st.nextToken();
+							if (!StringUtil.isEmpty(currToken)) {
+								highlightStrings.add(currToken);
+							}
+						}
+					}
+					finally {
+						Mem64.OSUnlockObject(hStrings);
+						Mem64.OSMemFree(hStrings);
+					}
+				}
+			}
+			
+			NotesIDTable resultsIdTable = null;
+			List<NoteIdWithScore> matchesWithScore = null;
+			
+			if (searchOptionsToUse.contains(FTSearch.RET_IDTABLE)) {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+				}
+				if (resultsIdTable==null) {
+					resultsIdTable = new NotesIDTable();
+				}
+			}
+			else {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					Pointer ptr = Mem64.OSLockObject(hResults);
+					try {
+						matchesWithScore = FTSearchResultsDecoder.decodeNoteIdsWithStoreSearchResult(ptr, searchOptionsToUse);
+					}
+					finally {
+						Mem64.OSUnlockObject(hResults);
+						Mem64.OSMemFree(hResults);
+					}
+				}
+			}
+			
 			result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
-			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
+
+			return new NotesFTSearchResult(resultsIdTable, retNumDocs.getValue(), retNumHits.getValue(), highlightStrings,
+					matchesWithScore, t1-t0);
 		}
 		else {
 			IntByReference rethSearch = new IntByReference();
@@ -1257,29 +1345,97 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			Memory queryLMBCS = NotesStringUtils.toLMBCS(query, true);
 			IntByReference retNumDocs = new IntByReference();
 			IntByReference rethResults = new IntByReference();
-			
-			result = NotesNativeAPI32.get().FTSearch(
-					m_hDB32,
-					rethSearch,
-					0,
-					queryLMBCS,
-					searchOptionsBitMask,
-					limit,
+
+			IntByReference rethStrings = new IntByReference();
+			IntByReference retNumHits = new IntByReference();
+			short arg = 0;
+			int hNames = 0;
+
+			long t0=System.currentTimeMillis();
+			result = NotesNativeAPI32.get().FTSearchExt(m_hDB32, 
+					rethSearch, 0,
+					queryLMBCS, searchOptionsBitMask,
+					limitAsShort,
 					filterIDTable==null ? 0 : filterIDTable.getHandle32(),
-					retNumDocs,
-					new Memory(Pointer.SIZE), // Reserved field
-					rethResults);
+							retNumDocs, rethStrings, rethResults, retNumHits, start, count, arg, hNames);
+			long t1=System.currentTimeMillis();
+			
+			if (result==3874) { //no documents found
+				result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
+				NotesErrorUtils.checkResult(result);
+				return new NotesFTSearchResult(new NotesIDTable(), 0, 0, null, null, t1-t0);
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			if (searchOptionsToUse.contains(FTSearch.EXT_RET_HL)) {
+				//decode highlights
+				long hStrings = rethStrings.getValue();
+				if (hStrings!=0) {
+					Pointer ptr = Mem64.OSLockObject(hStrings);
+					try {
+						short varLength = ptr.getShort(0);
+						ptr = ptr.share(2);
+						short flags = ptr.getShort(0);
+						ptr = ptr.share(2);
+						
+						String strHighlights = NotesStringUtils.fromLMBCS(ptr, (int) (varLength & 0xffff));
+						System.out.println("Highlights: "+strHighlights);
+						
+						highlightStrings = new ArrayList<String>();
+						StringTokenizerExt st = new StringTokenizerExt(strHighlights, "\n");
+						while (st.hasMoreTokens()) {
+							String currToken = st.nextToken();
+							if (!StringUtil.isEmpty(currToken)) {
+								highlightStrings.add(currToken);
+							}
+						}
+					}
+					finally {
+						Mem64.OSUnlockObject(hStrings);
+						Mem64.OSMemFree(hStrings);
+					}
+				}
+			}
+			
 			if (result==3874) { //no documents found
 				result = NotesNativeAPI32.get().FTCloseSearch(rethSearch.getValue());
 				NotesErrorUtils.checkResult(result);
-				return new SearchResult(new NotesIDTable(), 0);
+				return new NotesFTSearchResult(new NotesIDTable(), 0, 0, null, null, t1-t0);
 			}
 			NotesErrorUtils.checkResult(result);
 
+			NotesIDTable resultsIdTable = null;
+			List<NoteIdWithScore> matchesWithScore = null;
+
+			if (searchOptionsToUse.contains(FTSearch.RET_IDTABLE)) {
+				int hResults = rethResults.getValue();
+				if (hResults!=0) {
+					resultsIdTable = new NotesIDTable(rethResults.getValue(), false);
+				}
+				if (resultsIdTable==null) {
+					resultsIdTable = new NotesIDTable();
+				}
+			}
+			else {
+				long hResults = rethResults.getValue();
+				if (hResults!=0) {
+					Pointer ptr = Mem64.OSLockObject(hResults);
+					try {
+						matchesWithScore = FTSearchResultsDecoder.decodeNoteIdsWithStoreSearchResult(ptr, searchOptionsToUse);
+					}
+					finally {
+						Mem64.OSUnlockObject(hResults);
+						Mem64.OSMemFree(hResults);
+					}
+				}
+			}
+			
 			result = NotesNativeAPI32.get().FTCloseSearch(rethSearch.getValue());
 			NotesErrorUtils.checkResult(result);
-			
-			return new SearchResult(rethResults.getValue()==0 ? null : new NotesIDTable(rethResults.getValue(), false), retNumDocs.getValue());
+
+
+			return new NotesFTSearchResult(resultsIdTable, retNumDocs.getValue(), retNumHits.getValue(), highlightStrings,
+					matchesWithScore, t1-t0);
 		}
 	}
 
