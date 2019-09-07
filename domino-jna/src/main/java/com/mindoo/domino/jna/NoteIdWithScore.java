@@ -25,7 +25,7 @@ public class NoteIdWithScore {
 
 	@Override
 	public String toString() {
-		return "NoteIdWithScore [m_noteId=" + m_noteId + ", m_score=" + m_score + "]";
+		return "NoteIdWithScore [noteId=" + m_noteId + ", score=" + m_score + "]";
 	}
 	
 }
