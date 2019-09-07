@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna;
 
 /**
- * Container for one FT search result entry, containing of a note id and the search score (or 0 if
+ * Container for one FT search result entry, containing a note id and the search score (or 0 if
  * no scores have been collected).
  * 
  * @author Karsten Lehmann
