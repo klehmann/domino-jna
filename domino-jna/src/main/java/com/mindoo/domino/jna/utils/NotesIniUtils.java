@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna.utils;
 
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.sun.jna.Memory;
 
@@ -103,6 +105,22 @@ public class NotesIniUtils {
 	}
 	
 	/**
+	 * Method to set a Domino or Notes environment variable to the value of the specified string.<br>
+	 * The specified environment variable can be existing or new.<br>
+	 * <br>
+	 * Domino or Notes environment variables are stored in the file notes.ini.
+	 * 
+	 * @param variableName variable name
+	 * @param value new value
+	 * @param isSoft only check hard list of variables that are not settable as we are using the "soft" level 
+	 */
+	public static void setEnvironmentString(String variableName, String value, boolean isSoft) {
+		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
+		Memory valueMem = NotesStringUtils.toLMBCS(value, true);
+		NotesNativeAPI.get().OSSetEnvironmentVariableExt(variableNameMem, valueMem, isSoft ? (short) 1 : (short) 0);
+	}
+	
+	/**
 	 * OSSetEnvironmentInt is used to set the value of a Domino or Notes environment variable to the
 	 * specified integer.<br>
 	 * The environment variable can be an existing or new one.
@@ -113,6 +131,12 @@ public class NotesIniUtils {
 	public static void setEnvironmentInt(String variableName, int value) {
 		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
 		NotesNativeAPI.get().OSSetEnvironmentInt(variableNameMem, value);
+	}
+	
+	public static void setEnvironmentTimeDate(String variableName, NotesTimeDate td) {
+		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
+		NotesTimeDateStruct tdStruct = td.getAdapter(NotesTimeDateStruct.class);
+		NotesNativeAPI.get().OSSetEnvironmentTIMEDATE(variableNameMem, tdStruct);
 	}
 	
 	/**

@@ -422,7 +422,9 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
 	public native long OSGetEnvironmentLong(Memory variableName);
 	public native void OSSetEnvironmentVariable(Memory variableName, Memory Value);
+	public native void OSSetEnvironmentVariableExt(Memory variableName, Memory Value, short isSoft);
 	public native void OSSetEnvironmentInt(Memory variableName, int Value);
+	public native void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
 	public native short OSGetEnvironmentSeqNo();
 	
 	public native short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);

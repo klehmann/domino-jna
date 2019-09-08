@@ -62,7 +62,11 @@ public interface INotesNativeAPI extends Library {
 	public short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
 	public long OSGetEnvironmentLong(Memory variableName);
 	public void OSSetEnvironmentVariable(Memory variableName, Memory Value);
+	@UndocumentedAPI
+	public void OSSetEnvironmentVariableExt (Memory variableName, Memory Value, short isSoft);
 	public void OSSetEnvironmentInt(Memory variableName, int Value);
+	@UndocumentedAPI
+	public void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
 	public short OSGetEnvironmentSeqNo();
 	
 	public short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
