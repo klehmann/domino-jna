@@ -1,9 +1,9 @@
 package com.mindoo.domino.jna.utils;
 
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Memory;
 
 /**
@@ -89,6 +89,25 @@ public class NotesIniUtils {
 		}
 	}
 
+	/**
+	 * Method to get the value of a Domino or Notes environment variable string as a {@link NotesTimeDate}.<br>
+	 * 
+	 * @param variableName variable name
+	 * @return value as {@link NotesTimeDate} or null if not found or value cannot be converted
+	 */
+	public static NotesTimeDate getEnvironmentTimeDate(String variableName) {
+		Memory variableNameMem = NotesStringUtils.toLMBCS(variableName, true);
+		NotesTimeDateStruct tdStruct = NotesTimeDateStruct.newInstance();
+		
+		short result = NotesNativeAPI.get().OSGetEnvironmentTIMEDATE(variableNameMem, tdStruct);
+		if (result==1) {
+			return new NotesTimeDate(tdStruct);
+		}
+		else {
+			return null;
+		}
+	}
+	
 	/**
 	 * Method to set a Domino or Notes environment variable to the value of the specified string.<br>
 	 * The specified environment variable can be existing or new.<br>

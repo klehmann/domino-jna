@@ -421,6 +421,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native void OSPathAddTrailingPathSep(Memory retPathName);
 	public native short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
 	public native long OSGetEnvironmentLong(Memory variableName);
+	public native short OSGetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct retTd);
 	public native void OSSetEnvironmentVariable(Memory variableName, Memory Value);
 	public native void OSSetEnvironmentVariableExt(Memory variableName, Memory Value, short isSoft);
 	public native void OSSetEnvironmentInt(Memory variableName, int Value);
