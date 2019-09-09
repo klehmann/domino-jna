@@ -152,7 +152,6 @@ public class NotesStatistics {
 	 * Statistics are identified by a Facility name (see {@link #STATPKG_OS} etc. for Domino facilities) and a statistic Name.<br>
 	 * 
 	 * @param server server
-	 * @param facility facility, e.g. {@link #STATPKG_NSF} or null for all
 	 * @return statistics formatted as string
 	 */
 	public static String retrieveRemoteStatisticsAsString(String server) {

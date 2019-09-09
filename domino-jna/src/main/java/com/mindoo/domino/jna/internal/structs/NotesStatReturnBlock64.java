@@ -80,6 +80,8 @@ public class NotesStatReturnBlock64 extends BaseStructure {
 
 	/**
 	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
+	 * 
+	 * @param peer pointer
 	 */
 	public NotesStatReturnBlock64(Pointer peer) {
 		super(peer);

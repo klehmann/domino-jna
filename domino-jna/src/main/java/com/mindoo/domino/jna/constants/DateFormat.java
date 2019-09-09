@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.constants;
 
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**

@@ -4828,7 +4828,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		DisablePassThruHTML,
 		/** Preserves Notes intraline whitespace (spaces between characters). */
 		TextExactSpacing,
-		/** use styles instead of <FONT> tags */
+		/** use styles instead of &lt;FONT&gt; tags */
 		FontConversion,
 		/** enable new code for better representation of indented lists */
 		ListFidelity;

@@ -1222,7 +1222,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param filterIDTable optional ID table to further refine the search.  Use null if this is not required.
 	 * @param start the starting document number for the paged result. For the non-paged result, set this item to 0. For the paged result, set this item to a non-zero number.
 	 * @param count number of documents to return for the paged result.
-	 * @param arg paged results additional argument (not sure what this means)
 	 * @return search result
 	 */
 	public NotesFTSearchResult ftSearchExt(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable, int start, int count) {
