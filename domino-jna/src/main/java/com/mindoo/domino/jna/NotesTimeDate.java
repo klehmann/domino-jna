@@ -387,6 +387,46 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	}
 	
 	/**
+	 * Changes the timezone of this {@link NotesTimeDate} while keeping the current date/time
+	 * 
+	 * @param tz new timezone
+	 */
+	public void setTimeZone(TimeZone tz) {
+		long zoneMask = 0;
+
+		//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
+		if (tz.useDaylightTime()) {
+			zoneMask |= 1l << 31;
+		}
+		
+		//Bit 30 (0x40000000) is set if the time zone is east of Greenwich mean time.
+		int tzOffsetSeconds = (int)(tz.getRawOffset() / 1000);
+		
+		if (tzOffsetSeconds>0) {
+			zoneMask |= 1l << 30;
+		}
+		
+		int tzOffsetHours = Math.abs(tzOffsetSeconds / (60*60));
+		
+		
+		//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean time
+		zoneMask |= ((long)tzOffsetHours) << 24;
+
+		//bits 29-28 contain the number of 15-minute intervals in the difference
+		
+		int tzOffsetFractionSeconds = tzOffsetSeconds - tzOffsetHours*60*60; //  tzOffset % 60;
+		int tzOffsetFractionMinutes = tzOffsetFractionSeconds % 60;
+		int tzOffsetFraction15MinuteIntervalls = tzOffsetFractionMinutes / 15;
+		zoneMask |= ((long)tzOffsetFraction15MinuteIntervalls) << 28;
+
+		m_innards[1] = m_innards[1] & 0xFFFFFF;
+		long newInnard1AsLong = m_innards[1];
+		newInnard1AsLong = (newInnard1AsLong & 0xFFFFFF) | zoneMask;
+		
+		m_innards[1] = (int) (newInnard1AsLong & 0xffffffff);
+	}
+	
+	/**
 	 * Sets the date part of this timedate to today and the time part to ALLDAY
 	 */
 	public void setToday() {
