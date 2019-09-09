@@ -3,16 +3,23 @@ package com.mindoo.domino.jna;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
+import com.mindoo.domino.jna.constants.DateFormat;
+import com.mindoo.domino.jna.constants.DateTimeStructure;
+import com.mindoo.domino.jna.constants.TimeFormat;
+import com.mindoo.domino.jna.constants.ZoneFormat;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.InnardsConverter;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.structs.NotesTFMTStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ShortByReference;
@@ -25,6 +32,8 @@ import com.sun.jna.ptr.ShortByReference;
 public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	private int[] m_innards = new int[2];
 	private NotesTimeDateStruct m_structReused;
+	
+	private TimeZone m_guessedTimezone;
 	
 	/**
 	 * Creates a new date/time object and sets it to the current date/time
@@ -354,6 +363,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 */
 	public void setNow() {
 		m_innards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, true);
+		m_guessedTimezone = null;
 	}
 
 	/**
@@ -365,6 +375,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(dt);
 		setTime(cal);
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -376,6 +387,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		if (innards.length!=2)
 			throw new IllegalArgumentException("Innards array must have 2 elements ("+innards.length+"!=2");
 		m_innards = innards.clone();
+		m_guessedTimezone = null;
 	}
 	/**
 	 * Changes the internally stored date/time value
@@ -384,6 +396,70 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 */
 	public void setTime(Calendar cal) {
 		m_innards = NotesDateTimeUtils.calendarToInnards(cal);
+		m_guessedTimezone = null;
+	}
+	
+	public TimeZone getTimeZone() {
+		if (m_guessedTimezone==null) {
+			if (m_innards[1] == NotesConstants.ANYDAY) {
+				return null;
+			}
+
+			long innard1Long = m_innards[1];
+
+			int tzSign;
+			if (((innard1Long >> 30) & 1 ) == 0) {
+				tzSign = -1;
+			}
+			else {
+				tzSign = 1;
+			}
+
+			//The high-order bit, bit 31 (0x80000000), is set if Daylight Savings Time is observed
+			boolean useDST;
+			if (((innard1Long >> 31) & 1 ) == 0) {
+				useDST = false;
+			}
+			else {
+				useDST = true;
+			}
+
+			int tzOffsetHours = (int) (innard1Long >> 24) & 0xF;
+			int tzOffsetFraction15MinuteIntervalls = (int) (innard1Long >> 28) & 0x3;
+
+			long rawOffsetMillis = tzSign * 1000 * (tzOffsetHours * 60 * 60 + 15*60*tzOffsetFraction15MinuteIntervalls);
+
+			if (rawOffsetMillis==0) {
+				m_guessedTimezone = TimeZone.getTimeZone("GMT");
+			}
+			else {
+				//not great, go through the JDK locales to find a matching one by comparing the 
+				//raw offset; grep its short id and try to load a TimeZone for it
+				//the purpose is to return short ids like "CET" instead of "Africa/Ceuta"
+				String[] timezonesWithOffset = TimeZone.getAvailableIDs((int) rawOffsetMillis);
+				for (String currTZID : timezonesWithOffset) {
+					TimeZone currTZ = TimeZone.getTimeZone(currTZID);
+					if (useDST==currTZ.useDaylightTime()) {
+						String tzShortId = currTZ.getDisplayName(false, TimeZone.SHORT, Locale.ENGLISH);
+						m_guessedTimezone = TimeZone.getTimeZone(tzShortId);
+						if ("GMT".equals(m_guessedTimezone.getID())) {
+							//parse failed
+							m_guessedTimezone = currTZ;
+						}
+						break;
+					}
+				}
+
+				if (m_guessedTimezone==null) {
+					String tzString = "GMT" + (tzSign < 0 ? "-" : "+") +
+							StringUtil.pad(Integer.toString(tzOffsetHours + (useDST ? 1 : 0)), 2, '0', false) + ":" +
+							StringUtil.pad(Integer.toString(15 * tzOffsetFraction15MinuteIntervalls), 2, '0', false);
+
+					m_guessedTimezone = TimeZone.getTimeZone(tzString);
+				}
+			}
+		}
+		return m_guessedTimezone;
 	}
 	
 	/**
@@ -405,9 +481,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		if (tzOffsetSeconds>0) {
 			zoneMask |= 1l << 30;
 		}
-		
 		int tzOffsetHours = Math.abs(tzOffsetSeconds / (60*60));
-		
 		
 		//Bits 27-24 contain the number of hours difference between the time zone and Greenwich mean time
 		zoneMask |= ((long)tzOffsetHours) << 24;
@@ -416,6 +490,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		
 		int tzOffsetFractionSeconds = tzOffsetSeconds - tzOffsetHours*60*60; //  tzOffset % 60;
 		int tzOffsetFractionMinutes = tzOffsetFractionSeconds % 60;
+		
 		int tzOffsetFraction15MinuteIntervalls = tzOffsetFractionMinutes / 15;
 		zoneMask |= ((long)tzOffsetFraction15MinuteIntervalls) << 28;
 
@@ -424,6 +499,8 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		newInnard1AsLong = (newInnard1AsLong & 0xFFFFFF) | zoneMask;
 		
 		m_innards[1] = (int) (newInnard1AsLong & 0xffffffff);
+		
+		m_guessedTimezone = tz;
 	}
 	
 	/**
@@ -431,6 +508,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 */
 	public void setToday() {
 		m_innards = NotesDateTimeUtils.calendarToInnards(Calendar.getInstance(), true, false);
+		m_guessedTimezone = null;
 	}
 
 	/**
@@ -440,6 +518,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.DATE, 1);
 		m_innards = NotesDateTimeUtils.calendarToInnards(cal, true, false);
+		m_guessedTimezone = null;
 	}
 
 	/**
@@ -452,6 +531,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		else {
 			m_innards = new int[] {NotesConstants.ALLDAY, NotesConstants.ANYDAY};
 		}
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -474,6 +554,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		else {
 			m_innards = new int[] {NotesConstants.ALLDAY, NotesConstants.ANYDAY};
 		}
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -585,6 +666,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MINIMUM, struct);
 		struct.read();
 		m_innards = struct.Innards.clone();
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -595,6 +677,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_MAXIMUM, struct);
 		struct.read();
 		m_innards = struct.Innards.clone();
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -605,6 +688,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		NotesNativeAPI.get().TimeConstant(NotesConstants.TIMEDATE_WILDCARD, struct);
 		struct.read();
 		m_innards = struct.Innards.clone();
+		m_guessedTimezone = null;
 	}
 	
 	/**
@@ -613,6 +697,19 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 * @return string with formatted timedate
 	 */
 	public String toString() {
+		return toString(DateFormat.FULL, TimeFormat.FULL, ZoneFormat.ALWAYS, DateTimeStructure.DATETIME);
+	}
+	
+	/**
+	 * Converts a {@link NotesTimeDate} to string with formatting options.
+	 * 
+	 * @param dFormat how to format the date part
+	 * @param tFormat how to format the time part
+	 * @param zFormat how to format the timezone
+	 * @param dtStructure overall structure of the result, e.g. {@link DateTimeStructure} for date only
+	 * @return string with formatted timedate
+	 */
+	public String toString(DateFormat dFormat, TimeFormat tFormat, ZoneFormat zFormat, DateTimeStructure dtStructure) {
 		NotesTimeDateStruct struct = lazilyCreateStruct();
 		
 		if (struct.Innards==null || struct.Innards.length<2)
@@ -622,24 +719,40 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		if (struct.Innards[0]==0 && struct.Innards[1]==0xffffff)
 			return "MAXIMUM";
 		
-		DisposableMemory retTextBuffer = new DisposableMemory(100);
 		
-		ShortByReference retTextLength = new ShortByReference();
-		short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
-		if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
-			return "";
+		NotesTFMTStruct tfmtStruct = NotesTFMTStruct.newInstance();
+		tfmtStruct.Date = dFormat==null ? NotesConstants.TDFMT_FULL : dFormat.getValue();
+		tfmtStruct.Time = tFormat==null ? NotesConstants.TTFMT_FULL : tFormat.getValue();
+		tfmtStruct.Zone = zFormat==null ? NotesConstants.TZFMT_ALWAYS : zFormat.getValue();
+		tfmtStruct.Structure = dtStructure==null ? NotesConstants.TSFMT_DATETIME : dtStructure.getValue();
+		tfmtStruct.write();
+		
+		String txt;
+		int outBufLength = 40;
+		DisposableMemory retTextBuffer = new DisposableMemory(outBufLength);
+		while (true) {
+			ShortByReference retTextLength = new ShortByReference();
+			short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, tfmtStruct.getPointer(), struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+			if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
+				return "";
+			}
+			if (result!=1033) { // "Output Buffer Overflow"
+				NotesErrorUtils.checkResult(result);
+			}
+
+			if (result==1033 || (retTextLength.getValue() >= retTextBuffer.size())) {
+				retTextBuffer.dispose();
+				outBufLength = outBufLength * 2;
+				retTextBuffer = new DisposableMemory(outBufLength);
+
+				continue;
+			}
+			else {
+				txt = NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
+				break;
+			}
 		}
-		NotesErrorUtils.checkResult(result);
 
-		if (retTextLength.getValue() > retTextBuffer.size()) {
-			retTextBuffer.dispose();
-			retTextBuffer = new DisposableMemory(retTextLength.getValue());
-
-			result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, null, struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
-			NotesErrorUtils.checkResult(result);
-		}
-
-		String txt = NotesStringUtils.fromLMBCS(retTextBuffer, retTextLength.getValue());
 		retTextBuffer.dispose();
 		return txt;
 	}

@@ -3074,5 +3074,46 @@ This allows an Editor to assume some Designer-level access */
 	public short FT_RESULTS_EXPANDED = 0x0002;
 	/** Url expanded format returned by FTSearchExt only */
 	public short FT_RESULTS_URL = 0x0004;
+	
+	/* year, month, and day */
+	public byte TDFMT_FULL = 0;
+	/* month and day, year if not this year */
+	public byte TDFMT_CPARTIAL = 1;
+	/* month and day */
+	public byte	TDFMT_PARTIAL = 2;
+	/* year and month */
+	public byte TDFMT_DPARTIAL = 3;
+	/* year(4digit), month, and day */
+	public byte TDFMT_FULL4 = 4;
+	/* month and day, year(4digit) if not this year */
+	public byte TDFMT_CPARTIAL4 = 5;
+	/* year(4digit) and month */
+	public byte TDFMT_DPARTIAL4 = 6;
+	/* hour, minute, and second */
+	public byte TTFMT_FULL = 0;
+	/* hour and minute */
+	public byte TTFMT_PARTIAL = 1;
+	/* hour */
+	public byte TTFMT_HOUR = 2;
+	/* hour, minute, second, hundredths (max resolution). This currently works only for time-to-text conversion! */
+	public byte TTFMT_FULL_MAX = 3;
+
+	/* all times converted to THIS zone*/ 
+	public byte TZFMT_NEVER = 0;
+	/* show only when outside this zone */
+	public byte TZFMT_SOMETIMES = 1;
+	/* show on all times, regardless */
+	public byte TZFMT_ALWAYS = 2;
+
+	/* DATE */
+	public byte TSFMT_DATE = 0;		
+	/* TIME */
+	public byte TSFMT_TIME = 1;		
+	/* DATE TIME */
+	public byte TSFMT_DATETIME = 2;	
+	/* DATE TIME or TIME Today or TIME Yesterday */
+	public byte TSFMT_CDATETIME = 3;
+	/* DATE, Today or Yesterday */ 
+	public byte TSFMT_CDATE = 4;
 
 }
