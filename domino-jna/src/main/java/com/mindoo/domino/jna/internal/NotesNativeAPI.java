@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.STATTRAVERSEPROC;
+import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -440,7 +441,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native int TimeExtractDate(Memory time);
 
 	public native short ConvertTIMEDATEToText(
-			Pointer intlFormat,
+			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			NotesTimeDateStruct inputTime,
 			Memory retTextBuffer,
@@ -629,5 +630,6 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
 
 	public native void StatTraverse(Memory Facility, Memory StatName, STATTRAVERSEPROC Routine, Pointer Context);
-	
+
+	public native void OSGetIntlSettings(IntlFormatStruct retIntlFormat, short bufferSize);
 }

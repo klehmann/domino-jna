@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.constants.OpenNote;
+import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
@@ -110,7 +111,8 @@ public interface NotesConstants {
 	public final int notesSearchMatch32Size = NotesSearchMatch32Struct.newInstance().size();
 	public final int notesSearchMatch64Size = NotesSearchMatch64Struct.newInstance().size();
 	public final int mimePartSize = NotesMIMEPartStruct.newInstance().size();
-
+	public final int intlFormatSize = IntlFormatStruct.newInstance().size();
+	
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
@@ -3116,4 +3118,22 @@ This allows an Editor to assume some Designer-level access */
 	/* DATE, Today or Yesterday */ 
 	public byte TSFMT_CDATE = 4;
 
+	//lengths of strings in INTLFORMAT
+	
+	public int ISTRMAX = 5;
+	public int YTSTRMAX = 32;
+
+	/*	International Environment Parameter Definitions */
+
+	public short CURRENCY_SUFFIX = 0x0001;
+	public short CURRENCY_SPACE = 0x0002;
+	public short NUMBER_LEADING_ZERO = 0x0004;
+	public short CLOCK_24_HOUR = 0x0008;
+	public short DAYLIGHT_SAVINGS = 0x0010;
+	public short DATE_MDY = 0x0020;
+	public short DATE_DMY = 0x0040;
+	public short DATE_YMD = 0x0080;
+	public short DATE_4DIGIT_YEAR = 0x0100;
+	public short TIME_AMPM_PREFIX = 0x0400;
+	public short DATE_ABBREV	 = 0x0800;
 }

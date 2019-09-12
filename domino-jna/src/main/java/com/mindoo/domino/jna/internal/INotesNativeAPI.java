@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.internal;
 
 import java.util.Map;
 
+import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -84,7 +85,7 @@ public interface INotesNativeAPI extends Library {
 	public int TimeExtractDate(Memory time);
 
 	public short ConvertTIMEDATEToText(
-			Pointer intlFormat,
+			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			NotesTimeDateStruct inputTime,
 			Memory retTextBuffer,
@@ -325,4 +326,9 @@ public interface INotesNativeAPI extends Library {
 			Memory StatName,
 			NotesCallbacks.STATTRAVERSEPROC  Routine,
 			Pointer Context);
+	
+	public void OSGetIntlSettings(
+			IntlFormatStruct retIntlFormat,
+			short bufferSize);
+	
 }

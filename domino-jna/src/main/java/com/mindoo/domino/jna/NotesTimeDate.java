@@ -15,6 +15,7 @@ import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.InnardsConverter;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTFMTStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
@@ -342,6 +343,17 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	}
 
 	/**
+	 * Returns a new {@link NotesTimeDate} with date only, set to yesterday
+	 * 
+	 * @return time date
+	 */
+	public static NotesTimeDate yesterday() {
+		NotesTimeDate td = new NotesTimeDate();
+		td.setYesterday();
+		return td;
+	}
+	
+	/**
 	 * Returns a new {@link NotesTimeDate} with date and time info, adjusted from the current date/time
 	 * 
 	 * @param year positive or negative value or 0 for no change
@@ -521,6 +533,16 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		m_guessedTimezone = null;
 	}
 
+	/**
+	 * Sets the date part of this timedate to yesterday and the time part to ALLDAY
+	 */
+	public void setYesterday() {
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DATE, -1);
+		m_innards = NotesDateTimeUtils.calendarToInnards(cal, true, false);
+		m_guessedTimezone = null;
+	}
+	
 	/**
 	 * Removes the time part of this timedate
 	 */
@@ -710,6 +732,20 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 * @return string with formatted timedate
 	 */
 	public String toString(DateFormat dFormat, TimeFormat tFormat, ZoneFormat zFormat, DateTimeStructure dtStructure) {
+		return toString((NotesIntlFormat) null, dFormat, tFormat, zFormat, dtStructure);
+	}
+	
+	/**
+	 * Converts a {@link NotesTimeDate} to string with formatting options.
+	 * 
+	 * @param intl the internationalization settings in effect. Can be <code>null</code>, in which case this function works with the client/server default settings for the duration of the call.
+	 * @param dFormat how to format the date part
+	 * @param tFormat how to format the time part
+	 * @param zFormat how to format the timezone
+	 * @param dtStructure overall structure of the result, e.g. {@link DateTimeStructure} for date only
+	 * @return string with formatted timedate
+	 */
+	public String toString(NotesIntlFormat intl, DateFormat dFormat, TimeFormat tFormat, ZoneFormat zFormat, DateTimeStructure dtStructure) {
 		NotesTimeDateStruct struct = lazilyCreateStruct();
 		
 		if (struct.Innards==null || struct.Innards.length<2)
@@ -720,6 +756,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 			return "MAXIMUM";
 		
 		
+		IntlFormatStruct intlStruct = intl==null ? null : intl.getAdapter(IntlFormatStruct.class);
 		NotesTFMTStruct tfmtStruct = NotesTFMTStruct.newInstance();
 		tfmtStruct.Date = dFormat==null ? NotesConstants.TDFMT_FULL : dFormat.getValue();
 		tfmtStruct.Time = tFormat==null ? NotesConstants.TTFMT_FULL : tFormat.getValue();
@@ -732,7 +769,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		DisposableMemory retTextBuffer = new DisposableMemory(outBufLength);
 		while (true) {
 			ShortByReference retTextLength = new ShortByReference();
-			short result = NotesNativeAPI.get().ConvertTIMEDATEToText(null, tfmtStruct.getPointer(), struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
+			short result = NotesNativeAPI.get().ConvertTIMEDATEToText(intlStruct, tfmtStruct.getPointer(), struct, retTextBuffer, (short) retTextBuffer.size(), retTextLength);
 			if (result==1037) { // "Invalid Time or Date Encountered", return empty string like Notes UI does
 				return "";
 			}
