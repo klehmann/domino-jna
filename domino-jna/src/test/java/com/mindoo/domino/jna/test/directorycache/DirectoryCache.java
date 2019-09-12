@@ -24,7 +24,6 @@ import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
 import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
@@ -303,7 +302,7 @@ public class DirectoryCache {
 	 * @return elements
 	 */
 	public List<DirectoryUser> lookupNames(final List<String> lookupKeys, final int start, final int count) {
-		TreeMap<String,DirectoryUser> lookupResultByFullName = new TreeMap<String,DirectoryUser>(new CaseInsensitiveStringComparator());
+		TreeMap<String,DirectoryUser> lookupResultByFullName = new TreeMap<String,DirectoryUser>(String.CASE_INSENSITIVE_ORDER);
 
 		for (String currLkKey : lookupKeys) {
 			DirectoryUser dirUser = findUserByEmailOrUserName(currLkKey);
@@ -355,7 +354,7 @@ public class DirectoryCache {
 	public NameLookupResult lookupNames(final String namePattern, final int start, final int count) {
 		hashDirectoryUsers(false);
 
-		TreeMap<String,DirectoryUser> lookupResultByFullName = new TreeMap<String,DirectoryUser>(new CaseInsensitiveStringComparator());
+		TreeMap<String,DirectoryUser> lookupResultByFullName = new TreeMap<String,DirectoryUser>(String.CASE_INSENSITIVE_ORDER);
 
 		//multiple readers can read concurrently
 		m_cachedDirectoryUsersByUNIDLock.readLock().lock();
