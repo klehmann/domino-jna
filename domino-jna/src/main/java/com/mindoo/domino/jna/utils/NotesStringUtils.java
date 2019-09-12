@@ -127,7 +127,7 @@ public class NotesStringUtils {
 	/**
 	 * Scans the byte array for null values
 	 * 
-	 * @param in memory
+	 * @param bytes array of bytes
 	 * @return number of bytes before null byte in array
 	 */
 	public static int getNullTerminatedLength(byte[] bytes) {
