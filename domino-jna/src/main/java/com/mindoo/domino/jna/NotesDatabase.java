@@ -79,7 +79,6 @@ import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
 import com.mindoo.domino.jna.internal.structs.ReplServStatsStruct;
 import com.mindoo.domino.jna.transactions.ITransactionCallable;
 import com.mindoo.domino.jna.transactions.Transactions;
-import com.mindoo.domino.jna.utils.CaseInsensitiveStringComparator;
 import com.mindoo.domino.jna.utils.ExceptionUtil;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
@@ -5180,7 +5179,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return item definition table with case-insensitive key access
 	 */
 	public NavigableMap<String,Integer> getItemDefinitionTable() {
-		NavigableMap<String,Integer> table = new TreeMap<String,Integer>(new CaseInsensitiveStringComparator());
+		NavigableMap<String,Integer> table = new TreeMap<String,Integer>(String.CASE_INSENSITIVE_ORDER);
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
