@@ -12,6 +12,7 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesUniversalNoteId;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -266,6 +267,9 @@ public class TestStringUtils extends BaseJNATestClass {
 				}
 				
 				String[] testStrings = new String[] {
+						delim,
+						delim+delim,
+						delim+delim+"ABC",
 						delim + "def" + UML_A_BIG+UML_O_BIG+UML_U_BIG+UML_A_SMALL+UML_O_SMALL+UML_U_SMALL,
 						"Abc" + delim,
 						"Abc" + delim + delim,
@@ -277,6 +281,51 @@ public class TestStringUtils extends BaseJNATestClass {
 				};
 				for (String currStr : testStrings) {
 					Memory mem = NotesStringUtils.toLMBCS(currStr, false);
+					String decodedStr = NotesStringUtils.fromLMBCS(mem, (int) mem.size());
+					Assert.assertEquals("Conversion of string is correct: "+currStr, currStr, decodedStr);
+				}
+
+				Memory memABCNewline = NotesStringUtils.toLMBCS("abc" + delim, false);
+				byte[] arrABCNewLine = memABCNewline.getByteArray(0, (int) memABCNewline.size());
+				Assert.assertTrue("Result has expected content", Arrays.equals(new byte[] {97, 98, 99, 0}, arrABCNewLine));
+				return null;
+			}
+		});
+	}
+	
+	@Test
+	public void testStringWithUnconvertedNewlines() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				boolean useOSLineBreak = NotesStringUtils.isUseOSLineDelimiter();
+				String delim;
+				if (PlatformUtils.isWindows() && useOSLineBreak) {
+					delim = "\r\n";
+				}
+				else {
+					delim = "\n";
+				}
+				
+				String[] testStrings = new String[] {
+						delim,
+						delim+delim,
+						delim+delim+"ABC",
+						delim + "def" + UML_A_BIG+UML_O_BIG+UML_U_BIG+UML_A_SMALL+UML_O_SMALL+UML_U_SMALL,
+						"Abc" + delim,
+						"Abc" + delim + delim,
+						"Abc" + delim + "def"+"\u2192",
+						"Abc" + delim + "def" + delim + "ghi",
+						"Abc" + delim + "def" + delim,
+						"Abc" + delim + "def" + delim + delim + "ghi",
+						"A" + delim + "b" + delim + delim + "c",
+				};
+				for (String currStr : testStrings) {
+					Memory mem = NotesStringUtils.toLMBCS(currStr, false, true);
+					System.out.println("String: "+currStr);
+					System.out.println("LMBCS:\n"+DumpUtil.dumpAsAscii(mem, (int) mem.size()));
+					
 					String decodedStr = NotesStringUtils.fromLMBCS(mem, (int) mem.size());
 					Assert.assertEquals("Conversion of string is correct: "+currStr, currStr, decodedStr);
 				}
