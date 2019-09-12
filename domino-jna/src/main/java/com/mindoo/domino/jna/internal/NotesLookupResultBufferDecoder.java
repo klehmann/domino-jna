@@ -9,8 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import org.apache.commons.collections4.map.CaseInsensitiveMap;
+import java.util.TreeMap;
 
 import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.IItemValueTableData;
@@ -1077,7 +1076,7 @@ public class NotesLookupResultBufferDecoder {
 		
 		@Override
 		public Map<String,Object> asMap(boolean decodeLMBCS) {
-			Map<String,Object> data = new CaseInsensitiveMap<String, Object>();
+			Map<String,Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
 			int itemCount = getItemsCount();
 			for (int i=0; i<itemCount; i++) {
 				Object val = getItemValue(i);

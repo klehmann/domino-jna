@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -554,7 +554,7 @@ public class NotesViewEntryData {
 	public Map<String,Object> getColumnDataAsMap() {
 		Map<String,Object> data = m_convertedDataRef==null ? null : m_convertedDataRef.get();
 		if (data==null) {
-			data = new HashMap<String, Object>();
+			data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
 			
 			Iterator<String> colNames = getColumnNames();
 			
@@ -691,15 +691,13 @@ public class NotesViewEntryData {
 	private Object get(String columnNameOrTitle, boolean convertNotesTimeDateToCalendar) {
 		Object val = null;
 		
-		String columnNameOrTitleLC = columnNameOrTitle.toLowerCase();
-		
 		if (m_summaryData!=null) {
-			if (m_summaryData.containsKey(columnNameOrTitleLC)) {
-				val = m_summaryData.get(columnNameOrTitleLC);
+			if (m_summaryData.containsKey(columnNameOrTitle)) {
+				val = m_summaryData.get(columnNameOrTitle);
 			}
 			else {
 				//try to find the programmatic column name if columnNameOrTitle contains the column title
-				int colIdx = m_parentCollection.getColumnValuesIndex(columnNameOrTitleLC);
+				int colIdx = m_parentCollection.getColumnValuesIndex(columnNameOrTitle);
 				if (colIdx!=-1 && colIdx!=65535) {
 					String progColName = m_parentCollection.getColumnName(colIdx);
 					if (progColName!=null) {

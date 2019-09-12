@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -78,6 +77,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private boolean m_autoUpdate;
 	private CollationInfo m_collationInfo;
+	
+	private List<String> m_columnItemNames;
+	private List<String> m_columnTitles;
+	
 	private Map<String, Integer> m_columnIndicesByItemName;
 	private Map<String, Integer> m_columnIndicesByTitle;
 	private Map<Integer, String> m_columnNamesByIndex;
@@ -235,9 +238,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 		if (m_columnIndicesByItemName==null) {
 			scanColumns();
 		}
-		Integer idx = m_columnIndicesByItemName.get(columnNameOrTitle.toLowerCase());
+		Integer idx = m_columnIndicesByItemName.get(columnNameOrTitle);
 		if (idx==null) {
-			idx = m_columnIndicesByTitle.get(columnNameOrTitle.toLowerCase());
+			idx = m_columnIndicesByTitle.get(columnNameOrTitle);
 		}
 		return idx==null ? -1 : idx.intValue();
 	}
@@ -1566,6 +1569,21 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return column values
 	 */
 	public Set<String> getColumnValues(String columnName, Locale sortLocale) {
+		boolean isCategory = isCategoryColumn(columnName);
+		Navigate nav = isCategory ? Navigate.NEXT_CATEGORY : Navigate.NEXT_NONCATEGORY;
+		
+		return getAllEntries("0", 1, EnumSet.of(nav), Integer.MAX_VALUE, EnumSet.of(ReadMask.SUMMARYVALUES), new ReadSingleColumnValues(columnName, sortLocale));
+	}
+	
+	/**
+	 * Reads all values of a collection column
+	 * 
+	 * @param columnIndex index of lookup column
+	 * @param sortLocale optional sort locale to sort the values; if null, we use the locale returned by {@link Locale#getDefault()}
+	 * @return column values
+	 */
+	public Set<String> getColumnValues(int columnIndex, Locale sortLocale) {
+		String columnName = getColumnName(columnIndex);
 		boolean isCategory = isCategoryColumn(columnName);
 		Navigate nav = isCategory ? Navigate.NEXT_CATEGORY : Navigate.NEXT_NONCATEGORY;
 		
@@ -3096,10 +3114,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return programmatic column names converted to lowercase in the order they appear in the view
 	 */
 	public Iterator<String> getColumnNames() {
-		if (m_columnIndicesByItemName==null) {
+		if (m_columnItemNames==null) {
 			scanColumns();
 		}
-		return m_columnIndicesByItemName.keySet().iterator();
+		return m_columnItemNames.iterator();
 	}
 	
 	/**
@@ -3225,8 +3243,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * New method to read information about view columns and sortings using C methods
 	 */
 	private void scanColumns() {
-		m_columnIndicesByItemName = new LinkedHashMap<String, Integer>();
-		m_columnIndicesByTitle = new LinkedHashMap<String, Integer>();
+		m_columnItemNames = new ArrayList<String>();
+		m_columnTitles = new ArrayList<String>();
+		
+		m_columnIndicesByItemName = new TreeMap<String, Integer>(String.CASE_INSENSITIVE_ORDER);
+		m_columnIndicesByTitle = new TreeMap<String, Integer>(String.CASE_INSENSITIVE_ORDER);
+		
 		m_columnNamesByIndex = new TreeMap<Integer, String>();
 		m_columnIsCategoryByIndex = new TreeMap<Integer, Boolean>();
 		m_columnTitlesLCByIndex = new TreeMap<Integer, String>();
@@ -3276,17 +3298,19 @@ public class NotesCollection implements IRecyclableNotesObject {
 			for (int i=0; i<columns.size(); i++) {
 				NotesViewColumn currCol = columns.get(i);
 				String currItemName = currCol.getItemName();
-				String currItemNameLC = currItemName.toLowerCase(Locale.ENGLISH);
+//				String currItemNameLC = currItemName.toLowerCase(Locale.ENGLISH);
 				String currTitle = currCol.getTitle();
-				String currTitleLC = currTitle.toLowerCase(Locale.ENGLISH);
+//				String currTitleLC = currTitle.toLowerCase(Locale.ENGLISH);
 				
 				int currColumnValuesIndex = currCol.getColumnValuesIndex();
 				
-				m_columnIndicesByItemName.put(currItemNameLC, currColumnValuesIndex);
-				m_columnIndicesByTitle.put(currTitleLC, currColumnValuesIndex);
+				m_columnItemNames.add(currItemName);
+				m_columnTitles.add(currTitle);
+				m_columnIndicesByItemName.put(currItemName, currColumnValuesIndex);
+				m_columnIndicesByTitle.put(currTitle, currColumnValuesIndex);
 
-				m_columnNamesByIndex.put(currColumnValuesIndex, currItemNameLC);
-				m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitleLC);
+				m_columnNamesByIndex.put(currColumnValuesIndex, currItemName);
+				m_columnTitlesLCByIndex.put(currColumnValuesIndex, currTitle);
 				m_columnTitlesByIndex.put(currColumnValuesIndex, currTitle);
 
 				boolean isCategory = currCol.isCategory();
