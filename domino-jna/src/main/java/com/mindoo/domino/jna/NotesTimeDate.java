@@ -801,15 +801,28 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 * @return timedate
 	 */
 	public static NotesTimeDate fromString(String dateTimeStr) {
+		return fromString((NotesIntlFormat) null, dateTimeStr);
+	}
+	
+	/**
+	 * Parses a timedate string to a {@link NotesTimeDate}
+	 * 
+	 * @param intl international settings to be used for parsing
+	 * @param dateTimeStr timedate string
+	 * @return timedate
+	 */
+	public static NotesTimeDate fromString(NotesIntlFormat intl, String dateTimeStr) {
 		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr, true);
 		//convert method expects a pointer to the date string in memory
 		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
 		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);
 		
+		IntlFormatStruct intlStruct = intl==null ? null : intl.getAdapter(IntlFormatStruct.class);
+		
 		DisposableMemory retTimeDateMem = new DisposableMemory(NotesConstants.timeDateSize);
 		NotesTimeDateStruct retTimeDate = NotesTimeDateStruct.newInstance(retTimeDateMem);
 		
-		short result = NotesNativeAPI.get().ConvertTextToTIMEDATE(null, null, dateTimeStrLMBCSPtr, NotesConstants.MAXALPHATIMEDATE, retTimeDate);
+		short result = NotesNativeAPI.get().ConvertTextToTIMEDATE(intlStruct, null, dateTimeStrLMBCSPtr, NotesConstants.MAXALPHATIMEDATE, retTimeDate);
 		NotesErrorUtils.checkResult(result);
 		retTimeDate.read();
 		int[] innards = retTimeDate.Innards;
