@@ -4,19 +4,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 
-import com.ibm.icu.charset.CharsetICU;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.INotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
@@ -47,17 +44,16 @@ public class NotesStringUtils {
 
 	private static LRUStringLMBCSCache m_string2LMBCSCache_NullTerminated_OriginalLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
 	private static LRUStringLMBCSCache m_string2LMBCSCache_NotNullTerminated_OriginalLinebreaks = new LRUStringLMBCSCache(MAX_STRING2LMBCS_SIZE_BYTES);
+	
+	private static final Charset charsetUTF8 = Charset.forName("UTF-8");
 
-	//shared CharsetLMBCS instance
-	private static final Charset LMBCSCharset;
-	static {
-		LMBCSCharset = AccessController.doPrivileged(new PrivilegedAction<Charset>() {
-
-			@Override
-			public Charset run() {
-				return CharsetICU.forNameICU("LMBCS");
-			}
-		});
+	public static void flushCache() {
+		m_string2LMBCSCache_NullTerminated_LinefeedLinebreaks.clear();
+		m_string2LMBCSCache_NotNullTerminated_LinefeedLinebreaks.clear();
+		m_string2LMBCSCache_NullTerminated_NullLinebreaks.clear();
+		m_string2LMBCSCache_NotNullTerminated_NullLinebreaks.clear();
+		m_string2LMBCSCache_NullTerminated_OriginalLinebreaks.clear();
+		m_string2LMBCSCache_NotNullTerminated_OriginalLinebreaks.clear();
 	}
 	
 	/**
@@ -129,12 +125,41 @@ public class NotesStringUtils {
 	}
 	
 	/**
+	 * Scans the byte array for null values
+	 * 
+	 * @param in memory
+	 * @return number of bytes before null byte in array
+	 */
+	public static int getNullTerminatedLength(byte[] bytes) {
+		if (bytes == null) {
+			return 0;
+		}
+		
+		int textLen = bytes.length;
+		
+		//search for terminating null character
+		for (int i=0; i<textLen; i++) {
+			byte b = bytes[i];
+			if (b==0) {
+				textLen = i;
+				break;
+			}
+		}
+
+		return textLen;
+	}
+	
+	/**
 	 * Scans the Memory object for null values
 	 * 
 	 * @param in memory
 	 * @return number of bytes before null byte in memory
 	 */
 	public static int getNullTerminatedLength(Memory in) {
+		if (in == null) {
+			return 0;
+		}
+		
 		int textLen = (int) in.size();
 		
 		//search for terminating null character
@@ -222,23 +247,135 @@ public class NotesStringUtils {
 		
 		List<String> lines = new ArrayList<String>();
 		
-		for (int i=0; i<data.length; i++) {
-			if (data[i] == 0) {
-				CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(data, startOffset, i-startOffset));
-				String newLine = newLineBuf.toString();
-				lines.add(newLine);
-				startOffset = i+1;
-				
-				if (i==(data.length-1)) {
-					lines.add("");
+		INotesNativeAPI api = NotesNativeAPI.get();
+		
+		//output buffer shared across loop runs for each line
+		DisposableMemory outBufUTF8 = null;
+		try {
+			for (int i=0; i<data.length; i++) {
+				if (data[i] == 0) { // code for line break
+					int lengthOfLineDataToConvert = i-startOffset;
+					
+					if (lengthOfLineDataToConvert==0) {
+						lines.add("");
+						startOffset = i+1;
+						
+						if (i==(data.length-1)) {
+							lines.add("");
+						}
+						
+						continue;
+					}
+					
+					int worstCaseLengthOfConvertedData = 3*lengthOfLineDataToConvert;
+					
+					DisposableMemory inDataMem = new DisposableMemory(lengthOfLineDataToConvert);
+					try {
+						inDataMem.write(0, data, startOffset, lengthOfLineDataToConvert);
+						
+						do {
+							if (outBufUTF8!=null && outBufUTF8.size() < (worstCaseLengthOfConvertedData)) {
+								outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
+							}
+							
+							if (outBufUTF8==null) {
+								outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
+							}
+							
+							int retOutBufLength =
+									api.OSTranslate32(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8,
+											inDataMem, lengthOfLineDataToConvert,
+											outBufUTF8, (int) outBufUTF8.size());
+							
+							if (retOutBufLength==outBufUTF8.size()) {
+								// output buffer not large enough, increase it and retry (not expected to happen because of
+								// our worst case computation)
+								long oldOutBufSize = outBufUTF8.size();
+								long newOutBufSize = (long) (((double) oldOutBufSize)*2);
+								outBufUTF8.dispose();
+								outBufUTF8 = new DisposableMemory(newOutBufSize);
+								
+								continue;
+							}
+							else if (retOutBufLength==0) {
+								lines.add("");
+							}
+							else {
+								//success
+								String lineAsStr = new String(outBufUTF8.getByteArray(0, retOutBufLength), 0, retOutBufLength, charsetUTF8);
+								lines.add(lineAsStr);
+								startOffset = i+1;
+								
+								if (i==(data.length-1)) {
+									lines.add("");
+								}
+								
+								break;
+							}
+						}
+						while (true);
+					}
+					finally {
+						inDataMem.dispose();
+					}
+				}
+			}
+
+			if (startOffset<data.length) {
+				//convert remaining data
+				int lengthOfLineDataToConvert = data.length-startOffset;
+				int worstCaseLengthOfConvertedData = 3*lengthOfLineDataToConvert;
+
+				DisposableMemory inDataMem = new DisposableMemory(lengthOfLineDataToConvert);
+				try {
+					inDataMem.write(0, data, startOffset, lengthOfLineDataToConvert);
+					
+					do {
+						if (outBufUTF8!=null && outBufUTF8.size() < (worstCaseLengthOfConvertedData)) {
+							outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
+						}
+						
+						if (outBufUTF8==null) {
+							outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
+						}
+						
+						int retOutBufLength =
+								api.OSTranslate32(NotesConstants.OS_TRANSLATE_LMBCS_TO_UTF8,
+										inDataMem, lengthOfLineDataToConvert,
+										outBufUTF8, (int) outBufUTF8.size());
+						
+						if (retOutBufLength==outBufUTF8.size()) {
+							// output buffer not large enough, increase it and retry (not expected to happen because of
+							// our worst case computation)
+							long oldOutBufSize = outBufUTF8.size();
+							long newOutBufSize = (long) (((double) oldOutBufSize)*2);
+							outBufUTF8.dispose();
+							outBufUTF8 = new DisposableMemory(newOutBufSize);
+							
+							continue;
+						}
+						else if (retOutBufLength==0) {
+							lines.add("");
+						}
+						else {
+							//success
+							String lineAsStr = new String(outBufUTF8.getByteArray(0, retOutBufLength), 0, retOutBufLength, charsetUTF8);
+							lines.add(lineAsStr);
+							
+							break;
+						}
+					}
+					while (true);
+				}
+				finally {
+					inDataMem.dispose();
 				}
 			}
 		}
-		
-		if (startOffset<data.length) {
-			CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(data, startOffset, data.length-startOffset));
-			String newLine = newLineBuf.toString();
-			lines.add(newLine);
+		finally {
+			if (outBufUTF8!=null) {
+				outBufUTF8.dispose();
+			}
 		}
 		boolean useOSLineBreak = isUseOSLineDelimiter();
 		if (PlatformUtils.isWindows() && useOSLineBreak) {
@@ -262,42 +399,16 @@ public class NotesStringUtils {
 		}
 		else if (textLen==-1) {
 			textLen = getNullTerminatedLength(inPtr);
-			CharBuffer charBuf = LMBCSCharset.decode(inPtr.getByteBuffer(0, textLen));
-			String str = charBuf.toString();
-			return str;
+			
+			byte[] dataArr = inPtr.getByteArray(0, textLen);
+			
+			return fromLMBCS(dataArr);
 		}
 		else {
 			//check for \0 as newline delimiter
 			byte[] dataArr = inPtr.getByteArray(0, textLen);
-			int startOffset = 0;
 			
-			List<String> lines = new ArrayList<String>();
-			
-			for (int i=0; i<textLen; i++) {
-				if (dataArr[i] == 0) {
-					CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(dataArr, startOffset, i-startOffset));
-					String newLine = newLineBuf.toString();
-					lines.add(newLine);
-					startOffset = i+1;
-					
-					if (i==(textLen-1)) {
-						lines.add("");
-					}
-				}
-			}
-			
-			if (startOffset<textLen) {
-				CharBuffer newLineBuf = LMBCSCharset.decode(ByteBuffer.wrap(dataArr, startOffset, textLen-startOffset));
-				String newLine = newLineBuf.toString();
-				lines.add(newLine);
-			}
-			boolean useOSLineBreak = isUseOSLineDelimiter();
-			if (PlatformUtils.isWindows() && useOSLineBreak) {
-				return StringUtil.join(lines, "\r\n");
-			}
-			else {
-				return StringUtil.join(lines, "\n");
-			}
+			return fromLMBCS(dataArr);
 		}
 	}
 	
@@ -346,7 +457,7 @@ public class NotesStringUtils {
 	public static DisposableMemory toLMBCSNoCache(String inStr, boolean addNull, LineBreakConversion lineBreakConversion) {
 		return (DisposableMemory) toLMBCS(inStr, addNull, lineBreakConversion, true);
 	}
-
+	
 	/**
 	 * Converts a string to LMBCS format
 	 * 
@@ -413,12 +524,28 @@ public class NotesStringUtils {
 		else {
 			cacheToUse = null;
 		}
-		
+
+		boolean inStrHasLinebreaks;
+		String[] lines;
 		if (inStr.contains("\n") && lineBreakConversion != LineBreakConversion.ORIGINAL) {
-			String[] lines = inStr.split("\\r?\\n", -1);
-			ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+			lines = inStr.split("\\r?\\n", -1);
+			inStrHasLinebreaks = true;
+		}
+		else {
+			lines = new String[1];
+			lines[0] = inStr;
+			inStrHasLinebreaks = false;
+		}
+		
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+		
+		INotesNativeAPI api = NotesNativeAPI.get();
+		
+		DisposableMemory inputBufUTF8 = null;
+		DisposableMemory outputBufLMBCS = null;
+		try {
 			for (int i=0; i<lines.length; i++) {
-				if (i>0) {
+				if (inStrHasLinebreaks && i>0) {
 					if (lineBreakConversion == LineBreakConversion.NULL) {
 						//replace line breaks with null characters
 						bOut.write(0);
@@ -432,146 +559,144 @@ public class NotesStringUtils {
 						throw new IllegalArgumentException("Unexpected line break conversion: "+lineBreakConversion);
 					}
 				}
-				CharBuffer charBuf = CharBuffer.wrap(lines[i]);
-				ByteBuffer byteBuf = LMBCSCharset.encode(charBuf);
-				try {
-					if (byteBuf.hasArray()) {
-						bOut.write(byteBuf.array(), byteBuf.arrayOffset(), byteBuf.limit());
-					}
-					else {
-						byte[] data = new byte[byteBuf.limit()];
-						byteBuf.get(data);
-						bOut.write(data);
-					}
-				}
-				catch (IOException e) {
-					throw new NotesError(0, "Error writing converted data", e);
-				}
-			}
-			
-			if (addNull) {
-				int limit = bOut.size();
 				
-				Memory m;
-				if (noCache) {
-					m = new DisposableMemory(limit + 1);
+				if (lines[i].length() == 0) {
+					continue;
+				}
+				
+				//check if string only contains ascii characters that map 1:1 to LMBCS;
+				//in this case we can skip the OSTranslate call
+				boolean isPureAscii = true;
+				for (int x=0; x<lines[i].length(); x++) {
+					char c = lines[i].charAt(x);
+					if (c <= 0x1f || c >= 0x80) {
+						isPureAscii = false;
+						break;
+					}
+				}
+				
+				byte[] lineDataAsUTF8 = lines[i].getBytes(charsetUTF8);
+				
+				if (isPureAscii) {
+					try {
+						bOut.write(lineDataAsUTF8);
+					} catch (IOException e) {
+						throw new NotesError(0, "Error writing to temporary byte stream", e);
+					}
 				}
 				else {
-					m = new ReadOnlyMemory(limit + 1);
-				}
-				
-				byte[] data = bOut.toByteArray();
-				m.write(0, data, 0, data.length);
-				m.setByte(limit, (byte) 0);
-				
-				if (!noCache) {
-					((ReadOnlyMemory)m).seal();
+					int worstCaseLMBCSLength = 3 * lines[i].length();
 					
-					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-						if (cacheToUse!=null) {
-							cacheToUse.put(inStr, m);
+					if (inputBufUTF8!=null && inputBufUTF8.size() < lineDataAsUTF8.length) {
+						inputBufUTF8.dispose();
+						inputBufUTF8 = null;
+					}
+					
+					if (inputBufUTF8==null) {
+						inputBufUTF8 = new DisposableMemory(lineDataAsUTF8.length);
+					}
+					inputBufUTF8.write(0, lineDataAsUTF8, 0, lineDataAsUTF8.length);
+					
+					if (outputBufLMBCS!=null && outputBufLMBCS.size() < worstCaseLMBCSLength) {
+						outputBufLMBCS.dispose();
+						outputBufLMBCS = null;
+					}
+					
+					if (outputBufLMBCS==null) {
+						outputBufLMBCS = new DisposableMemory(worstCaseLMBCSLength);
+					}
+					
+					do {
+						int retOutBufLength = api.OSTranslate32(
+								NotesConstants.OS_TRANSLATE_UTF8_TO_LMBCS,
+								inputBufUTF8, (int) lineDataAsUTF8.length,
+								outputBufLMBCS, (int) outputBufLMBCS.size());
+						
+						if (retOutBufLength==outputBufLMBCS.size()) {
+							// output buffer not large enough, increase it and retry (not expected to happen because of
+							// our worst case computation)
+							long oldOutBufSize = outputBufLMBCS.size();
+							long newOutBufSize = (long) (((double) oldOutBufSize)*2);
+							outputBufLMBCS.dispose();
+							outputBufLMBCS = new DisposableMemory(newOutBufSize);
+
+							continue;
+						}
+						else if (retOutBufLength>0) {
+							//success
+							byte[] data = outputBufLMBCS.getByteArray(0, retOutBufLength);
+							try {
+								bOut.write(data);
+							} catch (IOException e) {
+								throw new NotesError(0, "Error writing to temporary byte stream", e);
+							}
+							break;
 						}
 					}
+					while (true);
 				}
-
-				return m;
-			}
-			else {
-				Memory m;
-				if (noCache) {
-					m = new DisposableMemory(bOut.size());
-				}
-				else {
-					m = new ReadOnlyMemory(bOut.size());
-				}
-
-				byte[] data = bOut.toByteArray();
-				m.write(0, data, 0, data.length);
-				
-				if (!noCache) {
-					((ReadOnlyMemory)m).seal();
-					
-					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-						if (cacheToUse!=null) {
-							cacheToUse.put(inStr, m);
-						}
-					}
-				}
-				
-				return m;
 			}
 		}
-		else {
-			CharBuffer charBuf = CharBuffer.wrap(inStr);
-			ByteBuffer byteBuf = LMBCSCharset.encode(charBuf);
+		finally {
+			if (inputBufUTF8!=null) {
+				inputBufUTF8.dispose();
+			}
 			
-			if (addNull) {
-				int limit = byteBuf.limit();
-				
-				Memory m;
-				if (noCache) {
-					m = new DisposableMemory(limit + 1);
-				}
-				else {
-					m = new ReadOnlyMemory(limit + 1);
-				}
-				
-				if (byteBuf.hasArray()) {
-					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
-				}
-				else {
-					byte[] dataArr = new byte[limit];
-					byteBuf.get(dataArr);
-					m.write(0, dataArr, 0, dataArr.length);
-				}
-				
-				m.setByte(limit, (byte) 0);
-				
-				if (!noCache) {
-					((ReadOnlyMemory)m).seal();
-					
-					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-						if (cacheToUse!=null) {
-							cacheToUse.put(inStr, m);
-						}
-					}
-				}
-				
-				return m;
+			if (outputBufLMBCS!=null) {
+				outputBufLMBCS.dispose();
+			}
+		}
+		
+		if (addNull) {
+			int limit = bOut.size();
+			
+			Memory m;
+			if (noCache) {
+				m = new DisposableMemory(limit + 1);
 			}
 			else {
-				int limit = byteBuf.limit();
+				m = new ReadOnlyMemory(limit + 1);
+			}
+			
+			byte[] data = bOut.toByteArray();
+			m.write(0, data, 0, data.length);
+			m.setByte(limit, (byte) 0);
+			
+			if (!noCache) {
+				((ReadOnlyMemory)m).seal();
 				
-				Memory m;
-				
-				if (noCache) {
-					m = new DisposableMemory(limit);
-				}
-				else {
-					m = new ReadOnlyMemory(limit);
-				}
-				
-				if (byteBuf.hasArray()) {
-					m.write(0, byteBuf.array(), byteBuf.arrayOffset(), limit);
-				}
-				else {
-					byte[] dataArr = new byte[limit];
-					byteBuf.get(dataArr);
-					m.write(0, dataArr, 0, dataArr.length);
-				}
-				
-				if (!noCache) {
-					((ReadOnlyMemory)m).seal();
-					
-					if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
-						if (cacheToUse!=null) {
-							cacheToUse.put(inStr, m);
-						}
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					if (cacheToUse!=null) {
+						cacheToUse.put(inStr, m);
 					}
 				}
-				
-				return m;
 			}
+
+			return m;
+		}
+		else {
+			Memory m;
+			if (noCache) {
+				m = new DisposableMemory(bOut.size());
+			}
+			else {
+				m = new ReadOnlyMemory(bOut.size());
+			}
+
+			byte[] data = bOut.toByteArray();
+			m.write(0, data, 0, data.length);
+			
+			if (!noCache) {
+				((ReadOnlyMemory)m).seal();
+				
+				if (USE_STRING2LMBCS_CACHE && inStr.length()<=MAX_STRING2LMBCS_KEY_LENGTH) {
+					if (cacheToUse!=null) {
+						cacheToUse.put(inStr, m);
+					}
+				}
+			}
+			
+			return m;
 		}
 	}
 
