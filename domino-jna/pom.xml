@@ -158,16 +158,6 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-collections4</artifactId>
-			<version>4.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.maven.plugins</groupId>
-			<artifactId>maven-gpg-plugin</artifactId>
-			<version>1.6</version>
-		</dependency>
-		<dependency>
 			<groupId>com.drewnoakes</groupId>
 			<artifactId>metadata-extractor</artifactId>
 			<version>2.11.0</version>
@@ -183,11 +173,6 @@
 			<version>1.4.2</version>
 		</dependency>
 		<dependency>
-		    <groupId>com.ibm.icu</groupId>
-		    <artifactId>icu4j-charset</artifactId>
-		    <version>60.2</version>
-		</dependency>
-		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.8.1</version>
@@ -198,11 +183,6 @@
 		    <artifactId>joda-time</artifactId>
 		    <version>2.9.9</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.mnode.ical4j</groupId>
-			<artifactId>ical4j</artifactId>
-			<version>1.0.7</version>
 		</dependency>
 		<dependency>
 		    <groupId>com.sun.mail</groupId>
