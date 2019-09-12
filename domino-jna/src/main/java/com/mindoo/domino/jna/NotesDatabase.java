@@ -304,11 +304,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			if ("".equals(server)) {
 				//locally, we can open the DB as any user/group/role
 				m_passNamesListToDbOpen = true;
+				m_passNamesListToViewOpen = true;
 			}
 			else if (!m_loginAsIdOwner) {
 				//if we should be opening the DB as another user, we need to pass the names ist;
 				//this might produce ERR 22507: You are not listed as a trusted server
 				m_passNamesListToDbOpen = true;
+				m_passNamesListToViewOpen = true;
 			}
 		}
 		
