@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.internal;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFGetAllFolderChangesCallback;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
@@ -1051,6 +1052,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NSFDbReadACL(
 			long hDB,
 			LongByReference rethACL);
+	
+	public native short ACLEnumEntries(long hACL, ACLENTRYENUMFUNC EnumFunc, Pointer EnumFuncParam);
+	
+	public native short ACLGetPrivName(long hACL, short PrivNum, Memory retPrivName);
 	
 	public native short NSFDbStoreACL(
 			long hDB,

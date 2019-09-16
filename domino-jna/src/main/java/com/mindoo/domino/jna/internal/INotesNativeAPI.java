@@ -93,7 +93,7 @@ public interface INotesNativeAPI extends Library {
 			ShortByReference retTextLength);
 
 	public short ConvertTextToTIMEDATE(
-			Pointer intlFormat,
+			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			Memory text,
 			short maxLength,

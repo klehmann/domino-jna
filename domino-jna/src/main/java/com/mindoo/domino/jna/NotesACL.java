@@ -3,7 +3,10 @@ package com.mindoo.domino.jna;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
@@ -11,11 +14,15 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -208,6 +215,7 @@ public class NotesACL implements IAllocatedMemory {
 					}
 					finally {
 						Mem64.OSUnlockObject(hPrivNames);
+						Mem64.OSMemFree(hPrivNames);
 					}
 				}
 
@@ -260,6 +268,7 @@ public class NotesACL implements IAllocatedMemory {
 					}
 					finally {
 						Mem32.OSUnlockObject(hPrivNames);
+						Mem32.OSMemFree(hPrivNames);
 					}
 				}
 				
@@ -284,6 +293,200 @@ public class NotesACL implements IAllocatedMemory {
 		}
 	}
 	
+	/**
+	 * Returns all ACL entries
+	 * 
+	 * @return ACL entries hashed by their username in the order they got returned from the C API
+	 */
+	public LinkedHashMap<String,NotesACLAccess> getEntries() {
+		final Map<Integer,String> rolesByIndex = getRolesByIndex();
+		
+		final LinkedHashMap<String,NotesACLAccess> aclAccessInfoByName = new LinkedHashMap<String,NotesACLAccess>();
+		
+		ACLENTRYENUMFUNC callback;
+		if (PlatformUtils.isWin32()) {
+			callback = new Win32NotesCallbacks.ACLENTRYENUMFUNCWin32() {
+				
+				@Override
+				public void invoke(Pointer enumFuncParam, Pointer nameMem, short accessLevelShort, Pointer privileges,
+						short accessFlag) {
+					
+					String name = NotesStringUtils.fromLMBCS(nameMem, -1);
+					AclLevel accessLevel = AclLevel.toLevel((int) (accessLevelShort & 0xffff));
+
+					int iAccessFlag = (int) (accessFlag & 0xffff);
+					EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
+					for (AclFlag currFlag : AclFlag.values()) {
+						if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
+							retFlags.add(currFlag);
+						}
+					}
+
+					byte[] privilegesArr = privileges.getByteArray(0, 10);
+
+					List<String> entryRoles = new ArrayList<String>();
+					
+					for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
+						//convert position to byte/bit position of byte[10]
+						int byteOffsetWithBit = i / 8;
+						byte byteValueWithBit = privilegesArr[byteOffsetWithBit];
+						int bitToCheck = (int) Math.pow(2, i % 8);
+						
+						boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
+						if (enabled) {
+							String currRole = rolesByIndex.get(i);
+							entryRoles.add(currRole);
+						}
+					}
+
+					NotesACLAccess access = new NotesACLAccess(accessLevel, entryRoles, retFlags);
+					aclAccessInfoByName.put(name, access);
+				}
+			};
+		}
+		else {
+			callback = new ACLENTRYENUMFUNC() {
+
+				@Override
+				public void invoke(Pointer enumFuncParam, Pointer nameMem, short accessLevelShort, Pointer privileges,
+						short accessFlag) {
+					
+					String name = NotesStringUtils.fromLMBCS(nameMem, -1);
+					AclLevel accessLevel = AclLevel.toLevel((int) (accessLevelShort & 0xffff));
+
+					int iAccessFlag = (int) (accessFlag & 0xffff);
+					EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
+					for (AclFlag currFlag : AclFlag.values()) {
+						if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
+							retFlags.add(currFlag);
+						}
+					}
+
+					byte[] privilegesArr = privileges.getByteArray(0, 10);
+
+					List<String> entryRoles = new ArrayList<String>();
+					
+					for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
+						//convert position to byte/bit position of byte[10]
+						int byteOffsetWithBit = i / 8;
+						byte byteValueWithBit = privilegesArr[byteOffsetWithBit];
+						int bitToCheck = (int) Math.pow(2, i % 8);
+						
+						boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
+						if (enabled) {
+							String currRole = rolesByIndex.get(i);
+							entryRoles.add(currRole);
+						}
+					}
+
+					NotesACLAccess access = new NotesACLAccess(accessLevel, entryRoles, retFlags);
+					aclAccessInfoByName.put(name, access);
+				}
+			};
+		}
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLEnumEntries(m_hACL64, callback, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLEnumEntries(m_hACL32, callback, null);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return aclAccessInfoByName;
+	}
+	
+	/**
+	 * Returns all roles declared in the ACL
+	 * 
+	 * @return roles
+	 */
+	public List<String> getRoles() {
+		List<String> roles = new ArrayList<String>();
+
+		short result;
+		DisposableMemory retPrivName = new DisposableMemory(NotesConstants.ACL_PRIVSTRINGMAX);
+		try {
+			for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().ACLGetPrivName(m_hACL64, (short) (i & 0xffff), retPrivName);
+					if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+						break;
+					}
+
+					NotesErrorUtils.checkResult(result);
+
+					String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+					if (!StringUtil.isEmpty(role)) {
+						roles.add(role);
+					}
+				}
+				else {
+					result = NotesNativeAPI32.get().ACLGetPrivName(m_hACL32, (short) (i & 0xffff), retPrivName);
+					if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+						break;
+					}
+
+					NotesErrorUtils.checkResult(result);
+
+					String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+					if (!StringUtil.isEmpty(role)) {
+						roles.add(role);
+					}
+				}
+			}
+		}
+		finally {
+			retPrivName.dispose();
+		}
+
+		return roles;
+	}
+	
+	/**
+	 * Returns the role names hashed by their internal position
+	 * 
+	 * @return roles
+	 */
+	private Map<Integer,String> getRolesByIndex() {
+		Map<Integer,String> roles = new HashMap<Integer,String>();
+		
+		short result;
+		Memory retPrivName = new Memory(NotesConstants.ACL_PRIVSTRINGMAX);
+		
+		for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().ACLGetPrivName(m_hACL64, (short) (i & 0xffff), retPrivName);
+				if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+					break;
+				}
+
+				NotesErrorUtils.checkResult(result);
+				
+				String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+				if (!StringUtil.isEmpty(role)) {
+					roles.put(i, role);
+				}
+			}
+			else {
+				result = NotesNativeAPI32.get().ACLGetPrivName(m_hACL32, (short) (i & 0xffff), retPrivName);
+				if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+					break;
+				}
+				
+				NotesErrorUtils.checkResult(result);
+				
+				String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+				if (!StringUtil.isEmpty(role)) {
+					roles.put(i, role);
+				}
+			}
+		}
+		
+		return roles;
+	}
+	
 	@Override
 	public String toString() {
 		if (isFreed()) {
@@ -297,6 +500,7 @@ public class NotesACL implements IAllocatedMemory {
 		}
 	}
 
+	
 	public static class NotesACLAccess {
 		private AclLevel m_accessLevel;
 		private EnumSet<AclFlag> m_accessFlags;

@@ -449,7 +449,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			ShortByReference retTextLength);
 
 	public native short ConvertTextToTIMEDATE(
-			Pointer intlFormat,
+			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			Memory text,
 			short maxLength,

@@ -54,4 +54,5 @@ public interface Win32NotesCallbacks {
 	
 	interface STATTRAVERSEPROCWin32 extends NotesCallbacks.STATTRAVERSEPROC, StdCallCallback {};
 
+	interface ACLENTRYENUMFUNCWin32 extends NotesCallbacks.ACLENTRYENUMFUNC, StdCallCallback {};
 }

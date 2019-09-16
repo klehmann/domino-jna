@@ -1772,6 +1772,13 @@ This allows an Editor to assume some Designer-level access */
 	/** Number of access levels */
 	public short ACL_LEVEL_COUNT = 7;
 	
+	/** Number of privilege bits (10 bytes) */
+	public int ACL_PRIVCOUNT	 = 80;
+	/** Privilege name max (including null) */
+	public int ACL_PRIVNAMEMAX = 16;
+	/** Privilege string max  (including parentheses and null) */
+	public int ACL_PRIVSTRINGMAX = (16+2);
+
 	/**
 	 * Keys in a COLLECTIONDATA structure are divided into percentiles - divisions
 	 * corresponding to one-tenth of the total range of keys - and a table of the keys

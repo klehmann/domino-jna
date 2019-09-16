@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -1204,6 +1205,16 @@ public interface INotesNativeAPI64 extends Library {
 			long hDB,
 			LongByReference rethACL);
 	
+	public short ACLEnumEntries(
+			long hACL,
+			ACLENTRYENUMFUNC EnumFunc,
+			Pointer EnumFuncParam);
+
+	public short ACLGetPrivName(
+			long hACL,
+			short PrivNum,
+			Memory retPrivName);
+
 	public short NSFDbStoreACL(
 			long hDB,
 			long hACL,

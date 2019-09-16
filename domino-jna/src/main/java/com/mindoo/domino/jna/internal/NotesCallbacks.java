@@ -196,4 +196,8 @@ public interface NotesCallbacks {
 	interface STATTRAVERSEPROC extends Callback {
 		short invoke(Pointer ctx, Pointer facility, Pointer statName, short valueType, Pointer value);
 	}
+	
+	interface ACLENTRYENUMFUNC extends Callback {
+		void invoke(Pointer enumFuncParam, Pointer name, short accessLevel, Pointer privileges, short accessFlag);
+	}
 }
