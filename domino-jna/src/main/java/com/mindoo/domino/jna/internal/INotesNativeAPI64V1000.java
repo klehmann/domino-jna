@@ -17,4 +17,7 @@ public interface INotesNativeAPI64V1000 {
 	@UndocumentedAPI
 	public short NSFDbLargeSummaryEnabled(long hDB);
 
+	@UndocumentedAPI
+	public short NSFDesignHarvest (long hDB, int flags);
+
 }

@@ -5536,14 +5536,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Harvest view design elements for optimized DQL performance.
 	 * 
 	 * @param mode harvest mode
+	 * @since V10
 	 */
 	public void harvestDesign(HarvestMode mode) {
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NSFDesignHarvest(m_hDB64, mode==HarvestMode.ADD ? 1 : 0);
+			result = NotesNativeAPI64V1000.get().NSFDesignHarvest(m_hDB64, mode==HarvestMode.ADD ? 1 : 0);
 		}
 		else {
-			result = NotesNativeAPI32.get().NSFDesignHarvest(m_hDB32, mode==HarvestMode.ADD ? 1 : 0);
+			result = NotesNativeAPI32V1000.get().NSFDesignHarvest(m_hDB32, mode==HarvestMode.ADD ? 1 : 0);
 		}
 		NotesErrorUtils.checkResult(result);
 	}

@@ -33,7 +33,10 @@ public class NotesNativeAPI32V1000 implements INotesNativeAPI32V1000 {
 	
 	@Override
 	public native short NSFDbLargeSummaryEnabled(int hDB);
-	
+
+	@Override
+	public native short NSFDesignHarvest(int hDB, int flags);
+
 	
 	/**
 	 * Returns the API instance used to call native Domino C API methods for 32 bit

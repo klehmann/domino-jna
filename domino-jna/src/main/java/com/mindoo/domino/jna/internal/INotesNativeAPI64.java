@@ -488,8 +488,6 @@ public interface INotesNativeAPI64 extends Library {
 	public short NSFDbOpen(Memory dbName, LongByReference dbHandle);
 	public short NSFDbClose(long dbHandle);
 	public short NSFDbOpenExtended (Memory PathName, short Options, long hNames, NotesTimeDateStruct ModifiedTime, LongByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
-	@UndocumentedAPI
-	public short NSFDesignHarvest (long hDB, int flags);
 	public short NSFDbGenerateOID(long hDB, NotesOriginatorIdStruct retOID);
 	public int NSFDbGetOpenDatabaseID(long hDBU);
 	public short NSFDbReopen(long hDB, LongByReference rethDB);

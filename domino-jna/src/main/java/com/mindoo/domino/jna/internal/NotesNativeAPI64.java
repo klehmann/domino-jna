@@ -448,7 +448,6 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NSFDbOpen(Memory dbName, LongByReference dbHandle);
 	public native short NSFDbClose(long dbHandle);
 	public native short NSFDbOpenExtended (Memory PathName, short Options, long hNames, NotesTimeDateStruct ModifiedTime, LongByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
-	public native short NSFDesignHarvest(long hDB, int flags);
 	public native short NSFDbGenerateOID(long hDB, NotesOriginatorIdStruct retOID);
 	public native int NSFDbGetOpenDatabaseID(long hDBU);
 	public native short NSFDbReopen(long hDB, LongByReference rethDB);
