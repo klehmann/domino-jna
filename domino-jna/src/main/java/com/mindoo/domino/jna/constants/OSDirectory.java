@@ -11,7 +11,8 @@ public enum OSDirectory {
 	/** Domino temp directory */
 	TEMP,
 	/** DAOS Base directory */
-	DAOS,
+// commented out, not compatible with later Notes version
+//	DAOS,
 	/** Temporary folder used for view rebuilds */
 	VIEWREBUILD;
 }

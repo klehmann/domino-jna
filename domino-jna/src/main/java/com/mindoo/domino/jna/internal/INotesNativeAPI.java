@@ -238,8 +238,9 @@ public interface INotesNativeAPI extends Library {
 
 	@UndocumentedAPI
 	public void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
-	@UndocumentedAPI
-	public void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
+//  commented out, not compatible with later Notes version
+//	@UndocumentedAPI
+//	public void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
 	public void NSFDbInfoParse(
 			Pointer Info,

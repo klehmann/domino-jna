@@ -592,7 +592,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			Pointer vContext);
 
 	public native void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
-	public native void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
+//  commented out, not compatible with later Notes version
+//	public native void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
 	public native void NSFDbInfoParse(
 			Pointer Info,

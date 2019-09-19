@@ -58,9 +58,10 @@ public class PlatformUtils {
 		case VIEWREBUILD:
 			NotesNativeAPI.get().NIFGetViewRebuildDir(retPathName, NotesConstants.MAXPATH);
 			break;
-		case DAOS:
-			NotesNativeAPI.get().DAOSGetBaseStoragePath(retPathName, NotesConstants.MAXPATH);
-			break;			
+// TODO commented out, not compatible with later Notes version
+//		case DAOS:
+//			NotesNativeAPI.get().DAOSGetBaseStoragePath(retPathName, NotesConstants.MAXPATH);
+//			break;			
 		default:
 			throw new IllegalArgumentException("Unsupported directory type: "+osDirectory);
 		}
