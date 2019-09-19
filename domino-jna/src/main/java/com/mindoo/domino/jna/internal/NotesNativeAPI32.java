@@ -448,6 +448,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
 	public native short NSFDbOpen(Memory dbName, IntByReference dbHandle);
 	public native short NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime, IntByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
+	public native short NSFDesignHarvest(int hDB, int flags);
 	public native short NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
 	public native short NSFDbClose(int dbHandle);
 	public native int NSFDbGetOpenDatabaseID(int hDBU);

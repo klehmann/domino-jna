@@ -486,6 +486,8 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
 	public short NSFDbOpen(Memory dbName, IntByReference dbHandle);
 	public short NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime, IntByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
+	@UndocumentedAPI
+	public short NSFDesignHarvest (int hDB, int flags);
 	public short NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
 	public short NSFDbClose(int dbHandle);
 	public int NSFDbGetOpenDatabaseID(int hDBU);
