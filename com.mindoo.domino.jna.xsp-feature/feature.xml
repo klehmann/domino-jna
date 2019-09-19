@@ -2,7 +2,7 @@
 <feature
       id="com.mindoo.domino.jna.xsp_feature"
       label="Domino JNA XPages Integrator Feature"
-      version="0.9.21.qualifier"
+      version="0.9.22.qualifier"
       provider-name="Mindoo GmbH">
 
    <description url="https://github.com/klehmann/domino-jna">Java project to access the IBM Domino C API using Java Native Access (JNA)</description>
