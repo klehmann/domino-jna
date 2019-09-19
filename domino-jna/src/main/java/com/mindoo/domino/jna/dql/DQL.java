@@ -202,7 +202,8 @@ public class DQL {
 		GREATERTHAN(">"),
 		GREATERTHANOREQUAL(">="),
 		IN("in"),
-		INALL("in all");
+		INALL("in all"),
+		CONTAINS("contains");
 		
 		private String m_val;
 		
@@ -241,6 +242,31 @@ public class DQL {
 	}
 	
 	/**
+	 * Returns a DQL term to run a FT search on the whole note with one or multiple search words.
+	 * 
+	 * @param values search words with optional wildcards like Lehm* or Lehman?
+	 * @return term
+	 * 
+	 * @since Domino R11
+	 */
+	public static DQLTerm contains(String...values) {
+		return new NoteContainsTerm(false, values);
+	}
+
+	/**
+	 * Returns a DQL term to run a FT search on the whole note with one or multiple search words.<br>
+	 * All search words must exist in the note for it to be a match.
+	 * 
+	 * @param values search words with optional wildcards like Lehm* or Lehman?
+	 * @return term
+	 * 
+	 * @since Domino R11
+	 */
+	public static DQLTerm containsAll(String...values) {
+		return new NoteContainsTerm(true, values);
+	}
+
+	/**
 	 * Returns a DQL term to do an AND operation on multiple other terms
 	 * 
 	 * @param terms terms for AND operation
@@ -278,6 +304,45 @@ public class DQL {
 		}
 	}
 	
+	public static class NoteContainsTerm extends DQLTerm {
+		private boolean m_containsAll;
+		private String[] m_values;
+		private String m_toString;
+		
+		public NoteContainsTerm(boolean containsAll, String... values) {
+			m_containsAll = containsAll;
+			m_values = values;
+		}
+		
+		@Override
+		public String toString() {
+			if (m_toString==null) {
+				StringBuilder sb = new StringBuilder();
+				
+				sb.append("contains ");
+				
+				if (m_containsAll) {
+					sb.append("all ");
+				}
+				
+				sb.append("(");
+
+				for (int i=0; i<m_values.length; i++) {
+					if (i>0) {
+						sb.append(", ");
+					}
+					sb.append("'");
+					sb.append(escapeStringValue(m_values[i]));
+					sb.append("'");
+				}
+				
+				sb.append(")");
+				m_toString = sb.toString();
+			}
+			return m_toString;
+		}
+	}
+	
 	public static class NotTerm extends DQLTerm {
 		private DQLTerm m_term;
 		
@@ -312,15 +377,16 @@ public class DQL {
 			if (terms.length==0) {
 				throw new IllegalArgumentException("And arguments value is empty");
 			}
-			if (terms.length==1) {
-				throw new IllegalArgumentException("And arguments value contains one value and must contain at least two");
-			}
 			m_terms = terms;
 		}
 		
 		@Override
 		public String toString() {
-			if (m_toString==null) {
+			if (m_terms.length == 1) {
+				return m_terms[0].toString();
+			}
+			
+			if (m_toString==null){
 				StringBuilder sb = new StringBuilder();
 				for (int i=0; i<m_terms.length; i++) {
 					if (i>0) {
@@ -339,6 +405,7 @@ public class DQL {
 						sb.append(m_terms[i]);
 					}
 				}
+				
 				m_toString = sb.toString();
 			}
 			return m_toString;
@@ -356,14 +423,15 @@ public class DQL {
 			if (terms.length==0) {
 				throw new IllegalArgumentException("Or arguments value is empty");
 			}
-			if (terms.length==1) {
-				throw new IllegalArgumentException("Or arguments value contains one value and must contain at least two");
-			}
 			m_terms = terms;
 		}
 		
 		@Override
 		public String toString() {
+			if (m_terms.length == 1) {
+				return m_terms[0].toString();
+			}
+			
 			if (m_toString==null) {
 				StringBuilder sb = new StringBuilder();
 				for (int i=0; i<m_terms.length; i++) {
@@ -496,6 +564,31 @@ public class DQL {
 			return new ValueComparisonTerm(this, TermRelation.GREATERTHANOREQUAL, Double.valueOf(numVal));
 		}
 
+		/**
+		 * Returns a DQL term to run a FT search on the value of an item with one or multiple search words.
+		 * 
+		 * @param values search words with optional wildcards like Lehm* or Lehman?
+		 * @return term
+		 * 
+		 * @since Domino R11
+		 */
+		public ValueContainsTerm contains(String...searchWords) {
+			return new ValueContainsTerm(this, false, searchWords);
+		}
+
+		/**
+		 * Returns a DQL term to run a FT search on the value of an item with one or multiple search words.<br>
+		 * All search words must exist in the note for it to be a match.
+		 * 
+		 * @param values search words with optional wildcards like Lehm* or Lehman?
+		 * @return term
+		 * 
+		 * @since Domino R11
+		 */
+		public ValueContainsTerm containsAll(String...searchWords) {
+			return new ValueContainsTerm(this, true, searchWords);
+		}
+
 		public ValueComparisonTerm in(String... strValues) {
 			if (strValues==null)
 				throw new IllegalArgumentException("Values ist cannot be null");
@@ -579,6 +672,51 @@ public class DQL {
 		@Override
 		public String toString() {
 			return escapeItemName(m_itemName);
+		}
+	}
+	
+	public static class ValueContainsTerm extends DQLTerm {
+		private Subject m_subject;
+		private boolean m_containsAll;
+		private String[] m_values;
+		
+		private String m_toString;
+		
+		private ValueContainsTerm(Subject item, boolean containsAll, String[] values) {
+			m_subject = item;
+			m_containsAll = containsAll;
+			m_values = values;
+		}
+		
+		@Override
+		public String toString() {
+			if (m_toString==null) {
+				StringBuilder sb = new StringBuilder();
+				
+				sb.append(m_subject.toString());
+				
+				sb.append(" contains ");
+				
+				if (m_containsAll) {
+					sb.append("all ");
+				}
+				
+				sb.append("(");
+
+				for (int i=0; i<m_values.length; i++) {
+					if (i>0) {
+						sb.append(", ");
+					}
+					sb.append("'");
+					sb.append(escapeStringValue(m_values[i]));
+					sb.append("'");
+				}
+				
+				sb.append(")");
+
+				m_toString = sb.toString();
+			}
+			return m_toString;
 		}
 	}
 	
