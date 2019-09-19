@@ -70,10 +70,10 @@ public class BaseJNATestClass {
 
 	@AfterClass
 	public static void termNotes() {
+		NotesThread.stermThread();
 		if (m_notesInitExtendedCalled) {
 			NotesInitUtils.notesTerm();
 		}
-		NotesThread.stermThread();
 	}
 
 	public synchronized NotesDatabase getSampleDataDb() throws NotesException, IOException {
