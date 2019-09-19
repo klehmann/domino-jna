@@ -1797,6 +1797,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			Memory unidMem = new Memory(NotesConstants.notesUniversalNoteIdSize);
 			unidMem.write(0, unidBytes, 0, unidBytes.length);
 			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(unidMem);
+			unidStruct.read();
 			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
 			return Arrays.asList((Object) unid);
 		}
