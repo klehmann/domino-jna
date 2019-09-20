@@ -42,8 +42,12 @@ public class NotesInitUtils {
 		StringArray strArr = new StringArray(argvArr);
 
 		short result = NotesNativeAPI.get().NotesInitExtended(argvArr.length, strArr);
-		if (result!=0)
-			throw new NotesError(result, "Error initializing Notes connection");
+		if (result==421) {
+			throw new NotesError(result, "Please make sure that the notes.ini file can be found (ERR 421).");
+		}
+		else if (result!=0) {
+			throw new NotesError(result, "Error initializing Notes connection (ERR "+result+")");
+		}
 	}
 
 	/**
