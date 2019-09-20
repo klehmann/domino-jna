@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>standalone-app-sample</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.m2e.core.maven2Builder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+		<nature>org.eclipse.m2e.core.maven2Nature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>lib/Notes.jar</name>
+			<type>1</type>
+			<locationURI>NOTESJAR_DIR_LOC/Notes.jar</locationURI>
+		</link>
+	</linkedResources>
+	<variableList>
+		<variable>
+			<name>NOTESJAR_DIR_LOC</name>
+			<value>file:/Applications/HCL%20Notes.app/Contents/MacOS/jvm/lib/ext</value>
+		</variable>
+	</variableList>
+</projectDescription>
