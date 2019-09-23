@@ -1356,7 +1356,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			long t1=System.currentTimeMillis();
 			
 			if (result==3874) { //no documents found
-				result = NotesNativeAPI64.get().FTCloseSearch(rethSearch.getValue());
+				result = NotesNativeAPI32.get().FTCloseSearch(rethSearch.getValue());
 				NotesErrorUtils.checkResult(result);
 				return new NotesFTSearchResult(new NotesIDTable(), 0, 0, null, null, t1-t0);
 			}
@@ -1364,9 +1364,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			
 			if (searchOptionsToUse.contains(FTSearch.EXT_RET_HL)) {
 				//decode highlights
-				long hStrings = rethStrings.getValue();
+				int hStrings = rethStrings.getValue();
 				if (hStrings!=0) {
-					Pointer ptr = Mem64.OSLockObject(hStrings);
+					Pointer ptr = Mem32.OSLockObject(hStrings);
 					try {
 						short varLength = ptr.getShort(0);
 						ptr = ptr.share(2);
@@ -1374,7 +1374,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						ptr = ptr.share(2);
 						
 						String strHighlights = NotesStringUtils.fromLMBCS(ptr, (int) (varLength & 0xffff));
-						System.out.println("Highlights: "+strHighlights);
 						
 						highlightStrings = new ArrayList<String>();
 						StringTokenizerExt st = new StringTokenizerExt(strHighlights, "\n");
@@ -1386,8 +1385,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						}
 					}
 					finally {
-						Mem64.OSUnlockObject(hStrings);
-						Mem64.OSMemFree(hStrings);
+						Mem32.OSUnlockObject(hStrings);
+						Mem32.OSMemFree(hStrings);
 					}
 				}
 			}
@@ -1412,15 +1411,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			else {
-				long hResults = rethResults.getValue();
+				int hResults = rethResults.getValue();
 				if (hResults!=0) {
-					Pointer ptr = Mem64.OSLockObject(hResults);
+					Pointer ptr = Mem32.OSLockObject(hResults);
 					try {
 						matchesWithScore = FTSearchResultsDecoder.decodeNoteIdsWithStoreSearchResult(ptr, searchOptionsToUse);
 					}
 					finally {
-						Mem64.OSUnlockObject(hResults);
-						Mem64.OSMemFree(hResults);
+						Mem32.OSUnlockObject(hResults);
+						Mem32.OSMemFree(hResults);
 					}
 				}
 			}
