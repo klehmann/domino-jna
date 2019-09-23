@@ -2189,6 +2189,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		return hasFullAccess==1; 
 	}
+	
 	/**
 	 * This routine returns the last time a database was full text indexed.
 	 * It can also be used to determine if a database is full text indexed.
@@ -2225,6 +2226,42 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * This routine returns the last time a database was full text indexed.
+	 * It can also be used to determine if a database is full text indexed.
+	 * If the database is not full text indexed, null is returned.
+	 * 
+	 * @return last index time or null if not indexed
+	 */
+	public NotesTimeDate getFTLastIndexTimeAsNotesTimeDate() {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
+			short result = NotesNativeAPI64.get().FTGetLastIndexTime(m_hDB64, retTime);
+			if (result == INotesErrorConstants.ERR_FT_NOT_INDEXED) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			retTime.read();
+			
+			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
+			return retTimeWrap;
+		}
+		else {
+			NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
+			short result = NotesNativeAPI32.get().FTGetLastIndexTime(m_hDB32, retTime);
+			if (result == INotesErrorConstants.ERR_FT_NOT_INDEXED) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			retTime.read();
+			
+			NotesTimeDate retTimeWrap = new NotesTimeDate(retTime);
+			return retTimeWrap;
+		}
+	}
+	
 	/**
 	 * This function returns the "major" portion of the build number of the Domino or
 	 * Notes executable running on the system where the specified database resides.
