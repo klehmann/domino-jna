@@ -778,6 +778,8 @@ public interface INotesNativeAPI32 extends Library {
 			int bForeignServer, int bSuppressPrintToConsole);
 	
 	public short FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
+	@UndocumentedAPI
+	public short ClientFTIndexRequest(int hDB);
 	public short FTDeleteIndex(int hDB);
 	public short FTGetLastIndexTime(int hDB, NotesTimeDateStruct retTime);
 	public short FTOpenSearch(IntByReference rethSearch);

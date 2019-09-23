@@ -684,6 +684,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int bSuppressPrintToConsole);
 
 	public native short FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
+	public native short ClientFTIndexRequest(int hDB);
 	public native short FTDeleteIndex(int hDB);
 	public native short FTGetLastIndexTime(int hDB, NotesTimeDateStruct retTime);
 	public native short FTOpenSearch(IntByReference rethSearch);

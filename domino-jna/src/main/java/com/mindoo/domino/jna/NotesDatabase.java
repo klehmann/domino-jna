@@ -2128,6 +2128,21 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Requests an asynchronous update of the full text index
+	 */
+	public void ftIndexRequest() {
+		checkHandle();
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ClientFTIndexRequest(m_hDB64);
+		}
+		else {
+			result = NotesNativeAPI32.get().ClientFTIndexRequest(m_hDB32);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+
+	/**
 	 * This function deletes a full text index for a database.<br>
 	 * <br>
 	 * This function does not disable full text indexing for a database.
