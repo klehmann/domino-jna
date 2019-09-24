@@ -3570,11 +3570,22 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param value item value, see method comment for allowed types
 	 * @return created item
 	 */
-	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
+	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flagsOrig, Object value) {
 		checkHandle();
 
+		//remove our own pseudo flags:
+		boolean keepLineBreaks = flagsOrig.contains(ItemType.KEEPLINEBREAKS);
+		EnumSet<ItemType> flags = flagsOrig.clone();
+		flags.remove(ItemType.KEEPLINEBREAKS);
+
 		if (value instanceof String) {
-			Memory strValueMem = NotesStringUtils.toLMBCS((String)value, false);
+			Memory strValueMem;
+			if (keepLineBreaks) {
+				strValueMem = NotesStringUtils.toLMBCS((String)value, false, false);
+			}
+			else {
+				strValueMem = NotesStringUtils.toLMBCS((String)value, false);
+			}
 
 			int valueSize = (int) (2 + (strValueMem==null ? 0 : strValueMem.size()));
 			

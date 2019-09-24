@@ -50,7 +50,11 @@ public enum ItemType {
 	READERS(0x400),
 	
 	/** Item is same as on-disk  */
-	UNCHANGED(0x1000);
+	UNCHANGED(0x1000),
+	
+	/** Special flag to keep \n in string item values instead of replacing them with \0 
+	 * (e.g. required when writing $$FormScript in design elements) */
+	KEEPLINEBREAKS(0x8000000);
 	
 	private int m_val;
 	
