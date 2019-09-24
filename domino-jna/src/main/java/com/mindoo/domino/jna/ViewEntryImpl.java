@@ -179,8 +179,23 @@ public class ViewEntryImpl implements ViewEntry {
 						for (int i=0; i<currColValueAsList.size(); i++) {
 							Object currListVal = currColValueAsList.get(i);
 							
-							if (currColValue instanceof Calendar) {
+							if (currListVal instanceof Calendar) {
 								currListVal = ((Calendar)currListVal).getTime();
+							}
+							else if (currListVal instanceof NotesTimeDate) {
+								currListVal = ((NotesTimeDate)currListVal).toDate();
+							}
+							else if (currListVal instanceof NotesDateRange) {
+								NotesDateRange range = (NotesDateRange) currListVal;
+								NotesTimeDate startDateTime = range.getStartDateTime();
+								NotesTimeDate endDateTime = range.getEndDateTime();
+								
+								//replace NotesDateRange with a Vector of Date
+								Vector<Object> currDateRangeValuesAsVector = new Vector<Object>(2);
+								currDateRangeValuesAsVector.add(startDateTime.toDate());
+								currDateRangeValuesAsVector.add(endDateTime.toDate());
+								
+								currListVal = currDateRangeValuesAsVector;
 							}
 							else if (currListVal instanceof Calendar[]) {
 								//replace Calendar[] with date range info with a Vector of Date
