@@ -6,7 +6,6 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
-import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 
@@ -42,11 +41,11 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 		}
 		
 		do {
-			if (nav.getCurrentRecordType() == CDRecordType.HOTSPOTEND) {
+			if (CDRecordType.HOTSPOTEND.getConstant() == nav.getCurrentRecordTypeAsShort()) {
 				RichTextNavPosition savedPos = nav.getCurrentRecordPosition();
 				if (nav.gotoNext()) {
 					//check what is next
-					if (nav.getCurrentRecordType() == CDRecordType.END) {
+					if (CDRecordType.END.getConstant() == nav.getCurrentRecordTypeAsShort()) {
 						//get the position of the data right after END
 						if (nav.gotoNext()) {
 							RichTextNavPosition posOfContentAfterEnd = nav.getCurrentRecordPosition();
@@ -90,7 +89,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 		}
 		
 		do {
-			if (nav.getCurrentRecordType() == CDRecordType.BEGIN) {
+			if (CDRecordType.BEGIN.getConstant() == nav.getCurrentRecordTypeAsShort()) {
 //				typedef struct {
 //					   BSIG Header;    /* Signature and length of this record */
 //					   WORD Version;		
@@ -105,7 +104,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 					RichTextNavPosition savedPos = nav.getCurrentRecordPosition();
 					if (nav.gotoNext()) {
 						//check what is next
-						if (nav.getCurrentRecordType() == CDRecordType.HOTSPOTBEGIN) {
+						if (CDRecordType.HOTSPOTBEGIN.getConstant() == nav.getCurrentRecordTypeAsShort()) {
 //							typedef struct {
 //							   WSIG  Header; /* Signature and length of this record */	
 //							   WORD  Type;

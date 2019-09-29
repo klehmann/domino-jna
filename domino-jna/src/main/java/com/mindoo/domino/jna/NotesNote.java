@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesMIMEPart.PartType;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
-import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.MimePartOptions;
@@ -5834,7 +5833,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 				@Override
 				public ICompositeCallbackDirect.Action recordVisited(Pointer dataPtr,
-						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
+						short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 					hasRecords[0] = true;
 					return ICompositeCallbackDirect.Action.Stop;
 				}
@@ -5856,14 +5855,14 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 				@Override
 				public ICompositeCallbackDirect.Action recordVisited(Pointer dataPtr,
-						CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
+						short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
 					
 					byte[] cdRecordDataArr = cdRecordPtr.getByteArray(0, cdRecordLength);
 					ReadOnlyMemory cdRecordDataCopied = new ReadOnlyMemory(cdRecordLength);
 					cdRecordDataCopied.write(0, cdRecordDataArr, 0, cdRecordLength);
 					cdRecordDataCopied.seal();
 					
-					CDRecordMemory cdRecordMem = new CDRecordMemory(cdRecordDataCopied, parsedSignature, signature,
+					CDRecordMemory cdRecordMem = new CDRecordMemory(cdRecordDataCopied, signature,
 							dataLength, cdRecordLength);
 					itemRecords.add(cdRecordMem);
 					return ICompositeCallbackDirect.Action.Continue;
@@ -6084,23 +6083,6 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		@Override
-		public CDRecordType getCurrentRecordType() {
-			CDRecordMemory record = getCurrentRecord();
-			return record==null ? null : record.getType();
-		}
-		
-//		Memory getCurrentRecordDataAsPointer() {
-//			CDRecordMemory record = getCurrentRecord();
-//			if (record==null) {
-//				return null;
-//			}
-//			else {
-//				Pointer dataPtr = record.getRecordDataWithoutHeader();
-//				return dataPtr;
-//			}
-//		}
-		
-		@Override
 		public Memory getCurrentRecordData() {
 			CDRecordMemory record = getCurrentRecord();
 			if (record==null) {
@@ -6162,14 +6144,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		 */
 		private class CDRecordMemory {
 			private ReadOnlyMemory m_cdRecordMemory;
-			private CDRecordType m_type;
 			private short m_typeAsShort;
 			private int m_dataSize;
 			private int m_cdRecordLength;
 			
-			public CDRecordMemory(ReadOnlyMemory cdRecordMem, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
+			public CDRecordMemory(ReadOnlyMemory cdRecordMem, short typeAsShort, int dataSize, int cdRecordLength) {
 				m_cdRecordMemory = cdRecordMem;
-				m_type = type;
 				m_typeAsShort = typeAsShort;
 				m_dataSize = dataSize;
 				m_cdRecordLength = cdRecordLength;
@@ -6181,10 +6161,6 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			public Memory getRecordDataWithoutHeader() {
 				return (Memory) m_cdRecordMemory.share(m_cdRecordLength - m_dataSize);
-			}
-			
-			public CDRecordType getType() {
-				return m_type;
 			}
 			
 			public short getTypeAsShort() {

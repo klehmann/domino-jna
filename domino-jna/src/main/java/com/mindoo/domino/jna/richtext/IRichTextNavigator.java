@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.richtext;
 
+import java.util.List;
+
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.sun.jna.Memory;
 
@@ -60,13 +62,6 @@ public interface IRichTextNavigator {
 	public boolean hasPrev();
 	
 	/**
-	 * Returns the type of the current CD record
-	 * 
-	 * @return type
-	 */
-	public CDRecordType getCurrentRecordType();
-	
-	/**
 	 * Returns a read-only buffer to access the CD record data (CD record header BSIG/WSIG/LSIG is not part of
 	 * the returned data)
 	 * 
@@ -75,7 +70,9 @@ public interface IRichTextNavigator {
 	public Memory getCurrentRecordData();
 	
 	/**
-	 * Returns the type of the current CD record as short
+	 * Returns the type of the current CD record as short constant. Use
+	 * {@link CDRecordType#getRecordTypeForConstant(short, com.mindoo.domino.jna.constants.CDRecordType.Area)}
+	 * to get an enum value for the type of data you are processing.
 	 * 
 	 * @return type as short
 	 */

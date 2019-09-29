@@ -24,7 +24,7 @@ public abstract class AbstractMailMergeConversion implements IRichTextConversion
 		//TODO add support for search word recognition across CD record boundaries like in this JS lib: https://github.com/padolsey/findAndReplaceDOMText
 		if (nav.gotoFirst()) {
 			do {
-				if (nav.getCurrentRecordType() == CDRecordType.TEXT) {
+				if (CDRecordType.TEXT.getConstant() == nav.getCurrentRecordTypeAsShort()) {
 //					typedef struct {
 //						   WSIG   Header; /* Tag and length */
 //						   FONTID FontID; /* Font ID */
@@ -58,7 +58,7 @@ public abstract class AbstractMailMergeConversion implements IRichTextConversion
 	public void convert(IRichTextNavigator source, ICompoundText target) {
 		if (source.gotoFirst()) {
 			do {
-				if (source.getCurrentRecordType() == CDRecordType.TEXT) {
+				if (CDRecordType.TEXT.getConstant() == source.getCurrentRecordTypeAsShort()) {
 //					typedef struct {
 //						   WSIG   Header; /* Tag and length */
 //						   FONTID FontID; /* Font ID */

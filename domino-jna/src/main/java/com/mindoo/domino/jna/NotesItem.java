@@ -93,10 +93,10 @@ public class NotesItem {
 	private int m_dataType;
 	private int m_valueLength;
 	private String m_itemName;
-	
+
 	private NotesBlockIdStruct m_itemBlockId;
 	private NotesBlockIdStruct m_valueBlockId;
-	
+
 	/**
 	 * Creates a new item object
 	 * 
@@ -128,7 +128,7 @@ public class NotesItem {
 	 */
 	public void convertRFC822TextItem() {
 		m_parentNote.checkHandle();
-		
+
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
@@ -147,12 +147,12 @@ public class NotesItem {
 					valueBlockIdByVal);
 		}
 		NotesErrorUtils.checkResult(result);
-		
+
 		//force datatype and seq number reload
 		m_itemFlagsLoaded = false;
 		loadItemNameAndFlags();
 	}
-	
+
 	/**
 	 * Returns the parent note for this item
 	 * 
@@ -161,7 +161,7 @@ public class NotesItem {
 	public NotesNote getParent() {
 		return m_parentNote;
 	}
-	
+
 	/**
 	 * Returns the item block id to read item meta data
 	 * 
@@ -170,7 +170,7 @@ public class NotesItem {
 	NotesBlockIdStruct getItemBlockId() {
 		return m_itemBlockId;
 	}
-	
+
 	/**
 	 * Returns the value block id to lock the value in memory and decode it
 	 * 
@@ -179,7 +179,7 @@ public class NotesItem {
 	NotesBlockIdStruct getValueBlockId() {
 		return m_valueBlockId;
 	}
-	
+
 	/**
 	 * Returns the value length in bytes
 	 * 
@@ -187,10 +187,10 @@ public class NotesItem {
 	 */
 	int getValueLength() {
 		loadItemNameAndFlags();
-		
+
 		return m_valueLength;
 	}
-	
+
 	/**
 	 * Returns the item name
 	 * 
@@ -198,10 +198,10 @@ public class NotesItem {
 	 */
 	public String getName() {
 		loadItemNameAndFlags();
-		
+
 		return m_itemName;
 	}
-	
+
 	/**
 	 * Returns the data type, e.g. {@link #TYPE_TEXT} or {@link #TYPE_NUMBER}
 	 * 
@@ -210,7 +210,7 @@ public class NotesItem {
 	public int getType() {
 		return m_dataType;
 	}
-	
+
 	/**
 	 * Returns false if the item's type is {@link #TYPE_UNAVAILABLE}
 	 * 
@@ -219,7 +219,7 @@ public class NotesItem {
 	public boolean isAvailable() {
 		return m_dataType!=TYPE_UNAVAILABLE;
 	}
-	
+
 	/**
 	 * Returns the sequence number of the item
 	 * 
@@ -227,10 +227,10 @@ public class NotesItem {
 	 */
 	public int getSeq() {
 		loadItemNameAndFlags();
-		
+
 		return (int) (m_seq & 0xff);
 	}
-	
+
 	/**
 	 * Returna the Duplicate item ID
 	 * 
@@ -238,10 +238,10 @@ public class NotesItem {
 	 */
 	public int getDupItemId() {
 		loadItemNameAndFlags();
-		
+
 		return m_dupItemId;
 	}
-	
+
 	/**
 	 * Decodes the item value(s). The data is always returned as a list even though
 	 * the list may contain only one element (e.g. for {@link #TYPE_TEXT}.
@@ -265,7 +265,7 @@ public class NotesItem {
 	 */
 	public List<Object> getValues() {
 		loadItemNameAndFlags();
-		
+
 		int valueLength = getValueLength();
 		List<Object> values = m_parentNote.getItemValue(m_itemName, m_itemBlockId, m_valueBlockId, valueLength);
 		return values;
@@ -285,7 +285,7 @@ public class NotesItem {
 	 */
 	public String getValueAsText(char separator) {
 		m_parentNote.checkHandle();
-		
+
 		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		valueBlockIdByVal.pool = m_valueBlockId.pool;
 		valueBlockIdByVal.block = m_valueBlockId.block;
@@ -297,14 +297,14 @@ public class NotesItem {
 
 				short length;
 				int valueLength = getValueLength();
-				
+
 				if (PlatformUtils.is64Bit()) {
 					length = NotesNativeAPI64.get().NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
 				else {
 					length = NotesNativeAPI32.get().NSFItemConvertValueToText((short) (m_dataType & 0xffff), valueBlockIdByVal, valueLength, MAX_TEXT_ITEM_VALUE, retBufferSize, separator);
 				}
-				
+
 				int lengthAsInt = (int) length & 0xffff;
 				if (lengthAsInt==0) {
 					return "";
@@ -325,25 +325,25 @@ public class NotesItem {
 		if (m_itemFlagsLoaded) {
 			return;
 		}
-		
+
 		m_parentNote.checkHandle();
-		
+
 		ByteByReference retSeqByte = new ByteByReference();
 		ByteByReference retDupItemID = new ByteByReference();
-		
+
 		Memory item_name = new Memory(NotesConstants.MAXUSERNAME);
 		ShortByReference retName_len = new ShortByReference();
 		ShortByReference retItem_flags = new ShortByReference();
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
-		
+
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
-			
+
 			NotesNativeAPI64.get().NSFItemQueryEx(m_parentNote.getHandle64(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
@@ -355,7 +355,7 @@ public class NotesItem {
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
 		}
-		
+
 		m_dataType = retDataType.getValue();
 		m_seq = retSeqByte.getValue();
 		m_dupItemId = retDupItemID.getValue();
@@ -364,31 +364,31 @@ public class NotesItem {
 		m_valueLength = retValueLen.getValue();
 		m_itemFlagsLoaded = true;
 	}
-	
+
 	public boolean isSigned() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_SIGN) == NotesConstants.ITEM_SIGN;
 	}
-	
+
 	public boolean isSealed() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_SEAL) == NotesConstants.ITEM_SEAL;
 	}
-	
+
 	public boolean isSummary() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_SUMMARY) == NotesConstants.ITEM_SUMMARY;
 	}
-	
+
 	public boolean isSaveToDisk() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_NOUPDATE) == 0;
 	}
-	
+
 	public void setSummary(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -406,7 +406,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public void setSaveToDisk(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -414,7 +414,7 @@ public class NotesItem {
 				int flagsAsInt = m_itemFlags & 0xffff;
 				int newFlagsAsInt = flagsAsInt & ~NotesConstants.ITEM_NOUPDATE;
 				setItemFlags((short) (newFlagsAsInt & 0xffff));
-				
+
 			}
 		}
 		else {
@@ -425,7 +425,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public void setSealed(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -443,7 +443,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public void setSigned(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -497,7 +497,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public void setAuthors(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -515,7 +515,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public void setReaders(boolean flag) {
 		loadItemNameAndFlags();
 		if (flag) {
@@ -551,10 +551,10 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	private void setItemFlags(short newFlags) {
 		m_parentNote.checkHandle();
-		
+
 		loadItemNameAndFlags();
 
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
@@ -568,11 +568,11 @@ public class NotesItem {
 		else {
 			poolPtr = Mem32.OSLockObject(m_itemBlockId.pool);
 		}
-		
+
 		int block = (int) (m_itemBlockId.block & 0xffff);
 		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
 		Pointer itemFlagsPtr = new Pointer(poolPtrLong).share(16);
-		
+
 		try {
 			short oldFlags = itemFlagsPtr.getShort(0);
 			if (oldFlags==m_itemFlags) {
@@ -589,49 +589,49 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	public boolean isReadWriters() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
 	}
-	
+
 	public boolean isNames() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_NAMES) == NotesConstants.ITEM_NAMES;
 	}
-	
+
 	public boolean isPlaceholder() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_PLACEHOLDER) == NotesConstants.ITEM_PLACEHOLDER;
 	}
-	
+
 	public boolean isProtected() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_PROTECTED) == NotesConstants.ITEM_PROTECTED;
 	}
-	
+
 	public boolean isReaders() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_READERS) == NotesConstants.ITEM_READERS;
 	}
-	
+
 	public boolean isAuthors() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
 	}
-	
+
 	public boolean isUnchanged() {
 		loadItemNameAndFlags();
-		
+
 		return (m_itemFlags & NotesConstants.ITEM_UNCHANGED) == NotesConstants.ITEM_UNCHANGED;
 	}
-	
+
 	/**
 	 * Searches all {@link #TYPE_MIME_PART} items on the note to see if
 	 * the given $File item contains MIME part data.
@@ -640,11 +640,11 @@ public class NotesItem {
 	 */
 	public boolean isMimePart() {
 		getParent().checkHandle();
-		
+
 		NotesBlockIdStruct.ByValue blockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		blockIdByVal.block = m_itemBlockId.block;
 		blockIdByVal.pool = m_itemBlockId.pool;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			return NotesNativeAPI64.get().NSFIsFileItemMimePart(getParent().getHandle64(), blockIdByVal) == 1;
 		}
@@ -652,7 +652,7 @@ public class NotesItem {
 			return NotesNativeAPI32.get().NSFIsFileItemMimePart(getParent().getHandle32(), blockIdByVal) == 1;
 		}
 	}
-	
+
 	/**
 	 * Given a MIME part item, check it to see if its content is in a file.<br>
 	 * If so, return the filename or null otherwise.
@@ -671,7 +671,7 @@ public class NotesItem {
 			if (PlatformUtils.is64Bit()) {
 				if (NotesNativeAPI64.get().NSFIsMimePartInFile(getParent().getHandle64(), blockIdByVal,
 						retFilenameMem, (short) (NotesConstants.MAXPATH & 0xffff)) == 1) {
-					
+
 					String fileName = NotesStringUtils.fromLMBCS(retFilenameMem, -1);
 					return fileName;
 				}
@@ -682,7 +682,7 @@ public class NotesItem {
 			else {
 				if (NotesNativeAPI32.get().NSFIsMimePartInFile(getParent().getHandle32(), blockIdByVal,
 						retFilenameMem, (short) (NotesConstants.MAXPATH & 0xffff)) == 1) {
-					
+
 					String fileName = NotesStringUtils.fromLMBCS(retFilenameMem, -1);
 					return fileName;
 				}
@@ -706,29 +706,29 @@ public class NotesItem {
 	 */
 	public Calendar getModifiedDateTime() {
 		m_parentNote.checkHandle();
-		
+
 		NotesTimeDateStruct retTime = NotesTimeDateStruct.newInstance();
-		
+
 		NotesBlockIdStruct.ByValue itemIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemIdByVal.pool = m_itemBlockId.pool;
 		itemIdByVal.block = m_itemBlockId.block;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle64(),
 					itemIdByVal, 0, retTime);
-			
+
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
 			short result = NotesNativeAPI32.get().NSFItemGetModifiedTimeByBLOCKID(m_parentNote.getHandle32(),
 					itemIdByVal, 0, retTime);
-			
+
 			NotesErrorUtils.checkResult(result);
 		}
 		retTime.read();
 		return retTime.toCalendar();
 	}
-	
+
 	/**
 	 * Copies this item to another note
 	 * 
@@ -748,7 +748,7 @@ public class NotesItem {
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().NSFItemCopy(targetNote.getHandle64(), itemBlockIdByVal);
 			NotesErrorUtils.checkResult(result);
@@ -758,7 +758,7 @@ public class NotesItem {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
-	
+
 	/**
 	 * Copies this item to another note and renames it.
 	 * 
@@ -776,11 +776,11 @@ public class NotesItem {
 			}
 		}
 		Memory newItemNameMem = NotesStringUtils.toLMBCS(newItemName, true);
-		
+
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().NSFItemCopyAndRename(targetNote.getHandle64(),
 					itemBlockIdByVal, newItemNameMem);
@@ -792,13 +792,13 @@ public class NotesItem {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
-	
+
 	/**
 	 * Removes the item from the parent note
 	 */
 	public void remove() {
 		m_parentNote.checkHandle();
-		
+
 		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
@@ -812,7 +812,7 @@ public class NotesItem {
 			NotesErrorUtils.checkResult(result);
 		}
 	}
-	
+
 	/**
 	 * Enumerates all CD records if a richtext item (TYPE_COMPOSITE).
 	 * 
@@ -830,25 +830,25 @@ public class NotesItem {
 		else {
 			poolPtr = Mem32.OSLockObject(m_valueBlockId.pool);
 		}
-		
+
 		int block = (m_valueBlockId.block & 0xffff);
 		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
 		Pointer valuePtr = new Pointer(poolPtrLong);
-		
+
 		try {
 			int fixedSize;
-			
+
 			int dwFileSize = getValueLength() - 2; //2 -> subtract data type WORD
 			int dwFileOffset = 0;
-			
+
 			boolean aborted = false;
-			
+
 			while (dwFileSize>0) {
 				Pointer cdRecordPtr = valuePtr.share(2 + dwFileOffset); //2 -> skip data type WORD
-				
+
 				//read signature WORD
 				short recordType = cdRecordPtr.getShort(0);
-				
+
 				int dwLength;
 
 				/* structures used to define and read the signatures 
@@ -857,21 +857,21 @@ public class NotesItem {
 				+---------+---------+
 				|   Sig   |  Length	|						Byte signature
 				+---------+---------+
-	
+
 					 0		   1        2         3
 				+---------+---------+---------+---------+
 				|   Sig   |   ff    |		Length	   |		Word signature
 				+---------+---------+---------+---------+
-	
+
 					 0		   1        2         3          4         5
 				+---------+---------+---------+---------+---------+---------+
 				|   Sig   |   00	    |                 Length		           | DWord signature
 				+---------+---------+---------+---------+---------+---------+
 
 				 */
-		
+
 				short highOrderByte = (short) (recordType & 0xFF00);
-				
+
 				switch (highOrderByte) {
 				case NotesConstants.LONGRECORDLENGTH:      /* LSIG */
 					dwLength = cdRecordPtr.share(2).getInt(0);
@@ -892,34 +892,32 @@ public class NotesItem {
 					recordType &= 0x00FF; /* Length not part of signature */
 					fixedSize = 2; //sizeof(BSIG);
 				}
-				
-				CDRecordType currType = CDRecordType.getRecordForConstant(recordType);
-				
+
 				//give direct pointer access (internal only)
 				if (callback!=null) {
-					if (callback.recordVisited(cdRecordPtr.share(fixedSize), currType, recordType, dwLength-fixedSize, cdRecordPtr, dwLength) == Action.Stop) {
+					if (callback.recordVisited(cdRecordPtr.share(fixedSize), recordType, dwLength-fixedSize, cdRecordPtr, dwLength) == Action.Stop) {
 						aborted=true;
 						break;
 					}
 				}
-				
+
 				if (dwLength>0) {
-		            dwFileSize -= dwLength;
-		            dwFileOffset += dwLength;
-		        }
-		        else {
-		            dwFileSize -= fixedSize;
-		            dwFileOffset += fixedSize;
-		        }
-				
+					dwFileSize -= dwLength;
+					dwFileOffset += dwLength;
+				}
+				else {
+					dwFileSize -= fixedSize;
+					dwFileOffset += fixedSize;
+				}
+
 				/* If we are at an odd file offset, ignore the filler byte */
 
-		        if ((dwFileOffset & 1L)==1 && (dwFileSize > 0) ) {
-		            dwFileSize -= 1;            
-		            dwFileOffset += 1;
-		        }
+				if ((dwFileOffset & 1L)==1 && (dwFileSize > 0) ) {
+					dwFileSize -= 1;            
+					dwFileOffset += 1;
+				}
 			}
-			
+
 			if (!aborted && dwFileSize>0) {
 				//should not happen :-)
 				System.out.println("WARNING: Remaining "+dwFileSize+" bytes found at the end of the CD record item "+getName()+" of document with UNID "+m_parentNote.getUNID());
@@ -934,7 +932,7 @@ public class NotesItem {
 			}
 		}
 	}
-	
+
 	@Override
 	public String toString() {
 		if (m_parentNote.isRecycled()) {
@@ -945,7 +943,7 @@ public class NotesItem {
 					", issummary="+isSummary()+"]";
 		}
 	}
-	
+
 	/**
 	 * Extracts all text from the item
 	 * 
@@ -956,7 +954,7 @@ public class NotesItem {
 		getAllCompositeTextContent(sWriter);
 		return sWriter.toString();
 	}
-	
+
 	/**
 	 * Extracts all text from the item
 	 * 
@@ -964,12 +962,12 @@ public class NotesItem {
 	 */
 	void getAllCompositeTextContent(final Writer writer) {
 		final boolean useOSLineBreaks = NotesStringUtils.isUseOSLineDelimiter();
-		
+
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
-			public Action recordVisited(Pointer dataPtr, CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
-				if (signature==NotesConstants.SIG_CD_TEXT) {
+			public Action recordVisited(Pointer dataPtr, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength) {
+				if (CDRecordType.TEXT.getConstant() == signature) {
 					Pointer txtPtr = dataPtr.share(4);
 					int txtMemLength = dataLength-4;
 					if (txtMemLength>0) {
@@ -984,7 +982,7 @@ public class NotesItem {
 						}
 					}
 				}
-				else if (signature==NotesConstants.SIG_CD_PARAGRAPH) {
+				else if (CDRecordType.PARAGRAPH.getConstant() == signature) {
 					try {
 						if (PlatformUtils.isWindows() && useOSLineBreaks) {
 							writer.write("\r\n");
@@ -1000,7 +998,7 @@ public class NotesItem {
 			}
 		});
 	}
-		
+
 	/**
 	 * Internal interface for direct access to memory structures
 	 * 
@@ -1008,19 +1006,19 @@ public class NotesItem {
 	 */
 	static interface ICompositeCallbackDirect {
 		public enum Action {Continue, Stop}
-		
+
 		/**
 		 * Method is called for all CD records in this item
 		 * 
 		 * @param dataPtr pointer to access data
-		 * @param parsedSignature enum with converted signature WORD
-		 * @param signature signature WORD for the record type
+		 * @param parsedSignature list of enum values matching the signature WORD (that number is not unique, e.g. SIG_CD_VMTEXTBOX and SIG_CD_PABHIDE have the same value)
+		 * @param signature signature WORD for the record type, use {@link CDRecordType#getRecordTypeForConstant(short, com.mindoo.domino.jna.constants.CDRecordType.Area)} to get an enum value for the data you are processing
 		 * @param dataLength length of data to read
 		 * @param cdRecordPtr pointer to CD record (header + data)
 		 * @param cdRecordLength total length of CD record (BSIG/WSIG/LSIG header plus <code>dataLength</code>
 		 * @return action value to continue or stop
 		 */
-		public Action recordVisited(Pointer dataPtr, CDRecordType parsedSignature, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength);
+		public Action recordVisited(Pointer dataPtr, short signature, int dataLength, Pointer cdRecordPtr, int cdRecordLength);
 
 	}
 }

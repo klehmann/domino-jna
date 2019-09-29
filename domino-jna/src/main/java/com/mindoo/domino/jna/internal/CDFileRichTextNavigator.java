@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -119,8 +120,6 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 			fixedSize = 2; //sizeof(BSIG);
 		}
 		
-		CDRecordType type = CDRecordType.getRecordForConstant(typeAsShort);
-		
 		//file channel position points to the start of data, so reset it to the CD record start
 		m_fileChannel.position(m_position);
 		int cdRecordTotalLength = dwLength;
@@ -131,7 +130,7 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		}
 		cdRecordMem.seal();
 		
-		CDRecordMemory record = new CDRecordMemory(cdRecordMem, type, typeAsShort, dwLength-fixedSize, dwLength);
+		CDRecordMemory record = new CDRecordMemory(cdRecordMem, typeAsShort, dwLength-fixedSize, dwLength);
 		//remember the length of the CD records
 		m_cdRecordSizeAtIndex.put(m_currentCDRecordIndex, record.getCDRecordLength());
 		m_cdRecordIndexAtFilePos.put(m_position, m_currentCDRecordIndex);
@@ -243,13 +242,6 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	@Override
 	public boolean hasPrev() {
 		return m_currentCDRecordIndex>0;
-	}
-
-	@Override
-	public CDRecordType getCurrentRecordType() {
-		if (m_currentCDRecord==null)
-			return null;
-		return m_currentCDRecord.getType();
 	}
 
 	@Override
@@ -375,14 +367,12 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	 */
 	private class CDRecordMemory {
 		private ReadOnlyMemory m_cdRecordBuf;
-		private CDRecordType m_type;
 		private short m_typeAsShort;
 		private int m_dataSize;
 		private int m_cdRecordLength;
 		
-		public CDRecordMemory(ReadOnlyMemory recordBuf, CDRecordType type, short typeAsShort, int dataSize, int cdRecordLength) {
+		public CDRecordMemory(ReadOnlyMemory recordBuf, short typeAsShort, int dataSize, int cdRecordLength) {
 			m_cdRecordBuf = recordBuf;
-			m_type = type;
 			m_typeAsShort = typeAsShort;
 			m_dataSize = dataSize;
 			m_cdRecordLength = cdRecordLength;
@@ -395,11 +385,14 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		public Memory getRecordDataWithoutHeader() {
 			return (Memory) m_cdRecordBuf.share(m_cdRecordLength - m_dataSize);
 		}
-		
-		public CDRecordType getType() {
-			return m_type;
-		}
-		
+
+		/**
+		 * Use this value in
+		 * {@link CDRecordType#getRecordTypeForConstant(short, com.mindoo.domino.jna.constants.CDRecordType.Area)}
+		 * to get an enum value
+		 * 
+		 * @return CD record type
+		 */
 		public short getTypeAsShort() {
 			return m_typeAsShort;
 		}
