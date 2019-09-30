@@ -1,5 +1,5 @@
 # Domino JNA
-Cross-platform access to HCL Notes/Domino C API methods from Java
+Cross-platform access to IBM/HCL Notes/Domino C API methods from Java
 
 ## Features
 The project provides functionality that is not available in the classic Java API of HCL Notes/Domino or that is poorly implemented, for example:
