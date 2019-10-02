@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -28,8 +29,6 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.sync.ISyncTarget;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * Generic base class that implements {@link ISyncTarget} and syncs data with
