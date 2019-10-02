@@ -333,6 +333,10 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		m_hasData=true;
 	}
 
+	public void addCDRecords(Memory cdRecordMem) {
+		addCDRecords(cdRecordMem, (int) cdRecordMem.size());
+	}
+	
 	/**
 	 * Method to add raw CD records to the compound text
 	 * 

@@ -7,6 +7,7 @@ import java.io.InputStream;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesNote;
+import com.sun.jna.Memory;
 
 /**
  * Interface for CompoundText, a high level C API to produce richtext
@@ -188,6 +189,21 @@ public interface ICompoundText extends IAdaptable {
 	 */
 	public void addClosedStandaloneRichText(StandaloneRichText rt);
 	
+	/**
+	 * Method to add raw CD record data to the compound text.<br>
+	 * <br>
+	 * <b>Please note:<br>
+	 * Only use this method if you really know what you are doing. You can severe
+	 * mess up your richtext data by adding the wrong record content. We just added
+	 * this method here because we needed a way to copy modified richtext data
+	 * between documents (e.g. changing record type from TABLEBEGIN to NESTEDTABLEBEGIN while
+	 * keeping the rest of the record data).</b>
+	 * 
+	 * @param cdRecordMem CD record data including BSIG/WSIG/LSIG prefix
+	 * @param cdRecordMem CD record data to add including BSIG/WSIG/LSIG prefix (one or more records, calls the C API method CompoundTextAddCDRecords internally)
+	 */
+	public void addCDRecords(Memory cdRecordMem);
+
 	public boolean isRecycled();
 	
 }
