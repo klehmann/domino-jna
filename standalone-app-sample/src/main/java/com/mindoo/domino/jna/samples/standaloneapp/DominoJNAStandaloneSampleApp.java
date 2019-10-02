@@ -24,6 +24,15 @@ import com.mindoo.domino.jna.utils.StringUtil;
  * "C:\Program Files (x86)\IBM\Notes" on Windows</li>
  * <li>on macOS: set the environment variable DYLD_LIBRARY_PATH to the same value</li>
  * </ul>
+ * Use these commandline parameters to launch:<br>
+ * <br>
+ * On macOS:<br>
+ * <code>"-notesdir:/Applications/IBM Notes.app/Contents/MacOS" "-ini:/Users/klehmann/Library/Preferences/Notes Preferences"</code><br>
+ * and on Windows:<br>
+ * <code>"-notesdir:C:\Program Files (x86)\IBM\Notes" "-ini:C:\Program Files (x86)\IBM\Notes\Notes.ini"</code><br>
+ * <br>
+ * (change paths to match your Notes Client installation and Notes.ini path)<br>
+ * <br>
  * @author Karsten Lehmann
  */
 public class DominoJNAStandaloneSampleApp {
