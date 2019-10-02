@@ -1,7 +1,5 @@
 package com.mindoo.domino.jna.richtext;
 
-import java.util.List;
-
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.sun.jna.Memory;
 
