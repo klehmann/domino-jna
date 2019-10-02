@@ -676,13 +676,22 @@ public interface INotesNativeAPI64 extends Library {
 			LongByReference rethBuffer,
 			IntByReference retSequence);
 	@UndocumentedAPI
-	public long NIFFindByKeyExtended3 (long hCollection,
+	public short NIFFindByKeyExtended3 (long hCollection,
 			Memory keyBuffer, int findFlags,
 			int returnFlags,
 			NotesCollectionPositionStruct retIndexPos,
 			IntByReference retNumMatches, ShortByReference retSignalFlags,
 			LongByReference rethBuffer, IntByReference retSequence,
 			NotesCallbacks.NIFFindByKeyProc NIFFindByKeyCallback, NIFFindByKeyContextStruct Ctx);
+	
+//	STATUS far PASCAL NIFFindByKeyExtended3 (HCOLLECTION hCollection,
+//			void *KeyBuffer, DWORD FindFlags,
+//			DWORD ReturnFlags, 
+//			COLLECTIONPOSITION *retIndexPos,
+//			DWORD *retNumMatches, WORD *retSignalFlags,
+//			DHANDLE *rethBuffer, DWORD *retSequence,
+//			NIFFINDBYKEYPROC NIFFindByKeyCallback, NIFFINDBYKEYCTX *Ctx); 
+	
 	public short NIFFindByKey(long hCollection, Memory keyBuffer, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
 	public short NIFFindByName(long hCollection, Memory name, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
 	public short NIFGetCollation(long hCollection, ShortByReference retCollationNum);

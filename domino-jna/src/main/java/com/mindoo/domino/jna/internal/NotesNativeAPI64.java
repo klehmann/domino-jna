@@ -595,7 +595,7 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			ShortByReference retSignalFlags,
 			LongByReference rethBuffer,
 			IntByReference retSequence);
-	public native long NIFFindByKeyExtended3 (long hCollection,
+	public native short NIFFindByKeyExtended3 (long hCollection,
 			Memory keyBuffer, int findFlags,
 			int returnFlags,
 			NotesCollectionPositionStruct retIndexPos,
