@@ -272,6 +272,9 @@ public enum CDRecordType {
 	EMBEDDEDVIEW(NotesConstants.SIG_CD_EMBEDDEDVIEW, 1),
 	/** This CD Record gives information pertaining to Background Data for a Table, specifically the 'Cell Image' repeat value. */
 	CELLBACKGROUNDDATA(NotesConstants.SIG_CD_CELLBACKGROUNDDATA, 1),
+	/** This CD record provides additional table properties, expanding the information provided in CDTABLEBEGIN.<br>
+	 * It will only be recognized in Domino versions 5.0 and greater.  This record will be ignored in pre 5.0 versions. */
+	PRETABLEBEGIN(NotesConstants.SIG_CD_PRETABLEBEGIN, 1),
 
 	/* Signatures for Frameset CD records */
 	
@@ -295,11 +298,8 @@ public enum CDRecordType {
 	/** This CD record may further define attributes within a CDFIELD such as tab order. */
 	EMBEDDEDCTL(NotesConstants.SIG_CD_EMBEDDEDCTL, 3),
 	HTML_ALTTEXT(NotesConstants.SIG_CD_HTML_ALTTEXT, 3),
-	/** Structure which defines simple actions, fromulas or LotusScript for an image map.. */
+	/** Structure which defines simple actions, formulas or LotusScript for an image map.. */
 	EVENT(NotesConstants.SIG_CD_EVENT, 3),
-	/** This CD record provides additional table properties, expanding the information provided in CDTABLEBEGIN.<br>
-	 * It will only be recognized in Domino versions 5.0 and greater.  This record will be ignored in pre 5.0 versions. */
-	PRETABLEBEGIN(NotesConstants.SIG_CD_PRETABLEBEGIN, 3),
 	/** This CD record describes border information for a given table.<br>
 	 * This CD record will be preceded with CD record CDPRETABLEBEGIN both encapsulated between a
 	 * CDBEGINRECORD and a CDENDRECORD record with CD record signature CDPRETABLEBEGIN. */
