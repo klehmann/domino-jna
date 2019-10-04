@@ -25,6 +25,7 @@ import com.mindoo.domino.jna.internal.CompoundTextWriter.CompoundTextStandaloneB
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 
@@ -163,6 +164,11 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 	@Override
 	public void addClosedStandaloneRichText(StandaloneRichText rt) {
 		m_compoundText.addClosedStandaloneRichText(rt);
+	}
+	
+	@Override
+	public void addCDRecords(Memory cdRecordMem) {
+		m_compoundText.addCDRecords(cdRecordMem);
 	}
 	
 	@Override

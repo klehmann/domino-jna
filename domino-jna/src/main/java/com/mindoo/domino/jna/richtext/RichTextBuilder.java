@@ -10,6 +10,7 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
+import com.sun.jna.Memory;
 
 /**
  * This class can be used to create basic richtext content. It uses C API methods to create
@@ -151,6 +152,12 @@ public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText, I
 		m_compoundText.addClosedStandaloneRichText(rt);
 	}
 
+	@Override
+	public void addCDRecords(Memory cdRecordMem) {
+		checkHandle();
+		m_compoundText.addCDRecords(cdRecordMem);
+	}
+	
 	/**
 	 * This routine closes the build process. Use {@link NotesNote#update()} 
 	 * after {@link #close()} to update and save the document.
