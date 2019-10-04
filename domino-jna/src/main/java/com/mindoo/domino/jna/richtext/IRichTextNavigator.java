@@ -68,6 +68,21 @@ public interface IRichTextNavigator {
 	public Memory getCurrentRecordData();
 	
 	/**
+	 * Returns a read-only buffer to access the CD record data (CD record header BSIG/WSIG/LSIG is included
+	 * in the returned data)
+	 * 
+	 * @return data buffer with length {@link #getCurrentRecordDataLength()}
+	 */
+	public Memory getCurrentRecordDataWithHeader();
+
+	/**
+	 * Returns the length of the BSIG/WSIG/LSIG header contained in {@link #getCurrentRecordDataWithHeader()}
+	 * 
+	 * @return header size
+	 */
+	public int getCurrentRecordHeaderLength();
+	
+	/**
 	 * Returns the type of the current CD record as short constant. Use
 	 * {@link CDRecordType#getRecordTypeForConstant(short, com.mindoo.domino.jna.constants.CDRecordType.Area)}
 	 * to get an enum value for the type of data you are processing.

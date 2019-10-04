@@ -1,15 +1,20 @@
-package com.mindoo.domino.jna.internal.structs;
-import com.sun.jna.Pointer;
-import com.sun.jna.Structure;
-
+package com.mindoo.domino.jna.internal.structs.compoundtext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
+
+import com.mindoo.domino.jna.IAdaptable;
+import com.mindoo.domino.jna.internal.structs.BaseStructure;
+import com.mindoo.domino.jna.internal.structs.NotesNFMTStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTFMTStruct;
+import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
+
 /**
- * CD Field data structure
+ * Data of a CDFIELD compound context record
  */
-public class NotesCDFieldStruct extends BaseStructure {
+public class NotesCDFieldStruct extends BaseStructure implements IAdaptable {
 	/** ORed with WORDRECORDLENGTH */
 	public short Signature;
 	/** (length is inclusive with this struct) */
@@ -23,28 +28,21 @@ public class NotesCDFieldStruct extends BaseStructure {
 	 * LDDELIM_xxx)
 	 */
 	public short ListDelim;
-	
-	//NFMT structure embedded
-	/** Number of decimal digits */
-	public byte Digits;
-	/** Display Format */
-	public byte Format;
-	/** Display Attributes */
-	public byte Attributes;
-	public byte Unused;
-	
-	//TFMT structure embedded
-	/** Date Display Format */
-	public byte Date;
-	/** Time Display Format */
-	public byte Time;
-	/** Time Zone Display Format */
-	public byte Zone;
-	/** Overall Date/Time Structure */
-	public byte Structure;
-	
-	/** displayed font */
-	public int FontID;
+	/**
+	 * Number format, if applicable<br>
+	 * C type : NFMT
+	 */
+	public NotesNFMTStruct NumberFormat;
+	/**
+	 * Time format, if applicable<br>
+	 * C type : TFMT
+	 */
+	public NotesTFMTStruct TimeFormat;
+	/**
+	 * displayed font<br>
+	 * C type : FONTID
+	 */
+	public NotesFontIDFieldsStruct FontID;
 	
 	/** Default Value Formula */
 	public short DVLength;
@@ -58,15 +56,13 @@ public class NotesCDFieldStruct extends BaseStructure {
 	public short NameLength;
 	/** Description of the item */
 	public short DescLength;
+	
 	/**
 	 * (Text List) List of valid text<br>
 	 * values
 	 */
 	public short TextValueLength;
 	
-	/**
-	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
-	 */
 	public NotesCDFieldStruct() {
 		super();
 	}
@@ -80,22 +76,15 @@ public class NotesCDFieldStruct extends BaseStructure {
 			}
 		});
 	}
-	
-	@Override
+
 	protected List<String> getFieldOrder() {
-		return Arrays.asList("Signature", "Length", "Flags", "DataType", "ListDelim", "Digits", "Format", "Attributes", "Unused", "Date", "Time", "Zone", "Structure", "FontID", "DVLength", "ITLength", "TabOrder", "IVLength", "NameLength", "DescLength", "TextValueLength");
+		return Arrays.asList("Signature", "Length", "Flags", "DataType", "ListDelim", "NumberFormat", "TimeFormat", "FontID", "DVLength", "ITLength", "TabOrder", "IVLength", "NameLength", "DescLength", "TextValueLength");
 	}
 	
-	/**
-	 * @deprecated only public to be used by JNA; use static newInstance method instead to run in AccessController.doPrivileged block
-	 * 
-	 * @param peer pointer
-	 */
 	public NotesCDFieldStruct(Pointer peer) {
 		super(peer);
-//		setAlignType(ALIGN_DEFAULT);
 	}
-	
+
 	public static NotesCDFieldStruct newInstance(final Pointer peer) {
 		return AccessController.doPrivileged(new PrivilegedAction<NotesCDFieldStruct>() {
 
@@ -105,11 +94,21 @@ public class NotesCDFieldStruct extends BaseStructure {
 			}
 		});
 	}
-	
+
 	public static class ByReference extends NotesCDFieldStruct implements Structure.ByReference {
 		
 	};
+	
 	public static class ByValue extends NotesCDFieldStruct implements Structure.ByValue {
 		
 	};
+	
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (clazz == NotesCDFieldStruct.class) {
+			return (T) this;
+		}
+		return null;
+	}
+	
 }

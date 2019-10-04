@@ -5,7 +5,6 @@ import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
-import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemValueTableStruct;
@@ -30,6 +29,7 @@ import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.collation.NotesCollateDescriptorStruct;
 import com.mindoo.domino.jna.internal.structs.collation.NotesCollationStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlArgStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.internal.structs.html.StringListStruct;
@@ -69,7 +69,6 @@ public interface NotesConstants {
 	public final int macNamesListHeaderSize64 = MacNotesNamesListHeader64Struct.newInstance().size();
 	public final int objectDescriptorSize = NotesObjectDescriptorStruct.newInstance().size();
 	public final int fileObjectSize = NotesFileObjectStruct.newInstance().size();
-	public final int cdFieldSize = NotesCDFieldStruct.newInstance().size();
 	public final int schedListSize = NotesScheduleListStruct.newInstance().size();
 	public final int schedEntrySize = NotesSchedEntryStruct.newInstance().size();
 	public final int schedEntryExtSize = NotesSchedEntryExtStruct.newInstance().size();
@@ -112,7 +111,8 @@ public interface NotesConstants {
 	public final int notesSearchMatch64Size = NotesSearchMatch64Struct.newInstance().size();
 	public final int mimePartSize = NotesMIMEPartStruct.newInstance().size();
 	public final int intlFormatSize = IntlFormatStruct.newInstance().size();
-	
+	public final int notesCDFieldStructSize = NotesCDFieldStruct.newInstance().size();
+			
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;

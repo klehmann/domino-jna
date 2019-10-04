@@ -251,6 +251,20 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	}
 
 	@Override
+	public Memory getCurrentRecordDataWithHeader() {
+		if (m_currentCDRecord==null)
+			return null;
+		return m_currentCDRecord.getRecordDataWithHeader();
+	}
+	
+	@Override
+	public int getCurrentRecordHeaderLength() {
+		if (m_currentCDRecord==null)
+			return 0;
+		return m_currentCDRecord.getRecordHeaderLength();
+	}
+	
+	@Override
 	public short getCurrentRecordTypeAsShort() {
 		if (m_currentCDRecord==null)
 			return 0;
@@ -385,6 +399,10 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 			return (Memory) m_cdRecordBuf.share(m_cdRecordLength - m_dataSize);
 		}
 
+		public int getRecordHeaderLength() {
+			return m_cdRecordLength - m_dataSize;
+		}
+		
 		/**
 		 * Use this value in
 		 * {@link CDRecordType#getRecordTypeForConstant(short, com.mindoo.domino.jna.constants.CDRecordType.Area)}

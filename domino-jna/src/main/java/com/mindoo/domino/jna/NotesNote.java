@@ -63,7 +63,6 @@ import com.mindoo.domino.jna.internal.ViewFormatDecoder;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
-import com.mindoo.domino.jna.internal.structs.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
 import com.mindoo.domino.jna.internal.structs.NotesLSCompileErrorInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesMIMEPartStruct;
@@ -74,9 +73,11 @@ import com.mindoo.domino.jna.internal.structs.NotesRangeStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
+import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
@@ -313,6 +314,36 @@ public class NotesNote implements IRecyclableNotesObject {
 			m_noteClass = NoteClass.toNoteClasses(noteClassMask);
 		}
 		return m_noteClass;
+	}
+	
+	/**
+	 * Changes the note class for this note
+	 * 
+	 * @param noteClass new note class
+	 */
+	public void setNoteClass(EnumSet<NoteClass> noteClass) {
+		checkHandle();
+
+		EnumSet<NoteClass> noteClassToWrite = noteClass.clone();
+		noteClassToWrite.remove(NoteClass.ALL);
+		noteClassToWrite.remove(NoteClass.ALLNONDATA);
+		
+		short noteClassToWriteAsShort = NoteClass.toBitMask(noteClassToWrite);
+		
+		DisposableMemory noteClassMem = new DisposableMemory(2);
+		noteClassMem.setShort(0, noteClassToWriteAsShort);
+		
+		try {
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteSetInfo(m_hNote64, NotesConstants._NOTE_CLASS, noteClassMem);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteSetInfo(m_hNote32, NotesConstants._NOTE_CLASS, noteClassMem);
+			}
+		}
+		finally {
+			noteClassMem.dispose();
+		}
 	}
 	
 	/**
@@ -1380,20 +1411,20 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * 
 	 * If there is more than one item with the same name, this function will always return the first of these.
 	 * This function, therefore, is not useful if you want to retrieve multiple instances of the same
-	 * field name. For these situations, use NSFItemConvertValueToText.<br>
+	 * field name. For these situations, use {@link NotesItem#getValueAsText(char)}.<br>
 	 * <br>
 	 * The item value may be any one of these supported Domino data types:<br>
 	 * <ul>
-	 * <li>TYPE_TEXT - Text is returned unmodified.</li>
-	 * <li>TYPE_TEXT_LIST - A text list items will merged into a single text string, with the separator between them.</li>
-	 * <li>TYPE_NUMBER - the FLOAT number will be converted to text.</li>
-	 * <li>TYPE_NUMBER_RANGE -- the FLOAT numbers will be converted to text, with the separator between them.</li>
-	 * <li>TYPE_TIME - the binary Time/Date will be converted to text.</li>
-	 * <li>TYPE_TIME_RANGE -- the binary Time/Date values will be converted to text, with the separator between them.</li>
-	 * <li>TYPE_COMPOSITE - The text portion of the rich text field will be returned.</li>
-	 * <li>TYPE_USERID - The user name portion will be converted to text.</li>
-	 * <li>TYPE_ERROR - the binary Error value will be converted to "ERROR: ".</li>
-	 * <li>TYPE_UNAVAILABLE - the binary Unavailable value will be converted to "UNAVAILABLE: ".</li>
+	 * <li>{@link NotesItem#TYPE_TEXT} - Text is returned unmodified.</li>
+	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - A text list items will merged into a single text string, with the separator between them.</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER} - the FLOAT number will be converted to text.</li>
+	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - the FLOAT numbers will be converted to text, with the separator between them.</li>
+	 * <li>{@link NotesItem#TYPE_TIME} - the binary Time/Date will be converted to text.</li>
+	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - the binary Time/Date values will be converted to text, with the separator between them.</li>
+	 * <li>{@link NotesItem#TYPE_COMPOSITE} - The text portion of the rich text field will be returned.</li>
+	 * <li>{@link NotesItem#TYPE_USERID} - The user name portion will be converted to text.</li>
+	 * <li>{@link NotesItem#TYPE_ERROR} - the binary Error value will be converted to "ERROR: ".</li>
+	 * <li>{@link NotesItem#TYPE_UNAVAILABLE} - the binary Unavailable value will be converted to "UNAVAILABLE: ".</li>
 	 * </ul>
 	 * 
 	 * @param itemName item name
@@ -2847,78 +2878,6 @@ public class NotesNote implements IRecyclableNotesObject {
 		return phaseEnum;
 	}
 	
-	private FieldInfo readCDFieldInfo(Pointer ptrCDField) {
-		NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(ptrCDField);
-		cdField.read();
-		
-		Pointer defaultValueFormulaPtr = ptrCDField.share(NotesConstants.cdFieldSize);
-		Pointer inputTranslationFormulaPtr = defaultValueFormulaPtr.share(cdField.DVLength & 0xffff);
-		Pointer inputValidityCheckFormulaPtr = inputTranslationFormulaPtr.share((cdField.ITLength &0xffff) +
-				(cdField.TabOrder & 0xffff));
-//		Pointer namePtr = inputValidityCheckFormulaPtr.share(cdField.IVLength & 0xffff);
-		
-//		field.DVLength + field.ITLength + field.IVLength,
-//        field.NameLength
-        
-		Pointer namePtr = ptrCDField.share((cdField.DVLength & 0xffff) + (cdField.ITLength & 0xffff) +
-				(cdField.IVLength & 0xffff));
-		Pointer descriptionPtr = namePtr.share(cdField.NameLength & 0xffff);
-		
-		String defaultValueFormula = NotesStringUtils.fromLMBCS(defaultValueFormulaPtr, cdField.DVLength & 0xffff);
-		String inputTranslationFormula = NotesStringUtils.fromLMBCS(inputTranslationFormulaPtr, cdField.ITLength & 0xffff);
-		String inputValidityCheckFormula = NotesStringUtils.fromLMBCS(inputValidityCheckFormulaPtr, cdField.IVLength & 0xffff);
-		String name = NotesStringUtils.fromLMBCS(namePtr, cdField.NameLength & 0xffff);
-		String description = NotesStringUtils.fromLMBCS(descriptionPtr, cdField.DescLength & 0xffff);
-		
-		return new FieldInfo(defaultValueFormula, inputTranslationFormula, inputValidityCheckFormula,
-				name, description);
-	}
-	
-	public static class FieldInfo {
-		private String m_defaultValueFormula;
-		private String m_inputTranslationFormula;
-		private String m_inputValidityCheckFormula;
-		private String m_name;
-		private String m_description;
-		
-		public FieldInfo(String defaultValueFormula, String inputTranslationFormula, String inputValidityCheckFormula,
-				String name, String description) {
-			m_defaultValueFormula = defaultValueFormula;
-			m_inputTranslationFormula = inputTranslationFormula;
-			m_inputValidityCheckFormula = inputValidityCheckFormula;
-			m_name = name;
-			m_description = description;
-		}
-		
-		public String getDefaultValueFormula() {
-			return m_defaultValueFormula;
-		}
-		
-		public String getInputTranslationFormula() {
-			return m_inputTranslationFormula;
-		}
-		
-		public String getInputValidityCheckFormula() {
-			return m_inputValidityCheckFormula;
-		}
-		
-		public String getName() {
-			return m_name;
-		}
-		
-		public String getDescription() {
-			return m_description;
-		}
-		
-		@Override
-		public String toString() {
-			return "FieldInfo [name="+getName()+", description="+getDescription()+", default="+getDefaultValueFormula()+
-					", inputtranslation="+getInputTranslationFormula()+", validation="+getInputValidityCheckFormula()+"]";
-
-		}
-
-	}
-	
 	/**
 	 * Compiles all LotusScript code in this design note.
 	 * 
@@ -3028,7 +2987,9 @@ public class NotesNote implements IRecyclableNotesObject {
 						}
 					}
 
-					FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+					NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(pCDField);
+					cdFieldStruct.read();
+					FieldInfo fieldInfo = new FieldInfo(cdFieldStruct);
 					ValidationPhase phaseEnum = decodeValidationPhase(phase);
 
 					CWF_Action action;
@@ -3070,7 +3031,9 @@ public class NotesNote implements IRecyclableNotesObject {
 							}
 						}
 
-						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(pCDField);
+						cdFieldStruct.read();
+						FieldInfo fieldInfo = new FieldInfo(cdFieldStruct);
 						ValidationPhase phaseEnum = decodeValidationPhase(phase);
 
 						CWF_Action action;
@@ -3107,7 +3070,9 @@ public class NotesNote implements IRecyclableNotesObject {
 							}
 						}
 
-						FieldInfo fieldInfo = readCDFieldInfo(pCDField);
+						NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(pCDField);
+						cdFieldStruct.read();
+						FieldInfo fieldInfo = new FieldInfo(cdFieldStruct);
 						ValidationPhase phaseEnum = decodeValidationPhase(phase);
 
 						CWF_Action action;
@@ -6094,6 +6059,28 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		@Override
+		public Memory getCurrentRecordDataWithHeader() {
+			CDRecordMemory record = getCurrentRecord();
+			if (record==null) {
+				return null;
+			}
+			else {
+				return record.getRecordDataWithHeader();
+			}
+		}
+		
+		@Override
+		public int getCurrentRecordHeaderLength() {
+			CDRecordMemory record = getCurrentRecord();
+			if (record==null) {
+				return 0;
+			}
+			else {
+				return record.getRecordHeaderLength();
+			}
+		}
+		
+		@Override
 		public short getCurrentRecordTypeAsShort() {
 			CDRecordMemory record = getCurrentRecord();
 			return record==null ? 0 : record.getTypeAsShort();
@@ -6173,6 +6160,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			public int getCDRecordLength() {
 				return m_cdRecordLength;
+			}
+			
+			public int getRecordHeaderLength() {
+				return m_cdRecordLength - m_dataSize;
 			}
 		}
 	}
