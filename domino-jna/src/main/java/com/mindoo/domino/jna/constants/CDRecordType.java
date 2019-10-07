@@ -275,6 +275,20 @@ public enum CDRecordType {
 	/** This CD record provides additional table properties, expanding the information provided in CDTABLEBEGIN.<br>
 	 * It will only be recognized in Domino versions 5.0 and greater.  This record will be ignored in pre 5.0 versions. */
 	PRETABLEBEGIN(NotesConstants.SIG_CD_PRETABLEBEGIN, 1),
+	EXT2_FIELD(NotesConstants.SIG_CD_EXT2_FIELD, 1),
+	/** This CD record may further define attributes within a CDFIELD such as tab order. */
+	EMBEDDEDCTL(NotesConstants.SIG_CD_EMBEDDEDCTL, 1),
+	/** This CD record describes border information for a given table.<br>
+	 * This CD record will be preceded with CD record CDPRETABLEBEGIN both encapsulated between a
+	 * CDBEGINRECORD and a CDENDRECORD record with CD record signature CDPRETABLEBEGIN. */
+	BORDERINFO(NotesConstants.SIG_CD_BORDERINFO, 1),
+	/** This CD record defines an embedded element of type 'group scheduler'.<br>
+	 * It is preceded by a CDHOTSPOTBEGIN and a CDPLACEHOLDER.  The CD record, CDPLACEHOLDER,
+	 * further defines the CDEMBEDDEDSCHEDCTL.  */
+	EMBEDDEDSCHEDCTL(NotesConstants.SIG_CD_EMBEDDEDSCHEDCTL, 1),
+	/** This CD record defines an embedded element of type 'editor'. It is preceded by a
+	 * CDHOTSPOTBEGIN and a CDPLACEHOLDER. The CD record, CDPLACEHOLDER, further defines the CDEMBEDDEDEDITCTL */
+	EMBEDDEDEDITCTL(NotesConstants.SIG_CD_EMBEDDEDEDITCTL, 1),
 
 	/* Signatures for Frameset CD records */
 	
@@ -295,23 +309,9 @@ public enum CDRecordType {
 	/** An AREA element defines the shape and coordinates of a region within a client side image MAP. */
 	AREAELEMENT(NotesConstants.SIG_CD_AREAELEMENT, 3),
 	HREF(NotesConstants.SIG_CD_HREF, 3),
-	/** This CD record may further define attributes within a CDFIELD such as tab order. */
-	EMBEDDEDCTL(NotesConstants.SIG_CD_EMBEDDEDCTL, 3),
 	HTML_ALTTEXT(NotesConstants.SIG_CD_HTML_ALTTEXT, 3),
 	/** Structure which defines simple actions, formulas or LotusScript for an image map.. */
 	EVENT(NotesConstants.SIG_CD_EVENT, 3),
-	/** This CD record describes border information for a given table.<br>
-	 * This CD record will be preceded with CD record CDPRETABLEBEGIN both encapsulated between a
-	 * CDBEGINRECORD and a CDENDRECORD record with CD record signature CDPRETABLEBEGIN. */
-	BORDERINFO(NotesConstants.SIG_CD_BORDERINFO, 3),
-	/** This CD record defines an embedded element of type 'group scheduler'.<br>
-	 * It is preceded by a CDHOTSPOTBEGIN and a CDPLACEHOLDER.  The CD record, CDPLACEHOLDER,
-	 * further defines the CDEMBEDDEDSCHEDCTL.  */
-	EMBEDDEDSCHEDCTL(NotesConstants.SIG_CD_EMBEDDEDSCHEDCTL, 3),
-	EXT2_FIELD(NotesConstants.SIG_CD_EXT2_FIELD, 3),
-	/** This CD record defines an embedded element of type 'editor'. It is preceded by a
-	 * CDHOTSPOTBEGIN and a CDPLACEHOLDER. The CD record, CDPLACEHOLDER, further defines the CDEMBEDDEDEDITCTL */
-	EMBEDDEDEDITCTL(NotesConstants.SIG_CD_EMBEDDEDEDITCTL, 3),
 
 	/* Signatures for Composite Records that are reserved internal records, */
 	/* whose format may change between releases. */
