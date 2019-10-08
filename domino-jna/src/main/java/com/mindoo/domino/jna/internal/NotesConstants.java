@@ -29,6 +29,9 @@ import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.collation.NotesCollateDescriptorStruct;
 import com.mindoo.domino.jna.internal.structs.collation.NotesCollationStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDEmbeddedCtlStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExt2FieldStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExtFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlArgStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
@@ -112,6 +115,9 @@ public interface NotesConstants {
 	public final int mimePartSize = NotesMIMEPartStruct.newInstance().size();
 	public final int intlFormatSize = IntlFormatStruct.newInstance().size();
 	public final int notesCDFieldStructSize = NotesCDFieldStruct.newInstance().size();
+	public final int notesCDExtFieldStructSize = NotesCDExtFieldStruct.newInstance().size();
+	public final int notesCDExt2FieldStructSize = NotesCDExt2FieldStruct.newInstance().size();
+	public final int notesCDEmbeddedCtlStructSize = NotesCDEmbeddedCtlStruct.newInstance().size();
 			
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -3143,4 +3149,40 @@ This allows an Editor to assume some Designer-level access */
 	public short DATE_4DIGIT_YEAR = 0x0100;
 	public short TIME_AMPM_PREFIX = 0x0400;
 	public short DATE_ABBREV	 = 0x0800;
+	
+	/* edit control styles */
+	public short EC_STYLE_EDITMULTILINE = 0x0001;
+	public short EC_STYLE_EDITVSCROLL = 0x0002;
+	public short EC_STYLE_EDITPASSWORD = 0x0004;
+	/* combobox styles */
+	public short EC_STYLE_EDITCOMBO = 0x0001;
+	/* list box styles */
+	public short EC_STYLE_LISTMULTISEL = 0x0001;
+	/* time control styles */
+	public short EC_STYLE_CALENDAR = 0x0001;
+	public short EC_STYLE_TIME = 0x0002;
+	public short EC_STYLE_DURATION = 0x0004;
+	public short EC_STYLE_TIMEZONE = 0x0008;
+	/* control style is valid */
+	public int EC_STYLE_VALID = 0x80000000;
+
+	/** other control flags */
+	public short EC_FLAG_UNITS = 0x000F;
+	/** Width/Height are in dialog units, not twips */
+	public short EC_FLAG_DIALOGUNITS = 0x0001;
+	/** Width/Height should be adjusted to fit contents */
+	public short EC_FLAG_FITTOCONTENTS = 0x0002;
+	/** this control is active regardless of docs R/W status */
+	public short EC_FLAG_ALWAYSACTIVE = 0x0010;
+	/** let placeholder automatically fit to window */
+	public short EC_FLAG_FITTOWINDOW = 0x0020;
+	/** position control to top of paragraph */
+	public short EC_FLAG_POSITION_TOP = 0x0040;
+	/** position control to bottom of paragraph */
+	public short EC_FLAG_POSITION_BOTTOM = 0x0080;
+	/** position control to ascent of paragraph */
+	public short EC_FLAG_POSITION_ASCENT = 0x0100;
+	/** position control to height of paragraph */
+	public short EC_FLAG_POSITION_HEIGHT = 0x0200;
+
 }
