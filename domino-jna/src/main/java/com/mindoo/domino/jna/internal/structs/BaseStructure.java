@@ -19,33 +19,27 @@ import com.sun.jna.TypeMapper;
 public abstract class BaseStructure extends Structure {
 
 	protected BaseStructure() {
-		super();
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
+		super(NotesNativeAPI.getPlatformAlignment());
 	}
 	
 	public BaseStructure(int alignType, TypeMapper mapper) {
 		super(alignType, mapper);
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
 	}
 
 	public BaseStructure(int alignType) {
 		super(alignType);
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p, int alignType, TypeMapper mapper) {
 		super(p, alignType, mapper);
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p, int alignType) {
 		super(p, alignType);
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
 	}
 
 	public BaseStructure(Pointer p) {
-		super(p);
-		setAlignType(NotesNativeAPI.getPlatformAlignment());
+		super(p, NotesNativeAPI.getPlatformAlignment());
 	}
 
 	public BaseStructure(TypeMapper mapper) {
