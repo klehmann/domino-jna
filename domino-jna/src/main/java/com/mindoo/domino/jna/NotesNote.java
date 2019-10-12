@@ -3530,7 +3530,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * </ul>
 	 * 
 	 * @param itemName item name
-	 * @param flags item flags
+	 * @param flagsOrig item flags
 	 * @param value item value, see method comment for allowed types
 	 * @return created item
 	 */

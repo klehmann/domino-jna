@@ -67,6 +67,33 @@ public class NotesLookupResultBufferDecoder {
 	}
 
 	/**
+	 * Decodes the buffer, 32 bit mode
+	 * 
+	 * @param parentCollection parent collection
+	 * @param ptrBuffer buffer pointer
+	 * @param numEntriesSkipped entries skipped during collection scan
+	 * @param numEntriesReturned entries read during collection scan
+	 * @param returnMask bitmask used to fill the buffer with data
+	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
+	 * @param pos position of first match, if returned by find method
+	 * @param indexModifiedSequenceNo index modified sequence no
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
+	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
+	 * @return collection data
+	 */
+	public static NotesViewLookupResultData b32_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, Pointer ptrBuffer,
+			int numEntriesSkipped, int numEntriesReturned,
+			EnumSet<ReadMask> returnMask, short signalFlags, String pos,
+			int indexModifiedSequenceNo, NotesTimeDate retDiffTime, boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar,
+			String singleColumnLookupName) {
+		return b64_decodeCollectionLookupResultBuffer(parentCollection, ptrBuffer, numEntriesSkipped, numEntriesReturned,
+				returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime, convertStringsLazily, convertNotesTimeDateToCalendar,
+				singleColumnLookupName);
+	}
+	
+	/**
 	 * Decodes the buffer, 64 bit mode
 	 * 
 	 * @param parentCollection parent collection
@@ -86,7 +113,7 @@ public class NotesLookupResultBufferDecoder {
 	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection, long bufferHandle, int numEntriesSkipped, int numEntriesReturned,
 			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime,
 			boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, String singleColumnLookupName) {
-
+		
 		Pointer bufferPtr;
 		if (PlatformUtils.is64Bit()) {
 			bufferPtr = Mem64.OSLockObject(bufferHandle);
@@ -95,122 +122,173 @@ public class NotesLookupResultBufferDecoder {
 			bufferPtr = Mem32.OSLockObject((int) bufferHandle);
 		}
 		
+		try {
+			return b64_decodeCollectionLookupResultBuffer(parentCollection, bufferPtr, numEntriesSkipped,
+					numEntriesReturned, returnMask, signalFlags, pos, indexModifiedSequenceNo, retDiffTime,
+					convertStringsLazily, convertNotesTimeDateToCalendar, singleColumnLookupName);
+		}
+		finally {
+			if (PlatformUtils.is64Bit()) {
+				Mem64.OSUnlockObject(bufferHandle);
+				short result = Mem64.OSMemFree(bufferHandle);
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				Mem32.OSUnlockObject((int)bufferHandle);
+				short result = Mem32.OSMemFree((int)bufferHandle);
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+	}
+	
+	/**
+	 * Decodes the buffer, 64 bit mode
+	 * 
+	 * @param parentCollection parent collection
+	 * @param bufferPtr buffer pointer
+	 * @param numEntriesSkipped entries skipped during collection scan
+	 * @param numEntriesReturned entries read during collection scan
+	 * @param returnMask bitmask used to fill the buffer with data
+	 * @param signalFlags signal flags returned by NIFReadEntries, e.g. whether we have more data to read
+	 * @param pos position to add to NotesViewLookupResultData object in case view data is read via {@link NotesCollection#findByKeyExtended2(EnumSet, EnumSet, Object...)}
+	 * @param indexModifiedSequenceNo index modified sequence no
+	 * @param retDiffTime only set in {@link NotesCollection#readEntriesExt(com.mindoo.domino.jna.NotesCollectionPosition, EnumSet, int, EnumSet, int, EnumSet, NotesTimeDate, NotesIDTable, Integer)}
+	 * @param convertStringsLazily true to delay string conversion until the first use
+	 * @param convertNotesTimeDateToCalendar true to convert {@link NotesTimeDate} values to {@link Calendar}
+	 * @param singleColumnLookupName for single column lookups, programmatic name of lookup column
+	 * @return collection data
+	 */
+	public static NotesViewLookupResultData b64_decodeCollectionLookupResultBuffer(NotesCollection parentCollection,
+			Pointer bufferPtr, int numEntriesSkipped, int numEntriesReturned,
+			EnumSet<ReadMask> returnMask, short signalFlags, String pos, int indexModifiedSequenceNo, NotesTimeDate retDiffTime,
+			boolean convertStringsLazily, boolean convertNotesTimeDateToCalendar, String singleColumnLookupName) {
+
 		int bufferPos = 0;
 		
 		NotesCollectionStats collectionStats = null;
-		
-		//compute structure sizes
-		
-		try {
-			if (returnMask.contains(ReadMask.COLLECTIONSTATS)) {
-				NotesCollectionStatsStruct tmpStats = NotesCollectionStatsStruct.newInstance(bufferPtr);
-				tmpStats.read();
-				
-				collectionStats = new NotesCollectionStats(tmpStats.TopLevelEntries, tmpStats.LastModifiedTime);
-						
-				bufferPos += tmpStats.size();
-			}
 
-			List<NotesViewEntryData> viewEntries = new ArrayList<NotesViewEntryData>();
+		if (returnMask.contains(ReadMask.COLLECTIONSTATS)) {
+			NotesCollectionStatsStruct tmpStats = NotesCollectionStatsStruct.newInstance(bufferPtr);
+			tmpStats.read();
 			
-			final boolean decodeAllValues = true;
+			collectionStats = new NotesCollectionStats(tmpStats.TopLevelEntries, tmpStats.LastModifiedTime);
+					
+			bufferPos += tmpStats.size();
+		}
 
+		List<NotesViewEntryData> viewEntries = new ArrayList<NotesViewEntryData>();
+		
+		final boolean decodeAllValues = true;
+
+		if (returnMask.size()==1 && returnMask.contains(ReadMask.NOTEID)) {
+			//special optimized case for reading only note ids
+			int[] noteIds = new int[numEntriesReturned];
+			bufferPtr.read(0, noteIds, 0, numEntriesReturned);
+			
+			for (int i=0; i<noteIds.length; i++) {
+				NotesViewEntryData newData = new NotesViewEntryData(parentCollection);
+				viewEntries.add(newData);
+				newData.setNoteId(noteIds[i]);
+			}
+			
+		}
+		else {
 			for (int i=0; i<numEntriesReturned; i++) {
 				NotesViewEntryData newData = new NotesViewEntryData(parentCollection);
 				viewEntries.add(newData);
-				
+
 				if (returnMask.contains(ReadMask.NOTEID)) {
 					int entryNoteId = bufferPtr.getInt(bufferPos);
 					newData.setNoteId(entryNoteId);
-					
+
 					bufferPos+=4;
 				}
-				
+
 				if (returnMask.contains(ReadMask.NOTEUNID)) {
 					long[] unidLongs = bufferPtr.getLongArray(bufferPos, 2);
 					newData.setUNID(unidLongs);
-					
+
 					bufferPos+=16;
 				}
 				if (returnMask.contains(ReadMask.NOTECLASS)) {
 					short noteClass = bufferPtr.getShort(bufferPos);
 					newData.setNoteClass(noteClass);
-					
+
 					bufferPos+=2;
 				}
 				if (returnMask.contains(ReadMask.INDEXSIBLINGS)) {
 					int siblingCount = bufferPtr.getInt(bufferPos);
 					newData.setSiblingCount(siblingCount);
-					
+
 					bufferPos+=4;
 				}
 				if (returnMask.contains(ReadMask.INDEXCHILDREN)) {
 					int childCount = bufferPtr.getInt(bufferPos);
 					newData.setChildCount(childCount);
-					
+
 					bufferPos+=4;
 				}
 				if (returnMask.contains(ReadMask.INDEXDESCENDANTS)) {
 					int descendantCount = bufferPtr.getInt(bufferPos);
 					newData.setDescendantCount(descendantCount);
-					
+
 					bufferPos+=4;
 				}
 				if (returnMask.contains(ReadMask.INDEXANYUNREAD)) {
 					boolean isAnyUnread = bufferPtr.getShort(bufferPos) == 1;
 					newData.setAnyUnread(isAnyUnread);
-					
+
 					bufferPos+=2;
 				}
 				if (returnMask.contains(ReadMask.INDENTLEVELS)) {
 					short indentLevels = bufferPtr.getShort(bufferPos);
 					newData.setIndentLevels(indentLevels);
-					
+
 					bufferPos += 2;
 				}
 				if (returnMask.contains(ReadMask.SCORE)) {
 					short score = bufferPtr.getShort(bufferPos);
 					newData.setFTScore(score);
-					
+
 					bufferPos += 2;
 				}
 				if (returnMask.contains(ReadMask.INDEXUNREAD)) {
 					boolean isUnread = bufferPtr.getShort(bufferPos) == 1;
 					newData.setUnread(isUnread);
-					
+
 					bufferPos+=2;
 				}
 				if (returnMask.contains(ReadMask.INDEXPOSITION)) {
 					short level = bufferPtr.getShort(bufferPos);
 					int[] posArr = new int[level+1];
 					bufferPtr.read(bufferPos + 2 /* level */  + 2 /* MinLevel+MaxLevel */, posArr, 0, level+1);
-							
+
 					newData.setPosition(posArr);
-					
+
 					bufferPos += 4 * (level + 2);
 				}
 				if (returnMask.contains(ReadMask.SUMMARYVALUES)) {
-//					The information in a view summary of values is as follows:
-//
-//						ITEM_VALUE_TABLE containing header information (total length of summary, number of items in summary)
-//						WORD containing the length of item #1 (including data type)
-//						WORD containing the length of item #2 (including data type)
-//						WORD containing the length of item #3 (including data type)
-//						...
-//						USHORT containing the data type of item #1
-//						value of item #1
-//						USHORT containing the data type of item #2
-//						value of item #2
-//						USHORT containing the data type of item #3
-//						value of item #3
-//						....
-					
+					//				The information in a view summary of values is as follows:
+					//
+					//					ITEM_VALUE_TABLE containing header information (total length of summary, number of items in summary)
+					//					WORD containing the length of item #1 (including data type)
+					//					WORD containing the length of item #2 (including data type)
+					//					WORD containing the length of item #3 (including data type)
+					//					...
+					//					USHORT containing the data type of item #1
+					//					value of item #1
+					//					USHORT containing the data type of item #2
+					//					value of item #2
+					//					USHORT containing the data type of item #3
+					//					value of item #3
+					//					....
+
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemValueTablePtr = bufferPtr.share(bufferPos);
 					ItemValueTableDataImpl itemTableData = (ItemValueTableDataImpl) decodeItemValueTable(itemValueTablePtr,
 							convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
-					
+
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
 
@@ -228,7 +306,7 @@ public class NotesLookupResultBufferDecoder {
 					Pointer itemTablePtr = bufferPtr.share(bufferPos);
 					ItemTableDataImpl itemTableData = (ItemTableDataImpl) decodeItemTable(itemTablePtr, convertStringsLazily,
 							convertNotesTimeDateToCalendar, decodeAllValues);
-					
+
 					//move to the end of the buffer
 					bufferPos = startBufferPosOfSummaryValues + itemTableData.getTotalBufferLength();
 
@@ -239,22 +317,9 @@ public class NotesLookupResultBufferDecoder {
 					newData.setSingleColumnLookupName(singleColumnLookupName);
 				}
 			}
-			
-			return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo, retDiffTime);
-		}
-		finally {
-			if (PlatformUtils.is64Bit()) {
-				Mem64.OSUnlockObject(bufferHandle);
-				short result = Mem64.OSMemFree(bufferHandle);
-				NotesErrorUtils.checkResult(result);
-			}
-			else {
-				Mem32.OSUnlockObject((int)bufferHandle);
-				short result = Mem32.OSMemFree((int)bufferHandle);
-				NotesErrorUtils.checkResult(result);
-			}
 		}
 		
+		return new NotesViewLookupResultData(collectionStats, viewEntries, numEntriesSkipped, numEntriesReturned, signalFlags, pos, indexModifiedSequenceNo, retDiffTime);
 	}
 
 	/**
