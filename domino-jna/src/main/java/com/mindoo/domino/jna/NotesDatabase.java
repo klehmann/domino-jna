@@ -285,7 +285,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			m_namesList = NotesNamingUtils.writeNewNamesList(namesForNamesList);
 		}
 		else {
-			m_namesList = NotesNamingUtils.buildNamesList(m_server, m_asUserCanonical);
+			m_namesList = NotesNamingUtils.buildNamesList(server, m_asUserCanonical);
 		}
 		
 		//setting authenticated flag for the user is required when running on the server
@@ -447,7 +447,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public List<String> queryAccessRoles(String userName) {
 		NotesNamesList namesList = null;
 		try {
-			namesList = NotesNamingUtils.buildNamesList(m_server, userName);
+			namesList = NotesNamingUtils.buildNamesList(getServer(), userName);
 			List<String> roles = getACL().lookupAccess(namesList).getRoles();
 			return roles;
 		}
@@ -470,7 +470,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return access level
 	 */
 	public AclLevel queryAccess(String userName) {
-		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_server, userName);
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(getServer(), userName);
 		try {
 			AclLevel level = getACL().lookupAccess(namesList).getAclLevel();
 			return level;
@@ -489,7 +489,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return flags
 	 */
 	public EnumSet<AclFlag> queryAccessFlags(String userName) {
-		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_server, userName);
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(getServer(), userName);
 		try {
 			EnumSet<AclFlag> flags = getACL().lookupAccess(namesList).getAclFlags();
 			return flags;
