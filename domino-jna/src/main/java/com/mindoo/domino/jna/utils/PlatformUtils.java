@@ -171,7 +171,9 @@ public class PlatformUtils {
 	
 	/**
 	 * Runs an NSD. Please note that we could not yet get this method to work with a remote server name.
-	 * That's why the method is private.
+	 * That's why the method is private. We always goto an error message
+	 * "%p Author %,lu %,lu %,lu %s %s %p %s" back when we called the method with a server name
+	 * other than "".
 	 * 
 	 * @param serverName server, either abbreviated or canonical, use "" for the local environment
 	 * @param mode NSD mode
