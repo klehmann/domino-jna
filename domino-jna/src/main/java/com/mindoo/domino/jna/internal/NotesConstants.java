@@ -3185,4 +3185,13 @@ This allows an Editor to assume some Designer-level access */
 	/** position control to height of paragraph */
 	public short EC_FLAG_POSITION_HEIGHT = 0x0200;
 
+	public short FR_RUN_ALL = 0x1000;
+	public short FR_RUN_CLEANUPSCRIPT_ONLY = 0x1; 
+	public short FR_RUN_NSD_ONLY = 0x2; 
+	public short FR_DONT_RUN_ANYTHING = 0x4; 
+	public short FR_SHUTDOWN_HANG = 0x8; 
+	public short FR_PANIC_DIRECT = 0x10; 
+	public short FR_RUN_QOS_NSD = 0x20; 
+	public short FR_NSD_AUTOMONITOR = 0x40;
+	
 }

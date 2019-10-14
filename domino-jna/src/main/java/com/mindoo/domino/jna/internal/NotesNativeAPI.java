@@ -633,4 +633,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native void StatTraverse(Memory Facility, Memory StatName, STATTRAVERSEPROC Routine, Pointer Context);
 
 	public native void OSGetIntlSettings(IntlFormatStruct retIntlFormat, short bufferSize);
+	
+	public native short OSRunNSDExt(Memory szServerName, short flags);
+	
 }

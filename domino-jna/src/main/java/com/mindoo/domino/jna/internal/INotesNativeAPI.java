@@ -332,4 +332,7 @@ public interface INotesNativeAPI extends Library {
 			IntlFormatStruct retIntlFormat,
 			short bufferSize);
 	
+	@UndocumentedAPI
+	public short OSRunNSDExt (Memory szServerName, short flags);
+	
 }
