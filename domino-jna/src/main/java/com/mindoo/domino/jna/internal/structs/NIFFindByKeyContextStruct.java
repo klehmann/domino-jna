@@ -18,6 +18,7 @@ public class NIFFindByKeyContextStruct extends BaseStructure {
 
 	public NIFFindByKeyContextStruct() {
 		super();
+		setAlignType(Structure.ALIGN_DEFAULT);
 	}
 
 	public static NIFFindByKeyContextStruct newInstance() {
@@ -52,6 +53,7 @@ public class NIFFindByKeyContextStruct extends BaseStructure {
 		this.hUserData = hUserData;
 		this.UserDataLen = UserDataLen;
 		this.TotalDataInBuffer = TotalDataInBuffer;
+		setAlignType(Structure.ALIGN_DEFAULT);
 	}
 
 	public static NIFFindByKeyContextStruct newInstance(final short EntriesThisChunk, final short wSizeOfChunk, final Pointer SummaryBuffer, final int hUserData, final int UserDataLen, final int TotalDataInBuffer) {
@@ -66,6 +68,7 @@ public class NIFFindByKeyContextStruct extends BaseStructure {
 
 	public NIFFindByKeyContextStruct(Pointer peer) {
 		super(peer);
+		setAlignType(Structure.ALIGN_DEFAULT);
 	}
 
 	public static NIFFindByKeyContextStruct newInstance(final Pointer peer) {
