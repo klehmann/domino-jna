@@ -1,5 +1,8 @@
 package com.mindoo.domino.jna;
 
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -28,6 +31,7 @@ import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -35,11 +39,14 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionPositionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -1122,7 +1129,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 			//method with other return values other than note id
 			boolean unsupportedValuesFound = false;
 			for (ReadMask currReadMaskValues: returnMask) {
-				if ((currReadMaskValues != ReadMask.NOTEID) && (currReadMaskValues != ReadMask.SUMMARY)) {
+				//commented out ReadMask.SUMMARY because we found truncated ITEM_VALUE_TABLE's returned by NIFFindByKeyExtended2/3
+				if ((currReadMaskValues != ReadMask.NOTEID) /* && (currReadMaskValues != ReadMask.SUMMARY) */) {
 					unsupportedValuesFound = true;
 					break;
 				}
@@ -2150,10 +2158,254 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * 
 	 * @param <T> type of lookup result object
 	 */
+	private <T> T getAllEntriesByKeyLocally(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, final ViewLookupCallback<T> callback, Object... keys) {
+		final NIFFindByKeyContextStruct ctx = NIFFindByKeyContextStruct.newInstance();
+
+		final boolean convertStringsLazily = true;
+		final boolean convertNotesTimeDateToCalendar = false;
+
+		final EnumSet<ReadMask> returnMaskToUse = returnMask.clone();
+		//make sure every read entry looks the same (collectionstats might otherwise add data at
+		//the beginning of the buffer)
+		final int returnMaskToUseAsInt = ReadMask.toBitMask(returnMaskToUse);
+		
+		final T viewCallbackObj = callback.startingLookup();
+
+		final Throwable invocationEx[] = new Throwable[1];
+
+		final NotesCallbacks.NIFFindByKeyProc nifCallback;
+		
+		if (PlatformUtils.isWin32()) {
+			nifCallback = new Win32NotesCallbacks.NIFFindByKeyProcWin32() {
+				
+				@Override
+				public short invoke(NIFFindByKeyContextStruct ctx) {
+					try {
+						short wSizeOFChunk = ctx.wSizeOfChunk;
+						Pointer summaryBuffer = ctx.SummaryBuffer;
+
+						ctx.TotalDataInBuffer += (int) (wSizeOFChunk & 0xffff);
+
+						if (summaryBuffer!=null && Pointer.nativeValue(summaryBuffer)!=0) {
+							NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(NotesCollection.this,
+									summaryBuffer,
+									0, (int) (ctx.EntriesThisChunk & 0xffff), returnMaskToUse, (short) 0, null,
+									0, null, convertStringsLazily, convertNotesTimeDateToCalendar, null);
+
+							for (NotesViewEntryData currEntry : viewData.getEntries()) {
+								Action action = callback.entryRead(viewCallbackObj, currEntry);
+								if (action==Action.Stop) {
+									return INotesErrorConstants.ERR_CANCEL;
+								}
+							}
+						}
+
+						return 0;
+					}
+					catch (Throwable t) {
+						invocationEx[0] = t;
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+				}
+			};
+		}
+		else if (PlatformUtils.is32Bit()) {
+			nifCallback = new NotesCallbacks.NIFFindByKeyProc() {
+
+				@Override
+				public short invoke(NIFFindByKeyContextStruct ctx) {
+					try {
+						short wSizeOFChunk = ctx.wSizeOfChunk;
+						Pointer summaryBuffer = ctx.SummaryBuffer;
+
+						ctx.TotalDataInBuffer += (int) (wSizeOFChunk & 0xffff);
+
+						if (summaryBuffer!=null && Pointer.nativeValue(summaryBuffer)!=0) {
+							NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b32_decodeCollectionLookupResultBuffer(NotesCollection.this,
+									summaryBuffer,
+									0, (int) (ctx.EntriesThisChunk & 0xffff), returnMaskToUse, (short) 0, null,
+									0, null, convertStringsLazily, convertNotesTimeDateToCalendar, null);
+
+							for (NotesViewEntryData currEntry : viewData.getEntries()) {
+								Action action = callback.entryRead(viewCallbackObj, currEntry);
+								if (action==Action.Stop) {
+									return INotesErrorConstants.ERR_CANCEL;
+								}
+							}
+						}
+
+						return 0;
+					}
+					catch (Throwable t) {
+						invocationEx[0] = t;
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+				}
+			};
+		}
+		else {
+			nifCallback = new NotesCallbacks.NIFFindByKeyProc() {
+
+				@Override
+				public short invoke(NIFFindByKeyContextStruct ctx) {
+					try {
+						short wSizeOFChunk = ctx.wSizeOfChunk;
+						Pointer summaryBuffer = ctx.SummaryBuffer;
+						
+						ctx.TotalDataInBuffer += (int) (wSizeOFChunk & 0xffff);
+
+						if (summaryBuffer!=null && Pointer.nativeValue(summaryBuffer)!=0) {
+							NotesViewLookupResultData viewData = NotesLookupResultBufferDecoder.b64_decodeCollectionLookupResultBuffer(NotesCollection.this,
+									summaryBuffer,
+									0, (int) (ctx.EntriesThisChunk & 0xffff), returnMaskToUse, (short) 0, null,
+									0, null, convertStringsLazily, convertNotesTimeDateToCalendar, null);
+
+							for (NotesViewEntryData currEntry : viewData.getEntries()) {
+								Action action = callback.entryRead(viewCallbackObj, currEntry);
+								if (action==Action.Stop) {
+									return INotesErrorConstants.ERR_CANCEL;
+								}
+							}
+						}
+
+						return 0;
+					}
+					catch (Throwable t) {
+						invocationEx[0] = t;
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+				}
+			};
+		}
+
+		final Memory keyBuffer;
+		try {
+			if (PlatformUtils.is64Bit()) {
+				keyBuffer = NotesSearchKeyEncoder.b64_encodeKeys(keys);
+			}
+			else {
+				keyBuffer = NotesSearchKeyEncoder.b32_encodeKeys(keys);
+			}
+		} catch (Throwable e) {
+			throw new NotesError(0, "Could not encode search keys", e);
+		}
+		
+		final NotesCollectionPositionStruct retIndexPos = NotesCollectionPositionStruct.newInstance(); //null; // NotesCollectionPositionStruct.newInstance();
+		final IntByReference retNumMatches = new IntByReference();
+		final ShortByReference retSignalFlags = new ShortByReference();
+		final IntByReference retSequence = new IntByReference();
+		
+		final int findFlagsAsInt = Find.toBitMaskInt(findFlags) | 0x2000; // => AND_READ_MATCHES
+
+		short result;
+		try {
+			if (PlatformUtils.is64Bit()) {
+				final LongByReference rethBuffer = new LongByReference();
+				
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI64.get().NIFFindByKeyExtended3(getHandle64(),
+								keyBuffer, findFlagsAsInt,
+								returnMaskToUseAsInt, retIndexPos, retNumMatches, retSignalFlags, 
+								rethBuffer,
+								retSequence, nifCallback, ctx);
+					}
+
+				});	
+			}
+			else {
+				final IntByReference rethBuffer = new IntByReference();
+				
+				result = AccessController.doPrivileged(new PrivilegedExceptionAction<Short>() {
+
+					@Override
+					public Short run() throws Exception {
+						return NotesNativeAPI32.get().NIFFindByKeyExtended3(getHandle32(),
+								keyBuffer, findFlagsAsInt,
+								returnMaskToUseAsInt, retIndexPos, retNumMatches, retSignalFlags, 
+								rethBuffer,
+								retSequence, nifCallback, ctx);
+					}
+
+				});
+			}
+			
+		} catch (PrivilegedActionException e) {
+			if (e.getCause() instanceof RuntimeException) 
+				throw (RuntimeException) e.getCause();
+			else
+				throw new NotesError(0, "Error in view lookup", e);
+		}
+
+		if (invocationEx[0]!=null) {
+			//special case for JUnit testcases
+			if (invocationEx[0] instanceof AssertionError) {
+				throw (AssertionError) invocationEx[0];
+			}
+			throw new NotesError(0, "Error in view lookup", invocationEx[0]);
+		}
+		
+		if (result!=INotesErrorConstants.ERR_CANCEL) {
+			if ((result & NotesConstants.ERR_MASK)!=1028) { // no data found
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+		else {
+			return null;
+		}
+
+		T viewCallbackObjToReturn = callback.lookupDone(viewCallbackObj);
+		
+		return viewCallbackObjToReturn;
+	}
+
+	/**
+	 * Checks whether we can use an optimized lookup that locks the view index against concurrent
+	 * modifications while we read it. This mode needs more testing and is disabled by default.
+	 * It can be enabled by calling {@link NotesGC#setCustomValue(String, Object)} with
+	 * key "collection_optimizedlookup" and value <code>Boolean.TRUE</code>. The optimization also only
+	 * works for pure note id lookups and local databases.
+	 * 
+	 * @param findFlags find flags, see {@link Find}
+	 * @param returnMask values to be returned
+	 * @param keys lookup keys
+	 * @return true if supported
+	 */
+	private boolean canUseOptimizedLocalKeyLookup(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, Object... keys) {
+		if (Boolean.TRUE.equals(NotesGC.getCustomValue("collection_optimizedlookup"))) { // disabled by default
+			if (!getParent().isRemote()) { // only working on local dbs
+				return canUseOptimizedLookupForKeyLookup(findFlags, returnMask, keys); // only working properly for pure note id lookups
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Returns all view entries matching the specified search key(s) in the collection.
+	 * It internally takes care of view index changes while reading view data and restarts
+	 * reading if such a change has been detected.
+	 * 
+	 * @param findFlags find flags, see {@link Find}
+	 * @param returnMask values to be returned
+	 * @param callback callback that is called for each entry read from the collection, e.g. use {@link EntriesAsListCallback} to read all requested view row data, {@link NoteIdsAsOrderedSetCallback} to collection just the note ids or build your own to build the return objects you need
+	 * @param keys lookup keys
+	 * @return lookup result
+	 * 
+	 * @param <T> type of lookup result object
+	 */
 	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback, Object... keys) {
+		//for local databases, we can use an optimized lookup that locks the view during the lookup against index updates so that
+		//we don't have to rerun the lookup loop
+		if (canUseOptimizedLocalKeyLookup(findFlags, returnMask, callback, keys)) {
+			T result = getAllEntriesByKeyLocally(findFlags, returnMask, callback, keys);
+			return result;
+		}
+
 		//we are leaving the loop when there is no more data to be read;
 		//while(true) is here to rerun the query in case of view index changes while reading
-		
+
 		long t0=System.currentTimeMillis();
 		
 		int runs = -1;
