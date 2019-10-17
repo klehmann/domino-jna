@@ -58,7 +58,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		
 		Memory formulaName = null;
 		short formulaNameLength = 0;
-		Memory formulaText = NotesStringUtils.toLMBCS(formula, false);
+		Memory formulaText = NotesStringUtils.toLMBCS(formula, false, false);
 		short formulaTextLength = (short) formulaText.size();
 
 		short computeFlags = 0;
