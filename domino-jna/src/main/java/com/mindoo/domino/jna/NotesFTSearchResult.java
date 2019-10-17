@@ -88,6 +88,6 @@ public class NotesFTSearchResult {
 	@Override
 	public String toString() {
 		return "NotesFTSearchResult [numhits="+getNumHits()+", numdocs="+getNumDocs()+", highlights="+getHighlightStrings()+
-				", hasidtable="+(m_matchesIDTable!=null)+", hasmatches="+(m_noteIdsWithScore!=null)+", duration="+m_searchDurationMS+"ms]";
+				", hasidtable="+(m_matchesIDTable!=null)+", hasmatcheswithscore="+(m_noteIdsWithScore!=null)+", duration="+m_searchDurationMS+"ms]";
 	}
 }
