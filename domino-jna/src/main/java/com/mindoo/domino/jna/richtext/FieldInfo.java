@@ -26,9 +26,11 @@ import com.sun.jna.ptr.ShortByReference;
  */
 public class FieldInfo {
 	private int m_dataType;
+	
 	private String m_defaultValueFormula;
 	private String m_inputTranslationFormula;
 	private String m_inputValidityCheckFormula;
+	
 	private String m_name;
 	private String m_description;
 	private List<String> m_textListValues;
