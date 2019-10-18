@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -33,7 +34,7 @@ import com.sun.jna.ptr.ShortByReference;
  * 
  * @author Karsten Lehmann
  */
-public class FormulaExecution implements IRecyclableNotesObject {
+public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	private String m_formula;
 	
 	private long m_hFormula64;
@@ -41,6 +42,8 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	
 	private int m_hFormula32;
 	private int m_hCompute32;
+	
+	private int m_compiledFormulaLength;
 	
 	private Pointer m_ptrCompiledFormula;
 	
@@ -62,7 +65,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 		short formulaTextLength = (short) formulaText.size();
 
 		short computeFlags = 0;
-		
+
 		if (PlatformUtils.is64Bit()) {
 			m_hFormula64 = 0;
 			
@@ -90,6 +93,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			m_hFormula64 = rethFormula.getValue();
+			m_compiledFormulaLength = (int) (retFormulaLength.getValue() & 0xffff);
 			
 			LongByReference rethCompute = new LongByReference();
 			
@@ -129,6 +133,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			}
 			NotesErrorUtils.checkResult(result);
 			m_hFormula32 = rethFormula.getValue();
+			m_compiledFormulaLength = (int) (retFormulaLength.getValue() & 0xffff);
 			
 			IntByReference rethCompute = new IntByReference();
 			
@@ -138,9 +143,27 @@ public class FormulaExecution implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			m_hCompute32 = rethCompute.getValue();
-			
+
 			NotesGC.__objectCreated(FormulaExecution.class, this);
 		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		checkHandle();
+		
+		if (clazz == byte[].class) {
+			//return compiled formula as byte array
+			byte[] compiledFormula = m_ptrCompiledFormula.getByteArray(0, m_compiledFormulaLength);
+			return (T) compiledFormula;
+		}
+		
+		return null;
+	}
+	
+	public String getFormula() {
+		return m_formula;
 	}
 	
 	/**
@@ -373,13 +396,13 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	 */
 	public FormulaExecutionResult evaluateExt(NotesNote note) {
 		checkHandle();
-		
+
 		if (note!=null) {
 			if (note.isRecycled()) {
 				throw new NotesError(0, "Note is already recycled");
 			}
 		}
-		
+
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethResult = new LongByReference();
 			ShortByReference retResultLength = new ShortByReference();
@@ -504,6 +527,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 				
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula64 = 0;
+				m_ptrCompiledFormula=null;
 			}
 		}
 		else {
@@ -519,6 +543,7 @@ public class FormulaExecution implements IRecyclableNotesObject {
 				
 				NotesGC.__objectBeeingBeRecycled(FormulaExecution.class, this);
 				m_hFormula32 = 0;
+				m_ptrCompiledFormula=null;
 			}
 		}
 	}
@@ -526,12 +551,12 @@ public class FormulaExecution implements IRecyclableNotesObject {
 	@Override
 	public boolean isRecycled() {
 		if (PlatformUtils.is64Bit()) {
-			if (m_hFormula64==0 && m_hCompute64==0) {
+			if (m_hFormula64==0) {
 				return true;
 			}
 		}
 		else {
-			if (m_hFormula32==0 && m_hCompute32==0) {
+			if (m_hFormula32==0) {
 				return true;
 			}
 		}
