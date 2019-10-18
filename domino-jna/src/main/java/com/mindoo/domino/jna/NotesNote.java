@@ -3399,8 +3399,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * <li>{@link List} of number range types for multiple number ranges</li>
 	 * <li>Calendar, Date, NotesTimeDate</li>
 	 * <li>{@link List} of date types for multiple dates</li>
-	 * <li>Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
+	 * <li>{@link NotesDateRange}, Calendar[], Date[], NotesTimeDate[] with 2 elements (lower/upper) for date ranges</li>
 	 * <li>{@link List} of date range types for multiple date ranges (max. 65535 entries)</li>
+	 * <li>{@link FormulaExecution} to write a compiled formula (e.g. for the window title in design elements)</li>
 	 * </ul>
 	 * 
 	 * @param itemName item name
@@ -3487,6 +3488,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (value instanceof NotesUniversalNoteId) {
 			return true;
 		}
+		else if (value instanceof FormulaExecution) {
+			return true;
+		}
 		return false;
 	}
 	
@@ -3542,6 +3546,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		EnumSet<ItemType> flags = flagsOrig.clone();
 		flags.remove(ItemType.KEEPLINEBREAKS);
 
+		if (value instanceof FormulaExecution) {
+			//formulas as stored in compiled binary format
+			flags.remove(ItemType.SUMMARY);
+		}
+		
 		if (value instanceof String) {
 			Memory strValueMem;
 			if (keepLineBreaks) {
@@ -4146,6 +4155,56 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 					struct.write();
 					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					Mem32.OSUnlockObject(rethItem.getValue());
+				}
+			}
+		}
+		else if (value instanceof FormulaExecution) {
+			byte[] compiledFormula = ((FormulaExecution)value).getAdapter(byte[].class);
+			if (compiledFormula==null) {
+				throw new IllegalArgumentException("Unable to read the data of the compiled formula: "+((FormulaExecution)value).getFormula());
+			}
+			
+			//date type + compiled formula
+			int valueSize = 2 + compiledFormula.length;
+			
+			if (PlatformUtils.is64Bit()) {
+				LongByReference rethItem = new LongByReference();
+				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_FORMULA);
+					valuePtr = valuePtr.share(2);
+					
+					valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
+
+					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_FORMULA, (int) rethItem.getValue(), valueSize);
+					return item;
+				}
+				finally {
+					Mem64.OSUnlockObject(rethItem.getValue());
+				}
+			}
+			else {
+				IntByReference rethItem = new IntByReference();
+				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
+				NotesErrorUtils.checkResult(result);
+				
+				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
+				
+				try {
+					valuePtr.setShort(0, (short) NotesItem.TYPE_FORMULA);
+					valuePtr = valuePtr.share(2);
+					
+					valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
 
 					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
 					return item;
@@ -5744,7 +5803,11 @@ public class NotesNote implements IRecyclableNotesObject {
 			int oldItemIndex = m_currentItemIndex;
 			m_currentItemIndex = posImpl.m_itemIndex;
 			m_currentItemRecordsIndex = posImpl.m_recordIndex;
-			if (oldItemIndex!=posImpl.m_itemIndex) {
+			
+			if (posImpl.m_itemIndex==-1) {
+				m_currentItemRecords = null;
+			}
+			else if (oldItemIndex!=posImpl.m_itemIndex) {
 				//current item changed, so we need to reload the records
 				NotesItem currItem = m_items.get(m_currentItemIndex);
 				m_currentItemRecords = readCDRecords(currItem);
