@@ -27,20 +27,22 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 	/**
 	 * Check here if a formula needs a change
 	 * 
+	 * @param fieldName name of current field
 	 * @param type type of formula
 	 * @param formula formula
 	 * @return true if change is required
 	 */
-	protected abstract boolean fieldFormulaContainsMatch(FormulaType type, String formula);
+	protected abstract boolean fieldFormulaContainsMatch(String fieldName, FormulaType type, String formula);
 	
 	/**
 	 * Apply change to formula
 	 * 
+	 * @param fieldName name of current field
 	 * @param type type of formula
 	 * @param formula formula
 	 * @return changed formula
 	 */
-	protected abstract String replaceAllMatchesInFieldFormula(FormulaType type, String formula);
+	protected abstract String replaceAllMatchesInFieldFormula(String fieldName, FormulaType type, String formula);
 
 	// ===================
 
@@ -65,17 +67,20 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 	/**
 	 * Check here if the field description needs a change
 	 * 
+	 * @param fieldName name of current field
 	 * @param fieldDesc field description
 	 * @return true if change is required
 	 */
-	protected abstract boolean fieldDescriptionContainsMatch(String fieldDesc);
+	protected abstract boolean fieldDescriptionContainsMatch(String fieldName, String fieldDesc);
 	
 	/**
 	 * Apply change to field description
+	 * 
+	 * @param fieldName name of current field
 	 * @param fieldDesc field description
 	 * @return new field description
 	 */
-	protected abstract String replaceAllMatchesInFieldDescription(String fieldDesc);
+	protected abstract String replaceAllMatchesInFieldDescription(String fieldName, String fieldDesc);
 	
 	/**
 	 * Override this method to check if a custom change to the CDField record
@@ -106,26 +111,28 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 					NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(recordData);
 					FieldInfo fieldInfo = new FieldInfo(cdField);
 					
-					if (fieldNameContainsMatch(fieldInfo.getName())) {
+					String fieldName = fieldInfo.getName();
+					
+					if (fieldNameContainsMatch(fieldName)) {
 						return true;
 					}
 					
-					if (!StringUtil.isEmpty(fieldInfo.getDescription()) && fieldDescriptionContainsMatch(fieldInfo.getDescription())) {
+					if (!StringUtil.isEmpty(fieldInfo.getDescription()) && fieldDescriptionContainsMatch(fieldName, fieldInfo.getDescription())) {
 						return true;
 					}
 					
 					String defaultValueFormula = fieldInfo.getDefaultValueFormula();
-					if (!StringUtil.isEmpty(defaultValueFormula) && fieldFormulaContainsMatch(FormulaType.DEFAULTVALUE, defaultValueFormula)) {
+					if (!StringUtil.isEmpty(defaultValueFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.DEFAULTVALUE, defaultValueFormula)) {
 						return true;
 					}
 					
 					String itFormula = fieldInfo.getInputTranslationFormula();
-					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(FormulaType.INPUTTRANSLATION, itFormula)) {
+					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.INPUTTRANSLATION, itFormula)) {
 						return true;
 					}
 					
 					String ivFormula = fieldInfo.getInputValidityCheckFormula();
-					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
+					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
 						return true;
 					}
 				}
@@ -145,7 +152,8 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 					NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(recordDataWithHeader);
 					FieldInfo fieldInfo = new FieldInfo(cdField);
 					
-					String fieldName = fieldInfo.getName();
+					String origFieldName = fieldInfo.getName();
+					String fieldName = origFieldName;
 					String fieldDesc = fieldInfo.getDescription();
 					
 					String defaultValueFormula = fieldInfo.getDefaultValueFormula();
@@ -159,24 +167,24 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 						fieldName = replaceAllMatchesInFieldName(fieldName);
 					}
 					
-					if (!StringUtil.isEmpty(fieldDesc) && fieldDescriptionContainsMatch(fieldDesc)) {
+					if (!StringUtil.isEmpty(fieldDesc) && fieldDescriptionContainsMatch(origFieldName, fieldDesc)) {
 						hasMatch = true;
-						fieldDesc = replaceAllMatchesInFieldDescription(fieldDesc);
+						fieldDesc = replaceAllMatchesInFieldDescription(origFieldName, fieldDesc);
 					}
 
-					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(FormulaType.DEFAULTVALUE, defaultValueFormula)) {
+					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.DEFAULTVALUE, defaultValueFormula)) {
 						hasMatch = true;
-						defaultValueFormula = replaceAllMatchesInFieldFormula(FormulaType.DEFAULTVALUE, defaultValueFormula);
+						defaultValueFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.DEFAULTVALUE, defaultValueFormula);
 					}
 
-					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(FormulaType.INPUTTRANSLATION, itFormula)) {
+					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.INPUTTRANSLATION, itFormula)) {
 						hasMatch = true;
-						itFormula = replaceAllMatchesInFieldFormula(FormulaType.INPUTTRANSLATION, itFormula);
+						itFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.INPUTTRANSLATION, itFormula);
 					}
 					
-					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
+					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
 						hasMatch = true;
-						ivFormula = replaceAllMatchesInFieldFormula(FormulaType.INPUTVALIDITYCHECK, ivFormula);
+						ivFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula);
 					}
 					
 					if (!hasMatch) {
@@ -196,7 +204,7 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 						}
 					}
 					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling default value formula of field "+fieldInfo.getName(), e);
+						throw new NotesError(0, "Error compiling default value formula of field "+origFieldName, e);
 					}
 					
 					byte[] compiledItFormula;
@@ -209,7 +217,7 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 						}
 					}
 					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling input translation formula of field "+fieldInfo.getName(), e);
+						throw new NotesError(0, "Error compiling input translation formula of field "+origFieldName, e);
 					}
 					
 					byte[] compiledIvFormula;
@@ -222,7 +230,7 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 						}
 					}
 					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling input validity check formula of field "+fieldInfo.getName(), e);
+						throw new NotesError(0, "Error compiling input validity check formula of field "+origFieldName, e);
 					}
 
 					Memory fieldNameMem = NotesStringUtils.toLMBCS(fieldName, false);

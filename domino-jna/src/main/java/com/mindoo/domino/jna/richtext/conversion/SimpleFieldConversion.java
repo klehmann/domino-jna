@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.richtext.conversion;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +15,9 @@ import java.util.regex.Pattern;
  */
 public class SimpleFieldConversion extends AbstractFieldConversion {
 	private Map<Pattern,String> m_fromPatternToString;
+	private Map<String,String> m_dvFormulasByFieldName;
+	private Map<String,String> m_itFormulasByFieldName;
+	private Map<String,String> m_ivFormulasByFieldName;
 	
 	/**
 	 * Creates a new instance
@@ -31,6 +35,36 @@ public class SimpleFieldConversion extends AbstractFieldConversion {
 			Pattern pattern = ignoreCase ? Pattern.compile(currFromPattern, Pattern.CASE_INSENSITIVE) : Pattern.compile(currFromPattern);
 			m_fromPatternToString.put(pattern, currTo);
 		}
+	}
+
+	/**
+	 * Use this method to override the default value formulas of fields
+	 * 
+	 * @param formulasByFieldName map with fieldname as key and new formula as value
+	 */
+	public void setDefaultValueFormulas(Map<String,String> formulasByFieldName) {
+		m_dvFormulasByFieldName = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+		m_dvFormulasByFieldName.putAll(formulasByFieldName);
+	}
+	
+	/**
+	 * Use this method to override the input translation formulas of fields
+	 * 
+	 * @param formulasByFieldName map with fieldname as key and new formula as value
+	 */
+	public void setInputTranslationFormulas(Map<String,String> formulasByFieldName) {
+		m_itFormulasByFieldName = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+		m_itFormulasByFieldName.putAll(formulasByFieldName);
+	}
+
+	/**
+	 * Use this method to override the input validation formulas of fields
+	 * 
+	 * @param formulasByFieldName map with fieldname as key and new formula as value
+	 */
+	public void setInputValidationFormulas(Map<String,String> formulasByFieldName) {
+		m_ivFormulasByFieldName = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+		m_ivFormulasByFieldName.putAll(formulasByFieldName);
 	}
 
 	private boolean containsMatch(String txt) {
@@ -63,12 +97,70 @@ public class SimpleFieldConversion extends AbstractFieldConversion {
 	}
 
 	@Override
-	protected boolean fieldFormulaContainsMatch(FormulaType type, String formula) {
+	protected boolean fieldFormulaContainsMatch(String fieldName, FormulaType type, String formula) {
+		//check of formula should be overridden
+		switch (type) {
+		case DEFAULTVALUE:
+			if(m_dvFormulasByFieldName!=null && m_dvFormulasByFieldName.containsKey(fieldName)) {
+				return true;
+			}
+			break;
+		case INPUTTRANSLATION:
+			if(m_itFormulasByFieldName!=null && m_itFormulasByFieldName.containsKey(fieldName)) {
+				return true;
+			}
+			break;
+		case INPUTVALIDITYCHECK:
+			if (m_ivFormulasByFieldName!=null && m_ivFormulasByFieldName.containsKey(fieldName)) {
+				return true;
+			}
+			break;
+			default:
+				throw new IllegalArgumentException("Unknown formula type: "+type);
+		}
+		
 		return containsMatch(formula);
 	}
 
 	@Override
-	protected String replaceAllMatchesInFieldFormula(FormulaType type, String formula) {
+	protected String replaceAllMatchesInFieldFormula(String fieldName, FormulaType type, String formula) {
+		//check if whole formula should be replaced
+		switch (type) {
+		case DEFAULTVALUE:
+		{
+			if (m_dvFormulasByFieldName!=null) {
+				String newFormula = m_dvFormulasByFieldName.get(fieldName);
+				if (newFormula!=null) {
+					//override formula
+					return newFormula;
+				}
+			}
+		}
+		break;
+		case INPUTTRANSLATION:
+		{
+			if (m_itFormulasByFieldName!=null) {
+				String newFormula = m_itFormulasByFieldName.get(fieldName);
+				if (newFormula!=null) {
+					//override formula
+					return newFormula;
+				}
+			}
+		}
+		break;
+		case INPUTVALIDITYCHECK:
+		{
+			if (m_ivFormulasByFieldName!=null) {
+				String newFormula = m_ivFormulasByFieldName.get(fieldName);
+				if (newFormula!=null) {
+					//override formula
+					return newFormula;
+				}
+			}
+		}
+		break;
+		}
+		
 		return replaceAllMatches(formula);
 	}
 
@@ -83,12 +175,12 @@ public class SimpleFieldConversion extends AbstractFieldConversion {
 	}
 
 	@Override
-	protected boolean fieldDescriptionContainsMatch(String fieldDesc) {
+	protected boolean fieldDescriptionContainsMatch(String fieldName, String fieldDesc) {
 		return containsMatch(fieldDesc);
 	}
 
 	@Override
-	protected String replaceAllMatchesInFieldDescription(String fieldDesc) {
+	protected String replaceAllMatchesInFieldDescription(String fieldName, String fieldDesc) {
 		return replaceAllMatches(fieldDesc);
 	}
 
