@@ -93,6 +93,9 @@ public abstract class AbstractMailMergeConversion implements IRichTextConversion
 							source.copyCurrentRecordTo(target);
 						}
 					}
+					else {
+						source.copyCurrentRecordTo(target);
+					}
 				}
 				else {
 					source.copyCurrentRecordTo(target);
