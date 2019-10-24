@@ -7,8 +7,11 @@ import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.internal.FormulaDecompiler;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.compoundtext.IFieldHtmlPropsProvider;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDIdNameStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 /**
@@ -26,6 +29,13 @@ public class FieldInfo {
 	private String m_name;
 	private String m_description;
 	private List<String> m_textListValues;
+
+	private String m_htmlId;
+	private String m_htmlClassName;
+	private String m_htmlStyle;
+	private String m_htmlTitle;
+	private String m_htmlExtraAttr;
+	private String m_htmlName;
 	
 	public FieldInfo(int dataType, String defaultValueFormula, String inputTranslationFormula, String inputValidityCheckFormula,
 			String name, String description, List<String> textListValues) {
@@ -99,6 +109,60 @@ public class FieldInfo {
 		else {
 			throw new IllegalArgumentException("Could not find any supported adapter to read data");
 		}
+		
+		//read optional HTML properties
+		IFieldHtmlPropsProvider htmlPropsProvider = adaptable.getAdapter(IFieldHtmlPropsProvider.class);
+		if (htmlPropsProvider!=null) {
+			Memory idNameMem = htmlPropsProvider.getCDRecordWithHeaderAndIDNameStruct();
+			if (idNameMem!=null) {
+				NotesCDIdNameStruct idNameStruct = NotesCDIdNameStruct.newInstance(idNameMem);
+				idNameStruct.read();
+
+				Pointer ptrData = idNameMem.share(NotesConstants.notesCDIdNameStructSize);
+				
+				m_htmlId = "";
+				if (idNameStruct.wIdLength != 0) {
+					m_htmlId = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wIdLength & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wIdLength & 0xffff));
+				}
+				
+				m_htmlClassName = "";
+				if (idNameStruct.wClassLen != 0) {
+					m_htmlClassName = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wClassLen & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wClassLen & 0xffff));
+				}
+				
+				m_htmlStyle = "";
+				if (idNameStruct.wStyleLen != 0) {
+					m_htmlStyle = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wStyleLen & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wStyleLen & 0xffff));
+				}
+				
+				m_htmlTitle = "";
+				if (idNameStruct.wTitleLen != 0) {
+					m_htmlTitle = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wTitleLen & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wTitleLen & 0xffff));
+				}
+				
+				m_htmlExtraAttr = "";
+				if (idNameStruct.wExtraLen != 0) {
+					m_htmlExtraAttr = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wExtraLen & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wExtraLen & 0xffff));
+				}
+				
+				m_htmlName = "";
+				if (idNameStruct.wNameLen != 0) {
+					m_htmlName = NotesStringUtils.fromLMBCS(ptrData, (int) (idNameStruct.wNameLen & 0xffff) );
+					
+					ptrData = ptrData.share((int) (idNameStruct.wNameLen & 0xffff));
+				}
+			}
+		}
 	}
 	
 	/**
@@ -150,10 +214,38 @@ public class FieldInfo {
 		return m_textListValues;
 	}
 	
+	public String getHtmlId() {
+		return m_htmlId;
+	}
+	
+	public String getHtmlClassName() {
+		return m_htmlClassName;
+	}
+	
+	public String getHtmlStyle() {
+		return m_htmlStyle;
+	}
+	
+	public String getHtmlTitle() {
+		return m_htmlTitle;
+	}
+	
+	public String getHtmlExtraAttr() {
+		return m_htmlExtraAttr;
+	}
+	
+	public String getHtmlName() {
+		return m_htmlName;
+	}
+
+	
 	@Override
 	public String toString() {
 		return "FieldInfo [name="+getName()+", type="+getDataType()+", description="+getDescription()+", default="+getDefaultValueFormula()+
-				", inputtranslation="+getInputTranslationFormula()+", validation="+getInputValidityCheckFormula()+", textlistvalues="+getTextListValues()+"]";
+				", inputtranslation="+getInputTranslationFormula()+", validation="+getInputValidityCheckFormula()+
+				", textlistvalues="+getTextListValues()+", htmlid="+getHtmlId()+", htmlclassname="+getHtmlClassName()+
+				", htmlstyle="+getHtmlStyle()+", htmltitle="+getHtmlTitle()+", htmlattr="+getHtmlExtraAttr()+
+				", htmlname="+getHtmlName()+"]";
 
 	}
 

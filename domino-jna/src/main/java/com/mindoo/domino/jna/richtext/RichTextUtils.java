@@ -3,7 +3,9 @@ package com.mindoo.domino.jna.richtext;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.constants.CDRecordType;
+import com.mindoo.domino.jna.internal.structs.compoundtext.IFieldHtmlPropsProvider;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
 import com.sun.jna.Memory;
@@ -51,15 +53,44 @@ public class RichTextUtils {
 		RichTextNavPosition oldPos = rtNav.getCurrentRecordPosition();
 		
 		if (rtNav.gotoFirst()) {
+			boolean inBeginEnd = false;
+			
 			do {
-				if (CDRecordType.FIELD.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
+				if (CDRecordType.BEGIN.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
+					inBeginEnd = true;
+				}
+				else if (CDRecordType.END.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
+					inBeginEnd = false;
+				}
+				else if (CDRecordType.FIELD.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
 					//found record of type SIG_CD_FIELD
-					Memory recordMemWithHeader = rtNav.getCurrentRecordDataWithHeader();
+					Memory fieldRecordWithHeader = rtNav.getCurrentRecordDataWithHeader();
 					
-					NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(recordMemWithHeader);
-					cdFieldStruct.read();
+					//search for additional fields
+					RichTextNavPosition fieldPos = rtNav.getCurrentRecordPosition();
 					
-					FieldInfo fldInfo = new FieldInfo(cdFieldStruct);
+					Memory idNameCDRecordWithHeader = null;
+
+					if (inBeginEnd) {
+						if (rtNav.gotoNext()) {
+							do {
+								// check if we have reached the end of the field block
+								if (CDRecordType.END.getConstant() == rtNav.getCurrentRecordTypeAsShort() ||
+										CDRecordType.BEGIN.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
+									break;
+								}
+								else if (CDRecordType.IDNAME.getConstant() == rtNav.getCurrentRecordTypeAsShort()) {
+									idNameCDRecordWithHeader = rtNav.getCurrentRecordDataWithHeader();
+								}
+							}
+							while (rtNav.gotoNext());
+						}
+					}
+
+					rtNav.restoreCurrentRecordPosition(fieldPos);
+
+					FieldPropAdaptable fieldData = new FieldPropAdaptable(fieldRecordWithHeader, idNameCDRecordWithHeader);
+					FieldInfo fldInfo = new FieldInfo(fieldData);
 					fields.add(fldInfo);
 				}
 			}
@@ -71,5 +102,33 @@ public class RichTextUtils {
 		}
 		
 		return fields;
+	}
+	
+	private static class FieldPropAdaptable implements IAdaptable, IFieldHtmlPropsProvider {
+		private Memory m_fieldRecordWithHeader;
+		private Memory m_idNameCDRecord;
+		
+		public FieldPropAdaptable(Memory fieldRecordWithHeader, Memory idNameCDRecord) {
+			m_fieldRecordWithHeader = fieldRecordWithHeader;
+			m_idNameCDRecord = idNameCDRecord;
+		}
+
+		@Override
+		public <T> T getAdapter(Class<T> clazz) {
+			if (clazz == NotesCDFieldStruct.class && m_fieldRecordWithHeader!=null) {
+				NotesCDFieldStruct fieldStruct = NotesCDFieldStruct.newInstance(m_fieldRecordWithHeader);
+				fieldStruct.read();
+				return (T) fieldStruct;
+			}
+			else if (clazz == IFieldHtmlPropsProvider.class) {
+				return (T) this;
+			}
+			return null;
+		}
+
+		@Override
+		public Memory getCDRecordWithHeaderAndIDNameStruct() {
+			return m_idNameCDRecord;
+		}
 	}
 }

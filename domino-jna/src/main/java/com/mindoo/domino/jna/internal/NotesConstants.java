@@ -33,6 +33,7 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDEmbeddedCtlStr
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExt2FieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExtFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDIdNameStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDPabHideStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlArgStruct;
@@ -122,6 +123,7 @@ public interface NotesConstants {
 	public final int notesCDEmbeddedCtlStructSize = NotesCDEmbeddedCtlStruct.newInstance().size();
 	public final int notesCDPabhideStructSize = NotesCDPabHideStruct.newInstance().size();
 	public final int notesCDHotspotBeginStructSize = NotesCdHotspotBeginStruct.newInstance().size();
+	public final int notesCDIdNameStructSize = NotesCDIdNameStruct.newInstance().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
