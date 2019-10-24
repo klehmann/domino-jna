@@ -8,12 +8,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Simple subclass of {@link AbstractFieldConversion} that uses a from/to
+ * Simple subclass of {@link AbstractFieldAndFormulaConversion} that uses a from/to
  * map to find/replace matches
  * 
  * @author Karsten Lehmann
  */
-public class SimpleFieldConversion extends AbstractFieldConversion {
+public class SimpleFieldAndFormulaConversion extends AbstractFieldAndFormulaConversion {
 	private Map<Pattern,String> m_fromPatternToString;
 	private Map<String,String> m_dvFormulasByFieldName;
 	private Map<String,String> m_itFormulasByFieldName;
@@ -25,7 +25,7 @@ public class SimpleFieldConversion extends AbstractFieldConversion {
 	 * @param fromTo from/to map of search string and replacement
 	 * @param ignoreCase true to ignore the case when searching
 	 */
-	public SimpleFieldConversion(Map<String,String> fromTo, boolean ignoreCase) {
+	public SimpleFieldAndFormulaConversion(Map<String,String> fromTo, boolean ignoreCase) {
 		m_fromPatternToString = new HashMap<Pattern,String>();
 		for (Entry<String,String> currEntry : fromTo.entrySet()) {
 			String currFrom = currEntry.getKey();
@@ -164,6 +164,26 @@ public class SimpleFieldConversion extends AbstractFieldConversion {
 		return replaceAllMatches(formula);
 	}
 
+	@Override
+	protected boolean hideWhenFormulaContainsMatch(String formula) {
+		return containsMatch(formula);
+	}
+	
+	@Override
+	protected String replaceAllMatchesInHideWhenFormula(String formula) {
+		return replaceAllMatches(formula);
+	}
+	
+	@Override
+	protected boolean hotspotFormulaContainsMatch(String formula) {
+		return containsMatch(formula);
+	}
+
+	@Override
+	protected String replaceAllMatchesInHotspotFormula(String formula) {
+		return replaceAllMatches(formula);
+	}
+	
 	@Override
 	protected boolean fieldNameContainsMatch(String fieldName) {
 		return containsMatch(fieldName);

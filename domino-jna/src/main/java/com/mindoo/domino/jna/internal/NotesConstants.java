@@ -33,6 +33,8 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDEmbeddedCtlStr
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExt2FieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExtFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDPabHideStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlArgStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.internal.structs.html.StringListStruct;
@@ -118,7 +120,9 @@ public interface NotesConstants {
 	public final int notesCDExtFieldStructSize = NotesCDExtFieldStruct.newInstance().size();
 	public final int notesCDExt2FieldStructSize = NotesCDExt2FieldStruct.newInstance().size();
 	public final int notesCDEmbeddedCtlStructSize = NotesCDEmbeddedCtlStruct.newInstance().size();
-			
+	public final int notesCDPabhideStructSize = NotesCDPabHideStruct.newInstance().size();
+	public final int notesCDHotspotBeginStructSize = NotesCdHotspotBeginStruct.newInstance().size();
+	
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;
@@ -2496,22 +2500,21 @@ This allows an Editor to assume some Designer-level access */
 	/**	set this bit or the Notes client will assume the pab
 		was saved pre-V4 and will thus "link" these bit
 		definitions (assign the right one to the left one)
-		since preview did not exist pre-V4:
-			PABFLAG_HIDE_PV = PABFLAG_HIDE_RO
+		since preview did not exist pre-V4:<br>
+			PABFLAG_HIDE_PV = PABFLAG_HIDE_RO<br>
 			PABFLAG_HIDE_PVE = PABFLAG_HIDE_RW */
 	public short PABFLAG_HIDE_UNLINK = 0x0100;
 	/** hide paragraph when copying/forwarding */
 	public short PABFLAG_HIDE_CO = 0x0200;
 	/** display paragraph with bullet */
 	public short PABFLAG_BULLET = 0x0400;
-	/**  use the hide when formula
-	   even if there is one.		*/
+	/**  use the hide when formula even if there is one. */
 	public short PABFLAG_HIDE_IF = 0x0800;
 	/** display paragraph with number */
 	public short PABFLAG_NUMBEREDLIST = 0x1000;
 	/** hide paragraph when previewing*/
 	public short PABFLAG_HIDE_PV = 0x2000;
-	/** hide paragraph when editing in the preview pane.		*/
+	/** hide paragraph when editing in the preview pane. */
 	public short PABFLAG_HIDE_PVE = 0x4000;
 	/** hide paragraph from Notes clients */
 	public short PABFLAG_HIDE_NOTES = (short) (0x8000	 & 0xffff);
@@ -2519,6 +2522,82 @@ This allows an Editor to assume some Designer-level access */
 	public short PABFLAG_HIDEBITS = (short) ((PABFLAG_HIDE_RO | PABFLAG_HIDE_RW | PABFLAG_HIDE_CO | PABFLAG_HIDE_PR | PABFLAG_HIDE_PV | PABFLAG_HIDE_PVE | PABFLAG_HIDE_IF | PABFLAG_HIDE_NOTES) & 0xffff);
 
 	public short TABLE_PABFLAGS = (short) (( PABFLAG_KEEP_TOGETHER | PABFLAG_KEEP_WITH_NEXT) & 0xffff);
+
+	/* Extra Paragraph Flags (stored in Flags2 field) */
+
+	public short PABFLAG2_HIDE_WEB = 0x0001;
+	public short PABFLAG2_CHECKEDLIST = 0x0002;
+	/** PAB.LeftMargin is an offset value. */
+	public short PABFLAG2_LM_OFFSET = 0x0004;
+	/** PAB.LeftMargin is a percentage value. */
+	public short PABFLAG2_LM_PERCENT = 0x0008;
+	/** PAB.LeftMargin is an offset value. */
+	public short PABFLAG2_FLLM_OFFSET = 0x0010;
+	/** PAB.LeftMargin is a percentage value. */
+	public short PABFLAG2_FLLM_PERCENT = 0x0020;
+	/** PAB.RightMargin is an offset value.   */
+	public short PABFLAG2_RM_OFFSET = 0x0040;
+	/** PAB.RightMargin is a percentage value.   */
+	public short PABFLAG2_RM_PERCENT = 0x0080;
+	/** If to use default value instead of PAB.LeftMargin. */
+	public short PABFLAG2_LM_DEFAULT = 0x0100;
+	/** If to use default value instead of PAB.FirstLineLeftMargin. */
+	public short PABFLAG2_FLLM_DEFAULT = 0x0200;
+	/** If to use default value instead of PAB.RightMargin. */
+	public short PABFLAG2_RM_DEFAULT = 0x0400;
+	public short PABFLAG2_CIRCLELIST = 0x0800;	
+	public short PABFLAG2_SQUARELIST = 0x1000;	
+	public short PABFLAG2_UNCHECKEDLIST = 0x2000;	
+	/** set if right to left reading order */
+	public short PABFLAG2_BIDI_RTLREADING = 0x4000;
+	/** TRUE if Pab needs to Read more Flags*/
+	public short PABFLAG2_MORE_FLAGS = (short) (0x8000 & 0xffff);
+
+	public short PABFLAG2_HIDEBITS = PABFLAG2_HIDE_WEB;
+
+	public short PABFLAG2_CHECKLIST = (short) ((PABFLAG2_UNCHECKEDLIST | PABFLAG2_CHECKEDLIST)& 0xffff);
+
+	public short PABFLAG2_MARGIN_DEFAULTS_MASK = (short) (( PABFLAG2_LM_DEFAULT
+					| PABFLAG2_RM_DEFAULT
+					| PABFLAG2_FLLM_DEFAULT	) & 0xffff);
+
+	public short PABFLAG2_MARGIN_STYLES_MASK = (short) (( PABFLAG2_LM_OFFSET
+				| PABFLAG2_LM_PERCENT
+				| PABFLAG2_FLLM_OFFSET
+				| PABFLAG2_FLLM_PERCENT
+				| PABFLAG2_RM_OFFSET
+				| PABFLAG2_RM_PERCENT) & 0xffff);
+	
+	public short PABFLAG2_MARGIN_MASK = (short) (( PABFLAG2_MARGIN_STYLES_MASK | PABFLAG2_MARGIN_DEFAULTS_MASK ) & 0xffff);
+
+	public short PABFLAG2_ROMANUPPERLIST = (short) ((PABFLAG2_CHECKEDLIST | PABFLAG2_CIRCLELIST) & 0xffff);
+	public short PABFLAG2_ROMANLOWERLIST = (short) ((PABFLAG2_CHECKEDLIST | PABFLAG2_SQUARELIST) & 0xffff);
+	public short PABFLAG2_ALPHAUPPERLIST = (short) ((PABFLAG2_SQUARELIST | PABFLAG2_CIRCLELIST) & 0xffff);
+	public short PABFLAG2_ALPHALOWERLIST = (short) ((PABFLAG2_CHECKEDLIST | PABFLAG2_SQUARELIST | PABFLAG2_CIRCLELIST) & 0xffff);
+
+	/*	Table Flags */
+
+	/* Cells grow/shrink to fill window */
+	public short TABFLAG_AUTO_CELL_WIDTH = 0x0001;
+
+	/* Cell Flags */
+
+	/* Cell uses background color */
+	public byte CELLFLAG_USE_BKGCOLOR = 0x01;
+
+	/*	This DWORD, ExtendPabFlags, extends the PAB structure.<br>
+	 * Use the ExtendedPab flags to know what to read next */
+
+	public int EXTENDEDPABFLAGS3 = 0x00000001;	/* If True then need make another read for Flags3 */
+
+	/* 	This DWORD extends the flags and flags 2 in the CDPABDEFINITION record */
+
+	/** True, if Hide when embedded */
+	public int PABFLAG3_HIDE_EE = 0x00000001;
+	/** True, if hidden from mobile clients */
+	public int PABFLAG3_HIDE_MOBILE = 0x00000002;
+	/** True if boxes in a layer have set PABFLAG_DISPLAY_RM on pabs */
+	public int PABFLAG3_LAYER_USES_DRM = 0x00000004;
 
 	public short	 LONGRECORDLENGTH = 0x0000;
 	public short	 WORDRECORDLENGTH = (short) (0xff00 & 0xffff);
@@ -3194,4 +3273,7 @@ This allows an Editor to assume some Designer-level access */
 	public short FR_RUN_QOS_NSD = 0x20; 
 	public short FR_NSD_AUTOMONITOR = 0x40;
 	
+	/** maximum number of stops in tables */
+	public static int MAXTABS = 20;
+
 }

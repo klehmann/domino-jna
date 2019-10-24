@@ -1,17 +1,22 @@
 package com.mindoo.domino.jna.richtext.conversion;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
+import com.mindoo.domino.jna.constants.CDRecordType.Area;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.FormulaCompiler;
+import com.mindoo.domino.jna.internal.FormulaDecompiler;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDPabHideStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginStruct;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 
 /**
  * Abstract base class to convert fields in design richtext. Conversion includes field name and description
@@ -20,7 +25,7 @@ import com.sun.jna.Memory;
  * 
  * @author Karsten Lehmann
  */
-public abstract class AbstractFieldConversion implements IRichTextConversion {
+public abstract class AbstractFieldAndFormulaConversion implements IRichTextConversion {
 	/** type of field formula */
 	public static enum FormulaType { DEFAULTVALUE, INPUTTRANSLATION, INPUTVALIDITYCHECK }
 	
@@ -43,6 +48,38 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 	 * @return changed formula
 	 */
 	protected abstract String replaceAllMatchesInFieldFormula(String fieldName, FormulaType type, String formula);
+
+	/**
+	 * Check here if a hide when formula needs a change
+	 * 
+	 * @param formula hide when formula
+	 * @return true if change is required
+	 */
+	protected abstract boolean hideWhenFormulaContainsMatch(String formula);
+
+	/**
+	 * Apply change to hide when formula
+	 * 
+	 * @param formula hide when formula
+	 * @return changed formula
+	 */
+	protected abstract String replaceAllMatchesInHideWhenFormula(String formula);
+
+	/**
+	 * Check here if a hotspot formula needs a change
+	 * 
+	 * @param formula hotspot formula
+	 * @return true if change is required
+	 */
+	protected abstract boolean hotspotFormulaContainsMatch(String formula);
+
+	/**
+	 * Apply change to hotspot formula
+	 * 
+	 * @param formula hotspot formula
+	 * @return changed formula
+	 */
+	protected abstract String replaceAllMatchesInHotspotFormula(String formula);
 
 	// ===================
 
@@ -134,6 +171,41 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 					String ivFormula = fieldInfo.getInputValidityCheckFormula();
 					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
 						return true;
+					}
+				}
+				else if (CDRecordType.PABHIDE.getConstant() == nav.getCurrentRecordTypeAsShort()) {
+					Memory recordData = nav.getCurrentRecordDataWithHeader();
+					
+					NotesCDPabHideStruct hideWhenStruct = NotesCDPabHideStruct.newInstance(recordData);
+					hideWhenStruct.read();
+					
+					int formulaLen = (int) (recordData.size() - NotesConstants.notesCDPabhideStructSize);
+					if (formulaLen>0) {
+						Pointer formulaPtr = recordData.share(NotesConstants.notesCDPabhideStructSize);
+						String hwFormula = FormulaDecompiler.decompileFormula(formulaPtr);
+						if (!StringUtil.isEmpty(hwFormula) && hideWhenFormulaContainsMatch(hwFormula)) {
+							return true;
+						}
+					}
+				}
+				else if (CDRecordType.HOTSPOTBEGIN.getConstant() == nav.getCurrentRecordTypeAsShort() ||
+						CDRecordType.V4HOTSPOTBEGIN.getConstant() == nav.getCurrentRecordTypeAsShort()) {
+					Memory recordData = nav.getCurrentRecordDataWithHeader();
+					
+					NotesCdHotspotBeginStruct hotspotStruct = NotesCdHotspotBeginStruct.newInstance(recordData);
+					hotspotStruct.read();
+					
+					if ((hotspotStruct.Flags & NotesConstants.HOTSPOTREC_RUNFLAG_FORMULA) == NotesConstants.HOTSPOTREC_RUNFLAG_FORMULA) {
+						int dataLengthAsInt = hotspotStruct.DataLength & 0xffff;
+						
+						if (dataLengthAsInt > 0) {
+							Pointer ptrFormula = recordData.share(NotesConstants.notesCDHotspotBeginStructSize);
+							String formula = FormulaDecompiler.decompileFormula(ptrFormula);
+							
+							if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+								return true;
+							}
+						}
 					}
 				}
 			}
@@ -300,7 +372,133 @@ public abstract class AbstractFieldConversion implements IRichTextConversion {
 					//write new data to target
 					target.addCDRecords(newCdFieldStructureWithHeaderMem);
 				}
+				else if (CDRecordType.PABHIDE.getConstant() == source.getCurrentRecordTypeAsShort()) {
+					Memory recordData = source.getCurrentRecordDataWithHeader();
+					
+					NotesCDPabHideStruct hideWhenStruct = NotesCDPabHideStruct.newInstance(recordData);
+					hideWhenStruct.read();
+					
+					boolean hasMatch = false;
+					
+					int formulaLen = (int) (recordData.size() - NotesConstants.notesCDPabhideStructSize);
+					if (formulaLen>0) {
+						Pointer formulaPtr = recordData.share(NotesConstants.notesCDPabhideStructSize);
+						String hwFormula = FormulaDecompiler.decompileFormula(formulaPtr);
+						
+						if (!StringUtil.isEmpty(hwFormula) && hideWhenFormulaContainsMatch(hwFormula)) {
+							hwFormula = replaceAllMatchesInHideWhenFormula(hwFormula);
+							
+							byte[] compiledHwFormula;
+							try {
+								if (!StringUtil.isEmpty(hwFormula)) {
+									compiledHwFormula = FormulaCompiler.compileFormula(hwFormula);
+								}
+								else {
+									compiledHwFormula = new byte[0];
+								}
+							}
+							catch (FormulaCompilationError e) {
+								throw new NotesError(0, "Error compiling hide when formula", e);
+							}
+							
+							int newRecordLength = NotesConstants.notesCDPabhideStructSize + compiledHwFormula.length;
+							Memory newCdPabHideStructureWithHeaderMem = new Memory(newRecordLength);
+							//copy old data
+							newCdPabHideStructureWithHeaderMem.write(0, recordData.getByteArray(0, NotesConstants.notesCDPabhideStructSize), 0, NotesConstants.notesCDPabhideStructSize);
+							
+							NotesCDPabHideStruct newHideWhenStruct = NotesCDPabHideStruct.newInstance(newCdPabHideStructureWithHeaderMem);
+							newHideWhenStruct.read();
+							newHideWhenStruct.Length = (short) (newRecordLength & 0xffff);
+							newHideWhenStruct.write();
+
+							//append new compiled formula
+							newCdPabHideStructureWithHeaderMem.write(NotesConstants.notesCDPabhideStructSize, compiledHwFormula, 0, compiledHwFormula.length);
+
+							//write new data to target
+							target.addCDRecords(newCdPabHideStructureWithHeaderMem);
+							
+							hasMatch = true;
+						}
+					}
+					
+					if (!hasMatch) {
+						source.copyCurrentRecordTo(target);
+					}
+				}
+				else if (CDRecordType.HOTSPOTBEGIN.getConstant() == source.getCurrentRecordTypeAsShort() ||
+						CDRecordType.V4HOTSPOTBEGIN.getConstant() == source.getCurrentRecordTypeAsShort()) {
+					Memory recordData = source.getCurrentRecordDataWithHeader();
+					
+					NotesCdHotspotBeginStruct hotspotStruct = NotesCdHotspotBeginStruct.newInstance(recordData);
+					hotspotStruct.read();
+					
+					boolean hasMatch = false;
+					
+					if ((hotspotStruct.Flags & NotesConstants.HOTSPOTREC_RUNFLAG_FORMULA) == NotesConstants.HOTSPOTREC_RUNFLAG_FORMULA) {
+						int dataLengthAsInt = hotspotStruct.DataLength & 0xffff;
+						
+						if (dataLengthAsInt > 0) {
+							Pointer ptrFormula = recordData.share(NotesConstants.notesCDHotspotBeginStructSize);
+							String hotspotFormula = FormulaDecompiler.decompileFormula(ptrFormula);
+							
+							if (!StringUtil.isEmpty(hotspotFormula) && hotspotFormulaContainsMatch(hotspotFormula)) {
+								hotspotFormula = replaceAllMatchesInHotspotFormula(hotspotFormula);
+								
+								byte[] compiledHotspotFormula;
+								try {
+									if (!StringUtil.isEmpty(hotspotFormula)) {
+										compiledHotspotFormula = FormulaCompiler.compileFormula(hotspotFormula);
+									}
+									else {
+										compiledHotspotFormula = new byte[0];
+									}
+								}
+								catch (FormulaCompilationError e) {
+									throw new NotesError(0, "Error compiling hotspot formula", e);
+								}
+								
+								int newRecordLength = NotesConstants.notesCDHotspotBeginStructSize + compiledHotspotFormula.length;
+								Memory newCdHotspotBeginStructureWithHeaderMem = new Memory(newRecordLength);
+								//copy old data
+								newCdHotspotBeginStructureWithHeaderMem.write(0, recordData.getByteArray(0, NotesConstants.notesCDHotspotBeginStructSize), 0, NotesConstants.notesCDHotspotBeginStructSize);
+								
+								NotesCdHotspotBeginStruct newHotspotBeginStruct = NotesCdHotspotBeginStruct.newInstance(newCdHotspotBeginStructureWithHeaderMem);
+								newHotspotBeginStruct.read();
+								newHotspotBeginStruct.Length = (short) (newRecordLength & 0xffff);
+								newHotspotBeginStruct.DataLength = (short) (compiledHotspotFormula.length & 0xffff);
+								//unsign hotspot
+								if ((newHotspotBeginStruct.Flags & NotesConstants.HOTSPOTREC_RUNFLAG_SIGNED) == NotesConstants.HOTSPOTREC_RUNFLAG_SIGNED) {
+									newHotspotBeginStruct.Flags -= NotesConstants.HOTSPOTREC_RUNFLAG_SIGNED;
+								}
+								
+								newHotspotBeginStruct.write();
+
+								//append new compiled formula
+								newCdHotspotBeginStructureWithHeaderMem.write(NotesConstants.notesCDHotspotBeginStructSize, compiledHotspotFormula, 0, compiledHotspotFormula.length);
+
+								//write new data to target
+								target.addCDRecords(newCdHotspotBeginStructureWithHeaderMem);
+								
+								hasMatch = true;
+							}
+						}
+					}
+					
+					if (!hasMatch) {
+						source.copyCurrentRecordTo(target);
+					}
+				}
 				else {
+					System.out.println("Skipping record with type "+source.getCurrentRecordTypeAsShort());
+					CDRecordType cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.TYPE_COMPOSITE);
+					if (cd==null) {
+						cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.ALTERNATE_SEQ);
+					}
+					if (cd==null) {
+						cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.RESERVED_INTERNAL);
+					}
+					System.out.println("CD="+cd);
+
 					source.copyCurrentRecordTo(target);
 				}
 			}

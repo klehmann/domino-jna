@@ -4,20 +4,12 @@ import java.util.List;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesItem;
-import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.FormulaDecompiler;
 import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.Mem32;
-import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
-import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
-import com.sun.jna.ptr.ShortByReference;
 
 /**
  * Information read for a field in the database design
@@ -54,46 +46,7 @@ public class FieldInfo {
 	public int getDataType() {
 		return m_dataType;
 	}
-	
-	private String decompileFormula(Pointer ptr) {
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethFormulaText = new LongByReference();
-			ShortByReference retFormulaTextLength = new ShortByReference();
-			short result = NotesNativeAPI64.get().NSFFormulaDecompile(ptr, false, rethFormulaText, retFormulaTextLength);
-			NotesErrorUtils.checkResult(result);
 
-			Pointer formulaPtr = Mem64.OSLockObject(rethFormulaText.getValue());
-			try {
-				int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
-				String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
-				return formula;
-			}
-			finally {
-				Mem64.OSUnlockObject(rethFormulaText.getValue());
-				result = Mem64.OSMemFree(rethFormulaText.getValue());
-				NotesErrorUtils.checkResult(result);
-			}
-		}
-		else {
-			IntByReference rethFormulaText = new IntByReference();
-			ShortByReference retFormulaTextLength = new ShortByReference();
-			short result = NotesNativeAPI32.get().NSFFormulaDecompile(ptr, false, rethFormulaText, retFormulaTextLength);
-			NotesErrorUtils.checkResult(result);
-			
-			Pointer formulaPtr = Mem32.OSLockObject(rethFormulaText.getValue());
-			try {
-				int textLen = (int) (retFormulaTextLength.getValue() & 0xffff);
-				String formula = NotesStringUtils.fromLMBCS(formulaPtr, textLen);
-				return formula;
-			}
-			finally {
-				Mem32.OSUnlockObject(rethFormulaText.getValue());
-				result = Mem32.OSMemFree(rethFormulaText.getValue());
-				NotesErrorUtils.checkResult(result);
-			}
-		}	
-	}
-	
 	public FieldInfo(IAdaptable adaptable) {
 		NotesCDFieldStruct cdField = adaptable.getAdapter(NotesCDFieldStruct.class);
 		if (cdField!=null) {
@@ -115,17 +68,17 @@ public class FieldInfo {
 			
 			if (dvLength > 0) {
 				Pointer defaultValueFormulaPtr = ptrFlexDataStart;
-				m_defaultValueFormula = decompileFormula(defaultValueFormulaPtr);
+				m_defaultValueFormula = FormulaDecompiler.decompileFormula(defaultValueFormulaPtr);
 			}
 			
 			if (itLength > 0) {
 				Pointer inputTranslationFormulaPtr = ptrFlexDataStart.share(dvLength);
-				m_inputTranslationFormula = decompileFormula(inputTranslationFormulaPtr);
+				m_inputTranslationFormula = FormulaDecompiler.decompileFormula(inputTranslationFormulaPtr);
 			}
 			
 			if (ivLength > 0) {
 				Pointer inputValidityCheckFormulaPtr = ptrFlexDataStart.share(dvLength + itLength);
-				m_inputValidityCheckFormula = decompileFormula(inputValidityCheckFormulaPtr);
+				m_inputValidityCheckFormula = FormulaDecompiler.decompileFormula(inputValidityCheckFormulaPtr);
 			}
 			
 			int namePtrOffset = dvLength + itLength + ivLength;
