@@ -88,7 +88,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 		}
 		
 		if (mode==null) {
-			mode = Mode.Direct;
+			//classic by default, because we experienced crashes on R11 Beta 2 using direct mode
+			mode = Mode.Classic;
 		}
 		initialize(mode);
 	}
