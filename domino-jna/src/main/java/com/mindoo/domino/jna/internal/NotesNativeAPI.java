@@ -637,4 +637,46 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	
 	public native short OSRunNSDExt(Memory szServerName, short flags);
 	
+	public native short DXLCreateExporter(IntByReference prethDXLExport);
+	
+	public native void DXLDeleteExporter(int hDXLExport);
+	
+	public native short DXLExportWasErrorLogged(int hDXLExport);
+
+	public native short DXLGetExporterProperty(
+			int hDXLExport,
+			short prop,
+			Memory retPropValue);
+
+	public native short DXLSetExporterProperty(
+			int hDXLExport,
+			short prop,
+			Memory propValue);
+
+	public native short DXLCreateImporter(IntByReference prethDXLImport);
+	
+	public native void DXLDeleteImporter(int hDXLImport);
+	
+	public native short DXLImportWasErrorLogged(int hDXLImport);
+
+	public native short DXLGetImporterProperty(
+			int hDXLImporter,
+			short prop,
+			Memory retPropValue);
+	
+	public native short DXLSetImporterProperty(
+			int hDXLImport,
+			short prop,
+			Memory propValue);
+	
+	public native short XSLTTransform(
+			int hXSLTransform,
+			NotesCallbacks.XML_READ_FUNCTION pXSL_XMLInputFunc,
+			Pointer pXSL_XMLInputAction,
+			NotesCallbacks.XML_READ_FUNCTION  pXSL_StylesheetInputFunc,
+			Pointer pXSL_StylesheetInputAction,
+			NotesCallbacks.XML_WRITE_FUNCTION  pXSL_TransformOutputFunc,
+			Pointer pXSL_TransformOutputAction);
+	
+	public native short XSLTCreateTransform(IntByReference prethXSLTransform);
 }

@@ -148,6 +148,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			Memory Text,
 			short TextSize);
 	
+	public native short ListRemoveAllEntries(
+			long hList,
+			int fPrefixDataType,
+			ShortByReference pListSize);
 
 	public native short NSFItemInfo(
 			long note_handle,
@@ -1184,5 +1188,36 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	
 	public native short NSFGetServerStats(Memory serverName, Memory facility, Memory statName, LongByReference rethTable,
 			IntByReference retTableSize);
+	
+	public native short DXLImport(
+			int hDXLImport,
+			NotesCallbacks.XML_READ_FUNCTION pDXLReaderFunc,
+			long hDB,
+			Pointer pImAction);
+	
+	public native short DXLExportACL(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION pDXLWriteFunc,
+			long hDB,
+			Pointer pExAction);
+	
+	public native short DXLExportDatabase(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hDB,
+			Pointer pExAction);
+	
+	public native short DXLExportIDTable(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hDB,
+			long hIDTable,
+			Pointer pExAction);
+	
+	public native short DXLExportNote(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hNote,
+			Pointer pExAction);
 }
 

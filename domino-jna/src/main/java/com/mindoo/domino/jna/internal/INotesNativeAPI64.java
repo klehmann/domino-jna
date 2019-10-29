@@ -148,6 +148,10 @@ public interface INotesNativeAPI64 extends Library {
 			Memory Text,
 			short TextSize);
 	
+	public short ListRemoveAllEntries(
+			long hList,
+			int fPrefixDataType,
+			ShortByReference pListSize);
 
 	public short NSFItemInfo(
 			long note_handle,
@@ -1459,4 +1463,35 @@ public interface INotesNativeAPI64 extends Library {
 			Memory statName,
 			LongByReference rethTable,
 			IntByReference retTableSize);
+	
+	public short DXLImport(
+			int hDXLImport,
+			NotesCallbacks.XML_READ_FUNCTION pDXLReaderFunc,
+			long hDB,
+			Pointer pImAction);
+	
+	public short DXLExportACL(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION pDXLWriteFunc,
+			long hDB,
+			Pointer pExAction);
+	
+	public short DXLExportDatabase(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hDB,
+			Pointer pExAction);
+	
+	public short DXLExportIDTable(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hDB,
+			long hIDTable,
+			Pointer pExAction);
+	
+	public short DXLExportNote(
+			int hDXLExport,
+			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
+			long hNote,
+			Pointer pExAction);
 }

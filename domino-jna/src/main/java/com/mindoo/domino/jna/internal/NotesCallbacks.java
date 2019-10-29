@@ -200,4 +200,12 @@ public interface NotesCallbacks {
 	interface ACLENTRYENUMFUNC extends Callback {
 		void invoke(Pointer enumFuncParam, Pointer name, short accessLevel, Pointer privileges, short accessFlag);
 	}
+	
+	interface XML_READ_FUNCTION extends Callback {
+		void invoke(Pointer pBuffer, int length, Pointer pAction);
+	}
+
+	interface XML_WRITE_FUNCTION extends Callback {
+		void invoke(Pointer bBuffer, int length, Pointer pAction);
+	}
 }

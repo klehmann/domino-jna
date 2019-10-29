@@ -3278,4 +3278,206 @@ This allows an Editor to assume some Designer-level access */
 	/** maximum number of stops in tables */
 	public static int MAXTABS = 20;
 
+	/* ignore the action.  don't log anything and just continue */
+	public short DXLLOGOPTION_IGNORE=1;
+	/* log the problem as a warning */
+	public short DXLLOGOPTION_WARNING=2;
+	/* log the problem as an error */
+	public short DXLLOGOPTION_ERROR=3;
+	/* log the problem as a fatal error */
+	public short DXLLOGOPTION_FATALERROR=4;
+	
+	//	DXL_EXPORT_PROPERTY default values are set as follows:
+	//		 
+	//		Note:	(i) = can input new value into the exporter.
+	//		 	(o) = can get current value out of exporter.
+	//		 	(io) = can do both. 
+	//		 
+	//		 	eDxlExportResultLog		= (o)	NULLMEMHANDLE
+	//			eDefaultDoctypeSYSTEM	= (o)	default filename of dtd keyed to current version of DXL exporter."
+	//			eDoctypeSYSTEM		= (io)	filename of dtd keyed to current version of DXL exporter."
+	//		 	eDXLBannerComments		= (io)	NULLMEMHANDLE
+	//		 	eDxlExportCharset		= (io)	eDxlExportUtf8
+	//		 	eDxlRichtextOption		= (io)	eRichtextAsDxl
+	//			eDxlExportResultLogComment	= (io)	NULLMEMHANDLE
+	//		 	eForceNoteFormat		= (io)	FALSE
+	//		 	eExitOnFirstFatalError		= (io)	TRUE
+	//		 	eOutputRootAttrs		= (io)	TRUE
+	//		 	eOutputXmlDecl		= (io)	TRUE
+	//		 	eOutputDOCTYPE		= (io)	TRUE
+	//			eConvertNotesbitmapToGIF	= (io) 	FALSE
+	//			eDxlValidationStyle		= (io)	eDxlExportValidationStyle_DTD"
+	//			eDxlDefaultSchemaLocation	= (o)	URI's of schema keyed to current version of DLX exporter."
+	//			eDxlSchemaLocation		= (io)	filename of XML Schema keyed to current version of DXL exporter."
+
+			
+	/* non-boolean export properties */
+
+	/** MEMHANDLE,				Readonly - the result log from the last export. */
+	public short eDxlExportResultLog=1;
+	/**MEMHANDLE,				Readonly - filename of dtd/schema keyed to current version of exporter */
+	public short eDefaultDoctypeSYSTEM=2;
+	/** char*(i)/MEMHANDLE(o),	What to use for the DOCTYPE SYSTEM value (if emitted)<br>
+	 * NULL or "" 	= DOCTYPE should contain no SYSTEM info<br>
+	 * "filename"	= filename of dtd or schema used as DOCTYPE SYSTEM value */
+	public short eDoctypeSYSTEM=3;
+	/** char*(i)/MEMHANDLE(o),	One or more XML comments to output at top of the DXL<br>
+	 * NULL or ""	= no dxl banner comments<br>
+	 * "whatever"	= zero or more nul-terminated strings capped by extra empty string */
+	public short eDXLBannerComments=4;
+	/** DXL_EXPORT_CHARSET,		Specifies output charset. */
+	public short eDxlExportCharset=5;
+	/** DXL_RICHTEXT_OPTION,		Specifies rule for exporting richtext. */
+	public short eDxlRichtextOption=6;
+	/** char*(i)/MEMHANDLE(o),	LMBCS string to be added as comment to top of result log */
+	public short eDxlExportResultLogComment=7;
+	/** DXL_EXPORT_VALIDATION_STYLE,	Specifies style of validation info emitted by exporter<br>
+	 * Can override other settings, eg - eOutputDOCTYPE */
+	public short eDxlValidationStyle=8;
+	/** MEMHANDLE,				Readonly - default xsi:SchemaLocation attribute value for current DXL version */
+	public short eDxlDefaultSchemaLocation=9;
+	/** char*(i)/MEMHANDLE(o),	LMBCS value of xsi:SchemaLocation attribute put into DXL root element */
+	public short eDxlSchemaLocation=10;
+	/** DXL_MIME_OPTION,			Specifies rule for exporting native MIME. */
+	public short eDxlMimeOption=11;
+	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where an attachmentref<br>
+	 * was omitted; may contain XML markup but must be valid<br>
+	 * DXL richtext content */
+	public short eAttachmentOmittedText=12;
+	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where an objectref<br>
+	 * was omitted; may contain XML markup but must be valid<br>
+	 * DXL richtext content */
+	public short eOLEObjectOmittedText=13;
+	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where a picture<br>
+	 * was omitted; may contain XML markup but must be valid<br>
+	 * DXL richtext content */
+	public short ePictureOmittedText=14;	
+	/** HANDLE of list			List of item names to omit from DXL.  Use Listxxx<br>
+	 * functions to build list (use fPrefixDataType=FALSE)<br>
+	 * (i)API makes a copy of list thus does not adopt HANDLE<br>
+	 * (o)API returns copy of list thus caller must free */
+	public short eOmitItemNames=15;
+	/** HANDLE of list			List of item names; only items with one of these names will be included in the output DXL.<br>
+	 *   Use Listxxx<br>
+	 *   functions to build list (use fPrefixDataType=FALSE)<br>
+	 *   (i)API makes a copy of list thus does not adopt HANDLE<br>
+	 *   (o)API returns copy of list thus caller must free */
+	public short eRestrictToItemNames=16;
+
+	/* boolean properties (gap allows for future definitions of other non-boolean export properties) */
+
+	/** BOOL, TRUE = Export data as notes containing items, FALSE = export using a high level of abstraction, */
+	public short eForceNoteFormat=30;
+	/** BOOL, TRUE = Abort on first fatal error, FALSE = try to continue to export */
+	public short eExitOnFirstFatalError=31;
+	/** BOOL, TRUE = Root needs xmlns, version, and other common root attrs */
+	public short eOutputRootAttrs=32;
+	/** BOOL, TRUE = Emit a leading xml declaration statement (&lt;?xml ...?&gt;) */
+	public short eOutputXmlDecl=33;
+	/** BOOL, TRUE = Emit a DOCTYPE statement (can be overridden by dDxlValidationStyle) */
+	public short eOutputDOCTYPE=34;
+	/** BOOL, TRUE = Convert Notesbitmaps embedded in richtext to GIFs, FALSE = blob the Notesbitmap CD records */
+	public short eConvertNotesbitmapsToGIF=35;
+	/** BOOL, TRUE = omit attachments within documents: both the attachmentref
+	 * within richtext and corresponding items that contain file objects */
+	public short eOmitRichtextAttachments=36;
+	/** BOOL, TRUE = omit OLE objects within documents: both the objectref
+	 * within richtext and corresponding items that contain file objects */
+	public short eOmitOLEObjects=37;	
+	/** BOOL, TRUE = omit items within documents that are not normal attachments
+	 * (named $FILE) and that contain file objects */
+	public short eOmitMiscFileObjects=38;
+	/** BOOL, TRUE = omit pictures that occur directly within document richtext and
+	 * contain gif, jpeg, notesbitmap, or cgm--does not include picture within
+	 * attachmentref or imagemap */
+	public short eOmitPictures=39;
+	/** BOOL, TRUE = uncompress attachments */
+	public short eUncompressAttachments=40;
+
+	/*
+	 * DXL export charsets
+	 */
+
+	public enum DXL_EXPORT_CHARSET {
+		/** (default) "encoding =" attribute is set to utf8 and output charset is utf8 */
+		eDxlExportUtf8,
+		/** "encoding =" attribute is set to utf16 and charset is utf16 */
+		eDxlExportUtf16
+	}
+
+	public enum DXL_EXPORT_VALIDATION_STYLE {
+		eDxlExportValidationStyle_None,
+		eDxlExportValidationStyle_DTD,
+		eDxlExportValidationStyle_XMLSchema
+	};
+	
+	public enum DXL_MIME_OPTION {
+		/** (default) output native MIME within <mime> element in DXL */
+		eMimeAsDxl,
+		/** output MIME as uninterpretted (base64'ed) item data */
+		eMimeAsItemdata
+	};
+	
+	public enum DXL_RICHTEXT_OPTION {
+		/** (default) output richtext as dxl with warning 
+		   comments if uninterpretable CD records */
+		eRichtextAsDxl,
+		/** output richtext as uninterpretted (base64'ed) item data */
+		eRichtextAsItemdata
+	};
+	
+//	DXL_IMPORT_PROPERTY default values are set as follows:
+//		 
+//		 Note:	(i) = can input new value into the importer.
+//		 	(o) = can get current value out of importer.
+//		 	(io) = can do both. 
+//		 
+//		 	iACLImportOption			= (io) DXLIMPORTOPTION_IGNORE
+//		 	iDesignImportOption			= (io) DXLIMPORTOPTION_IGNORE
+//		 	iDocumentsImportOption		= (io) DXLIMPOROPTION_CREATE
+//		 	iCreateFullTextIndex			= (io) FALSE
+//
+//				note:	To create a Full Text Index on a database, the iCreateFullTextIndex must be set to TRUE,
+//				          	the iReplaceDbProperties must be set to TRUE and a schema element named <fulltextsettings>
+//				        	 must be defined.
+//
+//		 	iReplaceDbProperties			= (io) FALSE
+//		 	iInputValidationOption			= (io) Xml_Validate_Auto
+//		 	iReplicaRequiredForReplaceOrUpdate	= (io) TRUE
+//		 	iExitOnFirstFatalError			= (io) TRUE
+//		 	iUnknownTokenLogOption		= (io) DXLLOGOPTION_FATALERROR
+//		 	iResultLogComment			= (io) NULLMEMHANDLE
+//		 	iResultLog				= (o)  NULLMEMHANDLE
+//			iImportedNoteList			= (o)  NULLHANDLE
+
+	/** WORD, Assign to value defined in DXLIMPORTOPTION */
+	public short iACLImportOption=1;
+	/** WORD, Assign to value defined in DXLIMPORTOPTION */
+	public short iDesignImportOption=2;
+	/** WORD, Assign to value defined in DXLIMPORTOPTION */
+	public short iDocumentsImportOption=3;
+	/** BOOL, TRUE = create full text index, FALSE Do NOT create full text index<br>
+	 * In order to create FullTextIndex ReplaceDbProperties needs to be True<br>
+	 * element <fulltextsettings> needs to exist in the Dxl */
+	public short iCreateFullTextIndex=4;
+	/** BOOL, TRUE = replace database properties, FALSE Do NOT replace database properties */
+	public short iReplaceDbProperties=5;
+	/** Xml_Validation_Option, Values defined in Xml_Validation_Option, ...Validate_Never, ...Validate_Always, ...Validate_Auto */
+	public short iInputValidationOption=6;
+	/** BOOL, TRUE = skip replace/update ops if target DB and import DXL do not have same replicaid's<br>
+	 * ... FALSE = allow replace/update ops even if target DB and import DXL do not have same replicaid's */
+	public short iReplicaRequiredForReplaceOrUpdate=7;
+	/** BOOL, TRUE = importer exits on first fatal error, FALSE = importer continues even if fatal error found */
+	public short iExitOnFirstFatalError=8;
+	/** WORD, Assign to value defined in DXLLOGOPTION. Specifies what to do if DXL contains an unknown element or attribute */
+	public short iUnknownTokenLogOption=9;
+	/** char*(i)/MEMHANDLE(o)  LMBCS string to be added as comment to top of result log */ 
+	public short iResultLogComment=10;
+	/** MEMHANDLE, (readonly) The result log from the last import */
+	public short iResultLog=11;
+	/** DHANDLE, (readonly) An IDTABLE listing the notes imported by the last import operation */
+	public short iImportedNoteList=12;
+	/** BOOL, TRUE = all imported LotusScript code is compiled, FALSE = no compilation */
+	public short iCompileLotusScript=13;
+
 }

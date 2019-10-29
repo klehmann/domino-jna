@@ -55,4 +55,8 @@ public interface Win32NotesCallbacks {
 	interface STATTRAVERSEPROCWin32 extends NotesCallbacks.STATTRAVERSEPROC, StdCallCallback {};
 
 	interface ACLENTRYENUMFUNCWin32 extends NotesCallbacks.ACLENTRYENUMFUNC, StdCallCallback {};
+	
+	interface XML_READ_FUNCTIONWin32 extends NotesCallbacks.XML_READ_FUNCTION, StdCallCallback {};
+	
+	interface XML_WRITE_FUNCTIONWin32 extends NotesCallbacks.XML_WRITE_FUNCTION, StdCallCallback {};
 }
