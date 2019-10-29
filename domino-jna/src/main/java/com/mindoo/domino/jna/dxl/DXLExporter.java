@@ -34,9 +34,6 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 
-import lotus.domino.NotesException;
-import lotus.domino.Session;
-
 /**
  * DXL Exporter<br>
  * <br>
@@ -193,7 +190,7 @@ public class DXLExporter implements IAllocatedMemory {
 	}
 
 	/**
-	 * Export an IDTable of notes into XML format.
+	 * Export a set of note ids into XML format.
 	 * 
 	 * @param db database containing the export ids
 	 * @param ids ids to export
@@ -438,30 +435,6 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	private void tbd(Session session) throws NotesException {
-		//TODO
-		
-		session.createDxlExporter().getAttachmentOmittedText();
-		session.createDxlExporter().getConvertNotesBitmapsToGIF();
-		session.createDxlExporter().getDoctypeSYSTEM();
-		session.createDxlExporter().getExitOnFirstFatalError();
-		session.createDxlExporter().getForceNoteFormat();
-		session.createDxlExporter().getLog();
-		session.createDxlExporter().getLogComment();
-		session.createDxlExporter().getMIMEOption();
-		session.createDxlExporter().getOLEObjectOmittedText();
-		session.createDxlExporter().getOmitItemNames();
-		session.createDxlExporter().getOmitMiscFileObjects();
-		session.createDxlExporter().getOmitOLEObjects();
-		session.createDxlExporter().getOmitRichtextAttachments();
-		session.createDxlExporter().getOmitRichtextPictures();
-		session.createDxlExporter().getOutputDOCTYPE();
-		session.createDxlExporter().getPictureOmittedText();
-		session.createDxlExporter().getRestrictToItemNames();
-		session.createDxlExporter().getRichTextOption();
-		session.createDxlExporter().getUncompressAttachments();
-	}
-	
 	private void setBooleanProperty(short index, boolean value) {
 		checkHandle();
 
@@ -474,7 +447,6 @@ public class DXLExporter implements IAllocatedMemory {
 		finally {
 			m.dispose();
 		}
-
 	}
 	
 	private boolean getBooleanProperty(short index) {
