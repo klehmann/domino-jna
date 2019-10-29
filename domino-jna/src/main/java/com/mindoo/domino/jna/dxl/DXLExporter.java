@@ -45,7 +45,7 @@ import lotus.domino.Session;
  * but in a standalone application.<br>
  * <br>
  * Otherwise you might experience crashes during DXL export (we had crashes when testing the DB export).<br>
- * <b>
+ * </b>
  * 
  * @author Karsten Lehmann
  */

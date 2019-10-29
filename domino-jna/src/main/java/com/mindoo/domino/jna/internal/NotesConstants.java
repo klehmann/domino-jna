@@ -3412,7 +3412,7 @@ This allows an Editor to assume some Designer-level access */
 	};
 	
 	public enum DXL_MIME_OPTION {
-		/** (default) output native MIME within <mime> element in DXL */
+		/** (default) output native MIME within &lt;mime&gt; element in DXL */
 		eMimeAsDxl,
 		/** output MIME as uninterpretted (base64'ed) item data */
 		eMimeAsItemdata
@@ -3438,7 +3438,7 @@ This allows an Editor to assume some Designer-level access */
 //		 	iCreateFullTextIndex			= (io) FALSE
 //
 //				note:	To create a Full Text Index on a database, the iCreateFullTextIndex must be set to TRUE,
-//				          	the iReplaceDbProperties must be set to TRUE and a schema element named <fulltextsettings>
+//				          	the iReplaceDbProperties must be set to TRUE and a schema element named &lt;fulltextsettings&gt;
 //				        	 must be defined.
 //
 //		 	iReplaceDbProperties			= (io) FALSE
@@ -3458,7 +3458,7 @@ This allows an Editor to assume some Designer-level access */
 	public short iDocumentsImportOption=3;
 	/** BOOL, TRUE = create full text index, FALSE Do NOT create full text index<br>
 	 * In order to create FullTextIndex ReplaceDbProperties needs to be True<br>
-	 * element <fulltextsettings> needs to exist in the Dxl */
+	 * element 6lt;fulltextsettings&gt; needs to exist in the Dxl */
 	public short iCreateFullTextIndex=4;
 	/** BOOL, TRUE = replace database properties, FALSE Do NOT replace database properties */
 	public short iReplaceDbProperties=5;
