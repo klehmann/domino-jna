@@ -3314,117 +3314,110 @@ This allows an Editor to assume some Designer-level access */
 	/* non-boolean export properties */
 
 	/** MEMHANDLE,				Readonly - the result log from the last export. */
-	public short eDxlExportResultLog=1;
+	public int eDxlExportResultLog=1;
 	/**MEMHANDLE,				Readonly - filename of dtd/schema keyed to current version of exporter */
-	public short eDefaultDoctypeSYSTEM=2;
+	public int eDefaultDoctypeSYSTEM=2;
 	/** char*(i)/MEMHANDLE(o),	What to use for the DOCTYPE SYSTEM value (if emitted)<br>
 	 * NULL or "" 	= DOCTYPE should contain no SYSTEM info<br>
 	 * "filename"	= filename of dtd or schema used as DOCTYPE SYSTEM value */
-	public short eDoctypeSYSTEM=3;
+	public int eDoctypeSYSTEM=3;
 	/** char*(i)/MEMHANDLE(o),	One or more XML comments to output at top of the DXL<br>
 	 * NULL or ""	= no dxl banner comments<br>
 	 * "whatever"	= zero or more nul-terminated strings capped by extra empty string */
-	public short eDXLBannerComments=4;
+	public int eDXLBannerComments=4;
 	/** DXL_EXPORT_CHARSET,		Specifies output charset. */
-	public short eDxlExportCharset=5;
+	public int eDxlExportCharset=5;
 	/** DXL_RICHTEXT_OPTION,		Specifies rule for exporting richtext. */
-	public short eDxlRichtextOption=6;
+	public int eDxlRichtextOption=6;
 	/** char*(i)/MEMHANDLE(o),	LMBCS string to be added as comment to top of result log */
-	public short eDxlExportResultLogComment=7;
+	public int eDxlExportResultLogComment=7;
 	/** DXL_EXPORT_VALIDATION_STYLE,	Specifies style of validation info emitted by exporter<br>
 	 * Can override other settings, eg - eOutputDOCTYPE */
-	public short eDxlValidationStyle=8;
+	public int eDxlValidationStyle=8;
 	/** MEMHANDLE,				Readonly - default xsi:SchemaLocation attribute value for current DXL version */
-	public short eDxlDefaultSchemaLocation=9;
+	public int eDxlDefaultSchemaLocation=9;
 	/** char*(i)/MEMHANDLE(o),	LMBCS value of xsi:SchemaLocation attribute put into DXL root element */
-	public short eDxlSchemaLocation=10;
+	public int eDxlSchemaLocation=10;
 	/** DXL_MIME_OPTION,			Specifies rule for exporting native MIME. */
-	public short eDxlMimeOption=11;
+	public int eDxlMimeOption=11;
 	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where an attachmentref<br>
 	 * was omitted; may contain XML markup but must be valid<br>
 	 * DXL richtext content */
-	public short eAttachmentOmittedText=12;
+	public int eAttachmentOmittedText=12;
 	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where an objectref<br>
 	 * was omitted; may contain XML markup but must be valid<br>
 	 * DXL richtext content */
-	public short eOLEObjectOmittedText=13;
+	public int eOLEObjectOmittedText=13;
 	/** char*(i)/MEMHANDLE(o),	Text to insert within richtext where a picture<br>
 	 * was omitted; may contain XML markup but must be valid<br>
 	 * DXL richtext content */
-	public short ePictureOmittedText=14;	
+	public int ePictureOmittedText=14;	
 	/** HANDLE of list			List of item names to omit from DXL.  Use Listxxx<br>
 	 * functions to build list (use fPrefixDataType=FALSE)<br>
 	 * (i)API makes a copy of list thus does not adopt HANDLE<br>
 	 * (o)API returns copy of list thus caller must free */
-	public short eOmitItemNames=15;
+	public int eOmitItemNames=15;
 	/** HANDLE of list			List of item names; only items with one of these names will be included in the output DXL.<br>
 	 *   Use Listxxx<br>
 	 *   functions to build list (use fPrefixDataType=FALSE)<br>
 	 *   (i)API makes a copy of list thus does not adopt HANDLE<br>
 	 *   (o)API returns copy of list thus caller must free */
-	public short eRestrictToItemNames=16;
+	public int eRestrictToItemNames=16;
 
 	/* boolean properties (gap allows for future definitions of other non-boolean export properties) */
 
 	/** BOOL, TRUE = Export data as notes containing items, FALSE = export using a high level of abstraction, */
-	public short eForceNoteFormat=30;
+	public int eForceNoteFormat=30;
 	/** BOOL, TRUE = Abort on first fatal error, FALSE = try to continue to export */
-	public short eExitOnFirstFatalError=31;
+	public int eExitOnFirstFatalError=31;
 	/** BOOL, TRUE = Root needs xmlns, version, and other common root attrs */
-	public short eOutputRootAttrs=32;
+	public int eOutputRootAttrs=32;
 	/** BOOL, TRUE = Emit a leading xml declaration statement (&lt;?xml ...?&gt;) */
-	public short eOutputXmlDecl=33;
+	public int eOutputXmlDecl=33;
 	/** BOOL, TRUE = Emit a DOCTYPE statement (can be overridden by dDxlValidationStyle) */
-	public short eOutputDOCTYPE=34;
+	public int eOutputDOCTYPE=34;
 	/** BOOL, TRUE = Convert Notesbitmaps embedded in richtext to GIFs, FALSE = blob the Notesbitmap CD records */
-	public short eConvertNotesbitmapsToGIF=35;
+	public int eConvertNotesbitmapsToGIF=35;
 	/** BOOL, TRUE = omit attachments within documents: both the attachmentref
 	 * within richtext and corresponding items that contain file objects */
-	public short eOmitRichtextAttachments=36;
+	public int eOmitRichtextAttachments=36;
 	/** BOOL, TRUE = omit OLE objects within documents: both the objectref
 	 * within richtext and corresponding items that contain file objects */
-	public short eOmitOLEObjects=37;	
+	public int eOmitOLEObjects=37;	
 	/** BOOL, TRUE = omit items within documents that are not normal attachments
 	 * (named $FILE) and that contain file objects */
-	public short eOmitMiscFileObjects=38;
+	public int eOmitMiscFileObjects=38;
 	/** BOOL, TRUE = omit pictures that occur directly within document richtext and
 	 * contain gif, jpeg, notesbitmap, or cgm--does not include picture within
 	 * attachmentref or imagemap */
-	public short eOmitPictures=39;
+	public int eOmitPictures=39;
 	/** BOOL, TRUE = uncompress attachments */
-	public short eUncompressAttachments=40;
+	public int eUncompressAttachments=40;
 
 	/*
 	 * DXL export charsets
 	 */
 
-	public enum DXL_EXPORT_CHARSET {
-		/** (default) "encoding =" attribute is set to utf8 and output charset is utf8 */
-		eDxlExportUtf8,
-		/** "encoding =" attribute is set to utf16 and charset is utf16 */
-		eDxlExportUtf16
-	}
+	/** (default) "encoding =" attribute is set to utf8 and output charset is utf8 */
+	public int DXL_EXPORT_CHARSET_eDxlExportUtf8 = 0;
+	
+	/** "encoding =" attribute is set to utf16 and charset is utf16 */
+	public int DXL_EXPORT_CHARSET_eDxlExportUtf16 = 1;
 
-	public enum DXL_EXPORT_VALIDATION_STYLE {
-		eDxlExportValidationStyle_None,
-		eDxlExportValidationStyle_DTD,
-		eDxlExportValidationStyle_XMLSchema
-	};
+	public int DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_None = 0;
+	public int DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_DTD = 1;
+	public int DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_XMLSchema = 2;
 	
-	public enum DXL_MIME_OPTION {
-		/** (default) output native MIME within &lt;mime&gt; element in DXL */
-		eMimeAsDxl,
-		/** output MIME as uninterpretted (base64'ed) item data */
-		eMimeAsItemdata
-	};
+	/** (default) output native MIME within &lt;mime&gt; element in DXL */
+	public int DXL_MIME_OPTION_eMimeAsDxl = 0;
+	/** output MIME as uninterpretted (base64'ed) item data */
+	public int DXL_MIME_OPTION_eMimeAsItemdata = 1;
 	
-	public enum DXL_RICHTEXT_OPTION {
-		/** (default) output richtext as dxl with warning 
-		   comments if uninterpretable CD records */
-		eRichtextAsDxl,
-		/** output richtext as uninterpretted (base64'ed) item data */
-		eRichtextAsItemdata
-	};
+	/** (default) output richtext as dxl with warning 
+	   comments if uninterpretable CD records */
+	public int DXL_RICHTEXT_OPTION_eRichtextAsDxl = 0;
+	/** output richtext as uninterpretted (base64'ed) item data */
+	public int DXL_RICHTEXT_OPTION_eRichtextAsItemdata = 1;
 	
 //	DXL_IMPORT_PROPERTY default values are set as follows:
 //		 

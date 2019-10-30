@@ -645,12 +645,12 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	public native short DXLGetExporterProperty(
 			int hDXLExport,
-			short prop,
+			int prop,
 			Memory retPropValue);
 
 	public native short DXLSetExporterProperty(
 			int hDXLExport,
-			short prop,
+			int prop,
 			Memory propValue);
 
 	public native short DXLCreateImporter(IntByReference prethDXLImport);
@@ -661,12 +661,12 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	public native short DXLGetImporterProperty(
 			int hDXLImporter,
-			short prop,
+			int prop,
 			Memory retPropValue);
 	
 	public native short DXLSetImporterProperty(
 			int hDXLImport,
-			short prop,
+			int prop,
 			Memory propValue);
 	
 	public native short XSLTTransform(

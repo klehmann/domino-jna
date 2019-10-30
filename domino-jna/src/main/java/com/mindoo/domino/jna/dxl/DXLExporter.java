@@ -114,7 +114,7 @@ public class DXLExporter implements IAllocatedMemory {
 	 * @throws IOException in case of I/O errors
 	 */
 	public void exportNote(NotesNote note, Writer out) throws IOException {
-		WriterOutputStream outStream = new WriterOutputStream(out, Charset.forName("UTF-8"));
+		WriterOutputStream outStream = new WriterOutputStream(out, getJDKExportCharset());
 		exportNote(note, outStream);
 		outStream.flush();
 	}
@@ -216,7 +216,7 @@ public class DXLExporter implements IAllocatedMemory {
 	 * @throws IOException in case of I/O errors
 	 */
 	public void exportIDTable(NotesDatabase db, NotesIDTable idTable, Writer out) throws IOException {
-		WriterOutputStream outStream = new WriterOutputStream(out, Charset.forName("UTF-8"));
+		WriterOutputStream outStream = new WriterOutputStream(out, getJDKExportCharset());
 		exportIDTable(db, idTable, outStream);
 		outStream.flush();
 	}
@@ -435,7 +435,7 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	private void setBooleanProperty(short index, boolean value) {
+	private void setBooleanProperty(int index, boolean value) {
 		checkHandle();
 
 		DisposableMemory m = new DisposableMemory(Native.BOOL_SIZE);
@@ -449,7 +449,7 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	private boolean getBooleanProperty(short index) {
+	private boolean getBooleanProperty(int index) {
 		checkHandle();
 
 		DisposableMemory m = new DisposableMemory(2);
@@ -464,7 +464,7 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	private void setStringProperty(short index, String str) {
+	private void setStringProperty(int index, String str) {
 		checkHandle();
 		
 		if (str==null) {
@@ -476,7 +476,38 @@ public class DXLExporter implements IAllocatedMemory {
 		NotesErrorUtils.checkResult(result);
 	}
 	
-	private String getStringFromMemhandle(short index) {
+	private int getInt(int index) {
+		checkHandle();
+		
+		DisposableMemory m = new DisposableMemory(4);
+		try {
+			short result = NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
+			NotesErrorUtils.checkResult(result);
+
+			return m.getInt(0);
+		}
+		finally {
+			m.dispose();
+		}
+	}
+	
+	private void setInt(int index, int value) {
+		checkHandle();
+		
+		DisposableMemory m = new DisposableMemory(4);
+		try {
+			m.clear();
+			m.setInt(0, value);
+
+			short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
+			NotesErrorUtils.checkResult(result);
+		}
+		finally {
+			m.dispose();
+		}
+	}
+	
+	private String getStringFromMemhandle(int index) {
 		checkHandle();
 
 		DisposableMemory m = new DisposableMemory(4);
@@ -517,7 +548,7 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	private void setStringList(short index, List<String> values) {
+	private void setStringList(int index, List<String> values) {
 		LMBCSStringList lmbcsStrList = new LMBCSStringList(values, false);
 		try {
 			if (PlatformUtils.is64Bit()) {
@@ -548,7 +579,8 @@ public class DXLExporter implements IAllocatedMemory {
 		}
 	}
 	
-	public List<String> getStringList(short index) {
+	@SuppressWarnings("unchecked")
+	public List<String> getStringList(int index) {
 		checkHandle();
 
 		DisposableMemory m = new DisposableMemory(4);
@@ -725,20 +757,246 @@ public class DXLExporter implements IAllocatedMemory {
 		setStringProperty(NotesConstants.ePictureOmittedText, txt);
 	}
 	
+	/**
+	 * List of item names to omit from DXL
+	 * 
+	 * @return item names
+	 */
 	public List<String> getOmitItemNames() {
 		return getStringList(NotesConstants.eOmitItemNames);
 	}
 	
+	/**
+	 * List of item names to omit from DXL
+	 * 
+	 * @param itemNames new item names
+	 */
 	public void setOmitItemNames(List<String> itemNames) {
 		setStringList(NotesConstants.eOmitItemNames, itemNames);
 	}
 	
+	/**
+	 * List of item names; only items with one of these names will be included in the output DXL
+	 * 
+	 * @return item names
+	 */
 	public List<String> getRestrictToItemNames() {
 		return getStringList(NotesConstants.eRestrictToItemNames);
 	}
 	
+	/**
+	 * List of item names; only items with one of these names will be included in the output DXL
+	 * 
+	 * @param itemNames item names
+	 */
 	public void setRestrictToItemNames(List<String> itemNames) {
 		setStringList(NotesConstants.eRestrictToItemNames, itemNames);
 	}
+
+	/** Specifies output charset */
+	public static enum DXLExportCharset {
+		/** (default) "encoding =" attribute is set to utf8 and output charset is utf8 */
+		UTF8,
+		/** "encoding =" attribute is set to utf16 and charset is utf16 */
+		UTF16
+	}
+
+	/**
+	 * Returns the output charset
+	 * 
+	 * @return charset
+	 */
+	public DXLExportCharset getExportCharset() {
+		int charsetAsInt = getInt(NotesConstants.eDxlExportCharset);
+		if (charsetAsInt==NotesConstants.DXL_EXPORT_CHARSET_eDxlExportUtf8) {
+			return DXLExportCharset.UTF8;
+		}
+		else if (charsetAsInt==NotesConstants.DXL_EXPORT_CHARSET_eDxlExportUtf16) {
+			return DXLExportCharset.UTF16;
+		}
+		else {
+			return null;
+		}
+	}
 	
+	/**
+	 * Returns the output charset as a {@link Charset}
+	 * 
+	 * @return charset
+	 */
+	public Charset getJDKExportCharset() {
+		DXLExportCharset charset = getExportCharset();
+		if (charset==DXLExportCharset.UTF16) {
+			return Charset.forName("UTF-16");
+		}
+		else {
+			return Charset.forName("UTF-8");
+		}
+	}
+	
+	/**
+	 * Sets the output charset
+	 * 
+	 * @param charset new charset
+	 */
+	public void setExportCharset(DXLExportCharset charset) {
+		int charsetAsInt;
+		if (charset==DXLExportCharset.UTF8) {
+			charsetAsInt = NotesConstants.DXL_EXPORT_CHARSET_eDxlExportUtf8;
+		}
+		else if (charset==DXLExportCharset.UTF16) {
+			charsetAsInt = NotesConstants.DXL_EXPORT_CHARSET_eDxlExportUtf16;
+		}
+		else {
+			throw new IllegalArgumentException("Unsupported charset value: "+charset+". Only supported: "+DXLExportCharset.values());
+		}
+		
+		setInt(NotesConstants.eDxlExportCharset, charsetAsInt);
+	}
+
+	/** Specifies rule for exporting richtext */
+	public static enum DXLRichtextOption {
+		/** (default) output richtext as dxl with warning 
+		   comments if uninterpretable CD records */
+		DXL,
+		/** output richtext as uninterpretted (base64'ed) item data */
+		ITEMDATA
+	}
+
+	/**
+	 * Returns the rule for exporting richtext
+	 * 
+	 * @return richtext option
+	 */
+	public DXLRichtextOption getRichtextOption() {
+		int rtOption = getInt(NotesConstants.eDxlRichtextOption);
+		if (rtOption == NotesConstants.DXL_RICHTEXT_OPTION_eRichtextAsDxl) {
+			return DXLRichtextOption.DXL;
+		}
+		else if (rtOption == NotesConstants.DXL_RICHTEXT_OPTION_eRichtextAsItemdata) {
+			return DXLRichtextOption.ITEMDATA;
+		}
+		else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Specifies rule for exporting richtext
+	 * 
+	 * @param option richtext option
+	 */
+	public void setRichtextOption(DXLRichtextOption option) {
+		int rtOptionAsInt;
+		switch (option) {
+		case DXL:
+			rtOptionAsInt = NotesConstants.DXL_RICHTEXT_OPTION_eRichtextAsDxl;
+			break;
+		case ITEMDATA:
+			rtOptionAsInt = NotesConstants.DXL_RICHTEXT_OPTION_eRichtextAsItemdata;
+			break;
+			default:
+				throw new IllegalArgumentException("Unknown richtext option: "+option+". Only supported: "+DXLRichtextOption.values());
+		}
+		
+		setInt(NotesConstants.eDxlRichtextOption, rtOptionAsInt);
+	}
+	
+	/** Specifies style of validation info emitted by exporter. Can override other settings, eg - output doctype */
+	public static enum DXLValidationStyle { NONE, DTD, XMLSCHEMA }
+	
+	/**
+	 * Returns the style of validation info emitted by exporter. Can override other settings, eg - output doctype
+	 * 
+	 * @return style
+	 */
+	public DXLValidationStyle getValidationStyle() {
+		int styleAsInt = getInt(NotesConstants.eDxlValidationStyle);
+		
+		if (styleAsInt == NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_None) {
+			return DXLValidationStyle.NONE;
+		}
+		else if (styleAsInt == NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_DTD) {
+			return DXLValidationStyle.DTD;
+		}
+		else if (styleAsInt == NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_XMLSchema) {
+			return DXLValidationStyle.XMLSCHEMA;
+		}
+		else {
+			return null;
+		}
+	}
+
+	/**
+	 * Specifies style of validation info emitted by exporter. Can override other settings, eg - output doctype
+	 * 
+	 * @param style style
+	 */
+	public void setValidationStyle(DXLValidationStyle style) {
+		int styleAsInt;
+
+		switch (style) {
+		case NONE:
+			styleAsInt = NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_None;
+			break;
+		case DTD:
+			styleAsInt = NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_DTD;
+			break;
+		case XMLSCHEMA:
+			styleAsInt = NotesConstants.DXL_EXPORT_VALIDATION_STYLE_eDxlExportValidationStyle_XMLSchema;
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown validation style: "+style+". Only supported: "+DXLValidationStyle.values());
+		}
+
+		setInt(NotesConstants.eDxlValidationStyle, styleAsInt);
+	}
+
+	/** Specifies rule for exporting native MIME */
+	public static enum DXLMIMEOption {
+		/** (default) output native MIME within &lt;mime&gt; element in DXL */
+		DXL,
+		/** output MIME as uninterpretted (base64'ed) item data */
+		ITEMDATA }
+	
+	/**
+	 * Returns the rule for exporting native MIME
+	 * 
+	 * @return MIME option
+	 */
+	public DXLMIMEOption getMIMEOption() {
+		int mimeOptionAsInt = getInt(NotesConstants.eDxlMimeOption);
+		
+		if (mimeOptionAsInt == NotesConstants.DXL_MIME_OPTION_eMimeAsDxl) {
+			return DXLMIMEOption.DXL;
+		}
+		else if (mimeOptionAsInt == NotesConstants.DXL_MIME_OPTION_eMimeAsItemdata) {
+			return DXLMIMEOption.ITEMDATA;
+		}
+		else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Specifies rule for exporting native MIME
+	 * 
+	 * @param option MIME option
+	 */
+	public void setMIMEOption(DXLMIMEOption option) {
+		int mimeOptionAsInt;
+
+		switch (option) {
+		case DXL:
+			mimeOptionAsInt = NotesConstants.DXL_MIME_OPTION_eMimeAsDxl;
+			break;
+		case ITEMDATA:
+			mimeOptionAsInt = NotesConstants.DXL_MIME_OPTION_eMimeAsItemdata;
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown MIME option: "+option+". Only supported: "+DXLMIMEOption.values());
+		}
+
+		setInt(NotesConstants.eDxlMimeOption, mimeOptionAsInt);
+	}
 }

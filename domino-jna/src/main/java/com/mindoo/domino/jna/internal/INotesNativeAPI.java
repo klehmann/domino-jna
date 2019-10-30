@@ -343,12 +343,12 @@ public interface INotesNativeAPI extends Library {
 	
 	public short DXLGetExporterProperty(
 			int hDXLExport,
-			short prop,
+			int prop,
 			Memory retPropValue);
 
 	public short DXLSetExporterProperty(
 			int hDXLExport,
-			short prop,
+			int prop,
 			Memory propValue);
 	
 	public short DXLCreateImporter(IntByReference prethDXLImport);
@@ -359,12 +359,12 @@ public interface INotesNativeAPI extends Library {
 	
 	public short DXLGetImporterProperty(
 			int hDXLImporter,
-			short prop,
+			int prop,
 			Memory retPropValue);
 	
 	public short DXLSetImporterProperty(
 			int hDXLImport,
-			short prop,
+			int prop,
 			Memory propValue);
 
 	public short XSLTTransform(
