@@ -28,6 +28,7 @@ import com.drew.metadata.MetadataException;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.gif.GifHeaderDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;
+import com.drew.metadata.png.PngDirectory;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesCollection;
@@ -50,6 +51,7 @@ import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.TextStyle;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -544,9 +546,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 
-		BufferedInputStream innerBufIn = new BufferedInputStream(imageData, 3000);
-		innerBufIn.mark(3000);
-		BufferedInputStream outerBufIn = new BufferedInputStream(innerBufIn, 3000);
+		int bufSize = fileSize; // must be fileSize, otherwise PNG image width/height cannot be extracted
+		
+		BufferedInputStream innerBufIn = new BufferedInputStream(imageData, bufSize);
+		innerBufIn.mark(bufSize);
+		BufferedInputStream outerBufIn = new BufferedInputStream(innerBufIn, bufSize);
 		
 		FileType fileType = FileTypeDetector.detectFileType(outerBufIn);
 		if (fileType == FileType.Unknown)
@@ -554,14 +558,17 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		innerBufIn.reset();
 		
 		boolean isSupported = false;
-		if (fileType == FileType.Gif || fileType == FileType.Jpeg || fileType == FileType.Bmp) {
+		if (fileType == FileType.Gif || fileType == FileType.Jpeg || fileType == FileType.Bmp || fileType == FileType.Png) {
 			isSupported = true;
 		}
 		
 		if (!isSupported)
-			throw new NotesError(0, "Unsupported filetype "+fileType+". Only GIF, JPEG and BMP are supported");
+			throw new NotesError(0, "Unsupported filetype "+fileType+". Only GIF, PNG, JPEG and BMP are supported");
 		
-		outerBufIn.mark(3000);
+		int imgWidth = -1;
+		int imgHeight = -1;
+
+		outerBufIn.mark(bufSize);
 		Metadata metadata;
 		try {
 			metadata = ImageMetadataReader.readMetadata(outerBufIn);
@@ -569,9 +576,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			throw new NotesError(0, "Unable to read image metadata", e);
 		}
 		innerBufIn.reset();
-
-		int imgWidth = -1;
-		int imgHeight = -1;
 		
 		switch (fileType) {
 		case Gif:
@@ -610,17 +614,29 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				}
 			}
 			break;
+		case Png:
+			Collection<PngDirectory> pngHeaderDirs = metadata.getDirectoriesOfType(PngDirectory.class);
+			if (pngHeaderDirs!=null && !pngHeaderDirs.isEmpty()) {
+				PngDirectory pngHeader = pngHeaderDirs.iterator().next();
+				try {
+					imgWidth = pngHeader.getInt(PngDirectory.TAG_IMAGE_WIDTH);
+					imgHeight = pngHeader.getInt(PngDirectory.TAG_IMAGE_HEIGHT);
+				} catch (MetadataException e) {
+					throw new NotesError(0, "Error reading BMP image size", e);
+				}
+			}
+			break;
 		default:
 			//
 		}
 		
 		if (imgWidth<=0 || imgHeight<=0) {
-			throw new IllegalArgumentException("Width/Height must be specified");
+			throw new IllegalArgumentException("Width/Height cannot be extracted from the image data");
 		}
 		
 		short result;
 		
-		//write graphic header
+//		write graphic header:
 //		typedef struct {
 //			   LSIG     Header;     /* Signature and Length */
 //			   RECTSIZE DestSize;   /* Destination Display size in TWIPS
@@ -632,12 +648,6 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //			   BYTE     bFlags;     /* Ignored before CDGRAPHIC_VERSION3 */
 //			      WORD     wReserved;
 //			} CDGRAPHIC;
-		
-//		Read record GRAPHIC (153) with 22 data bytes, cdrecord length: 28
-//		Data:
-//		[00 00 00 00 00 00 00 00]   [........]
-//		[00 00 00 00 00 00 00 00]   [........]
-//		[00 00 01 00 00 00      ]
 				
 		Memory graphicMem = new Memory(
 				6 +				//LSIG
@@ -649,15 +659,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				1 + 				// Flags
 				2 				// Reserved
 				);
+		graphicMem.clear();
 		graphicMem.setShort(0, NotesConstants.SIG_CD_GRAPHIC);
 		graphicMem.share(2).setInt(0, (int) graphicMem.size());
 		
-		boolean isResized = resizeToWidth!=-1 && resizeToWidth!=-1;
+		boolean isResized = resizeToWidth!=-1 && resizeToHeight!=-1;
 		
 		// DestSize : RECTSIZE (Word/Word)
 		if (isResized) {
 			graphicMem.share(6).setShort(0, (short) (resizeToWidth & 0xffff));
-			graphicMem.share(6 + 2).setShort(0, (short) (resizeToWidth & 0xffff));
+			graphicMem.share(6 + 2).setShort(0, (short) (resizeToHeight & 0xffff));
 		}
 		else {
 			graphicMem.share(6).setShort(0, (short) 0);
@@ -684,9 +695,9 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		
 		//Flags:
 		graphicMem.share(6 + 19).setByte(0, (byte) NotesConstants.CDGRAPHIC_FLAG_DESTSIZE_IS_PIXELS);
+		
 		//Reserved:
 		graphicMem.share(6 + 20).setShort(0, (short) 0);
-		
 		
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, graphicMem, (int) graphicMem.size());
@@ -696,6 +707,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, graphicMem, (int) graphicMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
+		
 		m_hasData=true;
 
 		//write image header
@@ -711,20 +723,18 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //		   DWORD Reserved;      /* Reserved for future use */
 //		} CDIMAGEHEADER;
 
-//		[01 00 6e 01 2c 01 1f 41]   [..n.,..A]
-//		[00 00 02 00 00 00 00 00]   [........]
-//		[00 00 00 00 00 00      ]   [......  ]
-						
 		Memory imageHeaderMem = new Memory(
 				2+4 + //LSIG
-				2 + //ImageType
-				2 + //Width
-				2 + //Height
-				4 + //ImageDataSize
-				4 + //SegCount
-				4 + //Flags
+				2 + //ImageType = 0x0003
+				2 + //Width = 48
+				2 + //Height = 48
+				4 + //ImageDataSize = 0
+				4 + //SegCount = 0
+				4 + //Flags = 0
 				4  //Reserved
 				);
+		imageHeaderMem.clear();
+		
 		imageHeaderMem.setShort(0, NotesConstants.SIG_CD_IMAGEHEADER);
 		imageHeaderMem.share(2).setInt(0, (int) imageHeaderMem.size());
 		short imageTypeShort;
@@ -735,7 +745,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		case Jpeg:
 			imageTypeShort = NotesConstants.CDIMAGETYPE_JPEG;
 			break;
+		case Png:
 		case Bmp:
+			//R9 introduced PNG rendering support, but for the type they use BMP
+			//and added a new (undocumented) CD record type right after CDIMAGEHEADER that
+			//probably contains the actual image type (0x0004 for PNG) and the image size as DWORD
 			imageTypeShort = NotesConstants.CDIMAGETYPE_BMP;
 			break;
 		default:
@@ -745,12 +759,19 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		final int MAX_SEGMENT_SIZE = 10240;
 		
 		imageHeaderMem.share(6).setShort(0, imageTypeShort);
+		
 		short imgWidthShort = (short) (imgWidth & 0xffff);
 		imageHeaderMem.share(8).setShort(0, imgWidthShort);
 		short imgHeightShort = (short) (imgHeight & 0xffff);
 		imageHeaderMem.share(10).setShort(0, imgHeightShort);
 		
-		imageHeaderMem.share(12).setInt(0, fileSize);
+		if (fileType == FileType.Png) {
+			//for PNG, set filesize 0x00000000, probably to prevent older clients from reading the data
+			imageHeaderMem.share(12).setInt(0, 0);
+		}
+		else {
+			imageHeaderMem.share(12).setInt(0, fileSize);
+		}
 		
 		int fullSegments = (int) (fileSize / MAX_SEGMENT_SIZE);
 		int segments = fullSegments;
@@ -759,7 +780,13 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			segments++;
 		}
 		
-		imageHeaderMem.share(16).setInt(0, segments & 0xffff);
+		if (fileType == FileType.Png) {
+			//for PNG, set segments to 0x00000000, probably to prevent older clients from reading the data
+			imageHeaderMem.share(16).setInt(0, 0);
+		}
+		else {
+			imageHeaderMem.share(16).setInt(0, segments & 0xffff);
+		}
 		
 		imageHeaderMem.share(20).setInt(0, 0); //flags
 		imageHeaderMem.share(24).setInt(0, 0); //reserved
@@ -772,7 +799,42 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, imageHeaderMem, (int) imageHeaderMem.size());
 			NotesErrorUtils.checkResult(result);
 		}
-		
+
+		if (fileType==FileType.Png) {
+			//for PNG we add an undocumented CD record type to define the image type,
+			//number of chunks and filesize
+
+//			typedef struct
+//			  {
+//			  BSIG  Header;       /* Signature and Length */
+//			  WORD  ImageType;    /* Type of image (e.g., PNG, etc.) */
+//			  DWORD ImageDataSize;    /* Size (in bytes) of the image data */
+//			  DWORD SegCount;     /* Number of CDIMAGESEGMENT records expected to follow */
+//			  DWORD Flags;        /* Flags (currently unused) */
+//			  DWORD Reserved;     /* Reserved for future use */
+//			  } CDIMAGEHEADER2;
+			  
+			Memory imageHeader2Mem = new Memory(20);
+			imageHeader2Mem.clear();
+			
+			//BSIG Header with type and size
+			imageHeader2Mem.setByte(0, (byte) (NotesConstants.SIG_CD_IMAGEHEADER2 & 0xff));
+			imageHeader2Mem.share(1).setByte(0, (byte) (imageHeader2Mem.size() & 0xff));
+			
+			imageHeader2Mem.share(2).setShort(0, NotesConstants.CDIMAGETYPE_PNG);
+			imageHeader2Mem.share(4).setInt(0, fileSize);
+			imageHeader2Mem.share(8).setShort(0, (short) (segments & 0xffff));
+			
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, imageHeader2Mem, (int) imageHeader2Mem.size());
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, imageHeader2Mem, (int) imageHeader2Mem.size());
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
 		byte[] buf = new byte[MAX_SEGMENT_SIZE];
 		int len;
 		int bytesRead = 0;
@@ -792,7 +854,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				}
 			}
 			bytesRead += len;
-			
+
 			//write image segment
 //			typedef struct {
 //			   LSIG Header;   /* Signature and Length */
@@ -822,13 +884,14 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			if ((segSize & 1L)==1) {
 				segSize++;
 			}
-			
+
 			Memory imageSegMem = new Memory(
 					6 + //LSIG
 					2 + //DataSize
 					2 + //SegSize
 					segSize
 					);
+			imageSegMem.clear();
 			
 			imageSegMem.setShort(0, NotesConstants.SIG_CD_IMAGESEGMENT); // LSIG
 			imageSegMem.share(2).setInt(0, (int) imageSegMem.size()); // LSIG
@@ -908,6 +971,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			2 + //Version
 			2 //Signature
 			);
+	beginMem.clear();
 	
 //	Read record BEGIN (221) with 4 data bytes, cdrecord length: 6
 //	Data:
@@ -956,6 +1020,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			uniqueFileNameAttachment.size() + 
 			fileNameToDisplayMem.size()
 			);
+	hotspotBeginMem.clear();
 	
 	hotspotBeginMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTBEGIN);
 	hotspotBeginMem.share(2).setShort(0, (short) (hotspotBeginMem.size() & 0xffff));
@@ -1000,6 +1065,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			11 + //Reserved
 			captionTextMem.size()
 			);
+	captionMem.clear();
 	
 	captionMem.setShort(0, NotesConstants.SIG_CD_CAPTION);
 	captionMem.share(2).setShort(0, (short) (captionMem.size() & 0xffff));
@@ -1051,6 +1117,8 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //		Data:
 	
 	Memory hotspotEndMem = new Memory(2);
+	hotspotEndMem.clear();
+	
 	hotspotEndMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTEND);
 	hotspotEndMem.share(1).setByte(0, (byte) (hotspotEndMem.size() & 0xff));
 	
@@ -1064,6 +1132,8 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 	
 	Memory endMem = new Memory(6);
+	endMem.clear();
+	
 	endMem.setShort(0, NotesConstants.SIG_CD_END);
 	endMem.share(1).setByte(0, (byte) (endMem.size() & 0xff));
 	endMem.share(2).setShort(0, (short) 0);
@@ -1137,6 +1207,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		checkHandle();
 		
 		Memory returnFileMem = new Memory(NotesConstants.MAXPATH);
+		returnFileMem.clear();
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {

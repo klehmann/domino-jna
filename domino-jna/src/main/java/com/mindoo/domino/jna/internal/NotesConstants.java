@@ -2607,6 +2607,7 @@ This allows an Editor to assume some Designer-level access */
 
 	/* Signatures for Composite Records in items of data type COMPOSITE */
 
+	public short SIG_CD_IMAGEHEADER2 = (82 | BYTERECORDLENGTH );
 	public short SIG_CD_PDEF_MAIN = (83 | WORDRECORDLENGTH ) /* Signatures for items used in Property Broker definitions. LI 3925.04 */;
 	public short SIG_CD_PDEF_TYPE = (84 | WORDRECORDLENGTH );
 	public short SIG_CD_PDEF_PROPERTY = (85 | WORDRECORDLENGTH );
@@ -2838,7 +2839,12 @@ This allows an Editor to assume some Designer-level access */
 	public short CDIMAGETYPE_GIF = 1;
 	public short CDIMAGETYPE_JPEG = 2;
 	public short CDIMAGETYPE_BMP = 3;
-
+	public short CDIMAGETYPE_PNG = 4;
+	/* Images not supported in Notes rich text, but which can be useful for MIME/HTML external files */
+	public short CDIMAGETYPE_SVG = 5;
+	public short CDIMAGETYPE_TIF = 6;
+	public short CDIMAGETYPE_PDF = 7;
+	
 	/* Version control of graphic header */
 	public byte CDGRAPHIC_VERSION1 = 0;		/* Created by Notes version 2 */
 	public byte CDGRAPHIC_VERSION2 = 1;		/* Created by Notes version 3 */

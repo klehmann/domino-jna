@@ -14,6 +14,7 @@ public enum CDRecordType {
 	
 	/* Signatures for Composite Records in items of data type COMPOSITE */
 	
+	IMAGEHEADER2(NotesConstants.SIG_CD_IMAGEHEADER2, 1),
 	PDEF_MAIN(NotesConstants.SIG_CD_PDEF_MAIN, 1),
 	PDEF_TYPE(NotesConstants.SIG_CD_PDEF_TYPE, 1),
 	PDEF_PROPERTY(NotesConstants.SIG_CD_PDEF_PROPERTY, 1),
