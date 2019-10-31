@@ -20,7 +20,9 @@ The project provides functionality that is not available in the classic Java API
 * several APIs to write item values and attachments (needs more work)
 * **richtext item reading**: convenience method to extract text content, advanced API to read all CD records (IRichTextNavigator)
 * **richtext item writing**: create richtext items with text, images, doclinks, by rendering other notes and appending other richtet items
+* **add PNG images to richtext items**: something that cannot easily be done yet in the Notes Client UI
 * **richtext item conversion**: multi-level conversion of richtext item content, e.g. to **add/remove file hotspots (file icons with custom image that open file on click) independent from the actual file attachment** or do mail merge with richtext
+* **design richtext processing**: e.g. to **apply a string replacement and recompile formulas** for computed text/subforms or hotspots and **find all fields in a form**
 * **richtext-html conversion** with advanced quality and access to embedded images
 * **incremental data synchronization** with external databases or indexers. Generic design, sample implementation for [CQEngine](https://github.com/npgall/cqengine) and [SQLite](https://www.sqlite.org)
 * **quick check if a document is editable** by a specified user (without the need to scan through author items)
@@ -41,6 +43,7 @@ The project provides functionality that is not available in the classic Java API
 * APIs to **read and modify the ECL**
 * APIs to **read and write Out-of-Office information (OOO) of any user** 
 * API to **read the item definition table** of a database (all fieldnames and fieldtypes, useful to track FT Search issues and provide fieldname typeahead)
+* **DXL exporter with the option to write the DXL into a stream** (Notes.jar classes fill up the Java heap with a giant DXL string)
 
 **Please note:**
 
