@@ -1334,7 +1334,7 @@ public class NotesViewEntryData {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		if (m_noteId!=null) {
-			sb.append(",id="+m_noteId);
+			sb.append(",noteid="+m_noteId);
 		}
 		
 		String unid = getUNID();
