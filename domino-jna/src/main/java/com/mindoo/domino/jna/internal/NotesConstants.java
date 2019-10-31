@@ -2607,6 +2607,7 @@ This allows an Editor to assume some Designer-level access */
 
 	/* Signatures for Composite Records in items of data type COMPOSITE */
 
+	public short SIG_CD_SRC = (81 | WORDRECORDLENGTH);
 	public short SIG_CD_IMAGEHEADER2 = (82 | BYTERECORDLENGTH );
 	public short SIG_CD_PDEF_MAIN = (83 | WORDRECORDLENGTH ) /* Signatures for items used in Property Broker definitions. LI 3925.04 */;
 	public short SIG_CD_PDEF_TYPE = (84 | WORDRECORDLENGTH );
@@ -2661,6 +2662,7 @@ This allows an Editor to assume some Designer-level access */
 	public short SIG_CD_PABDEFINITION = (130 | WORDRECORDLENGTH);
 	public short SIG_CD_PABREFERENCE = (131 | BYTERECORDLENGTH);
 	public short SIG_CD_TEXT = (133 | WORDRECORDLENGTH);
+	public short SIG_CD_XML = (134 | WORDRECORDLENGTH);
 	public short SIG_CD_HEADER = (142 | WORDRECORDLENGTH);
 	public short SIG_CD_LINKEXPORT2 = (146 | WORDRECORDLENGTH);
 	public short SIG_CD_BITMAPHEADER = (149 | LONGRECORDLENGTH);
@@ -2710,6 +2712,7 @@ This allows an Editor to assume some Designer-level access */
 	public short SIG_CD_TRANSITION = (232 | WORDRECORDLENGTH);
 	public short SIG_CD_FIELDHINT = (233 | WORDRECORDLENGTH);
 	public short SIG_CD_PLACEHOLDER = (234 | WORDRECORDLENGTH);
+	public short SIG_CD_HTMLNAME = (235 | WORDRECORDLENGTH);
 	public short SIG_CD_EMBEDDEDOUTLINE = (236 | WORDRECORDLENGTH);
 	public short SIG_CD_EMBEDDEDVIEW = (237 | WORDRECORDLENGTH);
 	public short SIG_CD_CELLBACKGROUNDDATA = (238 | WORDRECORDLENGTH);
@@ -2721,6 +2724,7 @@ This allows an Editor to assume some Designer-level access */
 	/* Signature for Target Frame info on a link	*/
 	public short SIG_CD_TARGET = (242 | WORDRECORDLENGTH);
 
+	public short SIG_CD_NATIVEIMAGE = (243 | LONGRECORDLENGTH);
 	public short SIG_CD_MAPELEMENT = (244 | WORDRECORDLENGTH);
 	public short SIG_CD_AREAELEMENT = (245 | WORDRECORDLENGTH);
 	public short SIG_CD_HREF = (246 | WORDRECORDLENGTH);
@@ -2768,6 +2772,8 @@ This allows an Editor to assume some Designer-level access */
 	public short SIG_CD_LSOBJECT = (177 | WORDRECORDLENGTH)/* Compiled LS code*/;
 	public short SIG_CD_HTMLHEADER = (178 | WORDRECORDLENGTH) /* Raw HTML */;
 	public short SIG_CD_HTMLSEGMENT = (179 | WORDRECORDLENGTH);
+	public short SIG_CD_OLEOBJPH = (180 | WORDRECORDLENGTH);
+	public short SIG_CD_MAPIBINARY = (181 | WORDRECORDLENGTH);
 	public short SIG_CD_LAYOUT = (183 | BYTERECORDLENGTH);
 	public short SIG_CD_LAYOUTTEXT = (184 | BYTERECORDLENGTH);
 	public short SIG_CD_LAYOUTEND = (185 | BYTERECORDLENGTH);
@@ -2820,6 +2826,7 @@ This allows an Editor to assume some Designer-level access */
 	public short SIG_CD_VMREGION = (180 | BYTERECORDLENGTH);
 	public short SIG_CD_VMACTION = (181 | BYTERECORDLENGTH);
 	public short SIG_CD_VMELLIPSE = (182 | BYTERECORDLENGTH);
+	public short SIG_CD_VMSMALLTEXTBOX = (183 | BYTERECORDLENGTH);
 	public short SIG_CD_VMRNDRECT = (184 | BYTERECORDLENGTH);
 	public short SIG_CD_VMBUTTON = (185 | BYTERECORDLENGTH);
 	public short SIG_CD_VMACTION_2 = (186 | WORDRECORDLENGTH);

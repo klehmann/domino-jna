@@ -14,6 +14,7 @@ public enum CDRecordType {
 	
 	/* Signatures for Composite Records in items of data type COMPOSITE */
 	
+	SRC(NotesConstants.SIG_CD_SRC, 1),
 	IMAGEHEADER2(NotesConstants.SIG_CD_IMAGEHEADER2, 1),
 	PDEF_MAIN(NotesConstants.SIG_CD_PDEF_MAIN, 1),
 	PDEF_TYPE(NotesConstants.SIG_CD_PDEF_TYPE, 1),
@@ -118,6 +119,7 @@ public enum CDRecordType {
 	PABREFERENCE(NotesConstants.SIG_CD_PABREFERENCE, 1),
 	/** This structure defines the start of a run of text in a rich-text field. */
 	TEXT(NotesConstants.SIG_CD_TEXT, 1),
+	XML(NotesConstants.SIG_CD_XML, 1),
 	/** Contains the header or footer used in a document. */
 	HEADER(NotesConstants.SIG_CD_HEADER, 1),
 	/** This structure is used to create a document link in a rich text field.<br>
@@ -263,6 +265,7 @@ public enum CDRecordType {
 	/** A CDPLACEHOLDER record stores additional information about various embedded type CD records,
 	 * such as CDEMBEDDEDCTL, CDEMBEDDEDOUTLINE and other embedded CD record types defined in HOTSPOTREC_TYPE_xxx. */
 	PLACEHOLDER(NotesConstants.SIG_CD_PLACEHOLDER, 1),
+	HTMLNAME(NotesConstants.SIG_CD_HTMLNAME, 1),
 	/** This CD Record defines the attributes of an embedded outline.<br>
 	 * It is preceded by a CDHOTSPOTBEGIN and a CDPLACEHOLDER.<br>
 	 * The CD record, CDPLACEHOLDER, further defines the CDEMBEDDEDOUTLINE. */
@@ -317,6 +320,7 @@ public enum CDRecordType {
 	/* Signatures for Composite Records that are reserved internal records, */
 	/* whose format may change between releases. */
 	
+	NATIVEIMAGE(NotesConstants.SIG_CD_NATIVEIMAGE, 4),
 	DOCUMENT_PRE_26(NotesConstants.SIG_CD_DOCUMENT_PRE_26, 4),
 	/** * OBSOLETE * Defines the attributes of a field in a form. */
 	FIELD_PRE_36(NotesConstants.SIG_CD_FIELD_PRE_36, 4),
@@ -379,6 +383,9 @@ public enum CDRecordType {
 	/** This record is included for future use.  Applications should not generate these records.<br>
 	 * Domino and Notes will ignore this record. */
 	HTMLSEGMENT(NotesConstants.SIG_CD_HTMLSEGMENT, 4),
+	OLEOBJPH(NotesConstants.SIG_CD_OLEOBJPH, 4),
+	MAPIBINARY(NotesConstants.SIG_CD_MAPIBINARY, 4),
+
 	/** The definition for a layout region on a form is stored as CD records in the $Body item of the form note.<br>
 	 * The layout region begins with a CDLAYOUT record and ends with a CDLAYOUTEND record.<br>
 	 * Other records in the layout region define buttons, graphics, fields, or other rich text elements. */
@@ -432,6 +439,7 @@ public enum CDRecordType {
 	VMREGION(NotesConstants.SIG_CD_VMREGION, 5),
 	VMACTION(NotesConstants.SIG_CD_VMACTION, 5),
 	VMELLIPSE(NotesConstants.SIG_CD_VMELLIPSE, 5),
+	VMSMALLTEXTBOX(NotesConstants.SIG_CD_VMSMALLTEXTBOX, 5),
 	VMRNDRECT(NotesConstants.SIG_CD_VMRNDRECT, 5),
 	VMBUTTON(NotesConstants.SIG_CD_VMBUTTON, 5),
 	VMACTION_2(NotesConstants.SIG_CD_VMACTION_2, 5),
