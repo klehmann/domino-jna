@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.List;
 
@@ -142,13 +144,13 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 	 * @param out result stream
 	 * @throws IOException in case of I/O errors
 	 */
-	public void exportNote(NotesNote note, final OutputStream out) throws IOException {
+	public void exportNote(final NotesNote note, final OutputStream out) throws IOException {
 		checkHandle();
 		if (note.isRecycled()) {
 			throw new NotesError(0, "Note is recycled");
 		}
 		
-		NotesCallbacks.XML_WRITE_FUNCTION callback;
+		final NotesCallbacks.XML_WRITE_FUNCTION callback;
 		
 		final Exception[] ex = new Exception[1];
 		
@@ -189,10 +191,22 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().DXLExportNote(m_hExporter, callback, note.getHandle64(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI64.get().DXLExportNote(m_hExporter, callback, note.getHandle64(), (Pointer) null);
+				}
+			});
 		}
 		else {
-			result = NotesNativeAPI32.get().DXLExportNote(m_hExporter, callback, note.getHandle32(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI32.get().DXLExportNote(m_hExporter, callback, note.getHandle32(), (Pointer) null);
+				}
+			});
 		}
 		
 		if (ex[0] instanceof IOException) {
@@ -264,7 +278,7 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 	 * @param out result stream
 	 * @throws IOException in case of I/O errors
 	 */
-	public void exportIDTable(NotesDatabase db, NotesIDTable idTable, final OutputStream out) throws IOException {
+	public void exportIDTable(final NotesDatabase db, final NotesIDTable idTable, final OutputStream out) throws IOException {
 		checkHandle();
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database is recycled");
@@ -273,7 +287,7 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 			throw new NotesError(0, "IDTable is recycled");
 		}
 		
-		NotesCallbacks.XML_WRITE_FUNCTION callback;
+		final NotesCallbacks.XML_WRITE_FUNCTION callback;
 		
 		final Exception[] ex = new Exception[1];
 		
@@ -314,10 +328,22 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().DXLExportIDTable(m_hExporter, callback, db.getHandle64(), idTable.getHandle64(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI64.get().DXLExportIDTable(m_hExporter, callback, db.getHandle64(), idTable.getHandle64(), (Pointer) null);
+				}
+			});
 		}
 		else {
-			result = NotesNativeAPI32.get().DXLExportIDTable(m_hExporter, callback, db.getHandle32(), idTable.getHandle32(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI32.get().DXLExportIDTable(m_hExporter, callback, db.getHandle32(), idTable.getHandle32(), (Pointer) null);
+				}
+			});
 		}
 		
 		if (ex[0] instanceof IOException) {
@@ -338,13 +364,13 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 	 * @param out result stream
 	 * @throws IOException in case of I/O errors
 	 */
-	public void exportDatabase(NotesDatabase db, final OutputStream out) throws IOException {
+	public void exportDatabase(final NotesDatabase db, final OutputStream out) throws IOException {
 		checkHandle();
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database is recycled");
 		}
 		
-		NotesCallbacks.XML_WRITE_FUNCTION callback;
+		final NotesCallbacks.XML_WRITE_FUNCTION callback;
 		
 		final Exception[] ex = new Exception[1];
 		
@@ -385,10 +411,22 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().DXLExportDatabase(m_hExporter, callback, db.getHandle64(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI64.get().DXLExportDatabase(m_hExporter, callback, db.getHandle64(), (Pointer) null);
+				}
+			});
 		}
 		else {
-			result = NotesNativeAPI32.get().DXLExportDatabase(m_hExporter, callback, db.getHandle32(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI32.get().DXLExportDatabase(m_hExporter, callback, db.getHandle32(), (Pointer) null);
+				}
+			});
 		}
 		
 		if (ex[0] instanceof IOException) {
@@ -409,13 +447,13 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 	 * @param out result stream
 	 * @throws IOException in case of I/O errors
 	 */
-	public void exportACL(NotesDatabase db, final OutputStream out) throws IOException {
+	public void exportACL(final NotesDatabase db, final OutputStream out) throws IOException {
 		checkHandle();
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database is recycled");
 		}
 		
-		NotesCallbacks.XML_WRITE_FUNCTION callback;
+		final NotesCallbacks.XML_WRITE_FUNCTION callback;
 		
 		final Exception[] ex = new Exception[1];
 		
@@ -456,10 +494,22 @@ public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().DXLExportACL(m_hExporter, callback, db.getHandle64(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI64.get().DXLExportACL(m_hExporter, callback, db.getHandle64(), (Pointer) null);
+				}
+			});
 		}
 		else {
-			result = NotesNativeAPI32.get().DXLExportACL(m_hExporter, callback, db.getHandle32(), (Pointer) null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI32.get().DXLExportACL(m_hExporter, callback, db.getHandle32(), (Pointer) null);
+				}
+			});
 		}
 		
 		if (ex[0] instanceof IOException) {

@@ -7,6 +7,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -491,10 +493,10 @@ public class DXLImporter extends AbstractDXLTransfer implements IAllocatedMemory
 	 * @param db Domino database that is to be imported
 	 * @throws IOException in case of I/O errors
 	 */
-	public void importDxl(final InputStream in, NotesDatabase db) throws IOException {
+	public void importDxl(final InputStream in, final NotesDatabase db) throws IOException {
 		checkHandle();
 		
-		NotesCallbacks.XML_READ_FUNCTION callback;
+		final NotesCallbacks.XML_READ_FUNCTION callback;
 		
 		final Exception[] ex = new Exception[1];
 		
@@ -551,10 +553,22 @@ public class DXLImporter extends AbstractDXLTransfer implements IAllocatedMemory
 		short result;
 		
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().DXLImport(m_hImporter, callback, db.getHandle64(), null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI64.get().DXLImport(m_hImporter, callback, db.getHandle64(), null);
+				}
+			});
 		}
 		else {
-			result = NotesNativeAPI32.get().DXLImport(m_hImporter, callback, db.getHandle32(), null);
+			result = AccessController.doPrivileged(new PrivilegedAction<Short>() {
+
+				@Override
+				public Short run() {
+					return NotesNativeAPI32.get().DXLImport(m_hImporter, callback, db.getHandle32(), null);
+				}
+			});
 		}
 		if (ex[0] instanceof IOException) {
 			throw (IOException) ex[0];
