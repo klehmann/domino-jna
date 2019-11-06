@@ -1,6 +1,8 @@
 package com.mindoo.domino.jna.gc;
 
 import java.io.PrintWriter;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -468,7 +470,7 @@ public class NotesGC {
 	 * @param <T> return value type of code to be run
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static <T> T runWithAutoGC(Callable<T> callable) throws Exception {
+	public static <T> T runWithAutoGC(final Callable<T> callable) throws Exception {
 		if (Boolean.TRUE.equals(m_activeAutoGC.get())) {
 			//nested call
 			return callable.call();
@@ -501,7 +503,22 @@ public class NotesGC {
 					m_b32OpenHandlesMemory.set(b32HandlesMemory);
 				}
 				
-				return callable.call();
+				return AccessController.doPrivileged(new PrivilegedAction<T>() {
+
+					@Override
+					public T run() {
+						try {
+							return callable.call();
+						} catch (Exception e) {
+							if (e instanceof RuntimeException) {
+								throw (RuntimeException) e;
+							}
+							else {
+								throw new NotesError(0, "Error during code execution", e);
+							}
+						}
+					}
+				});
 			}
 			finally {
 				boolean writeDebugMsg = Boolean.TRUE.equals(m_writeDebugMessages.get());
