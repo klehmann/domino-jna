@@ -25,6 +25,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -148,6 +149,37 @@ public class NotesIDTable implements IRecyclableNotesObject {
 		}
 	}
 	
+	/**
+	 * Wraps an exissting ID table
+	 * 
+	 * @param adaptable adapter providing id table data
+	 * @param noRecycle true to prevent auto-recycling (e.g. because the C API owns this id table)
+	 */
+	public NotesIDTable(IAdaptable adaptable, boolean noRecycle) {
+		Handle hdl = adaptable.getAdapter(Handle.class);
+		if (hdl!=null) {
+			if (PlatformUtils.is64Bit()) {
+				m_idTableHandle64 = hdl.getHandle64();
+				if (m_idTableHandle64==0) {
+					throw new NotesError(0, "Handle is 0");
+				}
+			}
+			else {
+				m_idTableHandle32 = hdl.getHandle32();
+				if (m_idTableHandle32==0) {
+					throw new NotesError(0, "Handle is 0");
+				}
+			}
+			
+			if (!noRecycle) {
+				NotesGC.__objectCreated(NotesIDTable.class, this);
+			}
+		}
+		else {
+			throw new IllegalArgumentException("Adaptable did not provide the required data");
+		}
+	}
+	
 	public boolean isRecycled() {
 		if (PlatformUtils.is64Bit()) {
 			return m_idTableHandle64==0;
@@ -196,10 +228,6 @@ public class NotesIDTable implements IRecyclableNotesObject {
 				}
 			}
 		}
-	}
-	
-	public void setNoRecycle() {
-		m_noRecycle=true;
 	}
 	
 	@Override
