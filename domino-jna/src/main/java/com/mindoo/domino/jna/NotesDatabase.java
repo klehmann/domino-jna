@@ -49,6 +49,7 @@ import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
@@ -116,7 +117,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	private String[] m_paths;
 	private String m_replicaID;
 	private boolean m_loginAsIdOwner;
+	
 	NotesNamesList m_namesList;
+	private List<String> m_namesStringList;
+	private EnumSet<Privileges> m_namesListPrivileges;
+	
 	private Database m_legacyDbRef;
 	private Integer m_openDatabaseId;
 	private NotesACL m_acl;
@@ -213,7 +218,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		m_hDB64 = handle;
 		m_asUserCanonical = asUserCanonical;
+		
 		m_namesList = namesList;
+		m_namesStringList = m_namesList.getNames();
+		m_namesListPrivileges = NotesNamingUtils.getPrivileges(namesList);
 	}
 
 	private NotesDatabase(int handle, String asUserCanonical, NotesNamesList namesList) {
@@ -222,7 +230,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		m_hDB32 = handle;
 		m_asUserCanonical = asUserCanonical;
+		
 		m_namesList = namesList;
+		m_namesStringList = m_namesList.getNames();
+		m_namesListPrivileges = NotesNamingUtils.getPrivileges(namesList);
 	}
 
 	/**
@@ -287,6 +298,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			m_namesList = NotesNamingUtils.buildNamesList(server, m_asUserCanonical);
 		}
+		m_namesStringList = m_namesList.getNames();
 		
 		//setting authenticated flag for the user is required when running on the server
 		if (openFlags!=null && openFlags.contains(OpenDatabase.FULL_ACCESS)) {
@@ -297,6 +309,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
 		}
 		
+		m_namesListPrivileges = NotesNamingUtils.getPrivileges(m_namesList);
+
 		m_passNamesListToViewOpen = false;
 		m_passNamesListToDbOpen = false;
 		if (m_namesList!=null) {
@@ -427,6 +441,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				//setting authenticated flag for the user is required when running on the server
 				NotesNamingUtils.setPrivileges(m_namesList, EnumSet.of(Privileges.Authenticated));
 
+				m_namesListPrivileges = NotesNamingUtils.getPrivileges(m_namesList);
+				
 			} catch (NotesException e) {
 				throw new NotesError(e.id, e.getLocalizedMessage());
 			}
@@ -4350,17 +4366,24 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * To avoid memory errors, programs should not use database handles from outside the program's address
 	 * space for database I/O.
 	 * 
+	 * @param adaptable data provider for cloned DB
 	 * @return reopened database
 	 */
 	public NotesDatabase reopenDatabase() {
-		checkHandle();
-		
-		NotesNamesList namesList = null;
-		if (m_namesList!=null) {
-			List<String> namesListEntries = m_namesList.getNames();
-			namesList = NotesNamingUtils.writeNewNamesList(namesListEntries);
+		if (PlatformUtils.is64Bit()) {
+			if (m_hDB64==0) {
+				throw new NotesError(0, "Database already recycled");
+			}
+		}
+		else {
+			if (m_hDB32==0) {
+				throw new NotesError(0, "Database already recycled");
+			}
 		}
 
+		NotesNamesList namesListForClone = NotesNamingUtils.writeNewNamesList(m_namesStringList);
+		NotesNamingUtils.setPrivileges(namesListForClone, m_namesListPrivileges);
+		
 		NotesDatabase dbNew;
 		short result;
 		if (PlatformUtils.is64Bit()) {
@@ -4369,7 +4392,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			long newDbHandle = retDbHandle.getValue();
-			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesList);
+			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesListForClone);
 		}
 		else {
 			IntByReference retDbHandle = new IntByReference();
@@ -4377,7 +4400,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			NotesErrorUtils.checkResult(result);
 			
 			int newDbHandle = retDbHandle.getValue();
-			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesList);
+			dbNew = new NotesDatabase(newDbHandle, m_asUserCanonical, namesListForClone);
 		}
 		NotesGC.__objectCreated(NotesDatabase.class, dbNew);
 		return dbNew;
@@ -5598,5 +5621,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = NotesNativeAPI32V1000.get().NSFDesignHarvest(m_hDB32, mode==HarvestMode.ADD ? 1 : 0);
 		}
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	public List<String> getNamesList() {
+		NotesNote tmpNote = createNote();
+		try {
+			List<Object> userNamesList = FormulaExecution.evaluate("@Usernameslist", tmpNote);
+			List<String> namesListWithoutRoles = new ArrayList<String>();
+			for (int i=0; i<userNamesList.size(); i++) {
+				String currName = userNamesList.get(i).toString();
+				if (!currName.startsWith("[") && !currName.endsWith("]")) {
+					namesListWithoutRoles.add(currName);
+				}
+			}
+			return namesListWithoutRoles;
+		}
+		finally {
+			tmpNote.recycle();
+		}
 	}
 }
