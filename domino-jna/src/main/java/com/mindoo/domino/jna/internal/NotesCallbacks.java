@@ -202,7 +202,7 @@ public interface NotesCallbacks {
 	}
 	
 	interface XML_READ_FUNCTION extends Callback {
-		void invoke(Pointer pBuffer, int length, Pointer pAction);
+		int invoke(Pointer pBuffer, int length, Pointer pAction);
 	}
 
 	interface XML_WRITE_FUNCTION extends Callback {

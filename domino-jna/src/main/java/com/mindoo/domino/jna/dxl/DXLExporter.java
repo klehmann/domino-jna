@@ -5,7 +5,6 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -15,11 +14,6 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.LMBCSStringList;
-import com.mindoo.domino.jna.internal.Mem32;
-import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
@@ -27,10 +21,8 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.WriterOutputStream;
-import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
-import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 
@@ -42,11 +34,34 @@ import com.sun.jna.ptr.IntByReference;
  * but in a standalone application.<br>
  * <br>
  * Otherwise you might experience crashes during DXL export (we had crashes when testing the DB export).<br>
- * </b>
+ * </b><br>
+ * <br>
+ * Default values are set as follows:<br>
+ * <br>
+ * Note:	(i) = can input new value into the exporter.<br>
+ * (o) = can get current value out of exporter.<br>
+ * (io) = can do both.<br>
+ * <br>
+ * eDxlExportResultLog = (o) NULLMEMHANDLE<br>
+ * eDefaultDoctypeSYSTEM = (o) default filename of dtd keyed to current version of DXL exporter.<br>
+ * eDoctypeSYSTEM = (io) filename of dtd keyed to current version of DXL exporter.<br>
+ * eDXLBannerComments = (io) NULLMEMHANDLE<br>
+ * eDxlExportCharset = (io) {@link DXLExportCharset#UTF8}<br>
+ * eDxlRichtextOption = (io) {@link DXLRichtextOption#DXL}<br>
+ * eDxlExportResultLogComment = (io) NULLMEMHANDLE<br>
+ * eForceNoteFormat = (io) FALSE<br>
+ * eExitOnFirstFatalError = (io) TRUE<br>
+ * eOutputRootAttrs = (io) TRUE<br>
+ * eOutputXmlDecl = (io) TRUE<br>
+ * eOutputDOCTYPE = (io) TRUE<br>
+ * eConvertNotesbitmapToGIF	= (io) FALSE<br>
+ * eDxlValidationStyle = (io) {@link DXLValidationStyle#DTD}<br>
+ * eDxlDefaultSchemaLocation = (o) URI's of schema keyed to current version of DLX exporter.<br>
+ * eDxlSchemaLocation = (io) filename of XML Schema keyed to current version of DXL exporter.<br>
  * 
  * @author Karsten Lehmann
  */
-public class DXLExporter implements IAllocatedMemory {
+public class DXLExporter extends AbstractDXLTransfer implements IAllocatedMemory {
 	private int m_hExporter;
 	
 	public DXLExporter() {
@@ -87,7 +102,8 @@ public class DXLExporter implements IAllocatedMemory {
 		return m_hExporter;
 	}
 	
-	private void checkHandle() {
+	@Override
+	protected void checkHandle() {
 		if (m_hExporter==0)
 			throw new NotesError(0, "DXL exporter already freed");
 		
@@ -178,7 +194,6 @@ public class DXLExporter implements IAllocatedMemory {
 		else {
 			result = NotesNativeAPI32.get().DXLExportNote(m_hExporter, callback, note.getHandle32(), (Pointer) null);
 		}
-		NotesErrorUtils.checkResult(result);
 		
 		if (ex[0] instanceof IOException) {
 			throw (IOException) ex[0];
@@ -187,6 +202,8 @@ public class DXLExporter implements IAllocatedMemory {
 			throw new NotesError(0, "Error during DXL export of note "+note+" in database "+
 					note.getParent().getServer()+"!!"+note.getParent().getRelativeFilePath(), ex[0]);
 		}
+		
+		NotesErrorUtils.checkResult(result);
 	}
 
 	/**
@@ -198,6 +215,24 @@ public class DXLExporter implements IAllocatedMemory {
 	 * @throws IOException in case of I/O errors
 	 */
 	public void exportIDs(NotesDatabase db, Collection<Integer> ids, Writer out) throws IOException {
+		NotesIDTable idTable = new NotesIDTable(ids);
+		try {
+			exportIDTable(db, idTable, out);
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
+	
+	/**
+	 * Export a set of note ids into XML format.
+	 * 
+	 * @param db database containing the export ids
+	 * @param ids ids to export
+	 * @param out result stream
+	 * @throws IOException in case of I/O errors
+	 */
+	public void exportIDs(NotesDatabase db, Collection<Integer> ids, OutputStream out) throws IOException {
 		NotesIDTable idTable = new NotesIDTable(ids);
 		try {
 			exportIDTable(db, idTable, out);
@@ -284,7 +319,6 @@ public class DXLExporter implements IAllocatedMemory {
 		else {
 			result = NotesNativeAPI32.get().DXLExportIDTable(m_hExporter, callback, db.getHandle32(), idTable.getHandle32(), (Pointer) null);
 		}
-		NotesErrorUtils.checkResult(result);
 		
 		if (ex[0] instanceof IOException) {
 			throw (IOException) ex[0];
@@ -293,6 +327,8 @@ public class DXLExporter implements IAllocatedMemory {
 			throw new NotesError(0, "Error during DXL export of "+idTable+" in database "+
 					db.getServer()+"!!"+db.getRelativeFilePath(), ex[0]);
 		}
+		
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
@@ -354,7 +390,6 @@ public class DXLExporter implements IAllocatedMemory {
 		else {
 			result = NotesNativeAPI32.get().DXLExportDatabase(m_hExporter, callback, db.getHandle32(), (Pointer) null);
 		}
-		NotesErrorUtils.checkResult(result);
 		
 		if (ex[0] instanceof IOException) {
 			throw (IOException) ex[0];
@@ -363,6 +398,8 @@ public class DXLExporter implements IAllocatedMemory {
 			throw new NotesError(0, "Error during DXL export of database "+
 					db.getServer()+"!!"+db.getRelativeFilePath(), ex[0]);
 		}
+		
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
@@ -424,7 +461,6 @@ public class DXLExporter implements IAllocatedMemory {
 		else {
 			result = NotesNativeAPI32.get().DXLExportACL(m_hExporter, callback, db.getHandle32(), (Pointer) null);
 		}
-		NotesErrorUtils.checkResult(result);
 		
 		if (ex[0] instanceof IOException) {
 			throw (IOException) ex[0];
@@ -433,198 +469,20 @@ public class DXLExporter implements IAllocatedMemory {
 			throw new NotesError(0, "Error during DXL export of database ACL for "+
 					db.getServer()+"!!"+db.getRelativeFilePath(), ex[0]);
 		}
-	}
-	
-	private void setBooleanProperty(int index, boolean value) {
-		checkHandle();
-
-		DisposableMemory m = new DisposableMemory(Native.BOOL_SIZE);
-		try {
-			m.setByte(0, (byte) (value ? 1 : 0));
-			short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
-	private boolean getBooleanProperty(int index) {
-		checkHandle();
-
-		DisposableMemory m = new DisposableMemory(2);
-		try {
-			short result = NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
-			short boolAsShort = m.getShort(0);
-			return boolAsShort != 0;
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
-	private void setStringProperty(int index, String str) {
-		checkHandle();
 		
-		if (str==null) {
-			str = "";
-		}
-		
-		Memory strAsLMBCs = NotesStringUtils.toLMBCS(str, true);
-		short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, strAsLMBCs);
 		NotesErrorUtils.checkResult(result);
 	}
 	
-	private int getInt(int index) {
-		checkHandle();
-		
-		DisposableMemory m = new DisposableMemory(4);
-		try {
-			short result = NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
+	@Override
+	protected short getProperty(int index, Memory m) {
+		return NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
+	}
+	
+	@Override
+	protected short setProperty(int index, Memory m) {
+		return NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
+	}
 
-			return m.getInt(0);
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
-	private void setInt(int index, int value) {
-		checkHandle();
-		
-		DisposableMemory m = new DisposableMemory(4);
-		try {
-			m.clear();
-			m.setInt(0, value);
-
-			short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
-	private String getStringFromMemhandle(int index) {
-		checkHandle();
-
-		DisposableMemory m = new DisposableMemory(4);
-		try {
-			short result = NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
-			
-			int memHandle = m.getInt(0);
-			if (memHandle==0) {
-				return "";
-			}
-			
-			if (PlatformUtils.is64Bit()) {
-				Pointer ptr = Mem64.OSMemoryLock(memHandle);
-				try {
-					String str = NotesStringUtils.fromLMBCS(ptr, -1);
-					return str;
-				}
-				finally {
-					Mem64.OSMemoryUnlock(memHandle);
-					Mem64.OSMemoryFree(memHandle);
-				}
-			}
-			else {
-				Pointer ptr = Mem32.OSMemoryLock(memHandle);
-				try {
-					String str = NotesStringUtils.fromLMBCS(ptr, -1);
-					return str;
-				}
-				finally {
-					Mem32.OSMemoryUnlock(memHandle);
-					Mem32.OSMemoryFree(memHandle);
-				}
-			}
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
-	private void setStringList(int index, List<String> values) {
-		LMBCSStringList lmbcsStrList = new LMBCSStringList(values, false);
-		try {
-			if (PlatformUtils.is64Bit()) {
-				DisposableMemory m = new DisposableMemory(8);
-				try {
-					m.setLong(0, lmbcsStrList.getHandle64());
-					short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
-					NotesErrorUtils.checkResult(result);
-				}
-				finally {
-					m.dispose();
-				}
-			}
-			else {
-				DisposableMemory m = new DisposableMemory(4);
-				try {
-					m.setInt(0, lmbcsStrList.getHandle32());
-					short result = NotesNativeAPI.get().DXLSetExporterProperty(m_hExporter, index, m);
-					NotesErrorUtils.checkResult(result);
-				}
-				finally {
-					m.dispose();
-				}
-			}
-		}
-		finally {
-			lmbcsStrList.free();
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	public List<String> getStringList(int index) {
-		checkHandle();
-
-		DisposableMemory m = new DisposableMemory(4);
-		try {
-			short result = NotesNativeAPI.get().DXLGetExporterProperty(m_hExporter, index, m);
-			NotesErrorUtils.checkResult(result);
-			
-			int handle = m.getInt(0);
-			if (handle==0) {
-				return Collections.emptyList();
-			}
-			
-			if (PlatformUtils.is64Bit()) {
-				Pointer pList = Mem64.OSLockObject(handle);
-				try {
-					@SuppressWarnings("rawtypes")
-					List list = ItemDecoder.decodeTextListValue(pList, false);
-					return list;
-				}
-				finally {
-					Mem64.OSUnlockObject(handle);
-					result = Mem64.OSMemFree(handle);
-					NotesErrorUtils.checkResult(result);
-				}
-			}
-			else {
-				Pointer pList = Mem32.OSLockObject(handle);
-				try {
-					@SuppressWarnings("rawtypes")
-					List list = ItemDecoder.decodeTextListValue(pList, false);
-					return list;
-				}
-				finally {
-					Mem32.OSUnlockObject(handle);
-					result = Mem32.OSMemFree(handle);
-					NotesErrorUtils.checkResult(result);
-				}
-			}
-		}
-		finally {
-			m.dispose();
-		}
-	}
-	
 	public boolean isOutputXmlDecl() {
 		return getBooleanProperty(NotesConstants.eOutputXmlDecl);
 	}
