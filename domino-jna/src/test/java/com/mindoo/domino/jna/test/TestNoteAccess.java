@@ -9,13 +9,13 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.collections4.map.HashedMap;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,9 +37,6 @@ import lotus.domino.Database;
 import lotus.domino.DateRange;
 import lotus.domino.DateTime;
 import lotus.domino.Document;
-import lotus.domino.EmbeddedObject;
-import lotus.domino.Item;
-import lotus.domino.RichTextItem;
 import lotus.domino.Session;
 import lotus.domino.View;
 
@@ -126,7 +123,7 @@ public class TestNoteAccess extends BaseJNATestClass {
 				
 				System.out.println("Opening "+allIds.size()+" notes");
 
-				Map<Long,String> docDataByHandle = new HashedMap<Long, String>();
+				Map<Long,String> docDataByHandle = new HashMap<Long, String>();
 				List<NotesNote> allNotes = new ArrayList<NotesNote>();
 				
 				int idx=0;
