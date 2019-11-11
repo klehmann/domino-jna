@@ -35,6 +35,7 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDExtFieldStruct
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDIdNameStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDPabHideStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDResourceStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlArgStruct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
@@ -124,6 +125,7 @@ public interface NotesConstants {
 	public final int notesCDPabhideStructSize = NotesCDPabHideStruct.newInstance().size();
 	public final int notesCDHotspotBeginStructSize = NotesCdHotspotBeginStruct.newInstance().size();
 	public final int notesCDIdNameStructSize = NotesCDIdNameStruct.newInstance().size();
+	public final int notesCDResourceStructSize = NotesCDResourceStruct.newInstance().size();
 	
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -3485,5 +3487,135 @@ This allows an Editor to assume some Designer-level access */
 	public short iImportedNoteList=12;
 	/** BOOL, TRUE = all imported LotusScript code is compiled, FALSE = no compilation */
 	public short iCompileLotusScript=13;
+
+	/*	CDRESOURCE Flags */
+	
+	/** the type's data is a formula, valid for _TYPE_URL and _TYPE_NAMEDELEMENT
+	*/
+	public int CDRESOURCE_FLAGS_FORMULA = 0x00000001;
+
+	/** the notelink variable length data
+	* contains the notelink itself not
+ 	* an index into a $Links items
+	*/
+	public int CDRESOURCE_FLAGS_NOTELINKINLINE = 0x00000002;
+	
+	/** If specified, the link
+	is to an absolute 
+	database or thing.
+	Used to make a hard
+	link to a specific DB. */
+	public int CDRESOURCE_FLAGS_ABSOLUTE = 0x00000004;
+	
+	/** If specified, the server
+	and file hint are filled
+	in and should be 
+	attempted before trying
+	other copies. */
+	public int CDRESOURCE_FLAGS_USEHINTFIRST = 0x00000008;
+
+	/** the type's data is a canned image file (data/domino/icons/[*].gif)
+	*  valid for _TYPE_URL && _CLASS_IMAGE only
+	*/
+	public int CDRESOURCE_FLAGS_CANNEDIMAGE = 0x00000010;
+	
+	/*	NOTE: _PRIVATE_DATABASE and _PRIVATE_DESKTOP are mutually exclusive. */
+	
+	/** the object is private in its database */
+	public int CDRESOURCE_FLAGS_PRIVATE_DATABASE = 0x00000020;
+	/** the object is private in the desktop database */
+	public int CDRESOURCE_FLAGS_PRIVATE_DESKTOP = 0x00000040;
+
+	/** the replica in the CD resource needs to be obtained via RLGetReplicaID
+	to handle special replica IDs like 'current' mail file. */
+	public int CDRESOURCE_FLAGS_REPLICA_WILDCARD = 0x00000080;
+	
+	/** used with class view and folder to mean "Simple View" */
+	public int CDRESOURCE_FLAGS_SIMPLE = 0x00000100;
+	/** open this up in design mode */
+	public int CDRESOURCE_FLAGS_DESIGN_MODE = 0x00000200;
+	/** open this up in prevew mode, if supported.   Not saved to disk */
+	public int CDRESOURCE_FLAGS_PREVIEW = 0x00000400;
+	/** we will be doing a search after link opened.   Not saved to disk */
+	public int CDRESOURCE_FLAGS_SEARCH = 0x00000800;
+
+	/** An UNID is added to the end of the hResource that means 
+	something to that type  - currently used in named element type*/
+	public int CDRESOURCE_FLAGS_UNIDADDED = 0x00001000;
+	/** document should be in edit mode */
+	public int CDRESOURCE_FLAGS_EDIT_MODE = 0x00002000;
+
+
+	/** reserved meaning for each resource link class */
+	public int CDRESOURCE_FLAGS_RESERVED1 = 0x10000000;
+	/** reserved meaning for each resource link class */
+	public int CDRESOURCE_FLAGS_RESERVED2 = 0x20000000;
+	/** reserved meaning for each resource link class */
+	public int CDRESOURCE_FLAGS_RESERVED3 = 0x40000000;
+	/** reserved meaning for each resource link class */
+	public int CDRESOURCE_FLAGS_RESERVED4 = 0x80000000;
+
+
+	/* Types of CDRESOURCE
+	*/
+	public short CDRESOURCE_TYPE_EMPTY = 0;
+	public short CDRESOURCE_TYPE_URL = 1;
+	public short CDRESOURCE_TYPE_NOTELINK = 2;
+	public short CDRESOURCE_TYPE_NAMEDELEMENT = 3;
+	/** Currently not written to disk only used in RESOURCELINK */
+	public short CDRESOURCE_TYPE_NOTEIDLINK = 4;
+	/** This would be used in conjunction with the formula flag. The formula
+	is an @-Command that would perform some action, typically it would also switch to a 
+	Notes UI element. This will be used to reference the replicator page and other UI elements. */
+	public short CDRESOURCE_TYPE_ACTION = 5;
+	/** Currently not written to disk only used in RESOURCELINK */
+	public short CDRESOURCE_TYPE_NAMEDITEMELEMENT = 6;
+
+	/** And above...  See comment below. */
+	public short CDRESOURCE_TYPE_RESERVERS = 32000;
+
+	/*	Sitemaps/Outlines use the same type identifiers as resource links.
+		However, there are some types that are special to an outline, and
+			we want to reserve an upper range for thos special types.
+
+		For now, reserve the entire upper range 32,000 and up for them.
+		The IDs are started at MAXWORD and work their way down.   
+	*/
+
+
+	/* Classes of resource linked to by CDRESOURCE
+	*/
+	
+	public short CDRESOURCE_CLASS_UNKNOWN = 0;
+	public short CDRESOURCE_CLASS_DOCUMENT = 1;
+	public short CDRESOURCE_CLASS_VIEW = 2;
+	public short CDRESOURCE_CLASS_FORM = 3;
+	public short CDRESOURCE_CLASS_NAVIGATOR = 4;
+	public short CDRESOURCE_CLASS_DATABASE = 5;
+	public short CDRESOURCE_CLASS_FRAMESET = 6;
+	public short CDRESOURCE_CLASS_PAGE = 7;
+	public short CDRESOURCE_CLASS_IMAGE = 8;
+	public short CDRESOURCE_CLASS_ICON = 9;
+	public short CDRESOURCE_CLASS_HELPABOUT = 10;
+	public short CDRESOURCE_CLASS_HELPUSING = 11;
+	public short CDRESOURCE_CLASS_SERVER = 12;
+	public short CDRESOURCE_CLASS_APPLET = 13;
+	/** A compiled formula someplace */
+	public short CDRESOURCE_CLASS_FORMULA = 14;
+	public short CDRESOURCE_CLASS_AGENT = 15;
+	/** a file on disk (file:) */
+	public short CDRESOURCE_CLASS_FILE = 16;
+	/** A file attached to a note */
+	public short CDRESOURCE_CLASS_FILEATTACHMENT = 17;
+	public short CDRESOURCE_CLASS_OLEEMBEDDING = 18;
+	/** A shared image resource */
+	public short CDRESOURCE_CLASS_SHAREDIMAGE = 19;
+	public short CDRESOURCE_CLASS_FOLDER = 20;
+	/** An old (4.6) or new style portfolio.
+	Which gets incorporated into
+	the bookmark bar as a tab, rather
+	than getting opened as a database. */
+	public short CDRESOURCE_CLASS_PORTFOLIO = 21;
+	public short CDRESOURCE_CLASS_OUTLINE = 22;
 
 }

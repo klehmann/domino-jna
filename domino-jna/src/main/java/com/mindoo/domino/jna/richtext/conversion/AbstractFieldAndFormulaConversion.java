@@ -6,8 +6,10 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.FormulaCompiler;
 import com.mindoo.domino.jna.internal.FormulaDecompiler;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDPabHideStruct;
+import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDResourceStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginStruct;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
@@ -206,6 +208,107 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 							}
 						}
 					}
+				}
+				else if (CDRecordType.HREF.getConstant() == nav.getCurrentRecordTypeAsShort()) {
+					// e.g. picture element with computed filename
+					
+					Memory recordData = nav.getCurrentRecordDataWithHeader();
+					
+					NotesCDResourceStruct resourceStruct = NotesCDResourceStruct.newInstance(recordData);
+					resourceStruct.read();
+					
+					int cdResourceSize = NotesConstants.notesCDResourceStructSize; // 34
+					Pointer ptr = recordData.share(cdResourceSize);
+					int serverHintLengthAsInt = (int) (resourceStruct.ServerHintLength & 0xffff);
+					
+					String serverHint="";
+					if (serverHintLengthAsInt>0) {
+						serverHint = NotesStringUtils.fromLMBCS(ptr, serverHintLengthAsInt);
+						ptr = ptr.share(serverHintLengthAsInt);
+					}
+					
+					int fileHintLengthAsInt = (int) (resourceStruct.FileHintLength & 0xffff);
+					
+					String fileHint="";
+					if (fileHintLengthAsInt>0) {
+						fileHint = NotesStringUtils.fromLMBCS(ptr, fileHintLengthAsInt);
+						ptr = ptr.share(fileHintLengthAsInt);
+					}
+					
+					if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_URL) {
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+									return true;
+								}
+							}
+						}
+						
+					}
+					else if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_NAMEDELEMENT) {
+						//DBID to target DB or 0 for current database
+						NotesTimeDateStruct replicaId = NotesTimeDateStruct.newInstance(ptr);
+						ptr = ptr.share(NotesConstants.timeDateSize);
+						
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+									return true;
+								}
+							}
+						}
+					}
+					else if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_ACTION) {
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+									return true;
+								}
+							}
+						}
+						
+					}
+					
+					
+//flags = 00010040
+//type = 00
+//class = 3
+//length1 = 0x13 = 19
+//serverhint = 001e = 30
+//filehint = 0
+//					typedef struct {
+//						   WSIG  Header;
+//						   DWORD Flags;            /* one of CDRESOURCE_FLAGS_xxx */
+//						   WORD  Type;             /* one of CDRESOURCE_TYPE_xxx */
+//						   WORD  ResourceClass;    /* one of CDRESOURCE_CLASS_xxx */
+//						   WORD  Length1;          /* meaning depends on Type */
+//						   WORD  ServerHintLength; /* length of the server hint */
+//						   WORD  FileHintLength;   /* length of the file hint */
+//						   BYTE  Reserved[8];
+//						/* Variable length follows:
+//						 *   String of size ServerHintLength: hint as to resource's server
+//						 *   String of size FileHintLength: hint as to resource's file
+//						 *	- if CDRESOURCE_TYPE_URL : 
+//						 *     string of size Length1 - the URL.
+//						 *	- if CDRESOURCE_TYPE_NOTELINK: 
+//						 *     if CDRESOURCE_FLAGS_NOTELINKINLINE is NOT set in Flags:
+//						 *       WORD LinkID - index into $Links
+//						 *       string of size Length1 - the anchor name (optional)
+//						 *     if CDRESOURCE_FLAGS_NOTELINKINLINE is set in Flags:
+//						 *       NOTELINK NoteLink
+//						 *       string of size Length1 - the anchor name (optional)
+//						 *	- if CDRESOURCE_TYPE_NAMEDELEMENT :
+//						 *		TIMEDATE ReplicaID (zero if current db)
+//						 *		string of size Length1 - the name of element
+//						 */
+//						} CDRESOURCE;
+					 
 				}
 			}
 			while (nav.gotoNext());
@@ -486,6 +589,193 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 					if (!hasMatch) {
 						source.copyCurrentRecordTo(target);
 					}
+				}
+				else if (CDRecordType.HREF.getConstant() == source.getCurrentRecordTypeAsShort()) {
+					// e.g. picture element with computed filename
+					
+					Memory recordData = source.getCurrentRecordDataWithHeader();
+					
+					NotesCDResourceStruct resourceStruct = NotesCDResourceStruct.newInstance(recordData);
+					resourceStruct.read();
+					
+					int cdResourceSize = NotesConstants.notesCDResourceStructSize; // 34
+					Pointer ptr = recordData.share(cdResourceSize);
+					int serverHintLengthAsInt = (int) (resourceStruct.ServerHintLength & 0xffff);
+					
+					String serverHint="";
+					if (serverHintLengthAsInt>0) {
+						serverHint = NotesStringUtils.fromLMBCS(ptr, serverHintLengthAsInt);
+						ptr = ptr.share(serverHintLengthAsInt);
+					}
+					
+					int fileHintLengthAsInt = (int) (resourceStruct.FileHintLength & 0xffff);
+					
+					String fileHint="";
+					if (fileHintLengthAsInt>0) {
+						fileHint = NotesStringUtils.fromLMBCS(ptr, fileHintLengthAsInt);
+						ptr = ptr.share(fileHintLengthAsInt);
+					}
+					
+					boolean isMatch = false;
+					
+					if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_URL) {
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula)) {
+									String newFormula = replaceAllMatchesInHotspotFormula(formula);
+									
+									byte[] compiledFormula;
+									try {
+										if (!StringUtil.isEmpty(newFormula)) {
+											compiledFormula = FormulaCompiler.compileFormula(newFormula);
+										}
+										else {
+											compiledFormula = new byte[0];
+										}
+									}
+									catch (FormulaCompilationError e) {
+										throw new NotesError(0, "Error compiling resource formula", e);
+									}
+									
+									int newRecordLengthNoFormula = NotesConstants.notesCDResourceStructSize +
+											serverHintLengthAsInt +
+											fileHintLengthAsInt;
+
+									int newRecordLengthWithFormula = newRecordLengthNoFormula +
+											compiledFormula.length;
+									
+									Memory newRecordDataWithHeader = new Memory(newRecordLengthWithFormula);
+									
+									//copy header data, server hint and file int
+									newRecordDataWithHeader.write(0, recordData.getByteArray(0,
+											newRecordLengthNoFormula), 0, newRecordLengthNoFormula);
+									newRecordDataWithHeader.write(newRecordLengthNoFormula, compiledFormula, 0, compiledFormula.length);
+									
+									NotesCDResourceStruct newResourceCDStruct = NotesCDResourceStruct.newInstance(newRecordDataWithHeader);
+									newResourceCDStruct.read();
+									
+									newResourceCDStruct.Length = (short) (newRecordLengthWithFormula & 0xffff);
+									newResourceCDStruct.Length1 = (short) (compiledFormula.length & 0xffff);
+									newResourceCDStruct.write();
+									
+									target.addCDRecords(newRecordDataWithHeader);
+									
+									isMatch = true;
+								}
+							}
+						}
+						
+					}
+					else if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_NAMEDELEMENT) {
+						//DBID to target DB or 0 for current database
+						NotesTimeDateStruct replicaId = NotesTimeDateStruct.newInstance(ptr);
+						ptr = ptr.share(NotesConstants.timeDateSize);
+						
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+									String newFormula = replaceAllMatchesInHotspotFormula(formula);
+									
+									byte[] compiledFormula;
+									try {
+										if (!StringUtil.isEmpty(newFormula)) {
+											compiledFormula = FormulaCompiler.compileFormula(newFormula);
+										}
+										else {
+											compiledFormula = new byte[0];
+										}
+									}
+									catch (FormulaCompilationError e) {
+										throw new NotesError(0, "Error compiling resource formula", e);
+									}
+									
+									int newRecordLengthNoFormula = NotesConstants.notesCDResourceStructSize +
+											serverHintLengthAsInt +
+											fileHintLengthAsInt +
+											NotesConstants.timeDateSize;
+
+									int newRecordLengthWithFormula = newRecordLengthNoFormula +
+											compiledFormula.length;
+									
+									Memory newRecordDataWithHeader = new Memory(newRecordLengthWithFormula);
+									
+									//copy header data, server hint and file int
+									newRecordDataWithHeader.write(0, recordData.getByteArray(0,
+											newRecordLengthNoFormula), 0, newRecordLengthNoFormula);
+									newRecordDataWithHeader.write(newRecordLengthNoFormula, compiledFormula, 0, compiledFormula.length);
+									
+									NotesCDResourceStruct newResourceCDStruct = NotesCDResourceStruct.newInstance(newRecordDataWithHeader);
+									newResourceCDStruct.read();
+									
+									newResourceCDStruct.Length = (short) (newRecordLengthWithFormula & 0xffff);
+									newResourceCDStruct.Length1 = (short) (compiledFormula.length & 0xffff);
+									newResourceCDStruct.write();
+									
+									target.addCDRecords(newRecordDataWithHeader);
+									
+									isMatch = true;
+								}
+							}
+						}
+					}
+					else if (resourceStruct.Type == NotesConstants.CDRESOURCE_TYPE_ACTION) {
+						if((resourceStruct.Flags & NotesConstants.CDRESOURCE_FLAGS_FORMULA) == NotesConstants.CDRESOURCE_FLAGS_FORMULA) {
+							int formulaLengthAsInt = (int) (resourceStruct.Length1  & 0xffff);
+							if (formulaLengthAsInt>0) {
+								String formula = FormulaDecompiler.decompileFormula(ptr);
+								if (!StringUtil.isEmpty(formula) && hotspotFormulaContainsMatch(formula)) {
+									String newFormula = replaceAllMatchesInHotspotFormula(formula);
+									
+									byte[] compiledFormula;
+									try {
+										if (!StringUtil.isEmpty(newFormula)) {
+											compiledFormula = FormulaCompiler.compileFormula(newFormula);
+										}
+										else {
+											compiledFormula = new byte[0];
+										}
+									}
+									catch (FormulaCompilationError e) {
+										throw new NotesError(0, "Error compiling resource formula", e);
+									}
+									
+									int newRecordLengthNoFormula = NotesConstants.notesCDResourceStructSize +
+											serverHintLengthAsInt +
+											fileHintLengthAsInt;
+
+									int newRecordLengthWithFormula = newRecordLengthNoFormula +
+											compiledFormula.length;
+									
+									Memory newRecordDataWithHeader = new Memory(newRecordLengthWithFormula);
+									
+									//copy header data, server hint and file int
+									newRecordDataWithHeader.write(0, recordData.getByteArray(0,
+											newRecordLengthNoFormula), 0, newRecordLengthNoFormula);
+									newRecordDataWithHeader.write(newRecordLengthNoFormula, compiledFormula, 0, compiledFormula.length);
+									
+									NotesCDResourceStruct newResourceCDStruct = NotesCDResourceStruct.newInstance(newRecordDataWithHeader);
+									newResourceCDStruct.read();
+									
+									newResourceCDStruct.Length = (short) (newRecordLengthWithFormula & 0xffff);
+									newResourceCDStruct.Length1 = (short) (compiledFormula.length & 0xffff);
+									newResourceCDStruct.write();
+									
+									target.addCDRecords(newRecordDataWithHeader);
+									
+									isMatch = true;
+								}
+							}
+						}
+					}
+					
+					if (!isMatch) {
+						source.copyCurrentRecordTo(target);
+					}
+					 
 				}
 				else {
 					source.copyCurrentRecordTo(target);
