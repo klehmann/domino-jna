@@ -272,43 +272,7 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 								}
 							}
 						}
-						
 					}
-					
-					
-//flags = 00010040
-//type = 00
-//class = 3
-//length1 = 0x13 = 19
-//serverhint = 001e = 30
-//filehint = 0
-//					typedef struct {
-//						   WSIG  Header;
-//						   DWORD Flags;            /* one of CDRESOURCE_FLAGS_xxx */
-//						   WORD  Type;             /* one of CDRESOURCE_TYPE_xxx */
-//						   WORD  ResourceClass;    /* one of CDRESOURCE_CLASS_xxx */
-//						   WORD  Length1;          /* meaning depends on Type */
-//						   WORD  ServerHintLength; /* length of the server hint */
-//						   WORD  FileHintLength;   /* length of the file hint */
-//						   BYTE  Reserved[8];
-//						/* Variable length follows:
-//						 *   String of size ServerHintLength: hint as to resource's server
-//						 *   String of size FileHintLength: hint as to resource's file
-//						 *	- if CDRESOURCE_TYPE_URL : 
-//						 *     string of size Length1 - the URL.
-//						 *	- if CDRESOURCE_TYPE_NOTELINK: 
-//						 *     if CDRESOURCE_FLAGS_NOTELINKINLINE is NOT set in Flags:
-//						 *       WORD LinkID - index into $Links
-//						 *       string of size Length1 - the anchor name (optional)
-//						 *     if CDRESOURCE_FLAGS_NOTELINKINLINE is set in Flags:
-//						 *       NOTELINK NoteLink
-//						 *       string of size Length1 - the anchor name (optional)
-//						 *	- if CDRESOURCE_TYPE_NAMEDELEMENT :
-//						 *		TIMEDATE ReplicaID (zero if current db)
-//						 *		string of size Length1 - the name of element
-//						 */
-//						} CDRESOURCE;
-					 
 				}
 			}
 			while (nav.gotoNext());
