@@ -1,7 +1,6 @@
 package com.mindoo.domino.jna.richtext.conversion;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
-import com.mindoo.domino.jna.constants.CDRecordType.Area;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.FormulaCompiler;
@@ -259,118 +258,118 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 						ivFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula);
 					}
 					
-					if (!hasMatch) {
+					if (hasMatch) {
+						//recompile formulas
+						
+						byte[] compiledDefaultValueFormula;
+						try {
+							if (!StringUtil.isEmpty(defaultValueFormula)) {
+								compiledDefaultValueFormula = FormulaCompiler.compileFormula(defaultValueFormula);
+							}
+							else {
+								compiledDefaultValueFormula = new byte[0];
+							}
+						}
+						catch (FormulaCompilationError e) {
+							throw new NotesError(0, "Error compiling default value formula of field "+origFieldName, e);
+						}
+						
+						byte[] compiledItFormula;
+						try {
+							if (!StringUtil.isEmpty(itFormula)) {
+								compiledItFormula = FormulaCompiler.compileFormula(itFormula);
+							}
+							else {
+								compiledItFormula = new byte[0];
+							}
+						}
+						catch (FormulaCompilationError e) {
+							throw new NotesError(0, "Error compiling input translation formula of field "+origFieldName, e);
+						}
+						
+						byte[] compiledIvFormula;
+						try {
+							if (!StringUtil.isEmpty(ivFormula)) {
+								compiledIvFormula = FormulaCompiler.compileFormula(ivFormula);
+							}
+							else {
+								compiledIvFormula = new byte[0];
+							}
+						}
+						catch (FormulaCompilationError e) {
+							throw new NotesError(0, "Error compiling input validity check formula of field "+origFieldName, e);
+						}
+
+						Memory fieldNameMem = NotesStringUtils.toLMBCS(fieldName, false);
+						Memory fieldDescMem = NotesStringUtils.toLMBCS(fieldDesc, false);
+
+						//allocate enough memory for the new CDfield structure and the texts/formulas
+						Memory newCdFieldStructureWithHeaderMem = new Memory(
+								NotesConstants.notesCDFieldStructSize +
+
+								compiledDefaultValueFormula.length +
+								compiledItFormula.length +
+								compiledIvFormula.length +
+
+								fieldNameMem.size() + 
+								(fieldDescMem==null ? 0 : fieldDescMem.size())
+								);
+
+						//copy the old data for the CDField structure into byte array
+						byte[] oldCdFieldDataWithHeader = recordDataWithHeader.getByteArray(0, NotesConstants.notesCDFieldStructSize);
+						//and into newCdFieldStructureWithHeaderMem
+						newCdFieldStructureWithHeaderMem.write(0, oldCdFieldDataWithHeader, 0, oldCdFieldDataWithHeader.length);
+						
+						NotesCDFieldStruct newCdField = NotesCDFieldStruct.newInstance(newCdFieldStructureWithHeaderMem);
+						newCdField.read();
+						
+						applyCustomFieldChanges(newCdField);
+						
+						//write new total lengths of CD record including signature
+						newCdField.Length = (short) (newCdFieldStructureWithHeaderMem.size() & 0xffff);
+						
+						//write lengths of compiled formulas and name/description
+						newCdField.DVLength = (short) ((compiledDefaultValueFormula==null ? 0 : compiledDefaultValueFormula.length) & 0xffff);
+						newCdField.ITLength = (short) ((compiledItFormula==null ? 0 : compiledItFormula.length) & 0xffff);
+						newCdField.IVLength = (short) ((compiledIvFormula==null ? 0 : compiledIvFormula.length) & 0xffff);
+						newCdField.NameLength = (short) ((fieldNameMem==null ? 0 : fieldNameMem.size()) & 0xffff);
+						newCdField.DescLength = (short) ((fieldDescMem==null ? 0 : fieldDescMem.size()) & 0xffff);
+						
+						newCdField.write();
+
+						//write flexible data into CD record
+						int offset = NotesConstants.notesCDFieldStructSize;
+						if (compiledDefaultValueFormula.length>0) {
+							newCdFieldStructureWithHeaderMem.write(offset, compiledDefaultValueFormula, 0, compiledDefaultValueFormula.length);
+							offset += compiledDefaultValueFormula.length;
+						}
+
+						if (compiledItFormula.length>0) {
+							newCdFieldStructureWithHeaderMem.write(offset, compiledItFormula, 0, compiledItFormula.length);
+							offset += compiledItFormula.length;
+						}
+
+						if (compiledIvFormula.length>0) {
+							newCdFieldStructureWithHeaderMem.write(offset, compiledIvFormula, 0, compiledIvFormula.length);
+							offset += compiledIvFormula.length;
+						}
+
+						newCdFieldStructureWithHeaderMem.write(offset, fieldNameMem.getByteArray(0, (int) fieldNameMem.size()),
+								0, (int) fieldNameMem.size());
+						offset += fieldNameMem.size();
+						
+						if (fieldDescMem!=null) {
+							newCdFieldStructureWithHeaderMem.write(offset, fieldDescMem.getByteArray(0, (int) fieldDescMem.size()),
+									0, (int) fieldDescMem.size());
+							offset += fieldDescMem.size();
+						}
+
+						//write new data to target
+						target.addCDRecords(newCdFieldStructureWithHeaderMem);
+					}
+					else {
 						source.copyCurrentRecordTo(target);
-						return;
 					}
-					
-					//recompile formulas
-					
-					byte[] compiledDefaultValueFormula;
-					try {
-						if (!StringUtil.isEmpty(defaultValueFormula)) {
-							compiledDefaultValueFormula = FormulaCompiler.compileFormula(defaultValueFormula);
-						}
-						else {
-							compiledDefaultValueFormula = new byte[0];
-						}
-					}
-					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling default value formula of field "+origFieldName, e);
-					}
-					
-					byte[] compiledItFormula;
-					try {
-						if (!StringUtil.isEmpty(itFormula)) {
-							compiledItFormula = FormulaCompiler.compileFormula(itFormula);
-						}
-						else {
-							compiledItFormula = new byte[0];
-						}
-					}
-					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling input translation formula of field "+origFieldName, e);
-					}
-					
-					byte[] compiledIvFormula;
-					try {
-						if (!StringUtil.isEmpty(ivFormula)) {
-							compiledIvFormula = FormulaCompiler.compileFormula(ivFormula);
-						}
-						else {
-							compiledIvFormula = new byte[0];
-						}
-					}
-					catch (FormulaCompilationError e) {
-						throw new NotesError(0, "Error compiling input validity check formula of field "+origFieldName, e);
-					}
-
-					Memory fieldNameMem = NotesStringUtils.toLMBCS(fieldName, false);
-					Memory fieldDescMem = NotesStringUtils.toLMBCS(fieldDesc, false);
-
-					//allocate enough memory for the new CDfield structure and the texts/formulas
-					Memory newCdFieldStructureWithHeaderMem = new Memory(
-							NotesConstants.notesCDFieldStructSize +
-
-							compiledDefaultValueFormula.length +
-							compiledItFormula.length +
-							compiledIvFormula.length +
-
-							fieldNameMem.size() + 
-							(fieldDescMem==null ? 0 : fieldDescMem.size())
-							);
-
-					//copy the old data for the CDField structure into byte array
-					byte[] oldCdFieldDataWithHeader = recordDataWithHeader.getByteArray(0, NotesConstants.notesCDFieldStructSize);
-					//and into newCdFieldStructureWithHeaderMem
-					newCdFieldStructureWithHeaderMem.write(0, oldCdFieldDataWithHeader, 0, oldCdFieldDataWithHeader.length);
-					
-					NotesCDFieldStruct newCdField = NotesCDFieldStruct.newInstance(newCdFieldStructureWithHeaderMem);
-					newCdField.read();
-					
-					applyCustomFieldChanges(newCdField);
-					
-					//write new total lengths of CD record including signature
-					newCdField.Length = (short) (newCdFieldStructureWithHeaderMem.size() & 0xffff);
-					
-					//write lengths of compiled formulas and name/description
-					newCdField.DVLength = (short) ((compiledDefaultValueFormula==null ? 0 : compiledDefaultValueFormula.length) & 0xffff);
-					newCdField.ITLength = (short) ((compiledItFormula==null ? 0 : compiledItFormula.length) & 0xffff);
-					newCdField.IVLength = (short) ((compiledIvFormula==null ? 0 : compiledIvFormula.length) & 0xffff);
-					newCdField.NameLength = (short) ((fieldNameMem==null ? 0 : fieldNameMem.size()) & 0xffff);
-					newCdField.DescLength = (short) ((fieldDescMem==null ? 0 : fieldDescMem.size()) & 0xffff);
-					
-					newCdField.write();
-
-					//write flexible data into CD record
-					int offset = NotesConstants.notesCDFieldStructSize;
-					if (compiledDefaultValueFormula.length>0) {
-						newCdFieldStructureWithHeaderMem.write(offset, compiledDefaultValueFormula, 0, compiledDefaultValueFormula.length);
-						offset += compiledDefaultValueFormula.length;
-					}
-
-					if (compiledItFormula.length>0) {
-						newCdFieldStructureWithHeaderMem.write(offset, compiledItFormula, 0, compiledItFormula.length);
-						offset += compiledItFormula.length;
-					}
-
-					if (compiledIvFormula.length>0) {
-						newCdFieldStructureWithHeaderMem.write(offset, compiledIvFormula, 0, compiledIvFormula.length);
-						offset += compiledIvFormula.length;
-					}
-
-					newCdFieldStructureWithHeaderMem.write(offset, fieldNameMem.getByteArray(0, (int) fieldNameMem.size()),
-							0, (int) fieldNameMem.size());
-					offset += fieldNameMem.size();
-					
-					if (fieldDescMem!=null) {
-						newCdFieldStructureWithHeaderMem.write(offset, fieldDescMem.getByteArray(0, (int) fieldDescMem.size()),
-								0, (int) fieldDescMem.size());
-						offset += fieldDescMem.size();
-					}
-
-					//write new data to target
-					target.addCDRecords(newCdFieldStructureWithHeaderMem);
 				}
 				else if (CDRecordType.PABHIDE.getConstant() == source.getCurrentRecordTypeAsShort()) {
 					Memory recordData = source.getCurrentRecordDataWithHeader();
@@ -428,7 +427,7 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 				else if (CDRecordType.HOTSPOTBEGIN.getConstant() == source.getCurrentRecordTypeAsShort() ||
 						CDRecordType.V4HOTSPOTBEGIN.getConstant() == source.getCurrentRecordTypeAsShort()) {
 					Memory recordData = source.getCurrentRecordDataWithHeader();
-					
+							
 					NotesCdHotspotBeginStruct hotspotStruct = NotesCdHotspotBeginStruct.newInstance(recordData);
 					hotspotStruct.read();
 					
@@ -489,16 +488,6 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 					}
 				}
 				else {
-					System.out.println("Skipping record with type "+source.getCurrentRecordTypeAsShort());
-					CDRecordType cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.TYPE_COMPOSITE);
-					if (cd==null) {
-						cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.ALTERNATE_SEQ);
-					}
-					if (cd==null) {
-						cd = CDRecordType.getRecordTypeForConstant(source.getCurrentRecordTypeAsShort(), Area.RESERVED_INTERNAL);
-					}
-					System.out.println("CD="+cd);
-
 					source.copyCurrentRecordTo(target);
 				}
 			}
