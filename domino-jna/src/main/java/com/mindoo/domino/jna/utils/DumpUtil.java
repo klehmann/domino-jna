@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -12,7 +13,10 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
 
+import com.mindoo.domino.jna.constants.CDRecordType;
+import com.mindoo.domino.jna.constants.CDRecordType.Area;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
@@ -274,5 +278,43 @@ public class DumpUtil {
 		}
 		
 		NotesNativeAPI.get().DEBUGDumpHandleTable(typeAsInt, (short) (blkType & 0xffff));
+	}
+	
+	/**
+	 * Dumps the current richtext CD record
+	 * 
+	 * @param nav richtext navigator
+	 * @param out output stream
+	 */
+	public static void dumpCurrentRichtextRecord(IRichTextNavigator nav, PrintStream out) {
+		short cdRecordTypeAsShort = nav.getCurrentRecordTypeAsShort();
+		if (cdRecordTypeAsShort!=0) {
+			CDRecordType cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.TYPE_COMPOSITE);
+			if (cdRecordType==null) {
+				cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.RESERVED_INTERNAL);
+			}
+			if (cdRecordType==null) {
+				cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.ALTERNATE_SEQ);
+			}
+			if (cdRecordType==null) {
+				cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.TARGET_FRAME);
+			}
+			if (cdRecordType==null) {
+				cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.FRAMESETS);
+			}
+			if (cdRecordType==null) {
+				cdRecordType = CDRecordType.getRecordTypeForConstant(cdRecordTypeAsShort, Area.TYPE_VIEWMAP);
+			}
+
+			out.println("Record type: "+(cdRecordTypeAsShort & 0xffff)+(cdRecordType==null ? "" : " ("+cdRecordType+")"));
+			out.println("Total length: "+nav.getCurrentRecordTotalLength());
+			out.println("Header length: "+nav.getCurrentRecordHeaderLength());
+			out.println("Data length: "+nav.getCurrentRecordDataLength());
+
+			Memory memWithHeader = nav.getCurrentRecordDataWithHeader();
+			if (memWithHeader!=null) {
+				out.println("\n" + DumpUtil.dumpAsAscii(memWithHeader, (int) memWithHeader.size())+"\n");
+			}
+		}
 	}
 }
