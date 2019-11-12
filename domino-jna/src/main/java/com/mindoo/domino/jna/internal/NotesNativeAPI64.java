@@ -1162,6 +1162,9 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long hDB,
 			LongByReference retItemNameTable);
 	
+	public native short NSFDbGetTcpHostName(long hDB, Memory pszHostName, short wMaxHostNameLen, Memory pszDomainName,
+			short wMaxDomainNameLen, Memory pszFullName, short wMaxFullNameLen);
+	
 	public native short NSFItemDefExtLock(
 			Pointer pItemDefTable,
 			NotesItemDefinitionTableLock ItemDefTableLock);

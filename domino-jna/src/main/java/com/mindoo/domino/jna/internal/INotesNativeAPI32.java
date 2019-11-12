@@ -1424,6 +1424,16 @@ public interface INotesNativeAPI32 extends Library {
 			int hDB,
 			IntByReference retItemNameTable);
 	
+	@UndocumentedAPI
+	public short NSFDbGetTcpHostName(
+	        int hDB,                                                        /* Database Handle           */ 
+	        Memory pszHostName,                                        /* Return TCP Host Name      */ 
+	        short wMaxHostNameLen,                                /* Size of Host Name Buffer  */ 
+	        Memory pszDomainName,                                        /* Return TCP Domain Name    */ 
+	        short wMaxDomainNameLen,                                /* Size of Domain Buffer     */ 
+	        Memory pszFullName,                                        /* Return Full TCP Name      */ 
+	        short wMaxFullNameLen);                            /* Size of Full Name Buffer  */
+	
 	public short NSFItemDefExtLock(
 			Pointer pItemDefTable,
 			NotesItemDefinitionTableLock ItemDefTableLock);

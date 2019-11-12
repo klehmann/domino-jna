@@ -1166,6 +1166,9 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int hDB,
 			IntByReference retItemNameTable);
 	
+	public native short NSFDbGetTcpHostName(int hDB, Memory pszHostName, short wMaxHostNameLen, Memory pszDomainName,
+			short wMaxDomainNameLen, Memory pszFullName, short wMaxFullNameLen);
+	
 	public native short NSFItemDefExtLock(
 			Pointer pItemDefTable,
 			NotesItemDefinitionTableLock ItemDefTableLock);

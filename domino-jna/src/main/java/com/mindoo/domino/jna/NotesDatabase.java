@@ -5640,4 +5640,43 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			tmpNote.recycle();
 		}
 	}
+
+	/**
+	 * Returns an array of TCP [hostname, domainname, fullname] for the server of this database.
+	 * 
+	 * @return hostname/domainname/fullname
+	 */
+	public String[] getTcpHostName() {
+		checkHandle();
+		
+		DisposableMemory retHostName = new DisposableMemory(NotesConstants.MAXPATH);
+		DisposableMemory retDomainName = new DisposableMemory(NotesConstants.MAXPATH);
+		DisposableMemory retFullName = new DisposableMemory(NotesConstants.MAXPATH);
+
+		try {
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NSFDbGetTcpHostName(m_hDB64, retHostName, (short) ((NotesConstants.MAXPATH-1) & 0xffff),
+						retDomainName, (short) ((NotesConstants.MAXPATH-1) & 0xffff),
+						retFullName, (short) ((NotesConstants.MAXPATH-1) & 0xffff));
+			}
+			else {
+				result = NotesNativeAPI32.get().NSFDbGetTcpHostName(m_hDB32, retHostName, (short) ((NotesConstants.MAXPATH-1) & 0xffff),
+						retDomainName, (short) ((NotesConstants.MAXPATH-1) & 0xffff),
+						retFullName, (short) ((NotesConstants.MAXPATH-1) & 0xffff));
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			String hostName = NotesStringUtils.fromLMBCS(retHostName, -1);
+			String domainName = NotesStringUtils.fromLMBCS(retDomainName, -1);
+			String fullName = NotesStringUtils.fromLMBCS(retFullName, -1);
+			
+			return new String[] {hostName, domainName, fullName};
+		}
+		finally {
+			retHostName.dispose();
+			retDomainName.dispose();
+			retFullName.dispose();
+		}
+	}
 }
