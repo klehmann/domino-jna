@@ -75,7 +75,8 @@ public class TestViewTraversalWithFTSearch extends BaseJNATestClass {
 				int offset = 0;
 				int count = 1000; // Integer.MAX_VALUE;
 				
-				//amount of entries to be read with one NIFReadEntries call, should be higher 
+				// amount of entries to be read with one NIFReadEntries call, should be higher if
+				// EntriesAsListCallback.isAccepted is overridden and entries are skipped in code 
 				int preloadEntryCount = count;
 				
 				System.out.println("Reading max. "+count+" entries starting at offset "+offset);
