@@ -24,7 +24,7 @@ public enum FTSearch {
 	REFINE(0x00000004),
 	/** Return document scores (default sort) */
 	SCORES(0x00000008),
-	/** Return ID table, can be read via {@link NotesFTSearchResult} */
+	/** Return ID table, can be read via {@link NotesFTSearchResult#getMatches()} */
 	RET_IDTABLE(0x00000010),
 	
 	/** Use Limit arg. to return only top scores */
@@ -52,12 +52,12 @@ public enum FTSearch {
 	/** return highlight strings */ 
 	EXT_RET_HL(0x00080000),
 	
-	// sort options; if SORT_DATE or SORT_DATE_CREATED are not specified and we retrieved SCORES,
+	// sort options; if SORT_DATE_MODIFIED or SORT_DATE_CREATED are not specified and we retrieved SCORES,
 	// results are sorted by scores in descending order. Use SORT_ASCEND to reverse the sort order
 	
 	/** Sort results by last modified date (modified in this replica, returned by
 	 * {@link NotesOriginatorId#getSequenceTime()} in the OID read via {@link NotesNote#getOID()}  */
-	SORT_DATE(0x00000020),
+	SORT_DATE_MODIFIED(0x00000020),
 	/** Sort by created date (default is to sort by modified date) */
 	SORT_DATE_CREATED(0x00010000),
 	/** Sort in ascending order (e.g. ascending score when combined with {@link #SCORES} ) */
