@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -46,7 +47,7 @@ import com.sun.jna.ptr.LongByReference;
  * 
  * @author Karsten Lehmann
  */
-public class NotesIDTable implements IRecyclableNotesObject {
+public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 	private int m_idTableHandle32;
 	private long m_idTableHandle64;
 	private boolean m_isRecycled;
@@ -1278,5 +1279,113 @@ public class NotesIDTable implements IRecyclableNotesObject {
 			result = NotesNativeAPI32.get().NSFDbStampNotesMultiItem(db.getHandle32(), m_idTableHandle32, templateNote.getHandle32());
 		}
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Returns a note id {@link Iterator} starting with the first note id
+	 * 
+	 * @return iterator
+	 */
+	@Override
+	public Iterator<Integer> iterator() {
+		return new NoteIdIterator(this, false);
+	}
+
+	/**
+	 * Returns a note id {@link Iterator} starting with the last note id
+	 * 
+	 * @return iterator
+	 */
+	public Iterator<Integer> iteratorBackwards() {
+		return new NoteIdIterator(this, true);
+	}
+
+	private static class NoteIdIterator implements Iterator<Integer> {
+		private NotesIDTable m_idTable;
+		private IntByReference m_nextIdRef;
+		private Integer m_nextId;
+		private boolean m_scanBackward;
+		
+		private NoteIdIterator(NotesIDTable idTable, boolean scanBackward) {
+			m_idTable = idTable;
+			m_scanBackward = scanBackward;
+			
+			fetchNext();
+		}
+		
+		private void fetchNext() {
+			m_idTable.checkHandle();
+			
+			boolean isFirstVal;
+			
+			if (m_nextIdRef==null) {
+				//first id
+				isFirstVal = true;
+				m_nextIdRef = new IntByReference();
+			}
+			else if (m_nextId==null) {
+				//no more data
+				return;
+			}
+			else {
+				isFirstVal = false;
+				m_nextIdRef.setValue(m_nextId);
+			}
+			
+			if (PlatformUtils.is64Bit()) {
+				if (m_scanBackward) {
+					if (NotesNativeAPI64.get().IDScanBack(m_idTable.getHandle64(), isFirstVal, m_nextIdRef)) {
+						m_nextId = m_nextIdRef.getValue();
+					}
+					else {
+						m_nextId = null;
+					}
+				}
+				else {
+					if (NotesNativeAPI64.get().IDScan(m_idTable.getHandle64(), isFirstVal, m_nextIdRef)) {
+						m_nextId = m_nextIdRef.getValue();
+					}
+					else {
+						m_nextId = null;
+					}
+				}
+			}
+			else {
+				if (m_scanBackward) {
+					if (NotesNativeAPI32.get().IDScanBack(m_idTable.getHandle32(), isFirstVal, m_nextIdRef)) {
+						m_nextId = m_nextIdRef.getValue();
+					}
+					else {
+						m_nextId = null;
+					}
+				}
+				else {
+					if (NotesNativeAPI32.get().IDScan(m_idTable.getHandle32(), isFirstVal, m_nextIdRef)) {
+						m_nextId = m_nextIdRef.getValue();
+					}
+					else {
+						m_nextId = null;
+					}
+				}
+			}
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return m_nextId!=null;
+		}
+
+		@Override
+		public Integer next() {
+			if (m_nextId==null) {
+				throw new NoSuchElementException("No more elements");
+			}
+			
+			Integer nextId = m_nextId;
+			fetchNext();
+			
+			return nextId;
+		}
+		
 	}
 }
