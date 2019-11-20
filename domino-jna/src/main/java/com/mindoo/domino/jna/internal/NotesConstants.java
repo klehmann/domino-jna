@@ -3515,7 +3515,7 @@ This allows an Editor to assume some Designer-level access */
 	public int CDRESOURCE_FLAGS_USEHINTFIRST = 0x00000008;
 
 	/** the type's data is a canned image file (data/domino/icons/[*].gif)
-	*  valid for _TYPE_URL && _CLASS_IMAGE only
+	*  valid for _TYPE_URL and _CLASS_IMAGE only
 	*/
 	public int CDRESOURCE_FLAGS_CANNEDIMAGE = 0x00000010;
 	

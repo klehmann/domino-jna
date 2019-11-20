@@ -18,6 +18,7 @@ import org.apache.tools.ant.util.TeeOutputStream;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.dxl.DXLExporter.DXLExportCharset;
 import com.mindoo.domino.jna.dxl.DXLExporter.DXLMIMEOption;
 import com.mindoo.domino.jna.dxl.DXLExporter.DXLRichtextOption;

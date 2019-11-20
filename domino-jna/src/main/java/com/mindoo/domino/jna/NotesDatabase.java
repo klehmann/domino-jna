@@ -4366,7 +4366,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * To avoid memory errors, programs should not use database handles from outside the program's address
 	 * space for database I/O.
 	 * 
-	 * @param adaptable data provider for cloned DB
 	 * @return reopened database
 	 */
 	public NotesDatabase reopenDatabase() {
