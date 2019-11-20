@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 
 import lotus.domino.Session;
 
@@ -60,7 +61,7 @@ public class TestViewTraversalExpandedEntries extends BaseJNATestClass {
 				NotesIDTable collapsedList = companiesView.getCollapsedList();
 				//invert collapsed list => it now contains note ids of expanded entries instead of collapsed ones
 				collapsedList.setInverted(true);
-
+				
 				System.out.println("===============================");
 				System.out.println("Finding note ids for positions:");
 				System.out.println("===============================");
@@ -80,6 +81,9 @@ public class TestViewTraversalExpandedEntries extends BaseJNATestClass {
 						System.out.println(currPos+" => no entry found");
 					}
 				}
+
+				//only required for remote databases, push change to collapsed list via NRPC:
+				companiesView.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_COLLAPSED));
 
 				System.out.println("=======================================");
 				System.out.println("Reading visible (expanded) view entries");
@@ -144,6 +148,9 @@ public class TestViewTraversalExpandedEntries extends BaseJNATestClass {
 						System.out.println(currPos+" => no entry found");
 					}
 				}
+
+				//only required for remote databases, push change to collapsed list via NRPC:
+				companiesView.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_COLLAPSED));
 
 				System.out.println("=======================================");
 				System.out.println("Reading visitle (expanded) view entries");
