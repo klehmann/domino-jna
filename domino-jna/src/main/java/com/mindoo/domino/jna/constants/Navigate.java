@@ -96,9 +96,9 @@ public enum Navigate {
 	/** Remain at current position in hit's relevance rank array (in the order of the hit's relevance ranking) */
 	CURRENT_HIT(31),
 	
-	/** NEXT, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
+	/** NEXT, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking). Selection must be set <b>before</b> running the FT search. */
 	NEXT_SELECTED_HIT(35),
-	/** PREV, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */
+	/** PREV, but only "selected" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking). Selection must be set <b>before</b> running the FT search. */
 	PREV_SELECTED_HIT(36),
 	
 	/** NEXT, but only "unread" and FTSearch "hit" entries (in the SAME ORDER as the hit's relevance ranking) */

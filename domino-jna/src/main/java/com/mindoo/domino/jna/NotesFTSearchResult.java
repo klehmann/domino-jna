@@ -38,7 +38,9 @@ public class NotesFTSearchResult {
 	}
 	
 	/**
-	 * Returns the actual number of documents found for this search. This number may be greater than {@link #getNumDocs()}.
+	 * Returns the actual number of documents found for this search. This number may be greater than {@link #getNumDocs()}
+	 * if {@link NotesDatabase#ftSearchExt(String, int, java.util.EnumSet, NotesIDTable, int, int)}
+	 * is used with paging parameters.
 	 * 
 	 * @return hits
 	 */
@@ -47,7 +49,9 @@ public class NotesFTSearchResult {
 	}
 	
 	/**
-	 * Returns the number of documents returned in the results.
+	 * Returns the number of documents returned in the results, may be less than {@link #getNumHits()} if
+	 * {@link NotesDatabase#ftSearchExt(String, int, java.util.EnumSet, NotesIDTable, int, int)}
+	 * is used with paging parameters.
 	 * 
 	 * @return count
 	 */

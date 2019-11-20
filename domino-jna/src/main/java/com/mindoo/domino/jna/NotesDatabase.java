@@ -1233,7 +1233,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param limit Maximum number of documents to return (max. 65535). Use 0 to return the maximum number of results for the search
 	 * @param filterIDTable optional ID table to further refine the search.  Use null if this is not required.
 	 * @param start the starting document number for the paged result. For the non-paged result, set this item to 0. For the paged result, set this item to a non-zero number.
-	 * @param count number of documents to return for the paged result.
+	 * @param count number of documents to return for the paged result, set to 0 to return all results
 	 * @return search result
 	 */
 	public NotesFTSearchResult ftSearchExt(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable, int start, int count) {
