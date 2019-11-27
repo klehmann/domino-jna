@@ -222,21 +222,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * Converts a legacy {@link lotus.domino.Document} to a
 	 * {@link NotesNote}.
 	 * 
-	 * @param parentDb parent database
 	 * @param doc document to convert
 	 * @return note
 	 */
-	public static NotesNote toNote(NotesDatabase parentDb, Document doc) {
-		long handle = LegacyAPIUtils.getDocHandle(doc);
-		NotesNote note;
-		if (PlatformUtils.is64Bit()) {
-			note = new NotesNote(parentDb, handle);
-		}
-		else {
-			note = new NotesNote(parentDb, (int) handle);
-		}
-		note.setNoRecycle();
-		return note;
+	public static NotesNote toNote(final Document doc) {
+		return LegacyAPIUtils.toNotesNote(doc);
 	}
 	
 	/**
