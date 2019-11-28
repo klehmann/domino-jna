@@ -367,6 +367,21 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 							throw new NotesError(0, "Error compiling input validity check formula of field "+origFieldName, e);
 						}
 
+						int textValueLength = (short) (cdField.TextValueLength & 0xffff);
+						byte[] textValueData;
+						if (textValueLength==0) {
+							textValueData = new byte[0];
+						}
+						else {
+							textValueData = recordDataWithHeader.getByteArray(cdField.size() +
+									(int) (cdField.DVLength & 0xffff) +
+									(int) (cdField.ITLength & 0xffff) +
+									(int) (cdField.IVLength & 0xffff) +
+									(int) (cdField.NameLength & 0xffff) +
+									(int) (cdField.DescLength & 0xffff)
+									, textValueLength);
+						}
+						
 						Memory fieldNameMem = NotesStringUtils.toLMBCS(fieldName, false);
 						Memory fieldDescMem = NotesStringUtils.toLMBCS(fieldDesc, false);
 
@@ -379,7 +394,8 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 								compiledIvFormula.length +
 
 								fieldNameMem.size() + 
-								(fieldDescMem==null ? 0 : fieldDescMem.size())
+								(fieldDescMem==null ? 0 : fieldDescMem.size()) +
+								textValueLength
 								);
 
 						//copy the old data for the CDField structure into byte array
@@ -401,6 +417,7 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 						newCdField.IVLength = (short) ((compiledIvFormula==null ? 0 : compiledIvFormula.length) & 0xffff);
 						newCdField.NameLength = (short) ((fieldNameMem==null ? 0 : fieldNameMem.size()) & 0xffff);
 						newCdField.DescLength = (short) ((fieldDescMem==null ? 0 : fieldDescMem.size()) & 0xffff);
+						newCdField.TextValueLength = (short) (textValueLength & 0xffff);
 						
 						newCdField.write();
 
@@ -431,6 +448,10 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 							offset += fieldDescMem.size();
 						}
 
+						if (textValueLength>0) {
+							newCdFieldStructureWithHeaderMem.write(offset, textValueData, 0, textValueData.length);
+						}
+						
 						//write new data to target
 						target.addCDRecords(newCdFieldStructureWithHeaderMem);
 					}
