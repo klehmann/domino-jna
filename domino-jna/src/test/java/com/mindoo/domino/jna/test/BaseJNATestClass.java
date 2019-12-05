@@ -52,12 +52,16 @@ public class BaseJNATestClass {
 
 	private ThreadLocal<Session> m_threadSession = new ThreadLocal<Session>();
 	private static boolean m_notesInitExtendedCalled = false;
+	private static boolean m_notesThreadInitCalled = false;
 
 	@BeforeClass
 	public static void initNotes() {
 		String notesProgramDir = System.getenv("Notes_ExecDirectory");
 		String notesIniPath = System.getenv("NotesINI");
 
+		NotesThread.sinitThread();
+		m_notesThreadInitCalled = true;
+		
 		if (notesProgramDir!=null && notesProgramDir.length()>0 && notesIniPath!=null && notesIniPath.length()>0) {
 			NotesInitUtils.notesInitExtended(new String[] {
 					notesProgramDir,
@@ -65,14 +69,16 @@ public class BaseJNATestClass {
 			});
 			m_notesInitExtendedCalled = true;
 		}
-		NotesThread.sinitThread();
 	}
 
 	@AfterClass
 	public static void termNotes() {
-		NotesThread.stermThread();
 		if (m_notesInitExtendedCalled) {
 			NotesInitUtils.notesTerm();
+		}
+		
+		if (m_notesThreadInitCalled) {
+			NotesThread.stermThread();
 		}
 	}
 
