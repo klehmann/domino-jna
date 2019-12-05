@@ -136,7 +136,7 @@ public interface INoteSummary {
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return long
 	 */
-	public Long getAsLong(String columnName, Long defaultValue);
+	public Long getAsLong(String itemName, Long defaultValue);
 	
 	/**
 	 * Convenience function that converts a summary value to a list of long values
@@ -145,6 +145,6 @@ public interface INoteSummary {
 	 * @param defaultValue default value if column is empty or is not a number
 	 * @return long list
 	 */
-	public List<Long> getAsLongList(String columnName, List<Long> defaultValue);
+	public List<Long> getAsLongList(String itemName, List<Long> defaultValue);
 	
 }
