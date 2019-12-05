@@ -2402,6 +2402,20 @@ public class NotesCollection implements IRecyclableNotesObject {
 			T result = getAllEntriesByKeyLocally(findFlags, returnMask, callback, keys);
 			return result;
 		}
+		
+		EnumSet<ReadMask> useReturnMask = returnMask;
+
+		//decide whether we need to use the undocumented NIFReadEntriesExt
+		String readSingleColumnName = callback.getNameForSingleColumnRead();
+		if (readSingleColumnName!=null) {
+			//make sure that we actually read any column values
+			if (!useReturnMask.contains(ReadMask.SUMMARY) && !useReturnMask.contains(ReadMask.SUMMARYVALUES)) {
+				useReturnMask = useReturnMask.clone();
+				useReturnMask.add(ReadMask.SUMMARYVALUES);
+			}
+		}
+		
+		Integer readSingleColumnIndex = readSingleColumnName==null ? null : getColumnValuesIndex(readSingleColumnName);
 
 		//we are leaving the loop when there is no more data to be read;
 		//while(true) is here to rerun the query in case of view index changes while reading
@@ -2518,8 +2532,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 				
 				while (remainingEntries>0) {
 					//on first lookup, start at "posStr" and skip the amount of already read entries
-					data = readEntries(lookupPosWrap, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1, EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, returnMask);
-
+					data = readEntriesExt(lookupPosWrap, EnumSet.of(Navigate.NEXT_NONCATEGORY), isFirstLookup ? entriesToSkipOnFirstLoopRun : 1,
+							EnumSet.of(Navigate.NEXT_NONCATEGORY), remainingEntries, useReturnMask, null, null, readSingleColumnIndex);
+					
 					if (isFirstLookup || isAutoUpdate()) {
 						//for the first lookup, make sure we start at the right position
 						if (data.hasAnyNonDataConflicts()) {
