@@ -23,7 +23,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
  * 
  * @author Karsten Lehmann
  */
-public class NotesViewEntryData {
+public class NotesViewEntryData implements INoteSummary {
 	private NotesCollection m_parentCollection;
 	
 	private int[] m_pos;
@@ -782,13 +782,7 @@ public class NotesViewEntryData {
 		return false;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a string
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a string
-	 * @return string value or null
-	 */
+	@Override
 	public String getAsString(String columnName, String defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof String) {
@@ -806,35 +800,19 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to an abbreviated name
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @return name or null
-	 */
+	@Override
 	public String getAsNameAbbreviated(String columnName) {
 		String nameStr = getAsString(columnName, null);
 		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
 	}
 
-	/**
-	 * Convenience function that converts a column value to an abbreviated name
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a string
-	 * @return name or null
-	 */
+	@Override
 	public String getAsNameAbbreviated(String columnName, String defaultValue) {
 		String nameStr = getAsString(columnName, defaultValue);
 		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
 	}
 	 
-	/**
-	 * Convenience function that converts a column value to a list of abbreviated names
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @return names or null
-	 */
+	@Override
 	public List<String> getAsNamesListAbbreviated(String columnName) {
 		List<String> strList = getAsStringList(columnName, null);
 		if (strList!=null) {
@@ -848,13 +826,7 @@ public class NotesViewEntryData {
 			return null;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a list of abbreviated names
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a string
-	 * @return names or null
-	 */
+	@Override
 	public List<String> getAsNamesListAbbreviated(String columnName, List<String> defaultValue) {
 		List<String> strList = getAsStringList(columnName, defaultValue);
 		if (strList!=null) {
@@ -868,13 +840,7 @@ public class NotesViewEntryData {
 			return null;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a string list
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return string list value or null
-	 */
+	@Override
 	public List<String> getAsStringList(String columnName, List<String> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof String) {
@@ -907,13 +873,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a {@link Calendar}
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a Calendar
-	 * @return calendar value or null
-	 */
+	@Override
 	public Calendar getAsCalendar(String columnName, Calendar defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof NotesTimeDate) {
@@ -937,13 +897,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to a {@link NotesTimeDate}
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a NotesTimeDate
-	 * @return calendar value or null
-	 */
+	@Override
 	public NotesTimeDate getAsTimeDate(String columnName, NotesTimeDate defaultValue) {
 		Object val = get(columnName, false);
 		if (val instanceof NotesTimeDate) {
@@ -967,13 +921,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a {@link Calendar} list
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return calendar list value or null
-	 */
+	@Override
 	public List<Calendar> getAsCalendarList(String columnName, List<Calendar> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof NotesTimeDate) {
@@ -1004,13 +952,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a {@link Calendar} list
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return calendar list value or null
-	 */
+	@Override
 	public List<NotesTimeDate> getAsTimeDateList(String columnName, List<NotesTimeDate> defaultValue) {
 		Object val = get(columnName, false);
 		if (val instanceof NotesTimeDate) {
@@ -1037,13 +979,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a double
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return double
-	 */
+	@Override
 	public Double getAsDouble(String columnName, Double defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1061,13 +997,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to an integer
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return integer
-	 */
+	@Override
 	public Integer getAsInteger(String columnName, Integer defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1085,13 +1015,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to a long
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return long
-	 */
+	@Override
 	public Long getAsLong(String columnName, Long defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1109,13 +1033,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 	
-	/**
-	 * Convenience function that converts a column value to a double list
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return double list
-	 */
+	@Override
 	public List<Double> getAsDoubleList(String columnName, List<Double> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1159,13 +1077,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to a integer list
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return integer list
-	 */
+	@Override
 	public List<Integer> getAsIntegerList(String columnName, List<Integer> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1209,13 +1121,7 @@ public class NotesViewEntryData {
 		return defaultValue;
 	}
 
-	/**
-	 * Convenience function that converts a column value to a list of longs
-	 * 
-	 * @param columnName programatic column name or column title
-	 * @param defaultValue default value if column is empty or is not a number
-	 * @return list of longs
-	 */
+	@Override
 	public List<Long> getAsLongList(String columnName, List<Long> defaultValue) {
 		Object val = get(columnName);
 		if (val instanceof Number) {
@@ -1308,27 +1214,7 @@ public class NotesViewEntryData {
 	public void setSingleColumnLookupName(String colName) {
 		m_singleColumnLookupName = colName;
 	}
-	
-	/**
-	 * Returns the summary data, which is a map with programmatic column names as key and the column value as map value.
-	 * Only returns a non-null value if {@link ReadMask#SUMMARY} is used for the lookup.<br>
-	 * <br>
-	 * The following values are returned for the different column data types:<br>
-	 * <br>
-	 * <ul>
-	 * <li>{@link NotesItem#TYPE_TEXT} - {@link String}</li>
-	 * <li>{@link NotesItem#TYPE_TEXT_LIST} - {@link List} of {@link String}</li>
-	 * <li>{@link NotesItem#TYPE_NUMBER} - {@link Double}</li>
-	 * <li>{@link NotesItem#TYPE_NUMBER_RANGE} - {@link List} with {@link Double} values for number lists or double[] values for number ranges (not sure if Notes views really supports them)</li>
-	 * <li>{@link NotesItem#TYPE_TIME} - {@link Calendar}</li>
-	 * <li>{@link NotesItem#TYPE_TIME_RANGE} - {@link List} with {@link Calendar} values for number lists or Calendar[] values for datetime ranges</li>
-	 * </ul>
-	 * 
-	 * @return summary data or null
-//	 */
-//	public Map<String,Object> getSummaryData() {
-//		return m_summaryData;
-//	}
+
 	
 	@Override
 	public String toString() {
