@@ -17,8 +17,6 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
-import lotus.domino.Session;
-
 /**
  * Utility class to work with Notes User ID files and the ID vault
  * 
@@ -126,7 +124,6 @@ public class IDUtils {
 	 * Will open the ID file name provided, locate a vault server for user <code>userName</code>,
 	 * upload the ID file contents to the vault, then return with the vault server name.<br>
 	 * 
-	 * @param session current legacy session
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
 	 * @param idPath Path to where the download ID file should be created or overwritten
@@ -134,15 +131,14 @@ public class IDUtils {
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	public static String putUserIdIntoVault(Session session, String userName, String password, String idPath, String serverName) {
-		return _putUserIdIntoVault(session, userName, password, idPath, null, null, serverName);
+	public static String putUserIdIntoVault(String userName, String password, String idPath, String serverName) {
+		return _putUserIdIntoVault(userName, password, idPath, null, null, serverName);
 	}
 	
 	/**
 	 * Will locate a vault server for user <code>userName</code> and
 	 * upload the specified ID contents to the vault, then return with the vault server name.<br>
 	 * 
-	 * @param session current legacy session
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
 	 * @param userId user id
@@ -150,7 +146,7 @@ public class IDUtils {
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	public static String putUserIdIntoVault(Session session, String userName, String password, NotesUserId userId, String serverName) {
+	public static String putUserIdIntoVault(String userName, String password, NotesUserId userId, String serverName) {
 		LongByReference phKFC64 = null;
 		IntByReference phKFC32 = null;
 		
@@ -165,14 +161,13 @@ public class IDUtils {
 			}
 		}
 			
-		return _putUserIdIntoVault(session, userName, password, null, phKFC64, phKFC32, serverName);
+		return _putUserIdIntoVault(userName, password, null, phKFC64, phKFC32, serverName);
 	}
 	
 	/**
 	 * Will open the ID file name provided, locate a vault server for user <code>userName</code>,
 	 * upload the ID file contents to the vault, then return with the vault server name.<br>
 	 * 
-	 * @param session current legacy session
 	 * @param userName Name of user whose ID is being put into vault - either abbreviated or canonical format
 	 * @param password Password to id file being uploaded to the vault
 	 * @param idPath Path to where the download ID file should be created or overwritten or null to use the in-memory id
@@ -182,11 +177,11 @@ public class IDUtils {
 	 * @return the vault server name
 	 * @throws NotesError in case of problems, e.g. ERR 22792 Wrong Password
 	 */
-	private static String _putUserIdIntoVault(Session session, String userName, String password, String idPath,
+	private static String _putUserIdIntoVault(String userName, String password, String idPath,
 			LongByReference phKFC64, IntByReference phKFC32, String serverName) {
 		//opening any database on the server is required before putting the id fault, according to the
 		//C API documentation and sample "idvault.c"
-		NotesDatabase anyServerDb = new NotesDatabase(session, serverName, "names.nsf");
+		NotesDatabase anyServerDb = new NotesDatabase(serverName, "names.nsf", (String) null);
 		try {
 			String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
 			Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
