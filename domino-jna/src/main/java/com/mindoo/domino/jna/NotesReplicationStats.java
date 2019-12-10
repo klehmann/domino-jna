@@ -143,4 +143,19 @@ public class NotesReplicationStats {
 		}
 		return 0;
 	}
+
+	@Override
+	public String toString() {
+		return "NotesReplicationStats [stubsInitialized=" + getStubsInitialized() + ", totalUnreadExchanges="
+				+ getTotalUnreadExchanges() + ", numberErrors=" + getNumberErrors() + ", pullTotalFiles="
+				+ getPullTotalFiles() + ", pullFilesCompleted=" + getPullFilesCompleted()
+				+ ", pullNotesAdded=" + getPullNotesAdded() + ", pullNotesDeleted=" + getPullNotesDeleted()
+				+ ", pullSuccessful=" + getPullSuccessful() + ", pullFailed=" + getPullFailed()
+				+ ", pullNumberErrors=" + getPullNumberErrors() + ", pushTotalFiles=" + getPushTotalFiles()
+				+ ", pushFilesCompleted=" + getPushFilesCompleted() + ", pushNotesAdded="
+				+ getPushNotesAdded() + ", pushNotesDeleted=" + getPushNotesDeleted() + ", pushSuccessful="
+				+ getPushSuccessful() + ", pushFailed=" + getPushFailed() + ", pushNumberErrors="
+				+ getPushNumberErrors() + "]";
+	}
+	
 }
