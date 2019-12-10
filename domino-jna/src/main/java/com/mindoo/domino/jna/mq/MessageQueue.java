@@ -376,6 +376,11 @@ public class MessageQueue implements IRecyclableNotesObject {
 		return retMsgLength.getValue();
 	}
 
+	/**
+	 * This function tests whether the specified message queue is in a QUIT state, and returns TRUE if so. Otherwise, it returns FALSE.
+
+	 * @return true if in quite state
+	 */
 	public boolean isQuitPending() {
 		checkHandle();
 		boolean quitPending = NotesNativeAPI.get().MQIsQuitPending(m_queue);
