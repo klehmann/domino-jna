@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.tools.ant.util.TeeOutputStream;
+import com.mindoo.domino.jna.internal.TeeOutputStream;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesIDTable;
