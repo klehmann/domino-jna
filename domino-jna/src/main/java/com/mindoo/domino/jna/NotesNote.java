@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesMIMEPart.PartType;
@@ -85,6 +87,7 @@ import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.conversion.IRichTextConversion;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
+import com.mindoo.domino.jna.utils.Loop;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -2510,7 +2513,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		/**
 		 * Method is called when an item could not be found in the note
 		 */
-		public void itemNotFound();
+		public default void itemNotFound() {};
 		
 		/**
 		 * Method is called for each item in the note. A note may contain the same item name
@@ -2583,6 +2586,76 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public void getItems(final IItemCallback callback) {
 		getItems((String) null, callback);
+	}
+	
+	private static class LoopImpl extends Loop {
+		
+		@Override
+		public void setIndex(int index) {
+			super.setIndex(index);
+		}
+		
+		@Override
+		public void setIsLast() {
+			super.setIsLast();
+		}
+	}
+	
+	/**
+	 * Scans through all items of this note
+	 * 
+	 * @param consumer lambda expression to receive items
+	 */
+	public void getItems(BiConsumer<NotesItem, Loop> consumer) {
+		getItems((String)null, consumer);
+	}
+	
+	/**
+	 * Scans through all items of this note
+	 * 
+	 * @param searchForItemName item name to search for or null to scan through all items
+	 * @param consumer lambda expression to receive items
+	 */
+	public void getItems(final String searchForItemName, BiConsumer<NotesItem, Loop> consumer) {
+		LoopImpl loop = new LoopImpl();
+		
+		AtomicInteger itemIdx = new AtomicInteger(-1);
+		//to be able to report that the item is the last one, we need to prefetch one
+		AtomicReference<NotesItem> lastReadItem = new AtomicReference<>();
+		
+		getItems((String) null, new IItemCallback() {
+			
+			@Override
+			public Action itemFound(NotesItem item) {
+				if (itemIdx.get() == -1) {
+					//first match
+					lastReadItem.set(item);
+				}
+				else {
+					//report last read
+					consumer.accept(lastReadItem.get(), loop);
+					//store item for next loop run
+					lastReadItem.set(item);
+				}
+				
+				loop.setIndex(itemIdx.incrementAndGet());
+				
+				if (loop.isStopped()) {
+					return Action.Stop;
+				}
+				else {
+					return Action.Continue;
+				}
+			}
+		});
+		
+		//report last item
+		NotesItem lastItem = lastReadItem.get();
+		if (lastItem != null && !loop.isStopped()) {
+			loop.setIsLast();
+			
+			consumer.accept(lastItem, loop);
+		}
 	}
 	
 	/**
