@@ -42,6 +42,8 @@ public class TestJava8Features extends BaseJNATestClass {
 					public Action itemFound(NotesItem item) {
 						System.out.println("#"+idx.getAndIncrement()+"\tItem name: "+item.getName());
 
+//						return Action.Stop;
+						
 						return Action.Continue;
 					}
 					
@@ -50,6 +52,7 @@ public class TestJava8Features extends BaseJNATestClass {
 				
 				note.getItems((item,loop) -> {
 					System.out.println("#"+loop.getIndex()+"\tItem name: "+item.getName()+", isfirst="+loop.isFirst()+", islast="+loop.isLast());
+					loop.stop();
 				});
 				
 				return null;
