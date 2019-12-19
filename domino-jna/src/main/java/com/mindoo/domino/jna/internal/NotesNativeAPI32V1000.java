@@ -54,8 +54,8 @@ public class NotesNativeAPI32V1000 implements INotesNativeAPI32V1000 {
 		}
 		
 		if (m_instanceWithoutCrashLogging==null) {
-			Mode jnaMode = NotesNativeAPI.get().getActiveJNAMode();
-			Map<String,Object> libraryOptions = NotesNativeAPI.get().getLibraryOptions();
+			Mode jnaMode = NotesNativeAPI.getActiveJNAMode();
+			Map<String,Object> libraryOptions = NotesNativeAPI.getLibraryOptions();
 			
 			if (jnaMode==Mode.Direct) {
 				NativeLibrary library;

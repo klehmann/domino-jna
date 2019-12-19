@@ -1,7 +1,5 @@
 package com.mindoo.domino.jna.internal;
 
-import java.util.Map;
-
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
@@ -19,20 +17,6 @@ import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI extends Library {
 	public static enum Mode {Classic, Direct}
-
-	/**
-	 * Returns the mode that JNA uses to call native code
-	 * 
-	 * @return mode
-	 */
-	public Mode getActiveJNAMode();
-	
-	/**
-	 * Returns the JNA initialization options (only public for technical reasons)
-	 * 
-	 * @return options, read-only
-	 */
-	public Map<String, Object> getLibraryOptions();
 	
 	public short NotesInitExtended(int argc, Memory argvPtr);
 	public void NotesTerm();

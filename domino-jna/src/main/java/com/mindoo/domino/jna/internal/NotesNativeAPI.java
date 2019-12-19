@@ -64,13 +64,21 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	private static Mode m_activeMode;
 	private static Map<String, Object> m_libraryOptions;
 	
-	@Override
-	public Mode getActiveJNAMode() {
+	/**
+	 * Returns the mode that JNA uses to call native code
+	 * 
+	 * @return mode
+	 */
+	public static Mode getActiveJNAMode() {
 		return m_activeMode;
 	}
 
-	@Override
-	public Map<String, Object> getLibraryOptions() {
+	/**
+	 * Returns the JNA initialization options (only public for technical reasons)
+	 * 
+	 * @return options, read-only
+	 */
+	public static Map<String, Object> getLibraryOptions() {
 		return m_libraryOptions==null ? null : Collections.unmodifiableMap(m_libraryOptions);
 	}
 	

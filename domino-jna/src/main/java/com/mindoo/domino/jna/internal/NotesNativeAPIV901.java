@@ -43,8 +43,8 @@ public class NotesNativeAPIV901 implements INotesNativeAPIV901 {
 		}
 		
 		if (m_instanceWithoutCrashLogging==null) {
-			Mode jnaMode = NotesNativeAPI.get().getActiveJNAMode();
-			Map<String,Object> libraryOptions = NotesNativeAPI.get().getLibraryOptions();
+			Mode jnaMode = NotesNativeAPI.getActiveJNAMode();
+			Map<String,Object> libraryOptions = NotesNativeAPI.getLibraryOptions();
 			
 			if (jnaMode==Mode.Direct) {
 				NativeLibrary library;

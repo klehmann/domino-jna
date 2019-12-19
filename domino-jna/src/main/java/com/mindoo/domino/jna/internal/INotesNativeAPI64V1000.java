@@ -1,10 +1,11 @@
 package com.mindoo.domino.jna.internal;
 
+import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 
-public interface INotesNativeAPI64V1000 {
+public interface INotesNativeAPI64V1000 extends Library {
 
 	@UndocumentedAPI
 	public short NSFQueryDB(long hDb, Memory query, int flags,
