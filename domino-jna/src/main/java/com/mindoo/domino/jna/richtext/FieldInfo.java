@@ -29,16 +29,17 @@ public class FieldInfo {
 	private String m_name;
 	private String m_description;
 	private List<String> m_textListValues;
-
-	private String m_htmlId;
-	private String m_htmlClassName;
-	private String m_htmlStyle;
-	private String m_htmlTitle;
-	private String m_htmlExtraAttr;
-	private String m_htmlName;
+	private String m_keywordFormula;
+	
+	private String m_htmlId = "";
+	private String m_htmlClassName = "";
+	private String m_htmlStyle = "";
+	private String m_htmlTitle = "";
+	private String m_htmlExtraAttr = "";
+	private String m_htmlName = "";
 	
 	public FieldInfo(int dataType, String defaultValueFormula, String inputTranslationFormula, String inputValidityCheckFormula,
-			String name, String description, List<String> textListValues) {
+			String name, String description, List<String> textListValues, String keywordFormula) {
 		m_dataType = dataType;
 		m_defaultValueFormula = defaultValueFormula;
 		m_inputTranslationFormula = inputTranslationFormula;
@@ -46,6 +47,7 @@ public class FieldInfo {
 		m_name = name;
 		m_description = description;
 		m_textListValues = textListValues;
+		m_keywordFormula = keywordFormula;
 	}
 
 	/**
@@ -58,61 +60,74 @@ public class FieldInfo {
 	}
 
 	public FieldInfo(IAdaptable adaptable) {
-		NotesCDFieldStruct cdField = adaptable.getAdapter(NotesCDFieldStruct.class);
-		if (cdField!=null) {
-			cdField.read();
-			
-			m_dataType = cdField.DataType;
-			
-			int dvLength = cdField.DVLength & 0xffff;
-			int itLength = cdField.ITLength & 0xffff;
-			int ivLength = cdField.IVLength & 0xffff;
-			int nameLength = cdField.NameLength & 0xffff;
-			int descriptionLength = cdField.DescLength & 0xffff;
-			
-			//start of CD record data
-			Pointer ptrStruct = cdField.getPointer();
-			
-			//flexible size data comes after struct fields
-			Pointer ptrFlexDataStart = ptrStruct.share(NotesConstants.notesCDFieldStructSize);
-			
-			if (dvLength > 0) {
-				Pointer defaultValueFormulaPtr = ptrFlexDataStart;
-				m_defaultValueFormula = FormulaDecompiler.decompileFormula(defaultValueFormulaPtr);
-			}
-			
-			if (itLength > 0) {
-				Pointer inputTranslationFormulaPtr = ptrFlexDataStart.share(dvLength);
-				m_inputTranslationFormula = FormulaDecompiler.decompileFormula(inputTranslationFormulaPtr);
-			}
-			
-			if (ivLength > 0) {
-				Pointer inputValidityCheckFormulaPtr = ptrFlexDataStart.share(dvLength + itLength);
-				m_inputValidityCheckFormula = FormulaDecompiler.decompileFormula(inputValidityCheckFormulaPtr);
-			}
-			
-			int namePtrOffset = dvLength + itLength + ivLength;
-			Pointer namePtr = ptrFlexDataStart.share(namePtrOffset);
-			m_name = NotesStringUtils.fromLMBCS(namePtr, nameLength);
-			
-			int descPtrOffset = dvLength + itLength + ivLength + nameLength;
-			Pointer descriptionPtr = ptrFlexDataStart.share(descPtrOffset);
-			m_description = NotesStringUtils.fromLMBCS(descriptionPtr, descriptionLength);
-			
-			int textValueLength = cdField.TextValueLength & 0xffff;
-			if (textValueLength>0) {
-				int textValuePtrOffset = dvLength + itLength + ivLength + nameLength + descriptionLength;
-				Pointer textlistValuePtr = ptrFlexDataStart.share(textValuePtrOffset);
-				m_textListValues = (List) ItemDecoder.decodeTextListValue(textlistValuePtr, false);
-			}
-		}
-		else {
-			throw new IllegalArgumentException("Could not find any supported adapter to read data");
-		}
+		//read optional basic field and HTML properties
 		
-		//read optional HTML properties
 		IFieldHtmlPropsProvider htmlPropsProvider = adaptable.getAdapter(IFieldHtmlPropsProvider.class);
 		if (htmlPropsProvider!=null) {
+			Memory fieldMem = htmlPropsProvider.getCDRecordWithHeaderAndFieldStruct();
+			if (fieldMem!=null) {
+				NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(fieldMem);
+				cdField.read();
+				
+				m_dataType = cdField.DataType;
+				
+				int dvLength = cdField.DVLength & 0xffff;
+				int itLength = cdField.ITLength & 0xffff;
+				int ivLength = cdField.IVLength & 0xffff;
+				int nameLength = cdField.NameLength & 0xffff;
+				int descriptionLength = cdField.DescLength & 0xffff;
+				
+				//start of CD record data
+				Pointer ptrStruct = cdField.getPointer();
+				
+				//flexible size data comes after struct fields
+				Pointer ptrFlexDataStart = ptrStruct.share(NotesConstants.notesCDFieldStructSize);
+				
+				if (dvLength > 0) {
+					Pointer defaultValueFormulaPtr = ptrFlexDataStart;
+					m_defaultValueFormula = FormulaDecompiler.decompileFormula(defaultValueFormulaPtr);
+				}
+				
+				if (itLength > 0) {
+					Pointer inputTranslationFormulaPtr = ptrFlexDataStart.share(dvLength);
+					m_inputTranslationFormula = FormulaDecompiler.decompileFormula(inputTranslationFormulaPtr);
+				}
+				
+				if (ivLength > 0) {
+					Pointer inputValidityCheckFormulaPtr = ptrFlexDataStart.share(dvLength + itLength);
+					m_inputValidityCheckFormula = FormulaDecompiler.decompileFormula(inputValidityCheckFormulaPtr);
+				}
+				
+				int namePtrOffset = dvLength + itLength + ivLength;
+				Pointer namePtr = ptrFlexDataStart.share(namePtrOffset);
+				m_name = NotesStringUtils.fromLMBCS(namePtr, nameLength);
+				
+				int descPtrOffset = dvLength + itLength + ivLength + nameLength;
+				Pointer descriptionPtr = ptrFlexDataStart.share(descPtrOffset);
+				m_description = NotesStringUtils.fromLMBCS(descriptionPtr, descriptionLength);
+				
+				int textValueLength = cdField.TextValueLength & 0xffff;
+				if (textValueLength>0) {
+					int textValuePtrOffset = dvLength + itLength + ivLength + nameLength + descriptionLength;
+					Pointer textlistValuePtr = ptrFlexDataStart.share(textValuePtrOffset);
+					
+					if (textlistValuePtr.getShort(0) == 0) {
+						// If the field defined by a CDFIELD record is a keyword field, and the
+						// list of keywords is generated by a formula, then the ListEntries member
+						// of the Text_List datatype should be set to zero, and the formula will
+						// immediately follow the  LIST header of the Text_List.
+						Pointer keywordFormulaPtr = textlistValuePtr.share(2);
+						m_keywordFormula = FormulaDecompiler.decompileFormula(keywordFormulaPtr);
+					}
+					else {
+						m_textListValues = (List) ItemDecoder.decodeTextListValue(textlistValuePtr, false);
+					}
+				}
+			}
+			else {
+				throw new IllegalArgumentException("Could not find any supported adapter to read data");
+			}
+			
 			Memory idNameMem = htmlPropsProvider.getCDRecordWithHeaderAndIDNameStruct();
 			if (idNameMem!=null) {
 				NotesCDIdNameStruct idNameStruct = NotesCDIdNameStruct.newInstance(idNameMem);
@@ -162,7 +177,11 @@ public class FieldInfo {
 					ptrData = ptrData.share((int) (idNameStruct.wNameLen & 0xffff));
 				}
 			}
+			
+			return;
 		}
+		
+		throw new IllegalArgumentException("Could not find any supported adapter to read data");
 	}
 	
 	/**
@@ -214,6 +233,15 @@ public class FieldInfo {
 		return m_textListValues;
 	}
 	
+	/**
+	 * If the field is a textlist computed by a formula, this method returns the formula
+	 * 
+	 * @return formula or null if not set
+	 */
+	public String getKeywordFormula() {
+		return m_keywordFormula;
+	}
+	
 	public String getHtmlId() {
 		return m_htmlId;
 	}
@@ -238,12 +266,12 @@ public class FieldInfo {
 		return m_htmlName;
 	}
 
-	
 	@Override
 	public String toString() {
 		return "FieldInfo [name="+getName()+", type="+getDataType()+", description="+getDescription()+", default="+getDefaultValueFormula()+
 				", inputtranslation="+getInputTranslationFormula()+", validation="+getInputValidityCheckFormula()+
-				", textlistvalues="+getTextListValues()+", htmlid="+getHtmlId()+", htmlclassname="+getHtmlClassName()+
+				", textlistvalues="+getTextListValues()+", keywordformula="+getKeywordFormula()+
+				", htmlid="+getHtmlId()+", htmlclassname="+getHtmlClassName()+
 				", htmlstyle="+getHtmlStyle()+", htmltitle="+getHtmlTitle()+", htmlattr="+getHtmlExtraAttr()+
 				", htmlname="+getHtmlName()+"]";
 

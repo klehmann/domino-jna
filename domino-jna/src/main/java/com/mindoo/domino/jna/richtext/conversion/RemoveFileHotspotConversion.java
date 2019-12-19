@@ -22,6 +22,14 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 		m_att = att;
 	}
 	
+	@Override
+	public void richtextNavigationStart() {
+	}
+	
+	@Override
+	public void richtextNavigationEnd() {
+	}
+	
 	/**
 	 * Starts reading at "startPos" and searches for a record HOTSPOTEND followed by END. These two records
 	 * mark the end of the file hotspot we want to skip.

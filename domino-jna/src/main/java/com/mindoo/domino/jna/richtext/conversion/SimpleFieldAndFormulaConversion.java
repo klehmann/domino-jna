@@ -18,6 +18,7 @@ public class SimpleFieldAndFormulaConversion extends AbstractFieldAndFormulaConv
 	private Map<String,String> m_dvFormulasByFieldName;
 	private Map<String,String> m_itFormulasByFieldName;
 	private Map<String,String> m_ivFormulasByFieldName;
+	private Map<String,String> m_keywordFormulasByFieldName;
 	
 	/**
 	 * Creates a new instance
@@ -65,6 +66,16 @@ public class SimpleFieldAndFormulaConversion extends AbstractFieldAndFormulaConv
 	public void setInputValidationFormulas(Map<String,String> formulasByFieldName) {
 		m_ivFormulasByFieldName = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
 		m_ivFormulasByFieldName.putAll(formulasByFieldName);
+	}
+
+	/**
+	 * Use this method to override the keyword formulas of fields (formula computing the list values of a combobox)
+	 * 
+	 * @param formulasByFieldName map with fieldname as key and new formula as value
+	 */
+	public void setKeywordFormulas(Map<String,String> formulasByFieldName) {
+		m_keywordFormulasByFieldName = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+		m_keywordFormulasByFieldName.putAll(formulasByFieldName);
 	}
 
 	private boolean containsMatch(String txt) {
@@ -115,10 +126,15 @@ public class SimpleFieldAndFormulaConversion extends AbstractFieldAndFormulaConv
 				return true;
 			}
 			break;
-			default:
-				throw new IllegalArgumentException("Unknown formula type: "+type);
+		case KEYWORDFORMULA:
+			if(m_keywordFormulasByFieldName!=null && m_keywordFormulasByFieldName.containsKey(fieldName)) {
+				return true;
+			}
+			break;
+		default:
+			throw new IllegalArgumentException("Unknown formula type: "+type);
 		}
-		
+
 		return containsMatch(formula);
 	}
 
@@ -152,6 +168,17 @@ public class SimpleFieldAndFormulaConversion extends AbstractFieldAndFormulaConv
 		{
 			if (m_ivFormulasByFieldName!=null) {
 				String newFormula = m_ivFormulasByFieldName.get(fieldName);
+				if (newFormula!=null) {
+					//override formula
+					return newFormula;
+				}
+			}
+		}
+		break;
+		case KEYWORDFORMULA:
+		{
+			if (m_keywordFormulasByFieldName!=null) {
+				String newFormula = m_keywordFormulasByFieldName.get(fieldName);
 				if (newFormula!=null) {
 					//override formula
 					return newFormula;

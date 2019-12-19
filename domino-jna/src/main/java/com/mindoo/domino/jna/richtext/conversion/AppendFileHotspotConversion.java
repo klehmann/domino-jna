@@ -19,6 +19,14 @@ public class AppendFileHotspotConversion implements IRichTextConversion {
 	}
 	
 	@Override
+	public void richtextNavigationStart() {
+	}
+	
+	@Override
+	public void richtextNavigationEnd() {
+	}
+	
+	@Override
 	public boolean isMatch(IRichTextNavigator nav) {
 		//always append
 		return true;

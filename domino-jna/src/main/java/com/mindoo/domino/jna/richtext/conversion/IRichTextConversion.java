@@ -10,6 +10,13 @@ import com.mindoo.domino.jna.richtext.IRichTextNavigator;
  */
 public interface IRichTextConversion {
 
+	
+	/**
+	 * Method is called before starting the CD record traversal. Can be used
+	 * to reset variables, e.g. to track if we are within a BEGIN/END block.
+	 */
+	public void richtextNavigationStart();
+	
 	/**
 	 * Method to check whether the richtext item actually requires a conversion
 	 * 
@@ -27,4 +34,9 @@ public interface IRichTextConversion {
 	 */
 	public void convert(IRichTextNavigator source, ICompoundText target);
 	
+	/**
+	 * Method is called when the richtext navigation is done
+	 */
+	public void richtextNavigationEnd();
+
 }

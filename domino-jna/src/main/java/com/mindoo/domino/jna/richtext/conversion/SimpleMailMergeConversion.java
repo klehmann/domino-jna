@@ -15,6 +15,14 @@ import java.util.regex.Pattern;
 public class SimpleMailMergeConversion extends AbstractMailMergeConversion {
 	private Map<Pattern,String> m_fromPatternToString;
 	
+	@Override
+	public void richtextNavigationStart() {
+	}
+	
+	@Override
+	public void richtextNavigationEnd() {
+	}
+	
 	/**
 	 * Creates a new instance
 	 * 

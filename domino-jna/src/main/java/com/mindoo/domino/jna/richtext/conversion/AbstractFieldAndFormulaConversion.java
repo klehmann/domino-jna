@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.richtext.conversion;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.internal.FieldPropAdaptable;
 import com.mindoo.domino.jna.internal.FormulaCompiler;
 import com.mindoo.domino.jna.internal.FormulaDecompiler;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -14,6 +15,7 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCdHotspotBeginSt
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
@@ -28,7 +30,7 @@ import com.sun.jna.Pointer;
  */
 public abstract class AbstractFieldAndFormulaConversion implements IRichTextConversion {
 	/** type of field formula */
-	public static enum FormulaType { DEFAULTVALUE, INPUTTRANSLATION, INPUTVALIDITYCHECK }
+	public static enum FormulaType { DEFAULTVALUE, INPUTTRANSLATION, INPUTVALIDITYCHECK, KEYWORDFORMULA }
 	
 	/**
 	 * Check here if a formula needs a change
@@ -140,14 +142,21 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 	}
 	
 	@Override
+	public void richtextNavigationStart() {
+	}
+	
+	@Override
+	public void richtextNavigationEnd() {
+	}
+	
+	@Override
 	public boolean isMatch(IRichTextNavigator nav) {
 		if (nav.gotoFirst()) {
 			do {
 				if (CDRecordType.FIELD.getConstant() == nav.getCurrentRecordTypeAsShort()) {
-					Memory recordData = nav.getCurrentRecordDataWithHeader();
+					Memory recordDataWithHeader = nav.getCurrentRecordDataWithHeader();
 					
-					NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(recordData);
-					FieldInfo fieldInfo = new FieldInfo(cdField);
+					FieldInfo fieldInfo = new FieldInfo(new FieldPropAdaptable(recordDataWithHeader, null));
 					
 					String fieldName = fieldInfo.getName();
 					
@@ -171,6 +180,11 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 					
 					String ivFormula = fieldInfo.getInputValidityCheckFormula();
 					if (!StringUtil.isEmpty(ivFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula)) {
+						return true;
+					}
+					
+					String keywordFormula = fieldInfo.getKeywordFormula();
+					if (!StringUtil.isEmpty(keywordFormula) && fieldFormulaContainsMatch(fieldName, FormulaType.KEYWORDFORMULA, keywordFormula)) {
 						return true;
 					}
 				}
@@ -288,7 +302,8 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 					Memory recordDataWithHeader = source.getCurrentRecordDataWithHeader();
 					
 					NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(recordDataWithHeader);
-					FieldInfo fieldInfo = new FieldInfo(cdField);
+					cdField.read();
+					FieldInfo fieldInfo = new FieldInfo(new FieldPropAdaptable(recordDataWithHeader, null));
 					
 					String origFieldName = fieldInfo.getName();
 					String fieldName = origFieldName;
@@ -297,7 +312,8 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 					String defaultValueFormula = fieldInfo.getDefaultValueFormula();
 					String itFormula = fieldInfo.getInputTranslationFormula();
 					String ivFormula = fieldInfo.getInputValidityCheckFormula();
-					
+					String keywordFormula = fieldInfo.getKeywordFormula();
+									
 					boolean hasMatch = false;
 					
 					if (fieldNameContainsMatch(fieldName)) {
@@ -324,7 +340,12 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 						hasMatch = true;
 						ivFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.INPUTVALIDITYCHECK, ivFormula);
 					}
-					
+
+					if (!StringUtil.isEmpty(keywordFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.KEYWORDFORMULA, keywordFormula)) {
+						hasMatch = true;
+						keywordFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.KEYWORDFORMULA, keywordFormula);
+					}
+
 					if (hasMatch) {
 						//recompile formulas
 						
@@ -367,9 +388,33 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 							throw new NotesError(0, "Error compiling input validity check formula of field "+origFieldName, e);
 						}
 
+						byte[] compiledKeywordFormula;
+						try {
+							if (!StringUtil.isEmpty(keywordFormula)) {
+								compiledKeywordFormula = FormulaCompiler.compileFormula(keywordFormula);
+							}
+							else {
+								compiledKeywordFormula = new byte[0];
+							}
+						}
+						catch (FormulaCompilationError e) {
+							throw new NotesError(0, "Error compiling keyword formula of field "+origFieldName, e);
+						}
+
 						int textValueLength = (short) (cdField.TextValueLength & 0xffff);
 						byte[] textValueData;
-						if (textValueLength==0) {
+						if (compiledKeywordFormula.length > 0) {
+							//field has a keyword formula and no static list
+							textValueData = new byte[compiledKeywordFormula.length + 2];
+							// LIST.ListEntries = 0
+							textValueData[0] = 0;
+							textValueData[1] = 0;
+							
+							//and copy formula data
+							System.arraycopy(compiledKeywordFormula, 0, textValueData, 2, compiledKeywordFormula.length);
+							textValueLength = textValueData.length;
+						}
+						else if (textValueLength==0) {
 							textValueData = new byte[0];
 						}
 						else {

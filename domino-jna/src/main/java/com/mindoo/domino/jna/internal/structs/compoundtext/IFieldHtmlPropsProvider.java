@@ -4,6 +4,8 @@ import com.sun.jna.Memory;
 
 public interface IFieldHtmlPropsProvider {
 
+	public Memory getCDRecordWithHeaderAndFieldStruct();
+	
 	public Memory getCDRecordWithHeaderAndIDNameStruct();
 	
 }
