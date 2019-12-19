@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Map;
 
 import com.mindoo.domino.jna.errors.NotesError;
@@ -54,34 +56,40 @@ public class NotesNativeAPI64V1000 implements INotesNativeAPI64V1000 {
 		}
 		
 		if (m_instanceWithoutCrashLogging==null) {
-			Mode jnaMode = NotesNativeAPI.getActiveJNAMode();
-			Map<String,Object> libraryOptions = NotesNativeAPI.getLibraryOptions();
-			
-			if (jnaMode==Mode.Direct) {
-				NativeLibrary library;
-				if (PlatformUtils.isWindows()) {
-			        library = NativeLibrary.getInstance("nnotes", libraryOptions);
-				}
-				else {
-			        library = NativeLibrary.getInstance("notes", libraryOptions);
-				}
-				
-				Native.register(NotesNativeAPI64V1000.class, library);
+			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<INotesNativeAPI64V1000>() {
 
-				NotesNativeAPI64V1000 instance = new NotesNativeAPI64V1000();
-				return instance;
-			}
-			else {
-				INotesNativeAPI64V1000 api;
-				if (PlatformUtils.isWindows()) {
-					api = Native.loadLibrary("nnotes", INotesNativeAPI64V1000.class, libraryOptions);
-				}
-				else {
-					api = Native.loadLibrary("notes", INotesNativeAPI64V1000.class, libraryOptions);
-				}
+				@Override
+				public INotesNativeAPI64V1000 run() {
+					Mode jnaMode = NotesNativeAPI.getActiveJNAMode();
+					Map<String,Object> libraryOptions = NotesNativeAPI.getLibraryOptions();
+					
+					if (jnaMode==Mode.Direct) {
+						NativeLibrary library;
+						if (PlatformUtils.isWindows()) {
+					        library = NativeLibrary.getInstance("nnotes", libraryOptions);
+						}
+						else {
+					        library = NativeLibrary.getInstance("notes", libraryOptions);
+						}
+						
+						Native.register(NotesNativeAPI64V1000.class, library);
 
-				return api;
-			}
+						NotesNativeAPI64V1000 instance = new NotesNativeAPI64V1000();
+						return instance;
+					}
+					else {
+						INotesNativeAPI64V1000 api;
+						if (PlatformUtils.isWindows()) {
+							api = Native.loadLibrary("nnotes", INotesNativeAPI64V1000.class, libraryOptions);
+						}
+						else {
+							api = Native.loadLibrary("notes", INotesNativeAPI64V1000.class, libraryOptions);
+						}
+
+						return api;
+					}
+				}
+			});
 		}
 		
 		if (NotesGC.isLogCrashingThreadStacktrace()) {
