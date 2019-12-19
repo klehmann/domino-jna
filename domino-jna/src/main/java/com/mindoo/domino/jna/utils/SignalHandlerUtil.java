@@ -524,26 +524,79 @@ public class SignalHandlerUtil {
 	
 	public static interface IReplicationStateListener {
 		
+		/**
+		 * Indicating the connection is done.
+		 */
 		public void idle();
 		
+		/**
+		 * Display that it is trying to select a server.
+		 */
 		public void pickServer();
 		
+		/**
+		 *  Starting the connection.
+		 *  
+		 * @param server remove server
+		 * @param port port
+		 */
 		public void connecting(String server, String port);
-		
+
+		/**
+		 * Searching for matching replica on the server
+		 * 
+		 * @param server remove server
+		 * @param port port
+		 */
 		public void searching(String server, String port);
 		
+		/**
+		 * A "push" replication.
+		 * 
+		 * @param serverFile filepath on server
+		 * @param localFile local filepath
+		 */
 		public void sending(String serverFile, String localFile);
 		
+		/**
+		 * A "pull" replication.
+		 * 
+		 * @param serverFile filepath on server
+		 * @param localFile local filepath
+		 */
 		public void receiving(String serverFile, String localFile);
 		
+		/**
+		 * Replicator is in the searching phase.
+		 * 
+		 * @param srcFile source db filepath
+		 */
 		public void searchingDocs(String srcFile);
 		
+		/**
+		 * Signal the file is done.
+		 * 
+		 * @param localFile local filepath
+		 * @param replFileStats stats
+		 */
 		public void doneFile(String localFile, String replFileStats);
 		
+		/**
+		 * Signal found a redirect.
+		 * 
+		 * @param serverFile server filepath
+		 * @param localFile local filepath
+		 */
 		public void redirect(String serverFile, String localFile);
 		
+		/**
+		 *  Signal view is building.
+		 */
 		public void buildView();
 		
+		/**
+		 * Replication aborted
+		 */
 		public void abort();
 	}
 }
