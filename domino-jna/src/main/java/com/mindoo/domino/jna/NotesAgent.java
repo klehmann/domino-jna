@@ -401,7 +401,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	/**
 	 * Runs the agent on the server
 	 * 
-	 * @param noteIdParamDoc note id of parameter docunent
+	 * @param noteIdParamDoc note id of parameter document
 	 * @param suppressPrintToConsole true to not write "Print" statements in the agent code to the server console
 	 */
 	public void runOnServer(int noteIdParamDoc, boolean suppressPrintToConsole) {
