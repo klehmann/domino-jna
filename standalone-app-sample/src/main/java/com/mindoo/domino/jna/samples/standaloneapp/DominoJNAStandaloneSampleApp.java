@@ -15,6 +15,8 @@ import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 
+import lotus.domino.NotesThread;
+
 /**
  * To run this standalone sample app:<br>
  * <ul>
@@ -86,12 +88,27 @@ public class DominoJNAStandaloneSampleApp {
 		
 		try {
 			//initial Notes/Domino access for current thread (running single-threaded here)
-			NotesInitUtils.notesInitThread();
+			NotesThread.sinitThread();
 			
 			//launch run method within runWithAutoGC block to let it collect/dispose C handles
 			NotesGC.runWithAutoGC(new Callable<Object>() {
 
 				public Object call() throws Exception {
+					// use IDUtils.switchToId if you want to unlock the ID file and switch the current process
+					// to this ID; should only be used in standalone applications
+					// if this is missing, you will be prompted for your ID password the first time the
+					// id certs are required
+					String notesIdFilePath = System.getProperty("idfilepath");
+					String idPassword = System.getProperty("idpw");
+					
+					if (notesIdFilePath!=null && notesIdFilePath.length()>0 && idPassword!=null && idPassword.length()>0) {
+						// don't change Keyfileowner and other Notes.ini variables to this ID, so Notes Client can
+						// keep on running concurrently with his own ID
+						boolean dontSetEnvVar = true;
+						IDUtils.switchToId(notesIdFilePath, idPassword, dontSetEnvVar);
+					}
+					
+
 					DominoJNAStandaloneSampleApp app = new DominoJNAStandaloneSampleApp();
 					app.run();
 
@@ -107,7 +124,7 @@ public class DominoJNAStandaloneSampleApp {
 		}
 		finally {
 			//terminate Notes/Domino access for current thread 
-			NotesInitUtils.notesTermThread();
+			NotesThread.stermThread();
 			
 			//call notesTerm on app shutdown
 			NotesInitUtils.notesTerm();
