@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollection.Direction;
+import com.mindoo.domino.jna.NotesDatabase.HarvestMode;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDbQueryResult;
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -109,6 +110,7 @@ public class TestDQL extends BaseJNATestClass {
 			@Override
 			public Object call(Session session) throws Exception {
 				NotesDatabase db = getFakeNamesDb();
+				db.harvestDesign(HarvestMode.UPDATE);
 
 				//build query Lastname='Abbott' and Firstname>'B'
 				DQLTerm dqlQuery = and(
