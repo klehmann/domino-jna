@@ -51,7 +51,6 @@ import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.TextStyle;
-import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
