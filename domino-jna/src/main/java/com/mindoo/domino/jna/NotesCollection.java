@@ -310,6 +310,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return time date
 	 */
 	public NotesTimeDate getLastModifiedTime() {
+		checkHandle();
+		
 		NotesTimeDateStruct retLastModifiedTime = NotesTimeDateStruct.newInstance();
 		
 		if (PlatformUtils.is64Bit()) {
@@ -327,6 +329,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return last access date/time
 	 */
 	public NotesTimeDate getLastAccessedTime() {
+		checkHandle();
+		
 		NotesTimeDateStruct retLastAccessedTime = NotesTimeDateStruct.newInstance();
 		
 		if (PlatformUtils.is64Bit()) {
@@ -344,6 +348,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return discard date/time
 	 */
 	public NotesTimeDate getNextDiscardTime() {
+		checkHandle();
+		
 		NotesTimeDateStruct retNextDiscardTime = NotesTimeDateStruct.newInstance();
 		
 		if (PlatformUtils.is64Bit()) {
@@ -363,6 +369,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
 	 */
 	public void addToThisFolder(NotesIDTable idTable) {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().FolderDocAdd(m_hDB64, 0, m_viewNoteId, idTable.getHandle64(), 0);
 			NotesErrorUtils.checkResult(result);
@@ -381,6 +389,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
 	 */
 	public void addToThisFolder(Collection<Integer> noteIds) {
+		checkHandle();
+		
 		NotesIDTable idTable = new NotesIDTable();
 		try {
 			idTable.addNotes(noteIds);
@@ -397,6 +407,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param idTable id table
 	 */
 	public void removeFromFolder(NotesIDTable idTable) {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().FolderDocRemove(m_hDB64, 0, m_viewNoteId, idTable.getHandle64(), 0);
 			NotesErrorUtils.checkResult(result);
@@ -413,6 +425,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param noteIds ids of notes to remove
 	 */
 	public void removeFromFolder(Set<Integer> noteIds) {
+		checkHandle();
+		
 		NotesIDTable idTable = new NotesIDTable();
 		try {
 			idTable.addNotes(noteIds);
@@ -429,6 +443,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Subfolders and documents within the subfolders are not removed.
 	 */
 	public void removeAllFromFolder() {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().FolderDocRemoveAll(m_hDB64, 0, m_viewNoteId, 0);
 			NotesErrorUtils.checkResult(result);
@@ -448,6 +464,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param newParentFolder parent folder
 	 */
 	public void moveFolder(NotesCollection newParentFolder) {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			short result = NotesNativeAPI64.get().FolderMove(m_hDB64, 0, m_viewNoteId, 0, newParentFolder.getNoteId(), 0);
 			NotesErrorUtils.checkResult(result);
@@ -464,6 +482,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param name new folder name
 	 */
 	public void renameFolder(String name) {
+		checkHandle();
+		
 		Memory pszName = NotesStringUtils.toLMBCS(name, false);
 		if (pszName.size() > NotesConstants.DESIGN_FOLDER_MAX_NAME) {
 			throw new IllegalArgumentException("Folder name too long (max "+NotesConstants.DESIGN_FOLDER_MAX_NAME+" bytes, found "+pszName.size()+" bytes)");
@@ -489,6 +509,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return count
 	 */
 	public long getFolderDocCount() {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference pdwNumDocs = new LongByReference();
 			short result = NotesNativeAPI64.get().FolderDocCount(m_hDB64, 0, m_viewNoteId, 0, pdwNumDocs);
@@ -510,6 +532,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return id table
 	 */
 	public NotesIDTable getIDTableForFolder(boolean validateIds) {
+		checkHandle();
+		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference hTable = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFFolderGetIDTable(m_hDB64, m_hDB64, m_viewNoteId, validateIds ? NotesConstants.DB_GETIDTABLE_VALIDATE : 0, hTable);
@@ -704,6 +728,10 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	private void checkHandle() {
+		if (m_parentDb.isRecycled()) {
+			throw new NotesError(0, "Parent database of collection already recycled");
+		}
+		
 		if (PlatformUtils.is64Bit()) {
 			if (m_hCollection64==0)
 				throw new NotesError(0, "Collection already recycled");
@@ -768,6 +796,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return collapsed list
 	 */
 	public NotesIDTable getCollapsedList() {
+		checkHandle();
+		
 		return m_collapsedList;
 	}
 	
@@ -782,6 +812,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return selected list
 	 */
 	public NotesIDTable getSelectedList() {
+		checkHandle();
+		
 		return m_selectedList;
 	}
 	
@@ -811,6 +843,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @return search result
 	 */
 	public NotesFTSearchResult ftSearch(String query, int limit, EnumSet<FTSearch> options, NotesIDTable filterIDTable) {
+		checkHandle();
+		
 		clearSearch();
 		
 		if (limit<0 || limit>65535)
@@ -1694,6 +1728,9 @@ public class NotesCollection implements IRecyclableNotesObject {
 	public <T> T getAllEntriesInCategory(final Object[] categoryLevels, int skipCount, final EnumSet<Navigate> returnNav,
 			NotesTimeDate diffTime, NotesIDTable diffIDTable, int preloadEntryCount, EnumSet<ReadMask> returnMask,
 			final ViewLookupCallback<T> callback) {
+		
+		checkHandle();
+		
 
 		EnumSet<Navigate> useReturnNav = returnNav.clone();
 		if (useReturnNav.contains(Navigate.ALL_DESCENDANTS)) {
@@ -2396,6 +2433,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param <T> type of lookup result object
 	 */
 	public <T> T getAllEntriesByKey(EnumSet<Find> findFlags, EnumSet<ReadMask> returnMask, ViewLookupCallback<T> callback, Object... keys) {
+		checkHandle();
+		
 		//for local databases, we can use an optimized lookup that locks the view during the lookup against index updates so that
 		//we don't have to rerun the lookup loop
 		if (canUseOptimizedLocalKeyLookup(findFlags, returnMask, callback, keys)) {
@@ -3144,6 +3183,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 			int returnCount, EnumSet<ReadMask> returnMask, NotesTimeDate diffTime,
 			NotesIDTable diffIDTable,
 			Integer columnNumber) {
+		
 		checkHandle();
 
 		IntByReference retNumEntriesSkipped = new IntByReference();
@@ -3239,6 +3279,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public void update() {
 		checkHandle();
+		
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64.get().NIFUpdateCollection(m_hCollection64);
@@ -3500,7 +3541,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 
 	private NotesNote getViewNote() {
-		if (m_viewNote==null) {
+		if (m_viewNote==null || m_viewNote.isRecycled()) {
 			m_viewNote = m_parentDb.openNoteByUnid(m_viewUNID);
 		}
 		return m_viewNote;
@@ -3727,6 +3768,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 */
 	public boolean isNoteInView(int noteId) {
 		checkHandle();
+		
 		short result;
 		
 		IntByReference retIsInView = new IntByReference();
@@ -3856,6 +3898,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * Resets the selected list ID table
 	 */
 	public void clearSelection() {
+		checkHandle();
+		
 		m_selectedList.clear();
 		//push selection changes to remote servers
 		updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
@@ -3910,6 +3954,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * @param clearPrevSelection true to clear the previous selection
 	 */
 	public void select(String formula, boolean clearPrevSelection) {
+		checkHandle();
+		
 		NotesIDTable idTable = new NotesIDTable();
 		try {
 			//collect all ids of this collection
