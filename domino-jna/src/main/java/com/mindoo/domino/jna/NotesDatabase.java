@@ -94,6 +94,7 @@ import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -5282,7 +5283,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					//call redirects the pointer stored in retItemNamePtr to
 					//the item name in memory
 					DisposableMemory retItemName = new DisposableMemory(128);
-					DisposableMemory retItemNamePtr = new DisposableMemory(Pointer.SIZE);
+					DisposableMemory retItemNamePtr = new DisposableMemory(Native.POINTER_SIZE);
 					retItemNamePtr.setPointer(0, retItemName);
 					
 					try {
@@ -5348,7 +5349,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 					//call redirects the pointer stored in retItemNamePtr to
 					//the item name in memory
 					DisposableMemory retItemName = new DisposableMemory(128);
-					DisposableMemory retItemNamePtr = new DisposableMemory(Pointer.SIZE);
+					DisposableMemory retItemNamePtr = new DisposableMemory(Native.POINTER_SIZE);
 					retItemNamePtr.setPointer(0, retItemName);
 					
 					try {
