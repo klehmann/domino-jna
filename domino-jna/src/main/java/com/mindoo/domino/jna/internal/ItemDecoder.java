@@ -16,6 +16,7 @@ import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -50,7 +51,7 @@ public class ItemDecoder {
 		
 		List<Object> listValues = new ArrayList<Object>(listCountAsInt);
 		
-		Memory retTextPointer = new Memory(Pointer.SIZE);
+		Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 		ShortByReference retTextLength = new ShortByReference();
 		
 		for (short l=0; l<listCountAsInt; l++) {

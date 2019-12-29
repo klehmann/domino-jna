@@ -14,6 +14,7 @@ import com.mindoo.domino.jna.utils.NotesBusyTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 
@@ -111,7 +112,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		
 		IntByReference rethObj = new IntByReference();
 		if (PlatformUtils.is64Bit()) {
-			Memory schedulePtrMem = new Memory(Pointer.SIZE);
+			Memory schedulePtrMem = new Memory(Native.POINTER_SIZE);
 			result = NotesNativeAPI64.get().SchContainer_GetFirstSchedule(m_hCntnr64, rethObj, schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
@@ -145,7 +146,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			return schedule;
 		}
 		else {
-			Memory schedulePtrMem = new Memory(Pointer.SIZE);
+			Memory schedulePtrMem = new Memory(Native.POINTER_SIZE);
 			result = NotesNativeAPI32.get().SchContainer_GetFirstSchedule(m_hCntnr32, rethObj, schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
 				return null;
@@ -187,7 +188,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 
 		if (PlatformUtils.is64Bit()) {
 			int hCurSchedule = (int) schedule.getHandle64();
-			Memory schedulePtrMem = new Memory(Pointer.SIZE);
+			Memory schedulePtrMem = new Memory(Native.POINTER_SIZE);
 			result = NotesNativeAPI64.get().SchContainer_GetNextSchedule(m_hCntnr64, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {
@@ -211,7 +212,7 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 		}
 		else {
 			int hCurSchedule = (int) schedule.getHandle32();
-			Memory schedulePtrMem = new Memory(Pointer.SIZE);
+			Memory schedulePtrMem = new Memory(Native.POINTER_SIZE);
 			result = NotesNativeAPI32.get().SchContainer_GetNextSchedule(m_hCntnr32, hCurSchedule, rethNextSchedule,
 					schedulePtrMem);
 			if (result==INotesErrorConstants.ERR_SCHOBJ_NOTEXIST) {

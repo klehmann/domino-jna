@@ -28,6 +28,7 @@ import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -547,7 +548,7 @@ public class NotesNamingUtils {
 	public static NotesNamesList createNamesListFromNames(String server, String[] names) {
 		server = toCanonicalName(server);
 		
-		Memory ptrArrMem = new Memory(Pointer.SIZE * names.length);
+		Memory ptrArrMem = new Memory(Native.POINTER_SIZE * names.length);
 		Memory[] namesMem = new Memory[names.length];
 		
 		for (int i=0; i<names.length; i++) {

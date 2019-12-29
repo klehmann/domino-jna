@@ -183,14 +183,6 @@ public class ReadOnlyMemory extends Memory {
 	}
 
 	@Override
-	public void setString(long offset, String value, boolean wide) {
-		if (m_sealed)
-			throw new UnsupportedOperationException();
-
-		super.setString(offset, value, wide);
-	}
-
-	@Override
 	public void setString(long offset, String value, String encoding) {
 		if (m_sealed)
 			throw new UnsupportedOperationException();
@@ -448,14 +440,6 @@ public class ReadOnlyMemory extends Memory {
 				throw new UnsupportedOperationException();
 
 			super.setString(offset, value);
-		}
-
-		@Override
-		public void setString(long offset, String value, boolean wide) {
-			if (m_sealed)
-				throw new UnsupportedOperationException();
-
-			super.setString(offset, value, wide);
 		}
 
 		@Override

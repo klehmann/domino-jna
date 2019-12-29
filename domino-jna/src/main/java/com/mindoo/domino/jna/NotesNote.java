@@ -5527,7 +5527,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				}
 				NotesErrorUtils.checkResult(result);
 				
-				Memory ppRef = new Memory(Pointer.SIZE);
+				Memory ppRef = new Memory(Native.POINTER_SIZE);
 				
 				long hRef64 = phRef64.getValue();
 				int hRef32 = phRef32.getValue();

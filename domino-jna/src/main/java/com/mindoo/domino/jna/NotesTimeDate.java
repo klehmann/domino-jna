@@ -22,6 +22,7 @@ import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -814,7 +815,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	public static NotesTimeDate fromString(NotesIntlFormat intl, String dateTimeStr) {
 		Memory dateTimeStrLMBCS = NotesStringUtils.toLMBCS(dateTimeStr, true);
 		//convert method expects a pointer to the date string in memory
-		Memory dateTimeStrLMBCSPtr = new Memory(Pointer.SIZE);
+		Memory dateTimeStrLMBCSPtr = new Memory(Native.POINTER_SIZE);
 		dateTimeStrLMBCSPtr.setPointer(0, dateTimeStrLMBCS);
 		
 		IntlFormatStruct intlStruct = intl==null ? null : intl.getAdapter(IntlFormatStruct.class);

@@ -36,6 +36,7 @@ import com.mindoo.domino.jna.internal.structs.NotesCalendarActionDataStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -607,7 +608,7 @@ public class NotesCalendarUtils {
 						if (hRetUIDDataLong!=0) {
 							Pointer pUIDData = Mem64.OSMemoryLock(hRetUIDDataLong);
 							ShortByReference retTextLength = new ShortByReference();
-							Memory retTextPointer = new Memory(Pointer.SIZE);
+							Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 							try {
 								int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pUIDData, 0) & 0xffff);
 								for (int i=0; i<numEntriesAsInt; i++) {
@@ -675,7 +676,7 @@ public class NotesCalendarUtils {
 						if (hRetUIDDataInt!=0) {
 							Pointer pUIDData = Mem32.OSMemoryLock(hRetUIDDataInt);
 							ShortByReference retTextLength = new ShortByReference();
-							Memory retTextPointer = new Memory(Pointer.SIZE);
+							Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 							try {
 								int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pUIDData, 0) & 0xffff);
 								for (int i=0; i<numEntriesAsInt; i++) {

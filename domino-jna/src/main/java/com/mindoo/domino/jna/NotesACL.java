@@ -28,6 +28,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -201,7 +202,7 @@ public class NotesACL implements IAllocatedMemory {
 				else {
 					Pointer pPrivNames = Mem64.OSLockObject(hPrivNames);
 					ShortByReference retTextLength = new ShortByReference();
-					Memory retTextPointer = new Memory(Pointer.SIZE);
+					Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 					try {
 						int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
 						roles = new ArrayList<String>(numEntriesAsInt);
@@ -254,7 +255,7 @@ public class NotesACL implements IAllocatedMemory {
 				else {
 					Pointer pPrivNames = Mem32.OSLockObject(hPrivNames);
 					ShortByReference retTextLength = new ShortByReference();
-					Memory retTextPointer = new Memory(Pointer.SIZE);
+					Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 					try {
 						int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
 						roles = new ArrayList<String>(numEntriesAsInt);

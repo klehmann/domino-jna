@@ -7,6 +7,7 @@ import java.util.List;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Function;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.StringArray;
 
@@ -19,7 +20,7 @@ public class LMBCSStringArray extends Memory implements Function.PostCallRead {
 	private Object[] original;
 
 	public LMBCSStringArray(Object[] strValues) {
-		super((strValues.length + 1) * Pointer.SIZE);
+		super((strValues.length + 1) * Native.POINTER_SIZE);
 		this.original = strValues;
 
 		for (int i=0; i < strValues.length;i++) {
@@ -29,15 +30,15 @@ public class LMBCSStringArray extends Memory implements Function.PostCallRead {
 				natives.add(currStrMem);
 				p = currStrMem;
 			}
-			setPointer(Pointer.SIZE * i, p);
+			setPointer(Native.POINTER_SIZE * i, p);
 		}
-		setPointer(Pointer.SIZE * strValues.length, null);
+		setPointer(Native.POINTER_SIZE * strValues.length, null);
 	}
 
 	@Override
 	public void read() {
 		for (int i=0;i < original.length;i++) {
-			Pointer p = getPointer(i * Pointer.SIZE);
+			Pointer p = getPointer(i * Native.POINTER_SIZE);
 			Object s = null;
 			if (p != null) {
 				s = NotesStringUtils.fromLMBCS(p, -1);
