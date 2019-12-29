@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna</artifactId>
-	<version>0.9.23-SNAPSHOT</version>
+	<version>0.9.24-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA</name>
@@ -146,15 +146,22 @@
 
 	<dependencies>
 		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
+		<!--
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>jna</artifactId>
 			<version>4.4.0</version>
 		</dependency>
+		-->
+		<dependency>
+		    <groupId>net.java.dev.jna</groupId>
+		    <artifactId>jna</artifactId>
+		    <version>5.5.0</version>
+		</dependency>		
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
-			<version>9.0.1</version>
+			<version>11.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
