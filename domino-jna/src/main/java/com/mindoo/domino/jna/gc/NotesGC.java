@@ -8,9 +8,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
@@ -25,10 +27,13 @@ public class NotesGC {
 	private static ThreadLocal<Map<String,Object>> m_activeAutoGCCustomValues = new ThreadLocal<Map<String,Object>>();
 	
 	//maps with open handles; using LinkedHashMap to keep insertion order for the keys
-	private static ThreadLocal<LinkedHashMap<HashKey32,IRecyclableNotesObject>> m_b32OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey32,IRecyclableNotesObject>>();
-	private static ThreadLocal<LinkedHashMap<Integer,IAllocatedMemory>> m_b32OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Integer,IAllocatedMemory>>();
-	private static ThreadLocal<LinkedHashMap<HashKey64, IRecyclableNotesObject>> m_b64OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey64,IRecyclableNotesObject>>();
-	private static ThreadLocal<LinkedHashMap<Long, IAllocatedMemory>> m_b64OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Long,IAllocatedMemory>>();
+	private static ThreadLocal<LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject, Long>>> m_b32OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject, Long>>>();
+	private static ThreadLocal<LinkedHashMap<Integer, Pair<IAllocatedMemory, Long>>> m_b32OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Integer,Pair<IAllocatedMemory, Long>>>();
+	private static ThreadLocal<LinkedHashMap<HashKey64, Pair<IRecyclableNotesObject, Long>>> m_b64OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject, Long>>>();
+	private static ThreadLocal<LinkedHashMap<Long, Pair<IAllocatedMemory, Long>>> m_b64OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Long,Pair<IAllocatedMemory, Long>>>();
+	private static ThreadLocal<Long> m_threadInvocationCount = new ThreadLocal<>();
+	
+	private static final AtomicLong m_globalInvocationCounter = new AtomicLong();
 	
 	private static ThreadLocal<Boolean> m_writeDebugMessages = new ThreadLocal<Boolean>() {
 		protected Boolean initialValue() {
@@ -157,7 +162,7 @@ public class NotesGC {
 	public static class HashKey32 {
 		private Class<?> m_clazz;
 		private int m_handle;
-		
+
 		public HashKey32(Class<?> clazz, int handle) {
 			m_clazz = clazz;
 			m_handle = handle;
@@ -213,10 +218,13 @@ public class NotesGC {
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 		
+		long currInvCnt = m_threadInvocationCount.get();
+		
 		if (PlatformUtils.is64Bit()) {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			
-			IRecyclableNotesObject oldObj = m_b64OpenHandlesDominoObjects.get().put(key, obj);
+			Pair<IRecyclableNotesObject,Long> oldObjWithInvCnt = m_b64OpenHandlesDominoObjects.get().put(key, new Pair(obj, currInvCnt));
+			IRecyclableNotesObject oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
@@ -224,7 +232,8 @@ public class NotesGC {
 		else {
 			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
 			
-			IRecyclableNotesObject oldObj = m_b32OpenHandlesDominoObjects.get().put(key, obj);
+			Pair<IRecyclableNotesObject,Long> oldObjWithInvCnt = m_b32OpenHandlesDominoObjects.get().put(key, new Pair(obj, currInvCnt));
+			IRecyclableNotesObject oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
@@ -247,15 +256,18 @@ public class NotesGC {
 		if (mem.isFreed())
 			throw new NotesError(0, "Memory is already freed");
 		
-		
+		long currInvCnt = m_threadInvocationCount.get();
+
 		if (PlatformUtils.is64Bit()) {
-			IAllocatedMemory oldObj = m_b64OpenHandlesMemory.get().put(mem.getHandle64(), mem);
+			Pair<IAllocatedMemory,Long> oldObjWithInvCnt = m_b64OpenHandlesMemory.get().put(mem.getHandle64(), new Pair(mem, currInvCnt));
+			IAllocatedMemory oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
 			if (oldObj!=null && oldObj!=mem) {
 				throw new IllegalStateException("Duplicate handle detected. Memory to store: "+mem+", object found in open handle list: "+oldObj);
 			}
 		}
 		else {
-			IAllocatedMemory oldObj = m_b32OpenHandlesMemory.get().put(mem.getHandle32(), mem);
+			Pair<IAllocatedMemory,Long> oldObjWithInvCnt = m_b32OpenHandlesMemory.get().put(mem.getHandle32(), new Pair(mem, currInvCnt));
+			IAllocatedMemory oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
 			if (oldObj!=null && oldObj!=mem) {
 				throw new IllegalStateException("Duplicate handle detected. Memory to store: "+mem+", object found in open handle list: "+oldObj);
 			}
@@ -279,7 +291,15 @@ public class NotesGC {
 			throw new IllegalStateException("Auto GC is not active");
 		
 		HashKey64 key = new HashKey64(objClazz, handle);
-		IRecyclableNotesObject obj = m_b64OpenHandlesDominoObjects.get().get(key);
+		Pair<IRecyclableNotesObject,Long> objWithInvCnt = m_b64OpenHandlesDominoObjects.get().get(key);
+		if (objWithInvCnt!=null) {
+			long currInvCnt = m_threadInvocationCount.get();
+			if (currInvCnt != objWithInvCnt.getValue2()) {
+				throw new NotesError(0, "Object was created in a different thread or auto-gc block!");
+			}
+		}
+
+		IRecyclableNotesObject obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -299,7 +319,15 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		IAllocatedMemory obj = m_b64OpenHandlesMemory.get().get(handle);
+		Pair<IAllocatedMemory,Long> objWithInvCnt = m_b64OpenHandlesMemory.get().get(handle);
+		if (objWithInvCnt!=null) {
+			long currInvCnt = m_threadInvocationCount.get();
+			if (currInvCnt != objWithInvCnt.getValue2()) {
+				throw new NotesError(0, "Memory was allocated in a different thread or auto-gc block!");
+			}
+		}
+
+		IAllocatedMemory obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+memClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -318,7 +346,15 @@ public class NotesGC {
 			throw new IllegalStateException("Auto GC is not active");
 		
 		HashKey32 key = new HashKey32(objClazz, handle);
-		IRecyclableNotesObject obj = m_b32OpenHandlesDominoObjects.get().get(key);
+		Pair<IRecyclableNotesObject,Long> objWithInvCnt = m_b32OpenHandlesDominoObjects.get().get(key);
+		if (objWithInvCnt!=null) {
+			long currInvCnt = m_threadInvocationCount.get();
+			if (currInvCnt != objWithInvCnt.getValue2()) {
+				throw new NotesError(0, "Object was created in a different thread or auto-gc block!");
+			}
+		}
+
+		IRecyclableNotesObject obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -337,7 +373,14 @@ public class NotesGC {
 		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
 			throw new IllegalStateException("Auto GC is not active");
 		
-		IAllocatedMemory obj = m_b32OpenHandlesMemory.get().get(handle);
+		Pair<IAllocatedMemory,Long> objWithInvCnt = m_b32OpenHandlesMemory.get().get(handle);
+		if (objWithInvCnt!=null) {
+			long currInvCnt = m_threadInvocationCount.get();
+			if (currInvCnt != objWithInvCnt.getValue2()) {
+				throw new NotesError(0, "Memory was allocated in a different thread or auto-gc block!");
+			}
+		}
+		IAllocatedMemory obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -476,30 +519,33 @@ public class NotesGC {
 			return callable.call();
 		}
 		else {
+			long incCnt = m_globalInvocationCounter.getAndIncrement();
+			m_threadInvocationCount.set(incCnt);
+			
 			NotesNativeAPI.initialize();
 
 			m_activeAutoGC.set(Boolean.TRUE);
 			m_activeAutoGCCustomValues.set(new HashMap<String, Object>());
 			
-			LinkedHashMap<HashKey32,IRecyclableNotesObject> b32HandlesDominoObjects = null;
-			LinkedHashMap<HashKey64,IRecyclableNotesObject> b64HandlesDominoObjects = null;
+			LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject,Long>> b32HandlesDominoObjects = null;
+			LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject,Long>> b64HandlesDominoObjects = null;
 			
-			LinkedHashMap<Integer,IAllocatedMemory> b32HandlesMemory = null;
-			LinkedHashMap<Long,IAllocatedMemory> b64HandlesMemory = null;
+			LinkedHashMap<Integer,Pair<IAllocatedMemory,Long>> b32HandlesMemory = null;
+			LinkedHashMap<Long,Pair<IAllocatedMemory,Long>> b64HandlesMemory = null;
 			
 			try {
 				if (PlatformUtils.is64Bit()) {
-					b64HandlesDominoObjects = new LinkedHashMap<HashKey64,IRecyclableNotesObject>();
+					b64HandlesDominoObjects = new LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject,Long>>();
 					m_b64OpenHandlesDominoObjects.set(b64HandlesDominoObjects);
 					
-					b64HandlesMemory = new LinkedHashMap<Long,IAllocatedMemory>();
+					b64HandlesMemory = new LinkedHashMap<Long,Pair<IAllocatedMemory,Long>>();
 					m_b64OpenHandlesMemory.set(b64HandlesMemory);
 				}
 				else {
-					b32HandlesDominoObjects = new LinkedHashMap<HashKey32,IRecyclableNotesObject>();
+					b32HandlesDominoObjects = new LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject,Long>>();
 					m_b32OpenHandlesDominoObjects.set(b32HandlesDominoObjects);
 					
-					b32HandlesMemory = new LinkedHashMap<Integer,IAllocatedMemory>();
+					b32HandlesMemory = new LinkedHashMap<Integer,Pair<IAllocatedMemory,Long>>();
 					m_b32OpenHandlesMemory.set(b32HandlesMemory);
 				}
 				
@@ -534,8 +580,8 @@ public class NotesGC {
 								}
 								
 								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<HashKey64,IRecyclableNotesObject> currEntry = mapEntries[i];
-									IRecyclableNotesObject obj = currEntry.getValue();
+									Entry<HashKey64,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
+									IRecyclableNotesObject obj = currEntry.getValue().getValue1();
 									try {
 										if (!obj.isRecycled()) {
 											if (writeDebugMsg) {
@@ -569,8 +615,8 @@ public class NotesGC {
 								}
 
 								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<Long,IAllocatedMemory> currEntry = mapEntries[i];
-									IAllocatedMemory obj = currEntry.getValue();
+									Entry<Long,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
+									IAllocatedMemory obj = currEntry.getValue().getValue1();
 									try {
 										if (!obj.isFreed()) {
 											if (writeDebugMsg) {
@@ -606,8 +652,8 @@ public class NotesGC {
 								}
 
 								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<HashKey32,IRecyclableNotesObject> currEntry = mapEntries[i];
-									IRecyclableNotesObject obj = currEntry.getValue();
+									Entry<HashKey32,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
+									IRecyclableNotesObject obj = currEntry.getValue().getValue1();
 									try {
 										if (!obj.isRecycled()) {
 											if (writeDebugMsg) {
@@ -640,8 +686,8 @@ public class NotesGC {
 								}
 
 								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<Integer,IAllocatedMemory> currEntry = mapEntries[i];
-									IAllocatedMemory obj = currEntry.getValue();
+									Entry<Integer,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
+									IAllocatedMemory obj = currEntry.getValue().getValue1();
 									try {
 										if (!obj.isFreed()) {
 											if (writeDebugMsg) {
@@ -674,6 +720,7 @@ public class NotesGC {
 				m_activeAutoGCCustomValues.set(null);
 				m_activeAutoGC.set(null);
 				m_writeDebugMessages.set(Boolean.FALSE);
+				m_threadInvocationCount.set(null);
 			}
 		}
 	}
