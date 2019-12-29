@@ -285,7 +285,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	 */
 	private static class MethodInterceptorWithStacktraceLogging<T> implements MethodInterceptor {
 		private final T original;
-
+		private boolean loggedFileLocation;
+		
 		public MethodInterceptorWithStacktraceLogging(T original) {
 			this.original = original;
 		}
@@ -329,6 +330,11 @@ public class NotesNativeAPI implements INotesNativeAPI {
 					File outDir = new File(outDirPath);
 					if (!outDir.exists())
 						outDir.mkdirs();
+					
+					if (!loggedFileLocation) {
+						System.out.println("Writing stacktrace files in directory "+outDir.getAbsolutePath());
+						loggedFileLocation = true;
+					}
 					
 					File stFile = new File(outDir, "domino-jna-stack-"+Thread.currentThread().getId()+".txt");
 					if (stFile.exists()) {
