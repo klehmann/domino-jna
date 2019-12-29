@@ -146,18 +146,18 @@
 
 	<dependencies>
 		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
-		<!--
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>jna</artifactId>
-			<version>4.4.0</version>
+			<version>4.5.1</version>
 		</dependency>
-		-->
+		<!--
 		<dependency>
 		    <groupId>net.java.dev.jna</groupId>
 		    <artifactId>jna</artifactId>
 		    <version>5.5.0</version>
 		</dependency>		
+		-->
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
