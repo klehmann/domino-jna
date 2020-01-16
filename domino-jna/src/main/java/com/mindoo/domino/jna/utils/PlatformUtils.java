@@ -1,6 +1,10 @@
 
 package com.mindoo.domino.jna.utils;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.constants.OSDirectory;
@@ -186,4 +190,28 @@ public class PlatformUtils {
 		short result = NotesNativeAPI.get().OSRunNSDExt(serverNameMem, modeAsShort);
 		NotesErrorUtils.checkResult(result);
 	}
+	
+	/**
+	 * Runs a block of code with suppressed {@link SecurityManager}
+	 * 
+	 * @param <T> result type
+	 * @param action action to run
+	 * @return result
+	 */
+	public static <T> T runPrivileged(PrivilegedAction<T> action) {
+		return AccessController.doPrivileged(action);
+	}
+
+	/**
+	 * Runs a block of code with suppressed {@link SecurityManager}
+	 * 
+	 * @param <T> result type
+	 * @param action action to run
+	 * @return result
+	 * @throws PrivilegedActionException
+	 */
+	public static <T> T runPrivileged(PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
+		return AccessController.doPrivileged(action);
+	}
+
 }
