@@ -57,8 +57,18 @@ The code should run in 32 and 64 bit Notes Client and Domino server environments
 It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments, but
 we don't currently have access to those platforms anyway.
 
+## XPages
+Domino JNA can be used in XPages applications!
+
+See the [release](https://github.com/klehmann/domino-jna/releases) section for ready to install builds.
+Those work similar to the XPages Extension Libary. So you need to install the provided OSGi plugins both in Domino Designer and the Domino Server.
+
+Here are installation instructions how to do this: [link](http://www.tlcc.com/admin/tlccsite.nsf/pages/extension-lib).
+
+The API is available in the code editor after you activate the `com.mindoo.domino.jna.xsp.library` entry in the xsp.properties file.
+
 ## Maven
-DominoJNA is available on Maven Central: [https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna](https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna).
+Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna](https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna).
 
 ```xml
 <dependency>
@@ -78,18 +88,8 @@ Use repository [https://oss.sonatype.org/content/repositories/snapshots](https:/
 </dependency>
 ```
 
-## XPages
-DominoJNA can also be used in XPages applications!
-
-See the [release](https://github.com/klehmann/domino-jna/releases) section for ready to install builds.
-Those work similar to the XPages Extension Libary. So you need to install the provided OSGi plugins both in Domino Designer and the Domino Server.
-
-Here are installation instructions how to do this: [link](http://www.tlcc.com/admin/tlccsite.nsf/pages/extension-lib).
-
-The API is available in the code editor after you activate the `com.mindoo.domino.jna.xsp.library` entry in the xsp.properties file.
-
 ## Standalone applications
-There is a [sample database](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use DominoJNA in standalone Java applications.
+There is a [sample database](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use Domino JNA in standalone Java applications.
 
 ## Usage
 Here is a code snippet for the API usage. It opens a database and filters view entries.
