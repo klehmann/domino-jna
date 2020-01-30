@@ -33,6 +33,15 @@ public class NotesError extends RuntimeException {
 	}
 
 	/**
+	 * Creates a new instance
+	 * 
+	 * @param message error message
+	 */
+	public NotesError(String message) {
+		this(0, message);
+	}
+	
+	/**
 	 * Returns the C API error code
 	 * 
 	 * @return code
