@@ -57,21 +57,62 @@ The code should run in 32 and 64 bit Notes Client and Domino server environments
 It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments, but
 we don't currently have access to those platforms anyway.
 
+## Maven
+DominoJNA is available on Maven Central: [https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna](https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna).
+
+```xml
+<dependency>
+    <groupId>com.mindoo.domino</groupId>
+    <artifactId>domino-jna</artifactId>
+    <version>0.9.24</version>
+</dependency>
+```
+
+Use repository [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) to get snapshots.
+
+```xml
+<dependency>
+    <groupId>com.mindoo.domino</groupId>
+    <artifactId>domino-jna</artifactId>
+    <version>0.9.25-SNAPSHOT</version>
+</dependency>
+```
+
+## XPages
+DominoJNA can also be used in XPages applications!
+
+See the [release](https://github.com/klehmann/domino-jna/releases) section for ready to install builds.
+Those work similar to the XPages Extension Libary. So you need to install the provided OSGi plugins both in Domino Designer and the Domino Server.
+
+Here are installation instructions how to do this: [link](http://www.tlcc.com/admin/tlccsite.nsf/pages/extension-lib).
+
+The API is available in the code editor after you activate the `com.mindoo.domino.jna.xsp.library` entry in the xsp.properties file.
+
+## Standalone applications
+There is a [sample database](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use DominoJNA in standalone Java applications.
+
 ## Usage
-Here is a code snippet to demonstrate how to use the API:
+Here is a code snippet for the API usage. It opens a database and filters view entries.
 
 ```java
 NotesGC.runWithAutoGC(new Callable<Object>() {
 
 	public Object call() throws Exception {
-		NotesDatabase dbData = getFakeNamesDb();
-				
-		//open People view
-		NotesCollection colFromDbData = dbData.openCollectionByName("People");
+		//open database with the same access rights as a lotus.domino.Session
+		NotesDatabase dbData = new NotesDatabase(session, "", "fakenames.nsf");
+
+		//alternative: open database as another user (used for read and write access):
+		//NotesDatabase dbData = new NotesDatabase("", "fakenames.nsf", "John Doe/Mindoo");
+
+		//open database as the server:				
+		//NotesDatabase dbData = new NotesDatabase("", "fakenames.nsf", "");
+
+		//open People view (in C API called collection)
+		NotesCollection peopleView = dbData.openCollectionByName("People");
 
 		//read all note ids from the collection
 		boolean includeCategoryIds = false;
-		LinkedHashSet<Integer> allIds = colFromDbData.getAllIds(includeCategoryIds);
+		LinkedHashSet<Integer> allIds = peopleView.getAllIds(includeCategoryIds);
 				
 		//pick random note ids
 		Integer[] allIdsArr = allIds.toArray(new Integer[allIds.size()]);
@@ -83,12 +124,8 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		}
 				
 		//populate the collection's selected list with picked ids
-		NotesIDTable selectedList = colFromDbData.getSelectedList();
-		selectedList.clear();
-		selectedList.addNotes(pickedNoteIds);
-
-		//for remote databases, re-send modified SelectedList
-		colFromDbData.updateFilters(EnumSet.of(UpdateCollectionFilters.FILTER_SELECTED));
+		boolean clearPreviousSelection = true
+		peopleView.select(pickedNoteIds, clearPreviousSelection);
 
 		//next, traverse selected entries only, starting at position "0" (top of the view)
 		String startPos = "0";
@@ -106,7 +143,7 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 		//tell the API which data we want to read (in this case note ids and column values map)
 		EnumSet<ReadMask> returnData = EnumSet.of(ReadMask.NOTEID, ReadMask.SUMMARYVALUES);
 		
-		List<NotesViewEntryData> selectedEntries = colFromDbData.getAllEntries(startPos, entriesToSkip,
+		List<NotesViewEntryData> selectedEntries = peopleView.getAllEntries(startPos, entriesToSkip,
 				returnNavigator, Integer.MAX_VALUE,
 				returnData, new EntriesAsListCallback(entriesToReturn));
 				
@@ -134,8 +171,7 @@ NotesGC.runWithAutoGC(new Callable<Object>() {
 });
 ```
 
-This selected list feature demonstrated above is already the first big surprise, if you only know HCL's Java API for Domino.
-It dynamically filters the collection to only return entries matching an id list, that you might have read via previous lookups.
+Reducing the view to a specific selection (of note ids) is already the first big surprise, if you only know HCL's Java API for Domino.
 
 Comparable to reading fulltext search results, but a lot more powerful!
 And the cool thing is that Domino handles the filtering and even the paging for you (`entriesToSkip` parameter). so you don't have to waste
@@ -147,7 +183,12 @@ As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blo
 We do this to automatically collect allocated C handles and automatically free them when the code block is done.
 
 In many cases, this should avoid manual recycling of API objects, but for some edge cases, objects like `NotesCollection` (which is the term for Notes View in
-the C API) or `NotesIDTable`do have a `recycle()`method.
+the C API) or `NotesIDTable` do have a `recycle()` method.
+
+When running in an XPages environment, `NotesGC.runWithAutoGC` can be omitted when the code processes a HTTP request (e.g. an XAgent). It is only required if you run code in separate threads, e.g. using the `SessionCloner` class.
+
+## Creating your own build
+The following instructions are only relevant when you want to create your own Domino JNA release version.
 
 ### Registration of local Notes.jar
 Before running the test cases or building the project, your local Notes.jar file needs to be added to Maven's local repository, because
@@ -228,7 +269,7 @@ PATH = /Applications/IBM Notes.app/Contents/MacOS
 NotesINI = ~/Library/Preferences/Notes Preferences
 ```
 
-## Using Domino JNA in XPages applications
+### Creating XPages plugin build
 The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain experimental build scripts to use Domino JNA in XPages applications, similar to HCL's XPages Extension Library.
 
 Please use the following steps to create a build or just download a binary build from the "releases" section.
@@ -252,14 +293,6 @@ This copies the current Domino JNA source code from project `domino-jna` into tw
 
 You can find the created Update Site in directory `com.mindoo.domino.jna.xsp-updatesite/target/site`.
 
-**3. Install Update Site**
- 
-Similar to HCL's XPages Extension Library, the Domino JNA Update Site needs to be installed both in HCL Domino Designer and HCL Domino server R9.0.1+.
-
-[Installation instructions from HCL](https://www-10.lotus.com/ldd/ddwiki.nsf/xpAPIViewer.xsp?lookupName=XPages+Extensibility+API#action=openDocument&res_title=XPages_Extension_Library_Deployment&content=apicontent)
-
-When using the API in XPages applications, wrapping the code in `NotesGC.runWithAutoGC` blocks is not necessary, because we already do this in the plugin and clean up at the end of the XPages/JSF lifecycle.
-
 ## Further information
 * [New on Github: Domino JNA - Cross-platform access to IBM/HCL Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
 * [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
@@ -274,7 +307,7 @@ This project is not done yet, this is just the beginning.
 Here are some of the things that we plan to do:
 
 * write [blog entries](http://blog.mindoo.com) explaining the API internals
-* add more API methods, e.g. more Setters to write document items
+* add more API methods, e.g. an API to write MIME items
 * write more testcases
 * add more syntactical sugar, hide complexity
 
