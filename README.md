@@ -187,6 +187,29 @@ the C API) or `NotesIDTable` do have a `recycle()` method.
 
 When running in an XPages environment, `NotesGC.runWithAutoGC` can be omitted when the code processes a HTTP request (e.g. an XAgent). It is only required if you run code in separate threads, e.g. using the `SessionCloner` class.
 
+## Further information
+* [New on Github: Domino JNA - Cross-platform access to IBM/HCL Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
+* [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
+* [New APIs for Domino JNA project, now available for XPages development](http://www.mindoo.com/web/blog.nsf/dx/16.01.2017082125KLEAMY.htm?opendocument&comments)
+* [Explore the hidden parts of an application](https://www.eknori.de/2018-01-29/explore-the-hidden-parts-of-an-application-ibmchampion/)
+* [Query Domino data and faceted search with Domino JNA (part 1) by Mark Leusink](http://linqed.eu/2018/10/02/query-domino-data-and-faceted-search-with-domino-jna-part-1/)
+* [Query Domino data and faceted search with Domino JNA (part 2) by Mark Leusink](http://linqed.eu/2018/10/08/query-domino-data-and-faceted-search-with-domino-jna-part-2/)
+* [Query Domino data with Domino JNA (part 3): REST API and infinite scroll by Mark Leusink](http://linqed.eu/2018/11/02/query-domino-data-with-domino-jna-part-3-rest-api-and-infinite-scroll/)
+
+## Next steps
+This project is not done yet, this is just the beginning.
+Here are some of the things that we plan to do:
+
+* write [blog entries](http://blog.mindoo.com) explaining the API internals
+* add more API methods, e.g. an API to write MIME items
+* write more testcases
+* add more syntactical sugar, hide complexity
+
+## Licence
+The code is available under Apache 2.0 license.
+
+Copyright by [Mindoo GmbH](http://www.mindoo.com)
+
 ## Creating your own build
 The following instructions are only relevant when you want to create your own Domino JNA release version.
 
@@ -292,29 +315,6 @@ This copies the current Domino JNA source code from project `domino-jna` into tw
 `com.mindoo.domino.jna.xsp` provides the extension library for XPages and `com.mindoo.domino.jna.xsp.source` provides the source code for the Java editor of HCL Domino Designer.
 
 You can find the created Update Site in directory `com.mindoo.domino.jna.xsp-updatesite/target/site`.
-
-## Further information
-* [New on Github: Domino JNA - Cross-platform access to IBM/HCL Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
-* [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
-* [New APIs for Domino JNA project, now available for XPages development](http://www.mindoo.com/web/blog.nsf/dx/16.01.2017082125KLEAMY.htm?opendocument&comments)
-* [Explore the hidden parts of an application](https://www.eknori.de/2018-01-29/explore-the-hidden-parts-of-an-application-ibmchampion/)
-* [Query Domino data and faceted search with Domino JNA (part 1) by Mark Leusink](http://linqed.eu/2018/10/02/query-domino-data-and-faceted-search-with-domino-jna-part-1/)
-* [Query Domino data and faceted search with Domino JNA (part 2) by Mark Leusink](http://linqed.eu/2018/10/08/query-domino-data-and-faceted-search-with-domino-jna-part-2/)
-* [Query Domino data with Domino JNA (part 3): REST API and infinite scroll by Mark Leusink](http://linqed.eu/2018/11/02/query-domino-data-with-domino-jna-part-3-rest-api-and-infinite-scroll/)
-
-## Next steps
-This project is not done yet, this is just the beginning.
-Here are some of the things that we plan to do:
-
-* write [blog entries](http://blog.mindoo.com) explaining the API internals
-* add more API methods, e.g. an API to write MIME items
-* write more testcases
-* add more syntactical sugar, hide complexity
-
-## Licence
-The code is available under Apache 2.0 license.
-
-Copyright by [Mindoo GmbH](http://www.mindoo.com)
 
 ## Dependencies
 The code uses the following open source projects:
