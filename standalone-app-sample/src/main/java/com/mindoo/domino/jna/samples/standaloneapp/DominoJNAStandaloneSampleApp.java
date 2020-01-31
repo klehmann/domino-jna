@@ -67,6 +67,15 @@ public class DominoJNAStandaloneSampleApp {
 		//call notesInitExtended on app startup
 		try {
 			NotesInitUtils.notesInitExtended(notesInitArgs);
+			
+			Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+
+				public void run() {
+					//call notesTerm on app shutdown
+					NotesInitUtils.notesTerm();
+				}
+			}));
+
 		}
 		catch (NotesError e) {
 			e.printStackTrace();
@@ -125,9 +134,6 @@ public class DominoJNAStandaloneSampleApp {
 		finally {
 			//terminate Notes/Domino access for current thread 
 			NotesThread.stermThread();
-			
-			//call notesTerm on app shutdown
-			NotesInitUtils.notesTerm();
 		}
 		System.exit(status);
 	}
