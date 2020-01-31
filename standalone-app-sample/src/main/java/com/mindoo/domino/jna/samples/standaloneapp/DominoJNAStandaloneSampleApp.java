@@ -67,14 +67,6 @@ public class DominoJNAStandaloneSampleApp {
 		//call notesInitExtended on app startup
 		try {
 			NotesInitUtils.notesInitExtended(notesInitArgs);
-			
-			Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-
-				public void run() {
-					//call notesTerm on app shutdown
-					NotesInitUtils.notesTerm();
-				}
-			}));
 		}
 		catch (NotesError e) {
 			e.printStackTrace();
@@ -95,6 +87,9 @@ public class DominoJNAStandaloneSampleApp {
 		}
 		
 		try {
+			//initial Notes/Domino access for current thread (running single-threaded here)
+			NotesThread.sinitThread();
+			
 			//launch run method within runWithAutoGC block to let it collect/dispose C handles
 			NotesGC.runWithAutoGC(new Callable<Object>() {
 
@@ -107,16 +102,12 @@ public class DominoJNAStandaloneSampleApp {
 					String idPassword = System.getProperty("idpw");
 					
 					if (notesIdFilePath!=null && notesIdFilePath.length()>0 && idPassword!=null && idPassword.length()>0) {
-						// don't change Keyfileowner and other Notes.ini like the active Notes location
-						// variables to this ID, so Notes Client can
+						// don't change Keyfileowner and other Notes.ini variables to this ID, so Notes Client can
 						// keep on running concurrently with his own ID
-						
-						// please note that this means we may not see all expected server connection documents
-						// in case they are only visible for specific active Notes locations
-						// (we just switch the ID, we don't switch the location)
 						boolean dontSetEnvVar = true;
 						IDUtils.switchToId(notesIdFilePath, idPassword, dontSetEnvVar);
 					}
+					
 
 					DominoJNAStandaloneSampleApp app = new DominoJNAStandaloneSampleApp();
 					app.run();
@@ -130,6 +121,13 @@ public class DominoJNAStandaloneSampleApp {
 		catch (Exception e) {
 			e.printStackTrace();
 			status = -1;
+		}
+		finally {
+			//terminate Notes/Domino access for current thread 
+			NotesThread.stermThread();
+			
+			//call notesTerm on app shutdown
+			NotesInitUtils.notesTerm();
 		}
 		System.exit(status);
 	}
