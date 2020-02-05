@@ -272,7 +272,7 @@ public class NotesStringUtils {
 					DisposableMemory inDataMem = new DisposableMemory(lengthOfLineDataToConvert);
 					try {
 						inDataMem.write(0, data, startOffset, lengthOfLineDataToConvert);
-						
+
 						do {
 							if (outBufUTF8!=null && outBufUTF8.size() < (worstCaseLengthOfConvertedData)) {
 								outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
@@ -299,6 +299,9 @@ public class NotesStringUtils {
 							}
 							else if (retOutBufLength==0) {
 								lines.add("");
+								startOffset = i+1;
+								
+								break;
 							}
 							else {
 								//success
@@ -329,7 +332,7 @@ public class NotesStringUtils {
 				DisposableMemory inDataMem = new DisposableMemory(lengthOfLineDataToConvert);
 				try {
 					inDataMem.write(0, data, startOffset, lengthOfLineDataToConvert);
-					
+
 					do {
 						if (outBufUTF8!=null && outBufUTF8.size() < (worstCaseLengthOfConvertedData)) {
 							outBufUTF8 = new DisposableMemory(worstCaseLengthOfConvertedData);
@@ -356,6 +359,8 @@ public class NotesStringUtils {
 						}
 						else if (retOutBufLength==0) {
 							lines.add("");
+							
+							break;
 						}
 						else {
 							//success
