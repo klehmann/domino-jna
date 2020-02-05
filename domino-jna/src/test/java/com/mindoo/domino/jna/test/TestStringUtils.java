@@ -337,4 +337,52 @@ public class TestStringUtils extends BaseJNATestClass {
 			}
 		});
 	}
+
+	private static final short ULMBCS_GRP_L1   = 0x01; /* Latin-1      :ibm-850    */
+	private static final short ULMBCS_GRP_GR   = 0x02; /* Greek        :ibm-851    */
+	private static final short ULMBCS_GRP_HE   = 0x03; /* Hebrew       :ibm-1255   */
+	private static final short ULMBCS_GRP_AR   = 0x04; /* Arabic       :ibm-1256   */
+	private static final short ULMBCS_GRP_RU   = 0x05; /* Cyrillic     :ibm-1251   */
+	private static final short ULMBCS_GRP_L2   = 0x06; /* Latin-2      :ibm-852    */
+	private static final short ULMBCS_GRP_TR   = 0x08; /* Turkish      :ibm-1254   */
+	private static final short ULMBCS_GRP_TH   = 0x0B; /* Thai         :ibm-874    */
+	private static final short ULMBCS_GRP_JA   = 0x10; /* Japanese     :ibm-943    */
+	private static final short ULMBCS_GRP_KO   = 0x11; /* Korean       :ibm-1261   */
+	private static final short ULMBCS_GRP_TW   = 0x12; /* Chinese SC   :ibm-950    */
+	private static final short ULMBCS_GRP_CN   = 0x13; /* Chinese TC   :ibm-1386   */
+
+	private static final short[] ALLGROUPCODES = {
+			ULMBCS_GRP_L1,
+			ULMBCS_GRP_GR,
+			ULMBCS_GRP_HE,
+			ULMBCS_GRP_AR,
+			ULMBCS_GRP_RU,
+			ULMBCS_GRP_L2,
+			ULMBCS_GRP_TR,
+			ULMBCS_GRP_TH,
+			ULMBCS_GRP_JA,
+			ULMBCS_GRP_KO,
+			ULMBCS_GRP_TW,
+			ULMBCS_GRP_CN
+	};
+	
+	@Test
+	public void testLMBCSGroupCodes() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				System.out.println("Testing decoding of LMBCS group codes without data");
+				for (int i=0; i<ALLGROUPCODES.length; i++) {
+					byte currGroupCode = (byte) (ALLGROUPCODES[i] & 0xff);
+					System.out.println("Decoding code "+ALLGROUPCODES[i]);
+					String str = NotesStringUtils.fromLMBCS(new byte[] { currGroupCode });
+					Assert.assertTrue("String is empty", str!=null && str.length()==0);
+				}
+				System.out.println("Done testing decoding LMBCS group codes");
+				return null;
+			}
+		}
+				);
+	}
 }
