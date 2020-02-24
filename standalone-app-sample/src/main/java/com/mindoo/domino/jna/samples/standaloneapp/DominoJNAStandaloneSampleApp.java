@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.samples.standaloneapp;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -39,12 +40,27 @@ import lotus.domino.NotesThread;
  */
 public class DominoJNAStandaloneSampleApp {
 
+	private static String stripQuotes(String str) {
+		if (str!=null) {
+			if (str.startsWith("\"")) {
+				str = str.substring(1);
+			}
+			if (str.endsWith("\"")) {
+				str = str.substring(0, str.length()-1);
+			}
+		}
+		return str;
+	}
 	public static void main(String[] args) {
-		int status;
+		System.out.println("Environment: "+System.getenv());
+		System.out.println();
+		System.out.println("PATH: "+System.getenv("PATH"));
 		
 		String notesProgramDirPath = null;
 		String notesIniPath = null;
 		
+		// we support setting the notes program directory and notes.ini filepath as command line parameter
+		// and environment variables
 		for (int i=0; i<args.length; i++) {
 			String currArg = args[i];
 			
@@ -56,6 +72,17 @@ public class DominoJNAStandaloneSampleApp {
 			}
 		}
 		
+		if (StringUtil.isEmpty(notesProgramDirPath)) {
+			notesProgramDirPath = System.getenv("Notes_ExecDirectory");
+		}
+		
+		if (StringUtil.isEmpty(notesIniPath)) {
+			notesIniPath = System.getenv("NotesINI");
+		}
+		
+		notesProgramDirPath = stripQuotes(notesProgramDirPath);
+		notesIniPath = stripQuotes(notesIniPath);
+		
 		String[] notesInitArgs;
 		if (!StringUtil.isEmpty(notesProgramDirPath) && !StringUtil.isEmpty(notesIniPath)) {
 			notesInitArgs = new String[] {notesProgramDirPath, "="+notesIniPath };
@@ -64,37 +91,59 @@ public class DominoJNAStandaloneSampleApp {
 			notesInitArgs = new String[0];
 		}
 		
+		int exitStatus = 0;
+		boolean notesInitialized = false;
 		//call notesInitExtended on app startup
 		try {
-			NotesInitUtils.notesInitExtended(notesInitArgs);
+			System.out.println("Initializing Notes API with launch arguments: "+Arrays.toString(notesInitArgs));
 			
-			Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-
-				public void run() {
-					//call notesTerm on app shutdown
-					NotesInitUtils.notesTerm();
-				}
-			}));
-
+			NotesInitUtils.notesInitExtended(notesInitArgs);
+			notesInitialized = true;
+			
+			DominoJNAStandaloneSampleApp app = new DominoJNAStandaloneSampleApp();
+			app.run();
 		}
 		catch (NotesError e) {
 			e.printStackTrace();
-			
+			exitStatus=-1;
+
 			if (e.getId() == 421) {
 				//421 happens most of the time
+				System.err.println();
 				System.err.println("Please make sure that the Notes.ini exists and specify Notes program dir and notes.ini path like this:");
 				System.err.println("Mac:");
 				System.err.println("\"-notesdir=/Applications/IBM Notes.app/Contents/MacOS\" \"-ini:/Users/klehmann/Library/Preferences/Notes Preferences\"");
 				System.err.println("Windows:");
 				System.err.println("\"-notesdir=C:\\Program Files (x86)\\IBM\\Notes\" \"-ini:C:\\Program Files (x86)\\IBM\\Notes\\Notes.ini\"");
-				System.exit(-1);
+				System.err.println();
+				System.err.println("As an alternative, use environment variables Notes_ExecDirectory and NotesINI for those two paths.");
+			}
+			else if (e.getId() == 258) {
+				System.err.println();
+				System.err.println("If using macOS Catalina, make sure that the java process has full disk access rights in the"
+						+ " macOS security settings. Looks like we cannot access the Notes directories.");
 			}
 			else {
+				System.err.println();
 				System.err.println("Notes init failed with error code "+e.getId());
-				System.exit(-1);
+			}
+
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			exitStatus=-1;
+		}
+		finally {
+			if (notesInitialized) {
+				NotesInitUtils.notesTerm();
 			}
 		}
 		
+		System.exit(exitStatus);
+	}
+	
+	public void run() throws Exception {
+
 		try {
 			//initial Notes/Domino access for current thread (running single-threaded here)
 			NotesThread.sinitThread();
@@ -117,28 +166,19 @@ public class DominoJNAStandaloneSampleApp {
 						IDUtils.switchToId(notesIdFilePath, idPassword, dontSetEnvVar);
 					}
 					
-
-					DominoJNAStandaloneSampleApp app = new DominoJNAStandaloneSampleApp();
-					app.run();
+					readNotesData();
 
 					return null;
 				}
 			});
-			
-			status = 0;
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			status = -1;
 		}
 		finally {
 			//terminate Notes/Domino access for current thread 
 			NotesThread.stermThread();
 		}
-		System.exit(status);
 	}
 	
-	public void run() {
+	private void readNotesData() {
 		System.out.println("Domino JNA test application");
 		System.out.println("==========================");
 		System.out.println("Username of Notes ID: "+IDUtils.getIdUsername());
@@ -199,6 +239,5 @@ public class DominoJNAStandaloneSampleApp {
 			
 			System.out.println(currEntry.getUNID() + "\t" + currEntry.getColumnDataAsMap());
 		}
-	
 	}
 }
