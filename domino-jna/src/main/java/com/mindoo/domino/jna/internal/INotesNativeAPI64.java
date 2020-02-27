@@ -1248,6 +1248,30 @@ public interface INotesNativeAPI64 extends Library {
 			long hList,
 			Memory ServerName);
 	
+	public short ACLAddEntry(
+			long hACL,
+			Memory name,
+			short AccessLevel,
+			Memory privileges,
+			short AccessFlags);
+
+	public short ACLDeleteEntry(
+			long hACL,
+			Memory name);
+	
+	public short ACLSetFlags(
+			long hACL,
+			int Flags);
+	
+	public short ACLGetFlags(
+			long hACL,
+			IntByReference retFlags);
+
+	public short ACLSetPrivName(
+			long hACL,
+			short PrivNum,
+			Memory privName);
+
 	@UndocumentedAPI
 	public short NSFSearchStartExtended(long hDB, long formula, long filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 

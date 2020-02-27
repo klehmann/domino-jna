@@ -1085,6 +1085,20 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int hList,
 			Memory ServerName);
 
+	public native short ACLAddEntry(int hACL, Memory name, short AccessLevel, Memory privileges, short AccessFlags);
+
+	public native short ACLDeleteEntry(int hACL, Memory name);
+	
+	public native short ACLSetFlags(
+			int hACL,
+			int Flags);
+	
+	public native short ACLGetFlags(
+			int hACL,
+			IntByReference retFlags);
+
+	public native short ACLSetPrivName(int hACL, short PrivNum, Memory privName);
+	
 	public native short NSFSearchStartExtended(int hDB, int formula, int filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			int queue, int flags, int flags1, int flags2, int flags3, int flags4, 

@@ -1080,6 +1080,20 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long hList,
 			Memory ServerName);
 	
+	public native short ACLAddEntry(long hACL, Memory name, short AccessLevel, Memory privileges, short AccessFlags);
+	
+	public native short ACLDeleteEntry(long hACL, Memory name);
+	
+	public native short ACLSetFlags(
+			long hACL,
+			int Flags);
+	
+	public native short ACLGetFlags(
+			long hACL,
+			IntByReference retFlags);
+
+	public native short ACLSetPrivName(long hACL, short PrivNum, Memory privName);
+	
 	public native short NSFSearchStartExtended(long hDB, long formula, long filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			long queue, int flags, int flags1, int flags2, int flags3, int flags4, 

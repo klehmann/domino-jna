@@ -1793,6 +1793,10 @@ This allows an Editor to assume some Designer-level access */
 	/** Privilege string max  (including parentheses and null) */
 	public int ACL_PRIVSTRINGMAX = (16+2);
 
+	/** Require same ACL in ALL replicas of database */
+	public int ACL_UNIFORM_ACCESS = 0x00000001;
+
+	
 	/**
 	 * Keys in a COLLECTIONDATA structure are divided into percentiles - divisions
 	 * corresponding to one-tenth of the total range of keys - and a table of the keys

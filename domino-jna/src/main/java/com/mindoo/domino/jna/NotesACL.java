@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
@@ -23,6 +24,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.utils.ListUtil;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -295,14 +297,35 @@ public class NotesACL implements IAllocatedMemory {
 	}
 	
 	/**
+	 * Convenience method that call {@link #getEntries()} and returns a single
+	 * value for the specified name
+	 * 
+	 * @param name name
+	 * @return acl entry or null if not found
+	 */
+	public NotesACLEntry getEntry(String name) {
+		LinkedHashMap<String,NotesACLEntry> entries = getEntries();
+		NotesACLEntry entry = entries.get(name);
+		if (entry==null) {
+			for (Entry<String,NotesACLEntry> currEntry : entries.entrySet()) {
+				if (NotesNamingUtils.equalNames(currEntry.getKey(), name)) {
+					entry = currEntry.getValue();
+					break;
+				}
+			}
+		}
+		return entry;
+	}
+	
+	/**
 	 * Returns all ACL entries
 	 * 
 	 * @return ACL entries hashed by their username in the order they got returned from the C API
 	 */
-	public LinkedHashMap<String,NotesACLAccess> getEntries() {
+	public LinkedHashMap<String,NotesACLEntry> getEntries() {
 		final Map<Integer,String> rolesByIndex = getRolesByIndex();
 		
-		final LinkedHashMap<String,NotesACLAccess> aclAccessInfoByName = new LinkedHashMap<String,NotesACLAccess>();
+		final LinkedHashMap<String,NotesACLEntry> aclAccessInfoByName = new LinkedHashMap<String,NotesACLEntry>();
 		
 		ACLENTRYENUMFUNC callback;
 		if (PlatformUtils.isWin32()) {
@@ -340,7 +363,7 @@ public class NotesACL implements IAllocatedMemory {
 						}
 					}
 
-					NotesACLAccess access = new NotesACLAccess(accessLevel, entryRoles, retFlags);
+					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, retFlags);
 					aclAccessInfoByName.put(name, access);
 				}
 			};
@@ -380,7 +403,7 @@ public class NotesACL implements IAllocatedMemory {
 						}
 					}
 
-					NotesACLAccess access = new NotesACLAccess(accessLevel, entryRoles, retFlags);
+					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, retFlags);
 					aclAccessInfoByName.put(name, access);
 				}
 			};
@@ -396,6 +419,59 @@ public class NotesACL implements IAllocatedMemory {
 		NotesErrorUtils.checkResult(result);
 		
 		return aclAccessInfoByName;
+	}
+	
+	/**
+	 * Changes the name of a role
+	 * 
+	 * @param oldName old role name, either enclosed with [] or not
+	 * @param newName new role name, either enclosed with [] or not
+	 * @throws NotesError if role could not be found
+	 */
+	public void renameRole(String oldName, String newName) {
+		String oldNameStripped = oldName;
+		if (!oldNameStripped.startsWith("[")) {
+			oldNameStripped = "[" + oldNameStripped;
+		}
+		if (!oldNameStripped.endsWith("]")) {
+			oldNameStripped = oldNameStripped + "]";
+		}
+
+		String newNameStripped = newName;
+		if (!newNameStripped.startsWith("[")) {
+			newNameStripped = "[" + newNameStripped;
+		}
+		if (!newNameStripped.endsWith("]")) {
+			newNameStripped = newNameStripped + "]";
+		}
+
+		Map<Integer,String> rolesByIndex = getRolesByIndex();
+		int roleIndex = -1;
+		
+		for (Entry<Integer,String> currEntry : rolesByIndex.entrySet()) {
+			Integer currIndex = currEntry.getKey();
+			String currRole = currEntry.getValue();
+			
+			if (currRole.equalsIgnoreCase(oldNameStripped)) {
+				roleIndex = currIndex.intValue();
+				break;
+			}
+		}
+		
+		if (roleIndex==-1) {
+			throw new NotesError(0, "Role not found in ACL: "+oldName);
+		}
+		
+		Memory newNameStrippedMem = NotesStringUtils.toLMBCS(newNameStripped, true);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (roleIndex & 0xffff), newNameStrippedMem);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (roleIndex & 0xffff), newNameStrippedMem);			
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
@@ -487,6 +563,176 @@ public class NotesACL implements IAllocatedMemory {
 		
 		return roles;
 	}
+
+	/**
+	 * This function adds an entry to an access control list.
+	 * 
+	 * @param name user or group to be added, either in abbreviated or canonical format
+	 * @param accessLevel Access level ({@link AclLevel}), of the entry to be added
+	 * @param roles roles to be set for this user
+	 * @param accessFlags Access level modifier flags ({@link AclFlag}), e.g.: unable to delete documents, unable to create documents, of the entry to be added
+	 */
+	public void addEntry(String name, AclLevel accessLevel, List<String> roles, EnumSet<AclFlag> accessFlags) {
+		checkHandle();
+		
+		List<String> rolesFormatted;
+		if (roles.isEmpty()) {
+			rolesFormatted = roles;
+		}
+		else {
+			boolean rolesOk = true;
+			
+			for (String currRole : roles) {
+				if (!currRole.startsWith("[")) {
+					rolesOk = false;
+					break;
+				}
+				else if (!currRole.endsWith("]")) {
+					rolesOk = false;
+					break;
+				}
+			}
+			
+			if (rolesOk) {
+				rolesFormatted = roles;
+			}
+			else {
+				rolesFormatted = new ArrayList<>();
+				for (String currRole : roles) {
+					if (!currRole.startsWith("[")) {
+						currRole = "[" + currRole;
+					}
+					if (!currRole.endsWith("]")) {
+						currRole = currRole + "]";
+					}
+					rolesFormatted.add(currRole);
+				}
+			}
+		}
+		
+		String nameCanonical = NotesNamingUtils.toCanonicalName(name);
+		
+		Map<Integer,String> rolesByIndex = getRolesByIndex();
+		
+		byte[] privilegesArr = new byte[NotesConstants.ACL_PRIVCOUNT / 8];
+
+		for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) {
+			String currRole = rolesByIndex.get(i);
+			if (currRole!=null) {
+				if (ListUtil.containsIgnoreCase(rolesFormatted, currRole)) {
+					int byteOffsetWithBit = i / 8;
+					int bitToCheck = (int) Math.pow(2, i % 8);
+					
+					privilegesArr[byteOffsetWithBit] = (byte) ((privilegesArr[byteOffsetWithBit] | bitToCheck) & 0xff);
+				}
+			}
+		}
+		
+		Memory nameCanonicalMem = NotesStringUtils.toLMBCS(nameCanonical, true);
+
+		short accessFlagsAsShort = AclFlag.toBitMask(accessFlags);
+		
+		DisposableMemory privilegesMem = new DisposableMemory(privilegesArr.length);
+		try {
+			privilegesMem.write(0, privilegesArr, 0, privilegesArr.length);
+			
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().ACLAddEntry(m_hACL64, nameCanonicalMem, (short) (accessLevel.getValue() & 0xffff), privilegesMem, accessFlagsAsShort);
+			}
+			else {
+				result = NotesNativeAPI32.get().ACLAddEntry(m_hACL32, nameCanonicalMem, (short) (accessLevel.getValue() & 0xffff), privilegesMem, accessFlagsAsShort);
+			}
+			NotesErrorUtils.checkResult(result);
+		}
+		finally {
+			privilegesMem.dispose();
+		}
+	}
+
+	/**
+	 * This function deletes an entry from an access control list.
+	 * 
+	 * @param name user or group to be deleted, in abbreviated or canonical format
+	 */
+	public void removeEntry(String name) {
+		checkHandle();
+		
+		String nameCanonical = NotesNamingUtils.toCanonicalName(name);
+		Memory nameCanonicalMem = NotesStringUtils.toLMBCS(nameCanonical, true);
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLDeleteEntry(m_hACL64, nameCanonicalMem);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLDeleteEntry(m_hACL32, nameCanonicalMem);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Check if "Enforce consistent ACL" is set
+	 * 
+	 * @return true if set
+	 */
+	public boolean isUniformAccess() {
+		checkHandle();
+		
+		IntByReference retFlags = new IntByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
+		}
+		else {
+			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return (retFlags.getValue() & NotesConstants.ACL_UNIFORM_ACCESS) == NotesConstants.ACL_UNIFORM_ACCESS;
+	}
+	
+	/**
+	 * Changes the value for "Enforce consistent ACL"
+	 * 
+	 * @param uniformAccess true to set "Enforce consistent ACL" flag
+	 */
+	public void setUniformAccess(boolean uniformAccess) {
+		checkHandle();
+		
+		IntByReference retFlags = new IntByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
+		}
+		else {
+			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		boolean isSet = (retFlags.getValue() & NotesConstants.ACL_UNIFORM_ACCESS) == NotesConstants.ACL_UNIFORM_ACCESS;
+		if (uniformAccess == isSet) {
+			return;
+		}
+		
+		int newFlags = retFlags.getValue();
+		if (uniformAccess) {
+			newFlags = newFlags | NotesConstants.ACL_UNIFORM_ACCESS;
+		}
+		else {
+			newFlags -= NotesConstants.ACL_UNIFORM_ACCESS;
+		}
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLSetFlags(m_hACL64, newFlags);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLSetFlags(m_hACL32, newFlags);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
 	
 	@Override
 	public String toString() {
@@ -500,7 +746,6 @@ public class NotesACL implements IAllocatedMemory {
 			return "NotesACL [handle="+(PlatformUtils.is64Bit() ? m_hACL64 : m_hACL32)+", db="+dbNetPath+"]";
 		}
 	}
-
 	
 	public static class NotesACLAccess {
 		private AclLevel m_accessLevel;
@@ -529,5 +774,24 @@ public class NotesACL implements IAllocatedMemory {
 		public String toString() {
 			return "NotesACLAccess [level="+m_accessLevel+", roles="+m_roles+", flags="+m_accessFlags+"]";
 		}
+	}
+	
+	public static class NotesACLEntry extends NotesACLAccess {
+		private String m_name;
+		
+		public NotesACLEntry(String name, AclLevel accessLevel, List<String> roles, EnumSet<AclFlag> accessFlags) {
+			super(accessLevel, roles, accessFlags);
+			m_name = name;
+		}
+		
+		public String getName() {
+			return m_name;
+		}
+	
+		@Override
+		public String toString() {
+			return "NotesACLEntry [name="+m_name+", level="+getAclLevel()+", roles="+getRoles()+", flags="+getAclFlags()+"]";
+		}
+
 	}
 }
