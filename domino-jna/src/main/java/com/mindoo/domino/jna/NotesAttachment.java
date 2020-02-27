@@ -265,7 +265,7 @@ public class NotesAttachment {
 							return 0;
 						}
 						else {
-							throw new InterruptedException();
+							return INotesErrorConstants.ERR_NSF_INTERRUPT;
 						}
 					}
 					catch (Throwable t) {
@@ -290,7 +290,7 @@ public class NotesAttachment {
 							return 0;
 						}
 						else {
-							throw new InterruptedException();
+							return INotesErrorConstants.ERR_NSF_INTERRUPT;
 						}
 					}
 					catch (Throwable t) {
@@ -331,7 +331,9 @@ public class NotesAttachment {
 			throw new NotesError(0, "Extraction interrupted", extractError[0]);
 		}
 		
-		NotesErrorUtils.checkResult(result);
+		if (result!=INotesErrorConstants.ERR_NSF_INTERRUPT) {
+			NotesErrorUtils.checkResult(result);
+		}
 	}
 	
 	/**
