@@ -734,6 +734,11 @@ public class NotesACL implements IAllocatedMemory {
 		NotesErrorUtils.checkResult(result);
 	}
 	
+	/**
+	 * Adds a role to the ACL. If the role is already in the ACL, the method does nothing.
+	 * 
+	 * @param role role to add
+	 */
 	public void addRole(String role) {
 		checkHandle();
 		
@@ -841,6 +846,17 @@ public class NotesACL implements IAllocatedMemory {
 				}
 			}
 		}
+		
+		Memory emptyStrMem = NotesStringUtils.toLMBCS("", true);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (roleIndex & 0xffff), emptyStrMem);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (roleIndex & 0xffff), emptyStrMem);
+		}
+		NotesErrorUtils.checkResult(result);
 	}
 	
 	/**
@@ -1038,6 +1054,7 @@ public class NotesACL implements IAllocatedMemory {
 		public NotesACLEntry(String name, AclLevel accessLevel, List<String> roles, byte[] privilegesArr, EnumSet<AclFlag> accessFlags) {
 			super(accessLevel, roles, accessFlags);
 			m_name = name;
+			m_privilegesArr = privilegesArr;
 		}
 		
 		public String getName() {
