@@ -362,8 +362,8 @@ public class NotesACL implements IAllocatedMemory {
 							entryRoles.add(currRole);
 						}
 					}
-
-					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, retFlags);
+					
+					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, privilegesArr, retFlags);
 					aclAccessInfoByName.put(name, access);
 				}
 			};
@@ -403,7 +403,7 @@ public class NotesACL implements IAllocatedMemory {
 						}
 					}
 
-					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, retFlags);
+					NotesACLEntry access = new NotesACLEntry(name, accessLevel, entryRoles, privilegesArr, retFlags);
 					aclAccessInfoByName.put(name, access);
 				}
 			};
@@ -526,7 +526,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * 
 	 * @return roles
 	 */
-	private Map<Integer,String> getRolesByIndex() {
+	public Map<Integer,String> getRolesByIndex() {
 		Map<Integer,String> roles = new HashMap<Integer,String>();
 		
 		short result;
@@ -734,6 +734,245 @@ public class NotesACL implements IAllocatedMemory {
 		NotesErrorUtils.checkResult(result);
 	}
 	
+	public void addRole(String role) {
+		checkHandle();
+		
+		if (!role.startsWith("[")) {
+			role = "[" + role;
+		}
+		if (!role.endsWith("]")) {
+			role = role + "]";
+		}
+		
+		List<String> roles = getRoles();
+		if (roles.contains(role)) {
+			return;
+		}
+		
+		Map<Integer,String> rolesByIndex = getRolesByIndex();
+		int freeIndex = -1;
+		
+		for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) {
+			if (!rolesByIndex.containsKey(i) || "".equals(rolesByIndex.get(i))) {
+				freeIndex = i;
+				break;
+			}
+		}
+		
+		if (freeIndex==-1) {
+			throw new NotesError("No more space available to add role");
+		}
+		
+		Memory roleMem = NotesStringUtils.toLMBCS(role, true);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (freeIndex & 0xffff), roleMem);
+		}
+		else {
+			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (freeIndex & 0xffff), roleMem);			
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+
+	/**
+	 * Removes a role from the ACL
+	 * 
+	 * @param role role to remove
+	 */
+	public void removeRole(String role) {
+		checkHandle();
+		
+		if (!role.startsWith("[")) {
+			role = "[" + role;
+		}
+		if (!role.endsWith("]")) {
+			role = role + "]";
+		}
+
+		Map<Integer,String> rolesByIndex = getRolesByIndex();
+		int roleIndex = -1;
+		
+		for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) {
+			if (role.equals(rolesByIndex.get(i))) {
+				roleIndex = i;
+				break;
+			}
+		}
+
+		if (roleIndex==-1) {
+			//nothing to do
+			return;
+		}
+		
+		int byteOffsetWithBit = roleIndex / 8;
+		int bitToCheck = (int) Math.pow(2, roleIndex % 8);
+
+		LinkedHashMap<String, NotesACLEntry> entries = getEntries();
+		
+		for (Entry<String,NotesACLEntry> currEntry : entries.entrySet()) {
+			String currName = currEntry.getKey();
+			NotesACLEntry currACLEntry = currEntry.getValue();
+			
+			byte[] currPrivileges = currACLEntry.getPrivilegesArray();
+			if ((currPrivileges[byteOffsetWithBit] & bitToCheck) == bitToCheck) {
+				byte[] newPrivileges = currPrivileges.clone();
+				newPrivileges[byteOffsetWithBit] = (byte) ((newPrivileges[byteOffsetWithBit] - bitToCheck & 0xff));
+				
+				Memory currNameMem = NotesStringUtils.toLMBCS(currName, true);
+				
+				DisposableMemory newPrivilegesMem = new DisposableMemory(newPrivileges.length);
+				newPrivilegesMem.write(0, newPrivileges, 0, newPrivileges.length);
+				
+				try {
+					short result;
+					if (PlatformUtils.is64Bit()) {
+						result = NotesNativeAPI64.get().ACLUpdateEntry(m_hACL64, currNameMem, NotesConstants.ACL_UPDATE_PRIVILEGES, null, (short) 0,
+								newPrivilegesMem, (short) 0);
+					}
+					else {
+						result = NotesNativeAPI32.get().ACLUpdateEntry(m_hACL32, currNameMem, NotesConstants.ACL_UPDATE_PRIVILEGES, null, (short) 0,
+								newPrivilegesMem, (short) 0);
+					}
+					NotesErrorUtils.checkResult(result);
+				}
+				finally {
+					newPrivilegesMem.dispose();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * This function updates an entry in an access control list.<br>
+	 * <br>
+	 * Unless the user's name is specified to be modified, the information that is not specified to be
+	 * modified remains intact.<br>
+	 * <br>
+	 * If the user's name is specified to be modified, the user entry is deleted and a new entry is created.<br>
+	 * Unless the other access control information is specified to be modified as well, the other access control
+	 * information will be cleared and the user will have No Access to the database.
+	 * 
+	 * @param name name of the entry to change
+	 * @param newName optional new entry name or null
+	 * @param newAccessLevel optional new entry access level or null
+	 * @param newRoles optional new entry roles or null
+	 * @param newFlags optional new acl flags or null
+	 */
+	public void updateEntry(String name, String newName, AclLevel newAccessLevel, List<String> newRoles, EnumSet<AclFlag> newFlags) {
+		int updateFlags = 0;
+		
+		NotesACLEntry oldAclEntry = getEntry(name);
+		if (oldAclEntry==null) {
+			addEntry(newName, newAccessLevel, newRoles, newFlags);
+			return;
+		}
+		
+		Memory oldAclEntryNameMem = NotesStringUtils.toLMBCS(oldAclEntry.getName(), true);
+		
+		Memory newNameMem = null;
+		
+		if (newName!=null && !newName.equals(oldAclEntry.getName())) {
+			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_NAME;
+			
+			newNameMem = NotesStringUtils.toLMBCS(newName, true);
+		}
+		
+		int iNewAccessLevel = 0;
+		if (newAccessLevel!=null && !newAccessLevel.equals(oldAclEntry.getAclLevel())) {
+			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_LEVEL;
+			
+			iNewAccessLevel = newAccessLevel.getValue();
+		}
+		
+		DisposableMemory newPrivilegesMem = null;
+		
+		if (newRoles!=null && !newRoles.equals(oldAclEntry.getRoles())) {
+			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_PRIVILEGES;
+			
+			List<String> newRolesFormatted;
+			if (newRoles.isEmpty()) {
+				newRolesFormatted = newRoles;
+			}
+			else {
+				boolean rolesOk = true;
+				
+				for (String currRole : newRoles) {
+					if (!currRole.startsWith("[")) {
+						rolesOk = false;
+						break;
+					}
+					else if (!currRole.endsWith("]")) {
+						rolesOk = false;
+						break;
+					}
+				}
+				
+				if (rolesOk) {
+					newRolesFormatted = newRoles;
+				}
+				else {
+					newRolesFormatted = new ArrayList<>();
+					for (String currRole : newRoles) {
+						if (!currRole.startsWith("[")) {
+							currRole = "[" + currRole;
+						}
+						if (!currRole.endsWith("]")) {
+							currRole = currRole + "]";
+						}
+						newRolesFormatted.add(currRole);
+					}
+				}
+			}
+			
+			Map<Integer,String> rolesByIndex = getRolesByIndex();
+			byte[] newPrivilegesArr = new byte[NotesConstants.ACL_PRIVCOUNT / 8];
+			
+			for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) {
+				String currRole = rolesByIndex.get(i);
+				if (currRole!=null) {
+					if (ListUtil.containsIgnoreCase(newRolesFormatted, currRole)) {
+						int byteOffsetWithBit = i / 8;
+						int bitToCheck = (int) Math.pow(2, i % 8);
+						
+						newPrivilegesArr[byteOffsetWithBit] = (byte) ((newPrivilegesArr[byteOffsetWithBit] | bitToCheck) & 0xff);
+					}
+				}
+			}
+			
+			newPrivilegesMem = new DisposableMemory(NotesConstants.ACL_PRIVCOUNT / 8);
+			newPrivilegesMem.write(0, newPrivilegesArr, 0, newPrivilegesArr.length);
+		}
+		
+		short newFlagsAsShort = 0;
+		
+		if (newFlags!=null && !newFlags.equals(oldAclEntry.getAclFlags())) {
+			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_FLAGS;
+			
+			newFlagsAsShort = AclFlag.toBitMask(newFlags);
+		}
+		
+		try {
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().ACLUpdateEntry(m_hACL64, oldAclEntryNameMem, (short) (updateFlags & 0xffff),
+						newNameMem, (short) (iNewAccessLevel & 0xffff),
+						newPrivilegesMem, newFlagsAsShort);
+			}
+			else {
+				result = NotesNativeAPI32.get().ACLUpdateEntry(m_hACL32, oldAclEntryNameMem, (short) (updateFlags & 0xffff),
+						newNameMem, (short) (iNewAccessLevel & 0xffff),
+						newPrivilegesMem, newFlagsAsShort);
+			}
+			NotesErrorUtils.checkResult(result);
+		}
+		finally {
+			if (newPrivilegesMem!=null) {
+				newPrivilegesMem.dispose();
+			}
+		}
+	}
+	
 	@Override
 	public String toString() {
 		if (isFreed()) {
@@ -770,6 +1009,22 @@ public class NotesACL implements IAllocatedMemory {
 			return m_accessFlags;
 		}
 		
+		public boolean isPerson() {
+			return m_accessFlags.contains(AclFlag.PERSON);
+		}
+		
+		public boolean isGroup() {
+			return m_accessFlags.contains(AclFlag.GROUP);
+		}
+		
+		public boolean isServer() {
+			return m_accessFlags.contains(AclFlag.SERVER);
+		}
+		
+		public boolean isAdminServer() {
+			return m_accessFlags.contains(AclFlag.ADMIN_SERVER);
+		}
+		
 		@Override
 		public String toString() {
 			return "NotesACLAccess [level="+m_accessLevel+", roles="+m_roles+", flags="+m_accessFlags+"]";
@@ -778,8 +1033,9 @@ public class NotesACL implements IAllocatedMemory {
 	
 	public static class NotesACLEntry extends NotesACLAccess {
 		private String m_name;
-		
-		public NotesACLEntry(String name, AclLevel accessLevel, List<String> roles, EnumSet<AclFlag> accessFlags) {
+		private byte[] m_privilegesArr;
+
+		public NotesACLEntry(String name, AclLevel accessLevel, List<String> roles, byte[] privilegesArr, EnumSet<AclFlag> accessFlags) {
 			super(accessLevel, roles, accessFlags);
 			m_name = name;
 		}
@@ -788,6 +1044,10 @@ public class NotesACL implements IAllocatedMemory {
 			return m_name;
 		}
 	
+		byte[] getPrivilegesArray() {
+			return m_privilegesArr;
+		}
+
 		@Override
 		public String toString() {
 			return "NotesACLEntry [name="+m_name+", level="+getAclLevel()+", roles="+getRoles()+", flags="+getAclFlags()+"]";

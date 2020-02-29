@@ -1796,6 +1796,12 @@ This allows an Editor to assume some Designer-level access */
 	/** Require same ACL in ALL replicas of database */
 	public int ACL_UNIFORM_ACCESS = 0x00000001;
 
+	/* ACLUpdateEntry flags - Set flag if parameter is being modified */
+
+	public short ACL_UPDATE_NAME = 0x01;
+	public short ACL_UPDATE_LEVEL = 0x02;
+	public short ACL_UPDATE_PRIVILEGES = 0x04;
+	public short ACL_UPDATE_FLAGS = 0x08;
 	
 	/**
 	 * Keys in a COLLECTIONDATA structure are divided into percentiles - divisions

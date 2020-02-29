@@ -1099,6 +1099,10 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 
 	public native short ACLSetPrivName(int hACL, short PrivNum, Memory privName);
 	
+	@Override
+	public native short ACLUpdateEntry(int hACL, Memory name, short updateFlags, Memory newName, short newAccessLevel,
+			Memory newPrivileges, short newAccessFlags);
+	
 	public native short NSFSearchStartExtended(int hDB, int formula, int filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			int queue, int flags, int flags1, int flags2, int flags3, int flags4, 

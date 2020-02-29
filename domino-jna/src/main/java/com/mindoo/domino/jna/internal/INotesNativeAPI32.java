@@ -1266,6 +1266,15 @@ public interface INotesNativeAPI32 extends Library {
 			int hACL,
 			short PrivNum,
 			Memory privName);
+
+	public short ACLUpdateEntry(
+			int hACL,
+			Memory name,
+			short updateFlags,
+			Memory newName,
+			short newAccessLevel,
+			Memory newPrivileges,
+			short newAccessFlags);
 	
 	@UndocumentedAPI
 	public short NSFSearchStartExtended(int hDB, int formula, int filter,
