@@ -12,8 +12,6 @@ import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.LMBCSStringList;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -127,8 +125,6 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 				short result = getProperty(index, m);
 				NotesErrorUtils.checkResult(result);
 
-				System.out.println("getIDTableFromHandle:"+DumpUtil.dumpAsAscii(m, (int) m.size()));
-				
 				long handle = m.getLong(0);
 				if (handle==0) {
 					return null;
@@ -212,6 +208,22 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 		}
 	}
 
+	protected long getLong(int index) {
+		checkHandle();
+		
+		DisposableMemory m = new DisposableMemory(8);
+		m.clear();
+		try {
+			short result = getProperty(index, m);
+			NotesErrorUtils.checkResult(result);
+
+			return m.getLong(0);
+		}
+		finally {
+			m.dispose();
+		}
+	}
+
 	protected void setStringList(int index, List<String> values) {
 		LMBCSStringList lmbcsStrList = new LMBCSStringList(values, false);
 		try {
@@ -259,7 +271,24 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 			m.dispose();
 		}
 	}
-	
+
+	protected void setLong(int index, long value) {
+		checkHandle();
+		
+		DisposableMemory m = new DisposableMemory(8);
+		m.clear();
+		try {
+			m.clear();
+			m.setLong(0, value);
+
+			short result = setProperty(index, m);
+			NotesErrorUtils.checkResult(result);
+		}
+		finally {
+			m.dispose();
+		}
+	}
+
 	protected void setStringProperty(int index, String str) {
 		checkHandle();
 		
@@ -283,8 +312,6 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 		try {
 			short result = getProperty(index, m);
 			NotesErrorUtils.checkResult(result);
-
-			System.out.println(DumpUtil.dumpAsAscii(m, (int) m.size()));
 			
 			return m.getShort(0);
 		}

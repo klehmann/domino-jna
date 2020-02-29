@@ -262,6 +262,21 @@ public class DXLImporter extends AbstractDXLTransfer implements IAllocatedMemory
 			}
 		}
 		return null;
+
+//		int optionAsInt;
+//		if (PlatformUtils.is64Bit()) {
+//			optionAsInt = (int) getLong(NotesConstants.iDesignImportOption);
+//		}
+//		else {
+//			optionAsInt = getInt(NotesConstants.iDesignImportOption);
+//		}
+//		
+//		for (DXLImportOption currOpt : DXLImportOption.values()) {
+//			if (currOpt.getValue() == optionAsInt) {
+//				return currOpt;
+//			}
+//		}
+//		return null;
 	}
 	
 	/**
@@ -274,6 +289,14 @@ public class DXLImporter extends AbstractDXLTransfer implements IAllocatedMemory
 		short optionAsShort = (short) (optionAsInt & 0xffff);
 		
 		setShort(NotesConstants.iDesignImportOption, optionAsShort);
+		
+//		if (PlatformUtils.is64Bit()) {
+//			setLong(NotesConstants.iDesignImportOption, optionAsShort);
+//		}
+//		else {
+//			setInt(NotesConstants.iDesignImportOption, optionAsShort);
+//		}
+//		setInt(NotesConstants.iDesignImportOption, optionAsShort);
 	}
 	
 	/**
