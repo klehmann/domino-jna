@@ -526,7 +526,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * 
 	 * @return roles
 	 */
-	public Map<Integer,String> getRolesByIndex() {
+	private Map<Integer,String> getRolesByIndex() {
 		Map<Integer,String> roles = new HashMap<Integer,String>();
 		
 		short result;
