@@ -21,7 +21,7 @@ import lotus.domino.Session;
  */
 public class TestSignDb extends BaseJNATestClass {
 
-	@Test
+//	@Test
 	public void testSignDb() {
 
 		runWithSession(new IDominoCallable<Object>() {

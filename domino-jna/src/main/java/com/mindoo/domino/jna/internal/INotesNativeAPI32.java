@@ -969,6 +969,9 @@ public interface INotesNativeAPI32 extends Library {
 	public short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 	public short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
+	@UndocumentedAPI
+	public short SECKFMAccess(short param1, int hKFC, Memory retUsername, Pointer param4);
+
 	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
 			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);

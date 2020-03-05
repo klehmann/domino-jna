@@ -1,7 +1,13 @@
 package com.mindoo.domino.jna;
 
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Handle;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI32;
+import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
@@ -28,15 +34,19 @@ public class NotesUserId  {
 	}
 	
 	public String getUsername() {
-		//TODO find a better way to read the username from the hKFC
-		NotesDatabase db = new NotesDatabase("", "names.nsf", "");
-		NotesNote note = db.createNote();
-		note.sign(this, false);
-		String signer = note.getSigner();
-		note.recycle();
-		db.recycle();
+		DisposableMemory retUsernameMem = new DisposableMemory(NotesConstants.MAXUSERNAME);
 		
-		return signer;
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().SECKFMAccess((short) 32, m_memHandle64, retUsernameMem, null);
+		}
+		else {
+			result = NotesNativeAPI32.get().SECKFMAccess((short) 32, m_memHandle32, retUsernameMem, null);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		String username = NotesStringUtils.fromLMBCS(retUsernameMem, -1);
+		return username;
 	}
 	
 	/**
@@ -56,4 +66,5 @@ public class NotesUserId  {
 	public long getHandle64() {
 		return m_memHandle64;
 	}
+
 }
