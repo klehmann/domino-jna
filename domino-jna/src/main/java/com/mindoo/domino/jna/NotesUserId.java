@@ -27,6 +27,18 @@ public class NotesUserId  {
 		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 	
+	public String getUsername() {
+		//TODO find a better way to read the username from the hKFC
+		NotesDatabase db = new NotesDatabase("", "names.nsf", "");
+		NotesNote note = db.createNote();
+		note.sign(this, false);
+		String signer = note.getSigner();
+		note.recycle();
+		db.recycle();
+		
+		return signer;
+	}
+	
 	/**
 	 * Returns the handle to the in-memory ID for 32 bit
 	 * 

@@ -1957,6 +1957,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return agent;
 	}
+	//NotesUserId
 	
 	/**
 	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesConstants}.
@@ -1965,11 +1966,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param callback optional callback to get notified about signed notes or null
 	 */
 	public void signAll(EnumSet<NoteClass> noteClassesEnum, SignCallback callback) {
+		signAll(null, noteClassesEnum, false, callback);
+	}
+	
+	
+	/**
+	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesConstants}.
+	 * 
+	 * @param userId ID to be used for signing, use null for the active Notes ID
+	 * @param noteClassesEnum bitmask of note classes to sign
+	 * @param signNotesIfMimePresent If the note has MIME parts and this flag is true it will be SMIME signed, if not set it will be Notes signed.
+	 * @param callback optional callback to get notified about signed notes or null
+	 */
+	public void signAll(NotesUserId userId, EnumSet<NoteClass> noteClassesEnum, boolean signNotesIfMimePresent,
+			SignCallback callback) {
+		
 		checkHandle();
 
 		int noteClasses = NoteClass.toBitMaskInt(noteClassesEnum);
 		
-		String signer = IDUtils.getIdUsername();
+		String idUser = userId==null ? IDUtils.getIdUsername() : userId.getUsername();
 		
 		NotesCollection col = openDesignCollection();
 		try {
@@ -2000,7 +2016,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							
 							expandNote = true;
 						}
-						
+
 						if (PlatformUtils.is64Bit()) {
 							LongByReference rethNote = new LongByReference();
 							
@@ -2021,8 +2037,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								}
 								else {
 									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
-									if (NotesNamingUtils.equalNames(signer, currNoteSigner)) {
-										//already signed by current user
+									if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
+										//we have no user id to be used for signing and the note is already signed by current user
 										continue;
 									}
 									else {
@@ -2035,7 +2051,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								}
 								
 								if (signRequired) {
-									result = NotesNativeAPI64.get().NSFNoteSign(rethNote.getValue());
+									if (userId!=null) {
+										result = NotesNativeAPI64.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle64(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+									}
+									else {
+										result = NotesNativeAPI64.get().NSFNoteSign(rethNote.getValue());
+									}
 									NotesErrorUtils.checkResult(result);
 
 									if (expandNote) {
@@ -2071,9 +2092,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								}
 								else {
 									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
-									if (signer.equalsIgnoreCase(currNoteSigner)) {
-										//already signed by current user
+									if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
+										//we have no user id to be used for signing and the note is already signed by current user
 										continue;
+									}
+									else {
+										signRequired = true;
 									}
 								}
 								
@@ -2082,7 +2106,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 								}
 
 								if (signRequired) {
-									result = NotesNativeAPI32.get().NSFNoteSign(rethNote.getValue());
+									if (userId!=null) {
+										result = NotesNativeAPI32.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle32(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+									}
+									else {
+										result = NotesNativeAPI32.get().NSFNoteSign(rethNote.getValue());
+									}
 									NotesErrorUtils.checkResult(result);
 
 									if (expandNote) {
