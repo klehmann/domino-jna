@@ -894,7 +894,10 @@ public class NotesACL implements IAllocatedMemory {
 			newNameMem = NotesStringUtils.toLMBCS(newName, true);
 		}
 		
-		int iNewAccessLevel = 0;
+		int iNewAccessLevel = oldAclEntry.getAclLevel().getValue();
+		// TODO somehow it seems this flag always needs to be set
+        //             otherwise the level will be reset to NOACCESS, in case the level did not change
+        updateFlags = updateFlags | NotesConstants.ACL_UPDATE_LEVEL;
 		if (newAccessLevel!=null && !newAccessLevel.equals(oldAclEntry.getAclLevel())) {
 			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_LEVEL;
 			
