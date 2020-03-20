@@ -911,6 +911,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 
 	@Override
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
+		addFileHotspot(attachment.getFileName(), filenameToDisplay);
+	}
+	
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
 		InputStream in = getClass().getResourceAsStream("file-icon.gif");
 		if (in==null)
 			throw new IllegalStateException("Default icon file not found");
@@ -924,7 +929,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			}
 			
 			ByteArrayInputStream bIn = new ByteArrayInputStream(bOut.toByteArray());
-			addFileHotspot(attachment, filenameToDisplay, filenameToDisplay, new FontStyle(), CaptionPosition.BELOWCENTER, 0, 0, 0, -1, -1, bOut.size(), bIn);
+			addFileHotspot(attachmentProgrammaticName, filenameToDisplay, filenameToDisplay, new FontStyle(), CaptionPosition.BELOWCENTER, 0, 0, 0, -1, -1, bOut.size(), bIn);
 		} catch (IOException e) {
 			throw new IllegalStateException("Unexpected problems reading the default icon", e);
 		}
@@ -936,21 +941,36 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			}
 		}
 	}
-	
+
 	@Override
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException {
+		addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, image);
+	}
+	
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException {
 		FileInputStream fIn = new FileInputStream(image);
 		try {
-			addFileHotspot(attachment, filenameToDisplay, captionText, new FontStyle(), CaptionPosition.BELOWCENTER,
+			addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, new FontStyle(), CaptionPosition.BELOWCENTER,
 					0, 0, 0, -1, -1, (int) image.length(), fIn);
 		}
 		finally {
 			fIn.close();
 		}
 	}
-	
+
 	@Override
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
+			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
+			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
+		
+		addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, captionStyle, captionPos,
+				captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize,
+				imageData);
+	}
+	
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		
@@ -1008,7 +1028,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 //			/*  if HOTSPOTREC_RUNFLAG_SIGNED, WORD SigLen then SigData follows. */
 //		} CDHOTSPOTBEGIN;
 	
-	Memory uniqueFileNameAttachment = NotesStringUtils.toLMBCS(attachment.getFileName(), true);
+	Memory uniqueFileNameAttachment = NotesStringUtils.toLMBCS(attachmentProgrammaticName, true);
 	Memory fileNameToDisplayMem = NotesStringUtils.toLMBCS(filenameToDisplay, true);
 	
 	Memory hotspotBeginMem = new Memory(

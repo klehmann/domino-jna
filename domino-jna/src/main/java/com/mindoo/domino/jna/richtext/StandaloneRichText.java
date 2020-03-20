@@ -135,16 +135,35 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 			throws IOException {
 		m_compoundText.addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
 	}
+	
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
+		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay);
+	}
 
 	@Override
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay);
 	}
-	
+
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image)
+			throws IOException {
+		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, image);
+	}
+
 	@Override
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image)
 			throws IOException {
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay, captionText, image);
+	}
+
+	@Override
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText,
+			FontStyle captionStyle, CaptionPosition captionPos, int captionColorRed, int captionColorGreen,
+			int captionColorBlue, int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData)
+			throws IOException {
+		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, captionStyle, captionPos, captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
 	}
 
 	@Override

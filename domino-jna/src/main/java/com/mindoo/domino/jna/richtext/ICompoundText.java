@@ -180,7 +180,48 @@ public interface ICompoundText extends IAdaptable {
 	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
+
+	/**
+	 * Adds a file hotspot to the richtext item containing a default file icon
+	 * 
+	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
+	 * @param attachment attachment to open when the hotspot is clicked
+	 * @param filenameToDisplay filename to display in the hotspot properties
+	 */
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay);
 	
+	/**
+	 * Adds a file hotspot to the richtext item with a custom icon
+	 * 
+	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
+	 * @param filenameToDisplay filename to display in the hotspot properties
+	 * @param captionText caption text to display below the hotspot
+	 * @param image image file on disk to use for the file hotspot
+	 * @throws IOException in case of I/O errors
+	 */
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException;
+	
+	/**
+	 * Adds a file hotspot to the richtext item with a custom icon
+	 * 
+	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
+	 * @param filenameToDisplay filename to display in the hotspot properties
+	 * @param captionText caption text to display below the hotspot
+	 * @param captionStyle font style used for the caption
+	 * @param captionPos caption position
+	 * @param captionColorRed red-part of the caption text color
+	 * @param captionColorGreen green-part of the caption text color
+	 * @param captionColorBlue blue-part of the caption text color
+	 * @param resizeToWidth optional resize width to be used if image should be resized, or -1 to not resize
+	 * @param resizeToHeight optional resize height to be used if image should be resized, or -1 to not resize
+	 * @param fileSize length of the data to be read from <code>imageData</code> stream
+	 * @param imageData stream with image data
+	 * @throws IOException in case of I/O errors
+	 */
+	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
+			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
+			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
+
 	/**
 	 * Closes the specified {@link StandaloneRichText} and appends its content, merging and renumbering
 	 * paragraph definitions.

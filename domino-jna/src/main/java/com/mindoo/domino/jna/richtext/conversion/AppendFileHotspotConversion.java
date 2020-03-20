@@ -10,11 +10,27 @@ import com.mindoo.domino.jna.richtext.IRichTextNavigator;
  * @author Karsten Lehmann
  */
 public class AppendFileHotspotConversion implements IRichTextConversion {
-	private NotesAttachment m_att;
+	private String m_attachmentProgrammaticName;
 	private String m_fileNameToDisplay;
 	
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
+	 * @param fileNameToDisplay filename to display below the file icon, not necessarily the same as {@link NotesAttachment#getFileName()}
+	 */
+	public AppendFileHotspotConversion(String attachmentProgrammaticName, String fileNameToDisplay) {
+		m_attachmentProgrammaticName = attachmentProgrammaticName;
+	}
+
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param att attachment to add an icon for
+	 * @param fileNameToDisplay filename to display below the file icon, not necessarily the same as {@link NotesAttachment#getFileName()}
+	 */
 	public AppendFileHotspotConversion(NotesAttachment att, String fileNameToDisplay) {
-		m_att = att;
+		m_attachmentProgrammaticName = att.getFileName();
 		m_fileNameToDisplay = fileNameToDisplay;
 	}
 	
@@ -41,7 +57,7 @@ public class AppendFileHotspotConversion implements IRichTextConversion {
 			}
 			while (source.gotoNext());
 		}
-		target.addFileHotspot(m_att, m_fileNameToDisplay);
+		target.addFileHotspot(m_attachmentProgrammaticName, m_fileNameToDisplay);
 	}
 
 }
