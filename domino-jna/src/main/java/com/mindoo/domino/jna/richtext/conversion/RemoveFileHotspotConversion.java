@@ -16,10 +16,14 @@ import com.sun.jna.Memory;
  * @author Karsten Lehmann
  */
 public class RemoveFileHotspotConversion implements IRichTextConversion {
-	private NotesAttachment m_att;
+	private String m_attachmentFileName;
 	
 	public RemoveFileHotspotConversion(NotesAttachment att) {
-		m_att = att;
+		m_attachmentFileName = att.getFileName();
+	}
+	
+	public RemoveFileHotspotConversion(String attachmentFileName) {
+		m_attachmentFileName = attachmentFileName;
 	}
 	
 	@Override
@@ -130,7 +134,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 								int dataLength = (int) (hotspotRecordDataBuf.share(6).getShort(0)  & 0xffff);
 								
 								String uniqueFileName = NotesStringUtils.fromLMBCS(hotspotRecordDataBuf.share(8), -1);
-								if (uniqueFileName.equalsIgnoreCase(m_att.getFileName())) {
+								if (uniqueFileName.equalsIgnoreCase(m_attachmentFileName)) {
 									return savedPos;
 								}
 							}
