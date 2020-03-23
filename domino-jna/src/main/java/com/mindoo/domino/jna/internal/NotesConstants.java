@@ -3621,11 +3621,51 @@ This allows an Editor to assume some Designer-level access */
 	/** A shared image resource */
 	public short CDRESOURCE_CLASS_SHAREDIMAGE = 19;
 	public short CDRESOURCE_CLASS_FOLDER = 20;
-	/** An old (4.6) or new style portfolio.
-	Which gets incorporated into
-	the bookmark bar as a tab, rather
-	than getting opened as a database. */
+	/** An old (4.6) or new style portfolio. Which gets incorporated into the bookmark bar as a tab, rather
+	 * than getting opened as a database. */
 	public short CDRESOURCE_CLASS_PORTFOLIO = 21;
 	public short CDRESOURCE_CLASS_OUTLINE = 22;
+
+	public short KFM_access_GetIDFHFlags = 51;
+
+	/** File is password protected */
+	public short fIDFH_Password = 0x0001;
+	/** File password is required. */
+	public short fIDFH_Password_Required = 0x0002; 
+	/** Update 'MinPasswordSize' field of the target ID file when merging this ID file with the target ID file. */ 
+	public short fIDFH_UpdateMinPWOnMerge = 0x0004;
+	/** Password may be shared by all processes */
+	public short fIDFH_PWShareable = 0x0008;
+	/** ID file may be used for the limited version of Notes */
+	public short fIDFH_ForLimitedOnly = 0x0010; 
+	                                                   
+	/** THIS IS OBSOLETE, DO NOT USE ID may not be used on work stations. */
+	public short fIDFH_ForServersOnly = 0x0020;
+	/** ID file may be used for the "Desktop" version of Notes Not yet supported */ 
+	public short fIDFH_ForDesktopOnly = 0x0040;
+	/** Client license, but client cannot run the "desktop"  program. */
+	public short fIDFH_ForServiceOnly = 0x0080;
+
+	/** ID has been modified such that a backup should be performed */
+	public short fIDFH_BackupNeeded = 0x0100;
+	/** ID file has an extra that descibes special password features (eg, 128 bit key) */
+	public short fIDFH_PWExtra = 0x0200; 
+	/** Must prompt user before automatically accepting a name change */ 
+	public short fIDFH_ChangeNamePrompt = 0x0400;
+
+	/** For mailed in requests to certifier usually using a "safe-copy".<br>
+	 * This flags says that the requestor does not need a response via Mail -- usually because the response
+	 * will be detected during authentication with a server whose Address Book has been
+	 * updated with a new certificate for the requestor. */ 
+	public short f1IDFH_DontReplyViaMail = 0x0001;
+
+	/** ID file's UDOs contain more more than one LICENSE, most likely due to an ID merge. */ 
+	public short f1IDFH_MultipleLicenses = 0x0002;
+
+	/** Admin has locked down the value of this field. See fIDFH_PWShareable */ 
+	public short f1IDFH_PWShareableLockdown = 0x0004;
+
+	/** SI not converted to new fmt */ 
+	public short f1IDFH_SINotConverted = (short) (0x8000 & 0xffff);
 
 }

@@ -977,7 +977,7 @@ public interface INotesNativeAPI64 extends Library {
 
 	public short SECKFMClose(LongByReference phKFC, int Flags, int Reserved, Pointer pReserved);
 	@UndocumentedAPI
-	public short SECKFMAccess(short param1, long hKFC, Memory retUsername, Pointer param4);
+	public short SECKFMAccess(short param1, long hKFC, Pointer retUsername, Pointer param4);
 
 	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
 			LongByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,

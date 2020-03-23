@@ -839,7 +839,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 	public native short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
-	public native short SECKFMAccess(short param1, int hKFC, Memory retUsername, Pointer param4);
+	public native short SECKFMAccess(short param1, int hKFC, Pointer retUsername, Pointer param4);
 	
 	public native short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
 			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,

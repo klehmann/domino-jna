@@ -1,12 +1,17 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesUserId;
+import com.mindoo.domino.jna.constants.IDFlag;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
@@ -627,6 +632,73 @@ public class IDUtils {
 				result = NotesNativeAPI32.get().SECKFMClose(phKFC32, 0, 0, null);
 				NotesErrorUtils.checkResult(result);
 			}
+		}
+	}
+	
+	/**
+	 * Returns flags for the ID that is active for the current process
+	 * 
+	 * @return flags
+	 */
+	public static Set<IDFlag> getIDFlags() {
+		return getIDFlags(null);
+	}
+	
+	/**
+	 * Returns flags for the specified ID file
+	 * 
+	 * @param userId user id, use null for the ID that is active for the current process
+	 * @return flags
+	 */
+	public static Set<IDFlag> getIDFlags(NotesUserId userId) {
+		DisposableMemory idFlagsMem = new DisposableMemory(4);
+		idFlagsMem.clear();
+		DisposableMemory idFlags1Mem = new DisposableMemory(4);
+		idFlags1Mem.clear();
+		
+		short idFlags;
+		short idFlags1;
+		try {
+			short result;
+
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().SECKFMAccess(NotesConstants.KFM_access_GetIDFHFlags, userId==null ? 0 : userId.getHandle64(), idFlagsMem, idFlags1Mem);
+			}
+			else {
+				result = NotesNativeAPI32.get().SECKFMAccess(NotesConstants.KFM_access_GetIDFHFlags, userId==null ? 0 : userId.getHandle32(), idFlagsMem, idFlags1Mem);
+			}
+
+			NotesErrorUtils.checkResult(result);
+			
+			Set<IDFlag> retFlags = new HashSet<>();
+			
+			idFlags = idFlagsMem.getShort(0);
+			idFlags1 = idFlags1Mem.getShort(0);
+
+			for (IDFlag currFlag : IDFlag.values()) {
+				int currFlagVal = currFlag.getValue();
+				
+				if ((currFlagVal & 0x8000000) == 0x8000000) {
+					short currFlag1ValShort = (short) (currFlagVal & 0xffff);
+					
+					if ((idFlags1 & currFlag1ValShort) == currFlag1ValShort) {
+						retFlags.add(currFlag);
+					}
+				}
+				else {
+					short currFlagValShort = (short) (currFlagVal & 0xffff);
+					
+					if ((idFlags & currFlagValShort) == currFlagValShort) {
+						retFlags.add(currFlag);
+					}
+				}
+			}
+			
+			return retFlags;
+		}
+		finally {
+			idFlagsMem.dispose();
+			idFlags1Mem.dispose();
 		}
 	}
 }
