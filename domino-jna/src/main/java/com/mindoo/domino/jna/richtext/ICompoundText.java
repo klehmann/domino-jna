@@ -185,7 +185,6 @@ public interface ICompoundText extends IAdaptable {
 	 * Adds a file hotspot to the richtext item containing a default file icon
 	 * 
 	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
-	 * @param attachment attachment to open when the hotspot is clicked
 	 * @param filenameToDisplay filename to display in the hotspot properties
 	 */
 	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay);
