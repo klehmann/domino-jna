@@ -33,6 +33,7 @@ import lotus.domino.Document;
 public class NotesAgent implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private String m_title;
+	private String m_comment;
 	private int m_hNoteId;
 	private int m_hAgentB32;
 	private long m_hAgentB64;
@@ -84,10 +85,10 @@ public class NotesAgent implements IRecyclableNotesObject {
 	 * @return comment
 	 */
 	public String getComment() {
-		if (m_title==null) {
-			m_title = getAgentNote().getItemValueAsText("$Comment", '\n');
+		if (m_comment==null) {
+			m_comment = getAgentNote().getItemValueAsText("$Comment", '\n');
 		}
-		return m_title;
+		return m_comment;
 	}
 
 	@Override
