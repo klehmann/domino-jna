@@ -1616,7 +1616,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		if (!supportedType) {
-			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
+			if (dataTypeAsInt == NotesItem.TYPE_COMPOSITE) {
+				throw new UnsupportedItemValueError("Use NotesNote.getRichtextNavigator() to read richtext item data");
+			}
+			else {
+				throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
+			}
 		}
 
 		int checkDataType = valuePtr.getShort(0) & 0xffff;
@@ -2531,7 +2536,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		//to be able to report that the item is the last one, we need to prefetch one
 		AtomicReference<NotesItem> lastReadItem = new AtomicReference<>();
 		
-		getItems((String) null, new IItemCallback() {
+		getItems(searchForItemName, new IItemCallback() {
 			
 			@Override
 			public Action itemFound(NotesItem item) {
