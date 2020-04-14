@@ -888,10 +888,14 @@ public class NotesACL implements IAllocatedMemory {
 		
 		Memory newNameMem = null;
 		
-		if (newName!=null && !newName.equals(oldAclEntry.getName())) {
-			updateFlags = updateFlags | NotesConstants.ACL_UPDATE_NAME;
+		if (newName!=null) {
+			newName = NotesNamingUtils.toCanonicalName(newName);
 			
-			newNameMem = NotesStringUtils.toLMBCS(newName, true);
+			if (!NotesNamingUtils.equalNames(oldAclEntry.getName(), newName)) {
+				updateFlags = updateFlags | NotesConstants.ACL_UPDATE_NAME;
+				
+				newNameMem = NotesStringUtils.toLMBCS(newName, true);
+			}
 		}
 		
 		int iNewAccessLevel = oldAclEntry.getAclLevel().getValue();
