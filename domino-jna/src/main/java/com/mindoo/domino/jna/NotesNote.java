@@ -79,6 +79,7 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
+import com.mindoo.domino.jna.mime.MimeConversionControl;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -6419,6 +6420,35 @@ public class NotesNote implements IRecyclableNotesObject {
 					result = NotesNativeAPI32.get().NSFDbNoteUnlock(getParent().getHandle32(), getNoteId(), NotesConstants.NOTE_LOCK_PROVISIONAL);
 				}
 			}
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function converts the all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
+	 * to {@link NotesItem#TYPE_MIME_PART} items.<br>
+	 * It does not update the Domino database; to update the database, call {@link #update()}.
+	 * 
+	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
+	 */
+	public void convertToMime(MimeConversionControl concCtrl) {
+		checkHandle();
+		
+		if (concCtrl!=null && concCtrl.isRecycled()) {
+			throw new NotesError(0, "The conversion control object is recycled");
+		}
+		
+		boolean isCanonical = (getFlags() & NotesConstants.NOTE_FLAG_CANONICAL) == NotesConstants.NOTE_FLAG_CANONICAL;
+		boolean isMime = hasMIMEPart();
+		
+		Pointer ccPtr = concCtrl==null ? null : concCtrl.getAdapter(Pointer.class);
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertCDParts(getHandle64(), isCanonical, isMime, ccPtr);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertCDParts(getHandle32(), isCanonical, isMime, ccPtr);
 		}
 		NotesErrorUtils.checkResult(result);
 	}

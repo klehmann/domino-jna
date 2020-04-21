@@ -41,6 +41,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 import net.sf.cglib.proxy.Enhancer;
@@ -693,4 +694,41 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			Pointer pXSL_TransformOutputAction);
 	
 	public native short XSLTCreateTransform(IntByReference prethXSLTransform);
+	
+	public native short MMCreateConvControls(
+			PointerByReference phCC);
+
+	public native short MMDestroyConvControls(
+			Pointer hCC);
+	
+	public native void MMConvDefaults(
+			Pointer hCC);
+
+	public native short MMGetAttachEncoding(
+			Pointer hCC);
+	
+	public native void MMSetAttachEncoding(
+			Pointer hCC,
+			short wAttachEncoding);
+	
+	public native void MMSetDropItems(
+			Pointer hCC,
+			Memory pszDropItems);
+	
+	public native Pointer MMGetDropItems(
+			Pointer hCC);
+	
+	public native void MMSetKeepTabs(
+			Pointer hCC,
+			boolean bKeepTabs);
+	
+	public native boolean MMGetKeepTabs(
+			Pointer hCC);
+	
+	public native void MMSetPointSize(
+			Pointer hCC,
+			short wPointSize);
+
+	public native short MMGetPointSize(
+			Pointer hCC);
 }

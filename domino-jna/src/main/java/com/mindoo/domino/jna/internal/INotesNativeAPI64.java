@@ -361,27 +361,27 @@ public interface INotesNativeAPI64 extends Library {
 	public short NSFMimePartCloseStream(
 			long hCtx,
 			short bUpdate);
-	public short MIMEStreamOpen(
-			long hNote,
-			Memory pchItemName,
-			short wItemNameLen,
-			int dwOpenFlags,
-			LongByReference rethMIMEStream);
-	public int MIMEStreamPutLine(
-			Memory pszLine,
-			long hMIMEStream);
-	public short MIMEStreamItemize(
-			long hNote,
-			Memory pchItemName,
-			short wItemNameLen,
-			int dwFlags,
-			long hMIMEStream);
-	public int MIMEStreamWrite(
-			Pointer pchData,
-			int uiDataLen,
-			long hMIMEStream);
-	public void MIMEStreamClose(
-			long hMIMEStream);
+//	public short MIMEStreamOpen(
+//			long hNote,
+//			Memory pchItemName,
+//			short wItemNameLen,
+//			int dwOpenFlags,
+//			LongByReference rethMIMEStream);
+//	public int MIMEStreamPutLine(
+//			Memory pszLine,
+//			long hMIMEStream);
+//	public short MIMEStreamItemize(
+//			long hNote,
+//			Memory pchItemName,
+//			short wItemNameLen,
+//			int dwFlags,
+//			long hMIMEStream);
+//	public int MIMEStreamWrite(
+//			Pointer pchData,
+//			int uiDataLen,
+//			long hMIMEStream);
+//	public void MIMEStreamClose(
+//			int hMIMEStream);
 	public short MIMEConvertRFC822TextItemByBLOCKID(
 			long hNote,
 			NotesBlockIdStruct.ByValue bhItem,
@@ -1540,4 +1540,195 @@ public interface INotesNativeAPI64 extends Library {
 			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
 			long hNote,
 			Pointer pExAction);
+	
+	public short MIMEOpenDirectory(
+			long hNote,
+			IntByReference phMIMEDir);
+	
+	public short MIMEFreeDirectory(
+			long hMIMEDir);
+	
+	public Pointer MIMEEntityContentID(
+			Pointer pMIMEEntity);
+
+	public Pointer MIMEEntityContentLocation(
+			Pointer pMIMEEntity);
+	
+	public int MIMEEntityContentSubtype(
+			Pointer pMIMEEntity);
+
+	public int MIMEEntityContentType(
+			Pointer pMIMEEntity);
+	
+	public Pointer MIMEEntityGetHeader(
+			Pointer pMIMEEntity,
+			int symKey);
+
+	public short MIMEEntityGetTypeParam(
+			Pointer pMIMEEntity,
+			int symParam,
+			LongByReference phValue,
+			IntByReference pdwValueLen);
+	
+	public boolean MIMEEntityIsDiscretePart(
+			Pointer pMimeEntity);
+
+	public boolean MIMEEntityIsMessagePart(
+			Pointer pMIMEEntity);
+	
+	public boolean MIMEEntityIsMultiPart(
+			Pointer pMimeEntity);
+
+	public short MIMEFreeEntityDataObject(
+			long hNote,
+			Pointer pEntity);
+
+	public short MIMEGetDecodedEntityData(
+			long hNote,
+			Pointer pMimeEntity,
+			int dwEncodedOffset,
+			int dwChunkLen,
+			LongByReference phData,
+			IntByReference pdwDecodedDataLen,
+			IntByReference pdwEncodedDataLen);
+
+	public short MIMEGetEntityData(
+			long hNote,
+			Pointer pME,
+			short wDataType,
+			int dwOffset,
+			int dwRetBytes,
+			LongByReference phData,
+			IntByReference pdwDataLen);
+
+	public short MIMEGetEntityDataSize(
+			long hNote,
+			Pointer pME,
+			short wDataType,
+			IntByReference pdwDataLen);
+
+	public short MIMEGetEntityPartFlags(
+			long hNote,
+			Pointer  pEntity,
+			IntByReference pdwFlags);
+
+	public void  MimeGetExtFromTypeInfo(
+			Memory pszType,
+			Memory pszSubtype,
+			Memory pszExtBuf,
+			short wExtBufLen,
+			Memory pszDescrBuf,
+			short wDescrBufLen);
+
+	public void MIMEGetFirstSubpart(
+			int  hMIMEDir,
+			Pointer  pMIMEEntity,
+			PointerByReference retpMIMEEntity);
+	
+	public short MIMEGetNextSibling(
+			int hMIMEDir,
+			Pointer pMIMEEntity,
+			PointerByReference retpMIMEEntity);
+
+	public short MIMEGetParent(
+			int  hMIMEDir,
+			Pointer  pMIMEEntity,
+			PointerByReference retpMIMEEntity);
+	
+	public short MIMEGetPrevSibling(
+			int  hMIMEDir,
+			Pointer  pMIMEEntity,
+			PointerByReference retpMIMEEntity);
+
+	public short MIMEGetRootEntity(
+			int  hMIMEDir,
+			PointerByReference retpMIMEEntity);	
+	
+	public short MIMEGetText(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			boolean bNotesEOL,
+			Memory pchBuf,
+			int dwMaxBufLen,
+			IntByReference pdwBufLen);
+
+	public void MimeGetTypeInfoFromExt(
+			Memory pszExt,
+			Memory pszTypeBuf,
+			short wTypeBufLen,
+			Memory pszSubtypeBuf,
+			short wSubtypeBufLen,
+			Memory pszDescrBuf,
+			short wDescrBufLen);
+	
+	public short MIMEHeaderNameToItemName(
+			short wMessageType,
+			Memory pszHeaderName,
+			Memory pszHeaderBody,
+			Memory retszItemName,
+			short wItemNameSize,
+			ShortByReference retwHeaderType,
+			ShortByReference retwItemFlags,
+			ShortByReference retwDataType);
+
+	public short MIMEItemNameToHeaderName(
+			short wMessageType,
+			Memory pszItemName,
+			Memory retszHeaderName,
+			short wHeaderNameSize,
+			ShortByReference retwHeaderType);
+
+	public short MIMEIterateNext(
+			int  hMIMEDir,
+			Pointer pTopMIMEEntity,
+			Pointer pPrevMIMEEntity,
+			PointerByReference retpMIMEEntity);
+
+	public int MIMEStreamGetLine(
+			Memory pszLine,
+			int uiMaxLineSize,
+			Pointer hMIMEStream);
+
+	public short MIMEStreamItemize(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwFlags,
+			Pointer hMIMEStream);
+	
+	public short MIMEStreamOpen(
+			long hNote,
+			Memory pchItemName,
+			short wItemNameLen,
+			int dwOpenFlags,
+			PointerByReference rethMIMEStream);
+	
+	public int MIMEStreamPutLine(
+			Memory pszLine,
+			Pointer hMIMEStream);
+	
+	public int MIMEStreamRead(
+			Memory pchData,
+			IntByReference puiDataLen,
+			int uiMaxDataLen,
+			Pointer hMIMEStream);
+	
+	public int MIMEStreamRewind(
+			Pointer hMIMEStream);
+	
+	public int MIMEStreamWrite(
+			Memory pchData,
+			int  uiDataLen,
+			Pointer hMIMEStream);
+
+	public void MIMEStreamClose(
+			Pointer hMIMEStream);
+
+	public short MIMEConvertCDParts(
+			long hNote,
+			boolean bCanonical,
+			boolean bIsMIME,
+			Pointer hCC);
+
 }

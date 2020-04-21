@@ -13,6 +13,7 @@ import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI extends Library {
@@ -362,4 +363,41 @@ public interface INotesNativeAPI extends Library {
 	
 	public short XSLTCreateTransform(
 			IntByReference prethXSLTransform);
+	
+	public short MMCreateConvControls(
+			PointerByReference phCC);
+
+	public short MMDestroyConvControls(
+			Pointer hCC);
+	
+	public void MMConvDefaults(
+			Pointer hCC);
+
+	public short MMGetAttachEncoding(
+			Pointer hCC);
+	
+	public void MMSetAttachEncoding(
+			Pointer hCC,
+			short wAttachEncoding);
+	
+	public void MMSetDropItems(
+			Pointer hCC,
+			Memory pszDropItems);
+	
+	public Pointer MMGetDropItems(
+			Pointer hCC);
+	
+	public void MMSetKeepTabs(
+			Pointer hCC,
+			boolean bKeepTabs);
+	
+	public boolean MMGetKeepTabs(
+			Pointer hCC);
+	
+	public void MMSetPointSize(
+			Pointer hCC,
+			short wPointSize);
+
+	public short MMGetPointSize(
+			Pointer hCC);
 }

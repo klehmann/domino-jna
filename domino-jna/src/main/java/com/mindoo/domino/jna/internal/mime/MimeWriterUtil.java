@@ -15,7 +15,6 @@ import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.internet.ContentType;
 import javax.mail.internet.MimeMultipart;
-import javax.mail.internet.MimePart;
 
 import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesNote;
@@ -31,8 +30,10 @@ import com.mindoo.domino.jna.utils.NotesStringUtils.LineBreakConversion;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 
 public class MimeWriterUtil {
 
@@ -53,13 +54,13 @@ public class MimeWriterUtil {
 
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			LongByReference rethMIMEStream = new LongByReference();
+			PointerByReference rethMIMEStream = new PointerByReference();
 
 			result = NotesNativeAPI64.get().MIMEStreamOpen(targetNote.getHandle64(), null,
 					(short) 0, NotesConstants.MIME_STREAM_OPEN_WRITE, rethMIMEStream);
 			NotesErrorUtils.checkResult(result);
 
-			final long hMIMEStream = rethMIMEStream.getValue();
+			Pointer hMIMEStream = rethMIMEStream.getValue();
 
 			final DisposableMemory buf = new DisposableMemory(BUFFERSIZE);
 			try {
@@ -109,13 +110,13 @@ public class MimeWriterUtil {
 			}
 		}
 		else {
-			IntByReference rethMIMEStream = new IntByReference();
+			PointerByReference rethMIMEStream = new PointerByReference();
 
 			result = NotesNativeAPI32.get().MIMEStreamOpen(targetNote.getHandle32(), null,
 					(short) 0, NotesConstants.MIME_STREAM_OPEN_WRITE, rethMIMEStream);
 			NotesErrorUtils.checkResult(result);
 
-			final int hMIMEStream = rethMIMEStream.getValue();
+			final Pointer hMIMEStream = rethMIMEStream.getValue();
 
 			final DisposableMemory buf = new DisposableMemory(BUFFERSIZE);
 			try {
@@ -182,13 +183,13 @@ public class MimeWriterUtil {
 
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			LongByReference rethMIMEStream = new LongByReference();
+			PointerByReference rethMIMEStream = new PointerByReference();
 
 			result = NotesNativeAPI64.get().MIMEStreamOpen(targetNote.getHandle64(), null,
 					(short) 0, NotesConstants.MIME_STREAM_OPEN_WRITE, rethMIMEStream);
 			NotesErrorUtils.checkResult(result);
 
-			final long hMIMEStream = rethMIMEStream.getValue();
+			final Pointer hMIMEStream = rethMIMEStream.getValue();
 
 			DisposableMemory bufMem = new DisposableMemory(BUFFERSIZE);
 			try {
@@ -219,13 +220,13 @@ public class MimeWriterUtil {
 			}
 		}
 		else {
-			IntByReference rethMIMEStream = new IntByReference();
+			PointerByReference rethMIMEStream = new PointerByReference();
 
 			result = NotesNativeAPI32.get().MIMEStreamOpen(targetNote.getHandle32(), null,
 					(short) 0, NotesConstants.MIME_STREAM_OPEN_WRITE, rethMIMEStream);
 			NotesErrorUtils.checkResult(result);
 
-			final int hMIMEStream = rethMIMEStream.getValue();
+			final Pointer hMIMEStream = rethMIMEStream.getValue();
 
 			DisposableMemory bufMem = new DisposableMemory(BUFFERSIZE);
 			try {
