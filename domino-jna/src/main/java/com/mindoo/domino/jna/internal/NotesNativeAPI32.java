@@ -1410,26 +1410,6 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			int dwOpenFlags,
 			PointerByReference rethMIMEStream);
 
-	public native int MIMEStreamPutLine(
-			Memory pszLine,
-			Pointer hMIMEStream);
-
-	public native int MIMEStreamRead(
-			Memory pchData,
-			IntByReference puiDataLen,
-			int uiMaxDataLen,
-			Pointer hMIMEStream);	
-	
-	public native int MIMEStreamRewind(
-			Pointer hMIMEStream);
-
-	public native int MIMEStreamWrite(
-			Memory pchData,
-			int  uiDataLen,
-			Pointer hMIMEStream);
-
-	public native void MIMEStreamClose(
-			Pointer hMIMEStream);
 
 	public native short MIMEConvertCDParts(
 			int hNote,

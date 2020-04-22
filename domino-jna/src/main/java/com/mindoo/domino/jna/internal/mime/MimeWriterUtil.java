@@ -23,6 +23,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -83,7 +84,7 @@ public class MimeWriterUtil {
 
 					private void flushBuffer() throws IOException {
 						if (bytesInBuffer > 0) {
-							int mimeStatus = NotesNativeAPI64.get().MIMEStreamWrite(buf, bytesInBuffer, hMIMEStream);
+							int mimeStatus = NotesNativeAPI.get().MIMEStreamWrite(buf, bytesInBuffer, hMIMEStream);
 							System.out.println("MIME status: "+mimeStatus);
 							if (mimeStatus == NotesConstants.MIME_STREAM_IO) {
 								throw new IOException("Received I/O error from Domino when writing to the MIME stream");
@@ -106,7 +107,7 @@ public class MimeWriterUtil {
 			}
 			finally {
 				buf.dispose();
-				NotesNativeAPI64.get().MIMEStreamClose(hMIMEStream);
+				NotesNativeAPI.get().MIMEStreamClose(hMIMEStream);
 			}
 		}
 		else {
@@ -139,7 +140,7 @@ public class MimeWriterUtil {
 
 					private void flushBuffer() throws IOException {
 						if (bytesInBuffer > 0) {
-							int mimeStatus = NotesNativeAPI32.get().MIMEStreamWrite(buf, bytesInBuffer, hMIMEStream);
+							int mimeStatus = NotesNativeAPI.get().MIMEStreamWrite(buf, bytesInBuffer, hMIMEStream);
 							if (mimeStatus == NotesConstants.MIME_STREAM_IO) {
 								throw new IOException("Received I/O error from Domino when writing to the MIME stream");
 							}
@@ -161,7 +162,7 @@ public class MimeWriterUtil {
 			}
 			finally {
 				buf.dispose();
-				NotesNativeAPI32.get().MIMEStreamClose(hMIMEStream);
+				NotesNativeAPI.get().MIMEStreamClose(hMIMEStream);
 			}
 		}
 	}
@@ -199,7 +200,7 @@ public class MimeWriterUtil {
 				while ((len=mimeMessageData.read(buf))>0) {
 					bufMem.write(0, buf, 0, len);
 
-					int mimeStatus = NotesNativeAPI64.get().MIMEStreamWrite(bufMem, len, hMIMEStream);
+					int mimeStatus = NotesNativeAPI.get().MIMEStreamWrite(bufMem, len, hMIMEStream);
 					System.out.println("MIME status: "+mimeStatus);
 					if (mimeStatus == NotesConstants.MIME_STREAM_IO) {
 						throw new IOException("Received I/O error from Domino when writing to the MIME stream");
@@ -216,7 +217,7 @@ public class MimeWriterUtil {
 			}
 			finally {
 				bufMem.dispose();
-				NotesNativeAPI64.get().MIMEStreamClose(hMIMEStream);
+				NotesNativeAPI.get().MIMEStreamClose(hMIMEStream);
 			}
 		}
 		else {
@@ -236,7 +237,7 @@ public class MimeWriterUtil {
 				while ((len=mimeMessageData.read(buf))>0) {
 					bufMem.write(0, buf, 0, len);
 
-					int mimeStatus = NotesNativeAPI32.get().MIMEStreamWrite(bufMem, len, hMIMEStream);
+					int mimeStatus = NotesNativeAPI.get().MIMEStreamWrite(bufMem, len, hMIMEStream);
 					if (mimeStatus == NotesConstants.MIME_STREAM_IO) {
 						throw new IOException("Received I/O error from Domino when writing to the MIME stream");
 					}
@@ -252,7 +253,7 @@ public class MimeWriterUtil {
 			}
 			finally {
 				bufMem.dispose();
-				NotesNativeAPI32.get().MIMEStreamClose(hMIMEStream);
+				NotesNativeAPI.get().MIMEStreamClose(hMIMEStream);
 			}
 		}
 	}

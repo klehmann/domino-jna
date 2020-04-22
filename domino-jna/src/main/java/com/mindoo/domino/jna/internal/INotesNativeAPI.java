@@ -400,4 +400,61 @@ public interface INotesNativeAPI extends Library {
 
 	public short MMGetPointSize(
 			Pointer hCC);
+	
+	public short MMGetTypeFace(
+			Pointer hCC);
+	
+	public void MMSetTypeFace(
+			Pointer hCC,
+			short wTypeFace);
+
+	public void MMSetAddItems(
+			Pointer hCC,
+			Memory pszAddItems);
+
+	public Pointer MMGetAddItems(
+			Pointer hCC);
+	
+	public void MMSetMessageContentEncoding(
+			Pointer hCC,
+			short wMessageContentEncoding);
+
+	public short MMGetMessageContentEncoding(
+			Pointer hCC);
+	
+	public void MMSetReadReceipt(
+			Pointer hCC,
+			short wReadReceipt);
+
+	public short MMGetReadReceipt(
+			Pointer hCC);
+	
+	public void MMSetSkipX(
+			Pointer hCC,
+			boolean bSkipX);
+	
+	public boolean MMGetSkipX(
+			Pointer hCC);
+	
+	public int MIMEStreamPutLine(
+			Memory pszLine,
+			Pointer hMIMEStream);
+
+	public int MIMEStreamRead(
+			Memory pchData,
+			IntByReference puiDataLen,
+			int uiMaxDataLen,
+			Pointer hMIMEStream);	
+	
+	public int MIMEStreamRewind(
+			Pointer hMIMEStream);
+
+	public int MIMEStreamWrite(
+			Memory pchData,
+			int  uiDataLen,
+			Pointer hMIMEStream);
+
+	public void MIMEStreamClose(
+			Pointer hMIMEStream);
+
 }

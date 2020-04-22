@@ -731,4 +731,61 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	public native short MMGetPointSize(
 			Pointer hCC);
+	
+	public native short MMGetTypeFace(
+			Pointer hCC);
+	
+	public native void MMSetTypeFace(
+			Pointer hCC,
+			short wTypeFace);
+
+	public native void MMSetAddItems(
+			Pointer hCC,
+			Memory pszAddItems);
+
+	public native Pointer MMGetAddItems(
+			Pointer hCC);
+	
+	public native void MMSetMessageContentEncoding(
+			Pointer hCC,
+			short wMessageContentEncoding);
+
+	public native short MMGetMessageContentEncoding(
+			Pointer hCC);
+	
+	public native void MMSetReadReceipt(
+			Pointer hCC,
+			short wReadReceipt);
+
+	public native short MMGetReadReceipt(
+			Pointer hCC);
+	
+	public native void MMSetSkipX(
+			Pointer hCC,
+			boolean bSkipX);
+	
+	public native boolean MMGetSkipX(
+			Pointer hCC);
+
+	public native int MIMEStreamPutLine(
+			Memory pszLine,
+			Pointer hMIMEStream);
+
+	public native int MIMEStreamRead(
+			Memory pchData,
+			IntByReference puiDataLen,
+			int uiMaxDataLen,
+			Pointer hMIMEStream);	
+	
+	public native int MIMEStreamRewind(
+			Pointer hMIMEStream);
+
+	public native int MIMEStreamWrite(
+			Memory pchData,
+			int  uiDataLen,
+			Pointer hMIMEStream);
+
+	public native void MIMEStreamClose(
+			Pointer hMIMEStream);
+
 }

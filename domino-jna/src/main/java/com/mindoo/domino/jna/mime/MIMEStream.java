@@ -1,10 +1,16 @@
 package com.mindoo.domino.jna.mime;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.EnumSet;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+
+import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.constants.MimeStreamItemizeOptions;
 import com.mindoo.domino.jna.constants.MimeStreamOpenOptions;
@@ -14,6 +20,7 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -44,8 +51,8 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @param itemName item name
 	 * @return MIME stream
 	 */
-	public static MIMEStream openForRead(NotesNote note, String itemName) {
-		return openForRead(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+	public static MIMEStream newStreamForRead(NotesNote note, String itemName) {
+		return newStreamForRead(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 	}
 	
 	/**
@@ -59,10 +66,10 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * 
 	 * @param note note note
 	 * @param itemName item name
-	 * @param flags open flags
+	 * @param flags open flags (e.g. whether to include RFC822 and headers)
 	 * @return MIME stream
 	 */
-	public static MIMEStream openForRead(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
+	public static MIMEStream newStreamForRead(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
 		EnumSet<MimeStreamOpenOptions> flagsClone = flags.clone();
 		
 		int dwOpenFlags = MimeStreamOpenOptions.toBitMaskInt(flagsClone);
@@ -79,8 +86,8 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @param itemName mime item to write content
 	 * @return MIME stream
 	 */
-	public static MIMEStream openForWrite(NotesNote note, String itemName) {
-		return openForWrite(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+	public static MIMEStream newStreamForWrite(NotesNote note, String itemName) {
+		return newStreamForWrite(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 	}
 
 	/**
@@ -93,7 +100,7 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @param flags open flags
 	 * @return MIME stream
 	 */
-	public static MIMEStream openForWrite(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
+	public static MIMEStream newStreamForWrite(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
 		EnumSet<MimeStreamOpenOptions> flagsClone = flags.clone();
 
 		int dwOpenFlags = MimeStreamOpenOptions.toBitMaskInt(flagsClone);
@@ -101,11 +108,171 @@ public class MIMEStream implements IRecyclableNotesObject {
 		return new MIMEStream(note, itemName, dwOpenFlags);
 	}
 
+	/**
+	 * Simulates receiving a new email in the mail database. The method creates a new
+	 * unsaved note in the specified mail database and imports all data from the
+	 * {@link Message} into it, e.g. the body item and all header items (with type RFC822).
+	 * 
+	 * @param dbMail mail database
+	 * @param message message that contains the email data
+	 * @return created (unsaved) note
+	 * @throws IOException
+	 * @throws MessagingException
+	 */
+	public static NotesNote createMailNote(NotesDatabase dbMail, Message message) throws IOException, MessagingException {
+		NotesNote note = dbMail.createNote();
+		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
+		try {
+			stream.write(message);
+			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_HEADERS, MimeStreamItemizeOptions.ITEMIZE_BODY));
+			note.replaceItemValue("Form", "Memo");
+			return note;
+		}
+		finally {
+			stream.recycle();
+		}
+	}
+	
+	/**
+	 * Simulates receiving a new email in the mail database. The method creates a new
+	 * unsaved note in the specified mail database and imports all data from the
+	 * {@link Message} into it, e.g. the body item and all header items (with type RFC822).
+	 * 
+	 * @param dbMail mail database
+	 * @param reader reader returning the email's MIME data
+	 * @return created (unsaved) note
+	 * @throws IOException
+	 */
+	public static NotesNote createMailNote(NotesDatabase dbMail, Reader reader) throws IOException {
+		NotesNote note = dbMail.createNote();
+		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
+		try {
+			stream.write(reader);
+			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_HEADERS, MimeStreamItemizeOptions.ITEMIZE_BODY));
+			note.replaceItemValue("Form", "Memo");
+			return note;
+		}
+		finally {
+			stream.recycle();
+		}
+	}
+	
+	/**
+	 * Convenience method to write the data of a MIME {@link Message} to an item
+	 * of type {@link NotesItem#TYPE_MIME_PART} in a {@link NotesNote}.
+	 * 
+	 * @param note note
+	 * @param itemName mime item to write content
+	 * @param message message to itemize into the {@link NotesNote}
+	 * @throws IOException in case of MIME stream I/O errors
+	 * @throws MessagingException in case of read errors from the {@link Message}
+	 */
+	public static void writeMIMEItem(NotesNote note, String itemName, Message message) throws IOException, MessagingException {
+		if ("$file".equalsIgnoreCase(itemName)) {
+			throw new IllegalArgumentException("Invalid item name: "+itemName);
+		}
+
+		NotesNote tmpNote = note.getParent().createNote();
+		MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+		try {
+			stream.write(message);
+			//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
+			//otherwise we end up having To: , Subject: etc. in the first Body item
+			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
+			
+			//remove old items from target note
+			while (note.hasItem(itemName)) {
+				note.removeItem(itemName);
+			}
+			
+			//copy created MIME items from temp note to target note
+			tmpNote.getItems(itemName, (item, loop) -> {
+				item.copyToNote(note, false);
+			});
+			
+			//copy part data that exceeded 64k
+			tmpNote.getItems("$file", (item, loop) -> {
+				item.copyToNote(note, false);
+			});
+		}
+		finally {
+			stream.recycle();
+			tmpNote.recycle();
+		}
+	}
+
+	/**
+	 * Convenience method to write the data of a MIME {@link Message} to an item
+	 * of type {@link NotesItem#TYPE_MIME_PART} in a {@link NotesNote}.
+	 * 
+	 * @param note note
+	 * @param itemName mime item to write content
+	 * @param reader reader returning the email's MIME data
+	 * @throws IOException in case of MIME stream I/O errors
+	 */
+	public static void writeMIMEItem(NotesNote note, String itemName, Reader reader) throws IOException {
+		if ("$file".equalsIgnoreCase(itemName)) {
+			throw new IllegalArgumentException("Invalid item name: "+itemName);
+		}
+
+		NotesNote tmpNote = note.getParent().createNote();
+		MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+		try {
+			stream.write(reader);
+			//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
+			//otherwise we end up having To: , Subject: etc. in the first Body item
+			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
+			
+			//remove old items from target note
+			while (note.hasItem(itemName)) {
+				note.removeItem(itemName);
+			}
+			
+			//copy created MIME items from temp note to target note
+			tmpNote.getItems(itemName, (item, loop) -> {
+				item.copyToNote(note, false);
+			});
+			
+			//copy part data that exceeded 64k
+			tmpNote.getItems("$file", (item, loop) -> {
+				item.copyToNote(note, false);
+			});
+		}
+		finally {
+			stream.recycle();
+			tmpNote.recycle();
+		}
+	}
+
+	/**
+	 * Convenience function that reads the MIME data of a {@link NotesNote}.
+	 * 
+	 * @param note note
+	 * @param itemName item that contains the MIME data
+	 * @param writer writer to receive the MIME data
+	 * @param openFlags specifies whether MIME headers or RFC822 items should be exported or just the content of <code>itemName</code>
+	 * @throws IOException in case of I/O errors
+	 */
+	public static void readMIME(NotesNote note, String itemName, Writer writer, EnumSet<MimeStreamOpenOptions> openFlags) throws IOException {
+		MIMEStream stream = newStreamForRead(note, itemName, openFlags);
+		try {
+			stream.read(writer);
+		}
+		finally {
+			stream.recycle();
+		}
+	}
+	
 	private MIMEStream(NotesNote note, String itemName, int dwOpenFlags) {
 		if (note.isRecycled()) {
 			throw new NotesError(0, "Note is recycled");
 		}
+		if ("$file".equalsIgnoreCase(itemName)) {
+			throw new IllegalArgumentException("Invalid item name: "+itemName);
+		}
+
 		m_note = note;
+		m_itemName = itemName;
 		
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
 
@@ -163,14 +330,8 @@ public class MIMEStream implements IRecyclableNotesObject {
 			return;
 		}
 		
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().MIMEStreamClose(m_hMIMEStream);
-			m_recycled = true;
-		}
-		else {
-			NotesNativeAPI32.get().MIMEStreamClose(m_hMIMEStream);
-			m_recycled = true;			
-		}
+		NotesNativeAPI.get().MIMEStreamClose(m_hMIMEStream);
+		m_recycled = true;
 	}
 	
 	public void close() {
@@ -195,11 +356,10 @@ public class MIMEStream implements IRecyclableNotesObject {
 		
 		Memory lineMem = NotesStringUtils.toLMBCS(line, true, false);
 
-		if (PlatformUtils.is64Bit()) {
-			toStreamResult(NotesNativeAPI64.get().MIMEStreamPutLine(lineMem, m_hMIMEStream));
-		}
-		else {
-			toStreamResult(NotesNativeAPI32.get().MIMEStreamPutLine(lineMem, m_hMIMEStream));
+		int resultAsInt = NotesNativeAPI.get().MIMEStreamPutLine(lineMem, m_hMIMEStream);
+		
+		if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
+			throw new IOException("I/O error received during MIME stream operation");
 		}
 	}
 
@@ -267,29 +427,15 @@ public class MIMEStream implements IRecyclableNotesObject {
 
 			MimeStreamResult result = null;
 			while (result != MimeStreamResult.EOS) {
-				if (PlatformUtils.is64Bit()) {
-					result = toStreamResult(NotesNativeAPI64.get().MIMEStreamRead(pchData,
-							puiDataLen, MAX_BUFFER_SIZE, m_hMIMEStream));
-					int len = puiDataLen.getValue();
-					if (len > 0) {
-						String txt = NotesStringUtils.fromLMBCS(pchData, len);
-						writer.write(txt);
-					}
-					else {
-						return;
-					}
+				result = toStreamResult(NotesNativeAPI.get().MIMEStreamRead(pchData,
+						puiDataLen, MAX_BUFFER_SIZE, m_hMIMEStream));
+				int len = puiDataLen.getValue();
+				if (len > 0) {
+					String txt = NotesStringUtils.fromLMBCS(pchData, len);
+					writer.write(txt);
 				}
 				else {
-					result = toStreamResult(NotesNativeAPI32.get().MIMEStreamRead(pchData,
-							puiDataLen, MAX_BUFFER_SIZE, m_hMIMEStream));
-					int len = puiDataLen.getValue();
-					if (len > 0) {
-						String txt = NotesStringUtils.fromLMBCS(pchData, len);
-						writer.write(txt);
-					}
-					else {
-						return;
-					}
+					return;
 				}
 			}
 		}
@@ -309,14 +455,14 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * {@link MimeStreamItemizeOptions#ITEMIZE_HEADERS} and {@link MimeStreamItemizeOptions#ITEMIZE_BODY}
 	 * are set.
 	 * 
-	 * @param flags flags to control the itemize operation
+	 * @param itemizeFlags flags to control the itemize operation
 	 */
-	public void itemize(EnumSet<MimeStreamItemizeOptions> flags) {
+	public void itemize(EnumSet<MimeStreamItemizeOptions> itemizeFlags) {
 		checkRecycled();
 		
 		Memory targetItemNameMem = NotesStringUtils.toLMBCS(m_itemName, false);
 		
-		int dwFlags = MimeStreamItemizeOptions.toBitMaskInt(flags);
+		int dwFlags = MimeStreamItemizeOptions.toBitMaskInt(itemizeFlags);
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
@@ -334,26 +480,28 @@ public class MIMEStream implements IRecyclableNotesObject {
 	/**
 	 * This function rewinds a MIME stream to the beginning.
 	 * 
+	 * @return this instance
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public void rewind() throws IOException {
+	public MIMEStream rewind() throws IOException {
 		checkRecycled();
 		
-		if (PlatformUtils.is64Bit()) {
-			toStreamResult(NotesNativeAPI64.get().MIMEStreamRewind(m_hMIMEStream)); 
+		int resultAsInt = NotesNativeAPI.get().MIMEStreamRewind(m_hMIMEStream);
+		
+		if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
+			throw new IOException("I/O error received during MIME stream operation");
 		}
-		else {
-			toStreamResult(NotesNativeAPI32.get().MIMEStreamRewind(m_hMIMEStream)); 
-		}
+		return this;
 	}
 
 	/**
 	 * This function writes a buffer to the input MIME stream.
 	 * 
 	 * @param reader reader to get the MIME stream data
-	 * @throws IOException in case of 
+	 * @return this instance
+	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public void write(Reader reader) throws IOException {
+	public MIMEStream write(Reader reader) throws IOException {
 		char[] buffer = new char[60000];
 		int len;
 		
@@ -361,12 +509,60 @@ public class MIMEStream implements IRecyclableNotesObject {
 			String txt = new String(buffer, 0, len);
 			Memory txtMem = NotesStringUtils.toLMBCS(txt, false, false);
 			
-			if (PlatformUtils.is64Bit()) {
-				toStreamResult(NotesNativeAPI64.get().MIMEStreamWrite(txtMem, (short) (txtMem.size() & 0xffff), m_hMIMEStream));
+			int resultAsInt = NotesNativeAPI.get().MIMEStreamWrite(txtMem, (short) (txtMem.size() & 0xffff), m_hMIMEStream);
+			
+			if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
+				throw new IOException("I/O error received during MIME stream operation");
 			}
-			else {
-				toStreamResult(NotesNativeAPI32.get().MIMEStreamWrite(txtMem, (short) (txtMem.size() & 0xffff), m_hMIMEStream));
-			}
+
 		}
+		return this;
+	}
+	
+	/**
+	 * Writes the MIME content of a {@link Message} to the stream
+	 * 
+	 * @param message message to append to the stream
+	 * @return this instance
+	 * @throws IOException in case of MIME stream I/O errors
+	 * @throws MessagingException in case of read errors from the {@link Message}
+	 */
+	public MIMEStream write(Message message) throws IOException, MessagingException {
+		//size of in-memory buffer to transfer MIME data from Message object to Domino MIME stream
+		final int BUFFERSIZE = 16384;
+		
+		final DisposableMemory buf = new DisposableMemory(BUFFERSIZE);
+		
+		message.writeTo(new OutputStream() {
+			int bytesInBuffer = 0;
+
+			@Override
+			public void write(int b) throws IOException {
+				buf.setByte(bytesInBuffer, (byte) (b & 0xff));
+				bytesInBuffer++;
+				if (bytesInBuffer == buf.size()) {
+					flushBuffer();
+				}
+			}
+
+			@Override
+			public void close() throws IOException {
+				flushBuffer();
+			}
+
+			private void flushBuffer() throws IOException {
+				if (bytesInBuffer > 0) {
+					int resultAsInt = NotesNativeAPI.get().MIMEStreamWrite(buf, bytesInBuffer, m_hMIMEStream);
+
+					if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
+						throw new IOException("I/O error received during MIME stream operation");
+					}
+
+					bytesInBuffer = 0;
+				}
+			}
+		});
+		
+		return this;
 	}
 }
