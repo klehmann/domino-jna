@@ -905,8 +905,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * The function NSFNoteHasMIME returns TRUE if the given note contains either TYPE_RFC822_TEXT
-	 * items or TYPE_MIME_PART items.
+	 * The function NSFNoteHasMIME returns TRUE if the given note contains either {@link NotesItem#TYPE_RFC822_TEXT}
+	 * items or {@link NotesItem#TYPE_MIME_PART} items.
 	 * 
 	 * @return true if mime
 	 */
