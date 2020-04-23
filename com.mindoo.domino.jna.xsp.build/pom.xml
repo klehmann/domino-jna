@@ -45,8 +45,8 @@
 				<artifactId>tycho-compiler-plugin</artifactId>
 				<version>${tycho-version}</version>
 				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
+					<source>1.8</source>
+					<target>1.8</target>
 					<encoding>UTF-8</encoding>
 					<useProjectSettings>true</useProjectSettings>
 					<extraClasspathElements>
@@ -54,6 +54,11 @@
 							<groupId>com.ibm</groupId>
 							<artifactId>domino-api-binaries</artifactId>
 							<version>9.0.1</version>
+						</extraClasspathElement>
+						<extraClasspathElement>
+							<groupId>com.sun.mail</groupId>
+							<artifactId>javax.mail</artifactId>
+							<version>1.5.2</version>
 						</extraClasspathElement>
 					</extraClasspathElements>
 				</configuration>

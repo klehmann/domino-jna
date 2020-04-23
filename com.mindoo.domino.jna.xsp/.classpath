@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry exported="true" kind="lib" path="lib/javax.mail-1.5.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/concurrentlinkedhashmap-lru-1.4.2.jar"/>
 	<classpathentry kind="lib" path="lib/asm-6.0.jar"/>
 	<classpathentry kind="lib" path="lib/cglib-3.2.6.jar"/>
