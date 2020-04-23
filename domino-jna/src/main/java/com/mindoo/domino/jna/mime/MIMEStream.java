@@ -18,7 +18,6 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.constants.MimeStreamItemizeOptions;
 import com.mindoo.domino.jna.constants.MimeStreamOpenOptions;
@@ -37,8 +36,6 @@ import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
-
-import lotus.domino.axis.wsdl.symbolTable.MimeInfo;
 
 /**
  * Utility class to read a {@link NotesNote} in MIME format or populate (itemize) a

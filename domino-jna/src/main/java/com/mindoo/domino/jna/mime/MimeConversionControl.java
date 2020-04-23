@@ -215,7 +215,7 @@ public class MimeConversionControl implements IRecyclableNotesObject, IAdaptable
 	/**
 	 * The function  sets the Conversions Controls 'keep tabs' setting to the input value.
 	 * 
-	 * @param true to keep tabs
+	 * @param b true to keep tabs
 	 * @return this instance
 	 */
 	public MimeConversionControl setKeepTabs(boolean b) {
@@ -349,13 +349,13 @@ public class MimeConversionControl implements IRecyclableNotesObject, IAdaptable
 	}
 
 	public enum MessageContentEncoding {
-		/** text/plain (w/o images & attachments)  */
+		/** text/plain (w/o images and attachments)  */
 		TEXT_PLAIN_NO_IMAGES_ATTACHMENTS,
-		/** text/plain (w/images & attachments) */
+		/** text/plain (w/images and attachments) */
 		TEXT_PLAIN_WITH_IMAGES_ATTACHMENTS,
-		/** text/html (w/images & attachments) */
+		/** text/html (w/images and attachments) */
 		TEXT_HTML_WITH_IMAGES_ATTACHMENTS,
-		/** multipart/alternative: text/plain & text/html (w/images & attachments) */
+		/** multipart/alternative: text/plain and text/html (w/images and attachments) */
 		TEXT_PLAIN_AND_HTML_WITH_IMAGES_ATTACHMENTS
 	}
 
