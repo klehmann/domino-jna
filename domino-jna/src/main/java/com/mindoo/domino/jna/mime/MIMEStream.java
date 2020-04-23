@@ -1,13 +1,26 @@
 package com.mindoo.domino.jna.mime;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.StringWriter;
 import java.io.Writer;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.Properties;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesItem;
@@ -36,7 +49,7 @@ import com.sun.jna.ptr.PointerByReference;
  * 
  * @author Karsten Lehmann
  */
-public class MIMEStream implements IRecyclableNotesObject {
+public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	private NotesNote m_note;
 	private String m_itemName;
 	private Pointer m_hMIMEStream;
@@ -119,7 +132,7 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @throws IOException
 	 * @throws MessagingException
 	 */
-	public static NotesNote createMailNote(NotesDatabase dbMail, Message message) throws IOException, MessagingException {
+	public static NotesNote createMIMENote(NotesDatabase dbMail, Message message) throws IOException, MessagingException {
 		NotesNote note = dbMail.createNote();
 		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
 		try {
@@ -143,7 +156,7 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @return created (unsaved) note
 	 * @throws IOException
 	 */
-	public static NotesNote createMailNote(NotesDatabase dbMail, Reader reader) throws IOException {
+	public static NotesNote createMIMENote(NotesDatabase dbMail, Reader reader) throws IOException {
 		NotesNote note = dbMail.createNote();
 		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
 		try {
@@ -245,7 +258,8 @@ public class MIMEStream implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Convenience function that reads the MIME data of a {@link NotesNote}.
+	 * Convenience function that reads the MIME data of a {@link NotesNote} and
+	 * streams it into a {@link Writer}.
 	 * 
 	 * @param note note
 	 * @param itemName item that contains the MIME data
@@ -253,7 +267,7 @@ public class MIMEStream implements IRecyclableNotesObject {
 	 * @param openFlags specifies whether MIME headers or RFC822 items should be exported or just the content of <code>itemName</code>
 	 * @throws IOException in case of I/O errors
 	 */
-	public static void readMIME(NotesNote note, String itemName, Writer writer, EnumSet<MimeStreamOpenOptions> openFlags) throws IOException {
+	public static void readRawMIME(NotesNote note, String itemName, Writer writer, EnumSet<MimeStreamOpenOptions> openFlags) throws IOException {
 		MIMEStream stream = newStreamForRead(note, itemName, openFlags);
 		try {
 			stream.read(writer);
@@ -261,6 +275,68 @@ public class MIMEStream implements IRecyclableNotesObject {
 		finally {
 			stream.recycle();
 		}
+	}
+	
+	/**
+	 * Reads the MIME content of a {@link NotesNote} and parses it as {@link MimeMessage}.<br>
+	 * Please make sure to have sufficient memory so that the MIME data can fit into the Java heap.
+	 * Otherwise use {@link #readRawMIME(NotesNote, String, Writer, EnumSet)} instead which
+	 * allows streaming of the data.
+	 * 
+	 * @param note note with MIME data
+	 * @param itemName MIME item containing the data, should be "body" in most of the cases
+	 * @param openFlags specifies whether MIME headers or RFC822 items should be exported or just the content of <code>itemName</code>
+	 * @return parsed MIME message
+	 * @throws NotesError if something goes wrong extracting or parsing the data
+	 */
+	public static MimeMessage parseMIMEMessage(NotesNote note, String itemName,
+			EnumSet<MimeStreamOpenOptions> openFlags) {
+		final Exception[] ex = new Exception[1];
+		
+		MimeMessage msg = AccessController.doPrivileged(new PrivilegedAction<MimeMessage>() {
+
+			@Override
+			public MimeMessage run() {
+				MIMEStream stream = newStreamForRead(note, itemName, openFlags);
+				
+				File tmpFile = null;
+				try {
+					//use a temp file to not store the MIME content twice in memory (raw + parsed)
+					tmpFile = File.createTempFile("dominojna_mime_", ".tmp");
+					
+					try (FileWriter writer = new FileWriter(tmpFile)) {
+						stream.read(writer);
+					}
+					
+					try (FileInputStream fIn = new FileInputStream(tmpFile);
+							BufferedInputStream bufIn = new BufferedInputStream(fIn)) {
+						
+						Properties props = System.getProperties(); 
+						javax.mail.Session mailSession = javax.mail.Session.getInstance(props, null);
+						MimeMessage message = new MimeMessage(mailSession, bufIn);
+						return message;
+					}
+				}
+				catch (Exception e) {
+					ex[0] = e;
+					return null;
+				}
+				finally {
+					if (tmpFile.exists() && !tmpFile.delete()) {
+						tmpFile.deleteOnExit();
+					}
+					stream.recycle();
+				}
+			}
+		});
+		
+		if (ex[0] != null) {
+			NotesDatabase parentDb = note.getParent();
+			throw new NotesError(0, "Error parsing the MIME content of document with UNID "+
+					note.getUNID()+" and item name "+itemName+
+					" in database "+parentDb.getServer()+"!!"+parentDb.getRelativeFilePath(), ex[0]);
+		}
+		return msg;
 	}
 	
 	private MIMEStream(NotesNote note, String itemName, int dwOpenFlags) {
@@ -334,6 +410,7 @@ public class MIMEStream implements IRecyclableNotesObject {
 		m_recycled = true;
 	}
 	
+	@Override
 	public void close() {
 		recycle();
 	}
@@ -565,4 +642,19 @@ public class MIMEStream implements IRecyclableNotesObject {
 		
 		return this;
 	}
+
+	@Override
+	public String toString() {
+		if (!m_note.isRecycled() && !m_note.getParent().isRecycled()) {
+			return "MIMEStream [noteid=" + m_note.getNoteId() + ", noteunid=" + m_note.getUNID() +
+					", itemname=" + m_itemName +
+					", db="+m_note.getParent().getServer()+"!!"+m_note.getParent().getRelativeFilePath() +
+					"]";
+		}
+		else {
+			return "MIMEStream [note=recycled, itemname="+m_itemName+"]";
+		}
+	}
+
+	
 }
