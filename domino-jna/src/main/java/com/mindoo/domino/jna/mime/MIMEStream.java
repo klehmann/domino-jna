@@ -38,6 +38,8 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 
+import lotus.domino.axis.wsdl.symbolTable.MimeInfo;
+
 /**
  * Utility class to read a {@link NotesNote} in MIME format or populate (itemize) a
  * document with data from a MIME document.<br>
@@ -117,141 +119,134 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	}
 
 	/**
-	 * Simulates receiving a new email in the mail database. The method creates a new
-	 * unsaved note in the specified mail database and imports all data from the
-	 * {@link Message} into it, e.g. the body item and all header items (with type RFC822).
+	 * Writes the content of a {@link Message} to a {@link NotesNote}.
 	 * 
-	 * @param dbMail mail database
-	 * @param message message that contains the email data
-	 * @return created (unsaved) note
-	 * @throws IOException
-	 * @throws MessagingException
+	 * @param note note to write MIME data
+	 * @param itemName item name that receives the content (e.g. "body")
+	 * @param message message containing the MIME data
+	 * @param itemizeFlags used to select which data should be written (MIME headers, body or both)
+	 * @throws IOException in case of I/O errors writing MIME
+	 * @throws MessagingException in case of errors reading the MIME message
 	 */
-	public static NotesNote createMIMENote(NotesDatabase dbMail, Message message) throws IOException, MessagingException {
-		NotesNote note = dbMail.createNote();
-		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
-		try {
-			stream.write(message);
-			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_HEADERS, MimeStreamItemizeOptions.ITEMIZE_BODY));
-			note.replaceItemValue("Form", "Memo");
-			return note;
+	public static void writeMIMEMessage(NotesNote note, String itemName, Message message,
+			EnumSet<MimeStreamItemizeOptions> itemizeFlags) throws IOException, MessagingException {
+		
+		if ("$file".equalsIgnoreCase(itemName)) {
+			throw new IllegalArgumentException("Invalid item name: "+itemName);
 		}
-		finally {
-			stream.recycle();
+		
+		if (itemizeFlags.isEmpty()) {
+			throw new IllegalArgumentException("Itemize flags cannot be empty");
+		}
+		
+		if (itemizeFlags.contains(MimeStreamItemizeOptions.ITEMIZE_BODY) &&
+				!itemizeFlags.contains(MimeStreamItemizeOptions.ITEMIZE_HEADERS)) {
+			
+			//write just the body
+			NotesNote tmpNote = note.getParent().createNote();
+			MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+			try {
+				stream.write(message);
+				//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
+				//otherwise we end up having To: , Subject: etc. in the first Body item
+				stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
+				
+				//remove old items from target note
+				while (note.hasItem(itemName)) {
+					note.removeItem(itemName);
+				}
+				
+				//copy created MIME items from temp note to target note
+				tmpNote.getItems(itemName, (item, loop) -> {
+					item.copyToNote(note, false);
+				});
+				
+				//copy part data that exceeded 64k
+				tmpNote.getItems("$file", (item, loop) -> {
+					item.copyToNote(note, false);
+				});
+			}
+			finally {
+				stream.recycle();
+				tmpNote.recycle();
+			}
+		}
+		else {
+			MIMEStream stream = newStreamForWrite(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+			try {
+				stream.write(message);
+				stream.itemize(itemizeFlags);
+			}
+			finally {
+				stream.recycle();
+			}
 		}
 	}
 	
 	/**
-	 * Simulates receiving a new email in the mail database. The method creates a new
-	 * unsaved note in the specified mail database and imports all data from the
-	 * {@link Message} into it, e.g. the body item and all header items (with type RFC822).
+	 * Writes MIME data to a {@link NotesNote}.
 	 * 
-	 * @param dbMail mail database
-	 * @param reader reader returning the email's MIME data
-	 * @return created (unsaved) note
-	 * @throws IOException
+	 * @param note note to write MIME
+	 * @param itemName name of item to write MIME content (e.g. "body")
+	 * @param reader reader used to read MIME content
+	 * @param itemizeFlags used to select which data should be written (MIME headers, body or both)
+	 * @throws IOException in case of I/O errors writing MIME
 	 */
-	public static NotesNote createMIMENote(NotesDatabase dbMail, Reader reader) throws IOException {
-		NotesNote note = dbMail.createNote();
-		MIMEStream stream = newStreamForWrite(note, "body", EnumSet.noneOf(MimeStreamOpenOptions.class));
-		try {
-			stream.write(reader);
-			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_HEADERS, MimeStreamItemizeOptions.ITEMIZE_BODY));
-			note.replaceItemValue("Form", "Memo");
-			return note;
+	public static void writeRawMIME(NotesNote note, String itemName, Reader reader,
+			EnumSet<MimeStreamItemizeOptions> itemizeFlags) throws IOException {
+		
+		if ("$file".equalsIgnoreCase(itemName)) {
+			throw new IllegalArgumentException("Invalid item name: "+itemName);
 		}
-		finally {
-			stream.recycle();
+		
+		if (itemizeFlags.isEmpty()) {
+			throw new IllegalArgumentException("Itemize flags cannot be empty");
+		}
+		
+		if (itemizeFlags.contains(MimeStreamItemizeOptions.ITEMIZE_BODY) &&
+				!itemizeFlags.contains(MimeStreamItemizeOptions.ITEMIZE_HEADERS)) {
+			
+			//write just the body
+			NotesNote tmpNote = note.getParent().createNote();
+			MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+			try {
+				stream.write(reader);
+				//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
+				//otherwise we end up having To: , Subject: etc. in the first Body item
+				stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
+				
+				//remove old items from target note
+				while (note.hasItem(itemName)) {
+					note.removeItem(itemName);
+				}
+				
+				//copy created MIME items from temp note to target note
+				tmpNote.getItems(itemName, (item, loop) -> {
+					item.copyToNote(note, false);
+				});
+				
+				//copy part data that exceeded 64k
+				tmpNote.getItems("$file", (item, loop) -> {
+					item.copyToNote(note, false);
+				});
+			}
+			finally {
+				stream.recycle();
+				tmpNote.recycle();
+			}
+		}
+		else {
+			MIMEStream stream = newStreamForWrite(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+			try {
+				stream.write(reader);
+				stream.itemize(itemizeFlags);
+			}
+			finally {
+				stream.recycle();
+			}
 		}
 	}
 	
-	/**
-	 * Convenience method to write the data of a MIME {@link Message} to an item
-	 * of type {@link NotesItem#TYPE_MIME_PART} in a {@link NotesNote}.
-	 * 
-	 * @param note note
-	 * @param itemName mime item to write content
-	 * @param message message to itemize into the {@link NotesNote}
-	 * @throws IOException in case of MIME stream I/O errors
-	 * @throws MessagingException in case of read errors from the {@link Message}
-	 */
-	public static void writeMIMEItem(NotesNote note, String itemName, Message message) throws IOException, MessagingException {
-		if ("$file".equalsIgnoreCase(itemName)) {
-			throw new IllegalArgumentException("Invalid item name: "+itemName);
-		}
-
-		NotesNote tmpNote = note.getParent().createNote();
-		MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
-		try {
-			stream.write(message);
-			//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
-			//otherwise we end up having To: , Subject: etc. in the first Body item
-			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
-			
-			//remove old items from target note
-			while (note.hasItem(itemName)) {
-				note.removeItem(itemName);
-			}
-			
-			//copy created MIME items from temp note to target note
-			tmpNote.getItems(itemName, (item, loop) -> {
-				item.copyToNote(note, false);
-			});
-			
-			//copy part data that exceeded 64k
-			tmpNote.getItems("$file", (item, loop) -> {
-				item.copyToNote(note, false);
-			});
-		}
-		finally {
-			stream.recycle();
-			tmpNote.recycle();
-		}
-	}
-
-	/**
-	 * Convenience method to write the data of a MIME {@link Message} to an item
-	 * of type {@link NotesItem#TYPE_MIME_PART} in a {@link NotesNote}.
-	 * 
-	 * @param note note
-	 * @param itemName mime item to write content
-	 * @param reader reader returning the email's MIME data
-	 * @throws IOException in case of MIME stream I/O errors
-	 */
-	public static void writeMIMEItem(NotesNote note, String itemName, Reader reader) throws IOException {
-		if ("$file".equalsIgnoreCase(itemName)) {
-			throw new IllegalArgumentException("Invalid item name: "+itemName);
-		}
-
-		NotesNote tmpNote = note.getParent().createNote();
-		MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
-		try {
-			stream.write(reader);
-			//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
-			//otherwise we end up having To: , Subject: etc. in the first Body item
-			stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
-			
-			//remove old items from target note
-			while (note.hasItem(itemName)) {
-				note.removeItem(itemName);
-			}
-			
-			//copy created MIME items from temp note to target note
-			tmpNote.getItems(itemName, (item, loop) -> {
-				item.copyToNote(note, false);
-			});
-			
-			//copy part data that exceeded 64k
-			tmpNote.getItems("$file", (item, loop) -> {
-				item.copyToNote(note, false);
-			});
-		}
-		finally {
-			stream.recycle();
-			tmpNote.recycle();
-		}
-	}
-
 	/**
 	 * Convenience function that reads the MIME data of a {@link NotesNote} and
 	 * streams it into a {@link Writer}.
@@ -284,7 +279,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * @return parsed MIME message
 	 * @throws NotesError if something goes wrong extracting or parsing the data
 	 */
-	public static MimeMessage parseMIMEMessage(NotesNote note, String itemName,
+	public static MimeMessage readMIMEMessage(NotesNote note, String itemName,
 			EnumSet<MimeStreamOpenOptions> openFlags) {
 		final Exception[] ex = new Exception[1];
 		
@@ -334,6 +329,13 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 		return msg;
 	}
 	
+	/**
+	 * Creates a new MIMEStream
+	 * 
+	 * @param note note to read/write MIME data
+	 * @param itemName item to read/write MIME data
+	 * @param dwOpenFlags open flags
+	 */
 	private MIMEStream(NotesNote note, String itemName, int dwOpenFlags) {
 		if (note.isRecycled()) {
 			throw new NotesError(0, "Note is recycled");
