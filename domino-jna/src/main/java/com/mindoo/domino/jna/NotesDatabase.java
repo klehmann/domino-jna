@@ -6370,11 +6370,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * <code>objectKey</code>.
 	 * 
 	 * @param category category part of primary key
-	 * @param objectKey object key part of primary key
+	 * @param objectId object id part of primary key
 	 * @return note or null if not found
 	 */
-	public NotesNote openNoteByPrimaryKey(String category, String objectKey) {
-		String fullNodeName = getApplicationNoteName(category, objectKey);
+	public NotesNote openNoteByPrimaryKey(String category, String objectId) {
+		String fullNodeName = getApplicationNoteName(category, objectId);
 		int rrv = getNamedObjectRRV(fullNodeName);
 		return rrv==0 ? null : openNoteById(rrv);
 	}
