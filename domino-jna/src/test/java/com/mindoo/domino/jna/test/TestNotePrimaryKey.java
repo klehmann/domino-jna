@@ -48,8 +48,8 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 
 				{
 					NotesNote noteFoundViaPK = dbJNA.openNoteByPrimaryKey(pkCategory, pkObjectId);
-					Assert.assertNotNull("Note could be found via primary key", noteFoundViaPK);
-					Assert.assertEquals("Note found via primary key has correct UNID", note.getUNID(), noteFoundViaPK.getUNID());
+					Assert.assertNotNull("note could be found via primary key", noteFoundViaPK);
+					Assert.assertEquals("note found via primary key has correct UNID", note.getUNID(), noteFoundViaPK.getUNID());
 				}
 				{
 					Map<String,Map<String,Integer>> notesByCategoryAndPK = dbJNA.getAllNotesByPrimaryKey();
@@ -71,7 +71,7 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 				{
 					NotesNote noteFoundViaPK = dbJNA.openNoteByPrimaryKey(pkCategory, pkObjectId);
 					Assert.assertNotNull("Note could be found via primary key", noteFoundViaPK);
-					Assert.assertEquals("Note found via primary key has correct UNID", note.getUNID(), noteFoundViaPK.getUNID());
+					Assert.assertEquals("note found via primary key has correct UNID", note.getUNID(), noteFoundViaPK.getUNID());
 				}
 				{
 					Map<String,Map<String,Integer>> notesByCategoryAndPK = dbJNA.getAllNotesByPrimaryKey();
@@ -87,6 +87,7 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 					Assert.assertTrue("value has the right note id", notesByPK.get(pkObjectId) == note.getNoteId());
 				}
 
+				//now delete the note and see if the index has been updated
 				note.delete();
 
 				// switch to local mode
@@ -94,7 +95,7 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 
 				{
 					NotesNote noteFoundViaPK = dbJNA.openNoteByPrimaryKey(pkCategory, pkObjectId);
-					Assert.assertNull("Deleted note could not be found via primary key", noteFoundViaPK);
+					Assert.assertNull("deleted note could not be found via primary key", noteFoundViaPK);
 				}
 				{
 					Map<String,Integer> notesByPK = dbJNA.getAllNotesByPrimaryKey(pkCategory);
@@ -106,7 +107,7 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 				
 				{
 					NotesNote noteFoundViaPK = dbJNA.openNoteByPrimaryKey(pkCategory, pkObjectId);
-					Assert.assertNull("Deleted note could not be found via primary key", noteFoundViaPK);
+					Assert.assertNull("deleted note could not be found via primary key", noteFoundViaPK);
 				}
 				{
 					Map<String,Integer> notesByPK = dbJNA.getAllNotesByPrimaryKey(pkCategory);
