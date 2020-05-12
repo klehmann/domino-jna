@@ -1,10 +1,12 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.sun.jna.Callback;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.IntByReference;
 
 /**
  * Callback interface used on non-Windows platforms
@@ -208,4 +210,21 @@ public interface NotesCallbacks {
 	interface XML_WRITE_FUNCTION extends Callback {
 		void invoke(Pointer bBuffer, int length, Pointer pAction);
 	}
+	
+	interface b64_NSFPROFILEENUMPROC extends Callback {
+		short invoke(long hDB, Pointer ctx, Pointer profileName, short profileNameLength, Pointer username, short usernameLength, int noteId);
+	}
+
+	interface b32_NSFPROFILEENUMPROC extends Callback {
+		short invoke(int hDB, Pointer ctx, Pointer profileName, short profileNameLength, Pointer username, short usernameLength, int noteId);
+	}
+
+	interface b64_NSFDbNamedObjectEnumPROC extends Callback {
+		short invoke(long hDB, Pointer param, short nameSpace, Pointer name, short nameLength, IntByReference objectID, NotesTimeDateStruct entryTime);
+	}
+
+	interface b32_NSFDbNamedObjectEnumPROC extends Callback {
+		short invoke(int hDB, Pointer param, short nameSpace, Pointer name, short nameLength, IntByReference objectID, NotesTimeDateStruct entryTime);
+	}
+
 }

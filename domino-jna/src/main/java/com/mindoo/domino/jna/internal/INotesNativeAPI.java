@@ -457,4 +457,9 @@ public interface INotesNativeAPI extends Library {
 	public void MIMEStreamClose(
 			Pointer hMIMEStream);
 
+	@UndocumentedAPI
+	public short NSFProfileNameToProfileNoteName(
+            Memory ProfileName, short ProfileNameLength,
+            Memory UserName, short UserNameLength, boolean bLeaveCase, Memory ProfileNoteName);
+
 }

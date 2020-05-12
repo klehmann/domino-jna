@@ -659,6 +659,43 @@ public class NotesNote implements IRecyclableNotesObject {
 		int flags = getFlags();
 		return (flags & NotesConstants.NOTE_FLAG_ABSTRACTED) == NotesConstants.NOTE_FLAG_ABSTRACTED;
 	}
+
+	/**
+	 * Method to check if this is ghost note. Ghost notes do not appear in any view or search.
+	 * 
+	 * @return true if ghost
+	 */
+	public boolean isGhost() {
+		int flags = getFlags();
+		return (flags & NotesConstants.NOTE_FLAG_GHOST) == NotesConstants.NOTE_FLAG_GHOST;
+	}
+	
+	/**
+	 * Changes the note's ghost flag. Ghost notes do not appear in any view or search.
+	 * 
+	 * @param b true if ghost
+	 */
+	void setGhost(boolean b) {
+		short flags = getFlags();
+		short newFlags;
+		
+		if (b) {
+			if ((flags & NotesConstants.NOTE_FLAG_GHOST) == NotesConstants.NOTE_FLAG_GHOST) {
+				return;
+			}
+			
+			newFlags = (short) ((flags | NotesConstants.NOTE_FLAG_GHOST) & 0xffff);
+		}
+		else {
+			if ((flags & NotesConstants.NOTE_FLAG_GHOST) == 0) {
+				return;
+			}
+			
+			newFlags = (short) ((flags & ~NotesConstants.NOTE_FLAG_GHOST) & 0xffff);
+		}
+		
+		setFlags(newFlags);
+	}
 	
 	/**
 	 * Examines the items in the note and determines if they are correctly formed.
@@ -684,18 +721,42 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	private short getFlags() {
 		checkHandle();
-		
-		Memory retFlags = new Memory(2);
-		retFlags.clear();
-		
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_FLAGS, retFlags);
+
+		DisposableMemory retFlags = new DisposableMemory(2);
+		try {
+			retFlags.clear();
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_FLAGS, retFlags);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_FLAGS, retFlags);
+			}
+			short flags = retFlags.getShort(0);
+			return flags;
 		}
-		else {
-			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_FLAGS, retFlags);
+		finally {
+			retFlags.dispose();
 		}
-		short flags = retFlags.getShort(0);
-		return flags;
+	}
+	
+	private void setFlags(short flags) {
+		checkHandle();
+
+		DisposableMemory flagsMem = new DisposableMemory(2);
+		try {
+			flagsMem.setShort(0, flags);
+
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteSetInfo(m_hNote64, NotesConstants._NOTE_FLAGS, flagsMem);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteSetInfo(m_hNote32, NotesConstants._NOTE_FLAGS, flagsMem);
+			}
+		}
+		finally {
+			flagsMem.dispose();
+		}
 	}
 	
 	public void setNoRecycle() {
@@ -827,6 +888,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param updateFlags flags
 	 */
 	public void update(EnumSet<UpdateNote> updateFlags) {
+		if (checkForProfileAndUpdate()) {
+			return;
+		}
 		checkHandle();
 		
 		int updateFlagsBitmask = UpdateNote.toBitMaskForUpdateExt(updateFlags);
@@ -841,6 +905,47 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Checks if this note is a profile. If it is, we use a different C method
+	 * to update it in the database and also update the profile cache.
+	 * 
+	 * @return true if note is a profile note that has been saved, false otherwise
+	 */
+	private boolean checkForProfileAndUpdate() {
+		checkHandle();
+		
+		if (!isGhost()) {
+			return false;
+		}
+		
+		String[] profileNameAndUsername = parseProfileAndUserName();
+		
+		if (profileNameAndUsername==null) {
+			return false;
+		}
+		String profileName = profileNameAndUsername[0];
+		String profileUsername = profileNameAndUsername[1];
+		
+		Memory profileNameMem = NotesStringUtils.toLMBCS(profileName, false);
+		Memory userNameMem = StringUtil.isEmpty(profileUsername) ? null : NotesStringUtils.toLMBCS(profileUsername, false);
+
+		//NSFProfileUpdate updates the profile cache
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFProfileUpdate(getHandle64(),
+					profileNameMem, (short) (profileNameMem.size() & 0xffff), userNameMem,
+					(short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)));
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFProfileUpdate(getHandle32(),
+					profileNameMem, (short) (profileNameMem.size() & 0xffff), userNameMem,
+					(short) (userNameMem==null ? 0 : (userNameMem.size() & 0xffff)));
+		}
+		NotesErrorUtils.checkResult(result);
+
+		return true;
+	}
+	
 	/**
 	 * This function writes the in-memory version of a note to its database.<br>
 	 * Prior to issuing this call, a new note (or changes to a note) are not a part of
@@ -1085,7 +1190,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	public void delete() {
 		delete(EnumSet.noneOf(UpdateNote.class));
 	}
-	
+
 	/**
 	 * This function deletes this note from the specified database.<br>
 	 * <br>
@@ -1102,6 +1207,10 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param flags flags
 	 */
 	public void delete(EnumSet<UpdateNote> flags) {
+		if (checkForProfileAndDelete()) {
+			return;
+		}
+		
 		checkHandle();
 		
 		if (m_parentDb.isRecycled())
@@ -1119,6 +1228,53 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 	}
 	
+	/**
+	 * Checks if this note is a profile. If it is, we use a different C method
+	 * to delete it in the database and also delete the profile cache entry.
+	 * 
+	 * @return true if note is a profile note that has been saved, false otherwise
+	 */
+	private boolean checkForProfileAndDelete() {
+		checkHandle();
+		
+		if (!isGhost()) {
+			return false;
+		}
+		
+		String[] profileNameAndUsername = parseProfileAndUserName();
+		
+		if (profileNameAndUsername==null) {
+			return false;
+		}
+		
+		String profileName = profileNameAndUsername[0];
+		String profileUsername = profileNameAndUsername[1];
+		
+		Memory profileNameMem = NotesStringUtils.toLMBCS(profileName, false);
+		Memory profileUsernameMem = StringUtil.isEmpty(profileUsername) ? null : NotesStringUtils.toLMBCS(profileUsername, false);
+		
+		NotesDatabase parentDb = getParent();
+		if (parentDb.isRecycled()) {
+			throw new NotesError("Parent database is disposed");
+		}
+		
+		//delete note and remove it from the profile cache
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NSFProfileDelete(parentDb.getHandle64(),
+					profileNameMem, (short) (profileNameMem.size() & 0xffff),
+					profileUsernameMem, (short) ((profileUsernameMem==null ? 0 : profileUsernameMem.size()) & 0xffff));
+		}
+		else {
+			result = NotesNativeAPI32.get().NSFProfileDelete(parentDb.getHandle32(),
+					profileNameMem, (short) (profileNameMem.size() & 0xffff),
+					profileUsernameMem, (short) ((profileUsernameMem==null ? 0 : profileUsernameMem.size()) & 0xffff));
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return true;
+	}
+
 	/**
 	 * Method to remove an item from a note
 	 * 
@@ -6451,5 +6607,98 @@ public class NotesNote implements IRecyclableNotesObject {
 			result = NotesNativeAPI32.get().MIMEConvertCDParts(getHandle32(), isCanonical, isMime, ccPtr);
 		}
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	public String getProfileName() {
+		if (isGhost()) {
+			String[] profileAndUsername = parseProfileAndUserName();
+			if (profileAndUsername!=null) {
+				return profileAndUsername[0];
+			}
+		}
+		return "";
+	}
+	
+	private String[] parseProfileAndUserName() {
+		String name = getItemValueString("$name"); //$profile_015calendarprofile_<username>
+		if (!name.startsWith("$profile_")) {
+			return null;
+		}
+		
+		String remainder = name.substring(9); //"$profile_".length()
+		if (remainder.length()<3) {
+			return null;
+		}
+		
+		String profileNameLengthStr = remainder.substring(0, 3);
+		int profileNameLength = Integer.parseInt(profileNameLengthStr);
+		
+		remainder = remainder.substring(3);
+		String profileName = remainder.substring(0, profileNameLength);
+		
+		remainder = remainder.substring(profileNameLength+1);
+		
+		String userName = remainder;
+		
+		return new String[] {profileName, userName};
+	}
+	
+	public String getProfileUserName() {
+		if (isGhost()) {
+			String[] profileAndUsername = parseProfileAndUserName();
+			if (profileAndUsername!=null) {
+				return profileAndUsername[1];
+			}
+		}
+		return "";
+	}
+	
+	/**
+	 * Writes a primary key information to the note. This primary key can be used for
+	 * efficient note retrieval without any lookup views.<br>
+	 * <br>
+	 * Both <code>category</code> and <code>objectKey</code> are combined
+	 * to a string that is expected to be unique within the database.
+	 * 
+	 * @param category category part of primary key
+	 * @param objectId object id part of primary key
+	 */
+	public void setPrimaryKey(String category, String objectId) {
+		String name = NotesDatabase.getApplicationNoteName(category, objectId);
+		replaceItemValue("$name", name);
+	}
+	
+	/**
+	 * Returns the category part of the note primary key
+	 * 
+	 * @return category or empty string if no primary key has been assigned
+	 */
+	public String getPrimaryKeyCategory() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseApplicationNamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[0];
+			}
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * Returns the object id part of the note primary key
+	 * 
+	 * @return object id or empty string if no primary key has been assigned
+	 */
+	public String getPrimaryKeyObjectId() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseApplicationNamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[1];
+			}
+		}
+		
+		return "";
 	}
 }

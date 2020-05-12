@@ -788,4 +788,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public native void MIMEStreamClose(
 			Pointer hMIMEStream);
 
+	public native short NSFProfileNameToProfileNoteName(
+            Memory ProfileName, short ProfileNameLength,
+            Memory UserName, short UserNameLength, boolean bLeaveCase, Memory ProfileNoteName);
+
 }

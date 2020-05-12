@@ -1,7 +1,5 @@
 package com.mindoo.domino.jna.constants;
 
-import java.util.EnumSet;
-
 /**
  * Open Flag Definitions.  These flags are passed to NSFNoteOpen.
  * 
@@ -10,7 +8,7 @@ import java.util.EnumSet;
 public enum OpenNote {
 	
 	/** open only summary info */
-	SUMMARY(0x0001),
+	SUMMARY,
 	
 	/** Do not verify if this is the default note in this class. A note is a default note if the
 	 * NOTE_CLASS_DEFAULT bit is OR'd into the note class. Normally, if the NOTE_CLASS_DEFAULT
@@ -19,22 +17,22 @@ public enum OpenNote {
 	 * is still the default note for that class. If this flag is set, then such verification
 	 * will not occur. This flag saves one disk I/O if the note is marked as being the
 	 * "default note", in the event that this information is not desired. */
-	NOVERIFYDEFAULT(0x0002),
+	NOVERIFYDEFAULT,
 	
 	/** For fields of TYPE_TEXT, expand the data to 1-entry TYPE_TEXT_LIST values while
 	 * reading the note. For fields of TYPE_NUMBER, expand the data to TYPE_NUMBER_RANGE.
 	 * For fields of TYPE_TIME, expand the data to TYPE_TIME_RANGE. This option is
 	 * necessary if the note is to be signed or a signature verified; please see the
 	 * entry for NSFNoteSign() for details. */
-	EXPAND(0x0004),
+	EXPAND,
 	
 	/** Do not read any objects. Objects include file attachments and DDE links.<br>
 	 * Warning: documents opened with OPEN_NOOBJECTS then subsequently updated loose
 	 * all objects that were previously attached. */
-	NOOBJECTS(0x0008),
+	NOOBJECTS,
 	
 	/** open in a "shared" memory mode */
-	SHARE(0x0020),
+	SHARE,
 	
 	/** Return ALL item values in canonical form, including the datatype WORD.
 	 * API programs should not use this flag when explicitly calling NSFNoteOpen or
@@ -48,18 +46,18 @@ public enum OpenNote {
 	 * If this flag is set, use ODSReadMemory to convert any canonical data to
 	 * host data. This can also be checked by calling NSFNoteGetInfo () with the
 	 * header member _NOTE_FLAGS, and checking the flags for the presence of NOTE_FLAG_CANONICAL. */
-	CANONICAL(0x0040),
+	CANONICAL,
 	
 	/** Mark unread to read if unread list is currently associated (database is a remote database). */
-	MARK_READ(0x0100),
+	MARK_READ,
 	
 	/** Only open an abstract of large documents */
-	ABSTRACT(0x0200),
+	ABSTRACT,
 	
 	/** Generate an ID Table of Note IDs for the responses to this note. Use this option in
 	 * order to access the Note IDs of the immediate responses to a given note in a later
 	 * call to NSFNoteGetInfo() using _NOTE_RESPONSES as the note header member ID. */
-	RESPONSE_ID_TABLE(0x1000),
+	RESPONSE_ID_TABLE,
 	
 	/** Include folder objects - the default is not to. Folder objects appear in Folder
 	 * notes. Folder notes contain two folder object items. The names of these items are
@@ -67,57 +65,18 @@ public enum OpenNote {
 	 * In order to access these items you must open the note with this flag. This flag
 	 * can only be used with functions that take DWORD OPEN_xxx(note) flags, such as
 	 * NSFNoteOpenExt. You do not need to set this flag when calling NSFDbCopyNoteExt. */
-	WITH_FOLDERS(0x00020000),
+	WITH_FOLDERS,
 	
-	/** Open for NSFNoteOpenExt: If set, leave TYPE_RFC822_TEXT items in native
-	format.  Otherwise, convert to TYPE_TEXT/TYPE_TIME. */
-	RAW_RFC822_TEXT(0x01000000),
-	
-	/** Open for NSFNoteOpenExt: If set, leave TYPE_MIME_PART items in native
-	format.  Otherwise, convert to TYPE_COMPOSITE. */
-	RAW_MIME_PART(0x02000000),
-	
-	/** Open for NSFNoteOpenExt: RAW_RFC822_TEXT | RAW_MIME_PART */
-	RAW_MIME(0x01000000 | 0x02000000);
+	/**
+	 * Converts items of type {@link ItemDataType#TYPE_RFC822_TEXT} to {@link ItemDataType#TYPE_TEXT}
+	 * and {@link ItemDataType#TYPE_TIME}. If not set, we leave the items in their native format.
+	 */
+	CONVERT_RFC822_TO_TEXT_AND_TIME,
 
-
-	private int m_val;
-
-	OpenNote(int val) {
-		m_val = val;
-	}
-
-	public int getValue() {
-		return m_val;
-	}
-
-	public static short toBitMaskForOpen(EnumSet<OpenNote> openFlagSet) {
-		int result = 0;
-		if (openFlagSet != null) {
-			for (OpenNote currNav : values()) {
-				if (currNav.getValue() > 0xffff) {
-					//skip ext flags
-					continue;
-				}
-				
-				if (openFlagSet.contains(currNav)) {
-					result = result | currNav.getValue();
-				}
-			}
-		}
-		return (short) (result & 0xffff);
-	}
-
-	public static int toBitMaskForOpenExt(EnumSet<OpenNote> openFlagSet) {
-		int result = 0;
-		if (openFlagSet != null) {
-			for (OpenNote currNav : values()) {
-				if (openFlagSet.contains(currNav)) {
-					result = result | currNav.getValue();
-				}
-			}
-		}
-		return result;
-	}
+	/**
+	 * Converts items of type {@link ItemDataType#TYPE_MIME_PART} to {@link ItemDataType#TYPE_COMPOSITE}
+	 * (richtext). If not set, we leave the items in their native format.
+	 */
+	CONVERT_MIME_TO_RICHTEXT;
 
 }

@@ -1,5 +1,8 @@
 package com.mindoo.domino.jna.internal;
 
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.sun.jna.Callback;
+import com.sun.jna.Pointer;
 import com.sun.jna.win32.StdCallLibrary.StdCallCallback;
 
 /**
@@ -59,4 +62,9 @@ public interface Win32NotesCallbacks {
 	interface XML_READ_FUNCTIONWin32 extends NotesCallbacks.XML_READ_FUNCTION, StdCallCallback {};
 	
 	interface XML_WRITE_FUNCTIONWin32 extends NotesCallbacks.XML_WRITE_FUNCTION, StdCallCallback {};
+	
+	interface NSFPROFILEENUMPROCWin32 extends NotesCallbacks.b32_NSFPROFILEENUMPROC, StdCallCallback {};
+
+	interface NSFDbNamedObjectEnumPROCWin32 extends NotesCallbacks.b32_NSFDbNamedObjectEnumPROC,  StdCallCallback {};
+
 }

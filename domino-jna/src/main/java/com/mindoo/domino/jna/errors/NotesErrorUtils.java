@@ -1,7 +1,7 @@
 package com.mindoo.domino.jna.errors;
 
-import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
 
@@ -66,6 +66,10 @@ public class NotesErrorUtils {
 		Memory retBuffer = new Memory(256);
 		short outStrLength = NotesNativeAPI.get().OSLoadString(0, err, retBuffer, (short) 255);
 		if (outStrLength==0) {
+			if (err == 577) { // ERR_BAD_PARAM
+				return "(invalid usage - see NSF documentation)";
+			}
+			
 			return "";
 		}
 		Memory newRetBuffer = new Memory(outStrLength);

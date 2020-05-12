@@ -966,6 +966,14 @@ public interface INotesNativeAPI32 extends Library {
 			Memory UserName,
 			short UserNameLength);
 
+	public short NSFProfileEnum(
+			int hDB,
+			Memory ProfileName,
+			short ProfileNameLength,
+			NotesCallbacks.b32_NSFPROFILEENUMPROC Callback,
+			Pointer CallbackCtx,
+			int Flags);
+
 	public short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 	public short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
@@ -1703,5 +1711,13 @@ public interface INotesNativeAPI32 extends Library {
 			boolean bCanonical,
 			boolean bIsMIME,
 			Pointer hCC);
-	
+
+	@UndocumentedAPI
+	public short NSFDbNamedObjectEnum(int hDB, NotesCallbacks.b32_NSFDbNamedObjectEnumPROC callback, Pointer param);
+
+	@UndocumentedAPI
+	public short NSFDbGetNamedObjectID(int hDB, short NameSpace,
+            Memory Name, short NameLength,
+            IntByReference rtnObjectID);
+
 }

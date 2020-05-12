@@ -50,7 +50,9 @@ import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat2St
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat4Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat5Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormatStruct;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.IntByReference;
 
 /**
  * Extract of Notes C API constants, should only be used internally by the API.
@@ -385,6 +387,10 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	This type of note is meant to retain the 
 	Item sequence numbers */
 	public static final short NOTE_FLAG_INCREMENTAL_FULL = 0x0040;
+	
+	/** Ghost entries do not appear in any views or searches */
+	public static final short NOTE_FLAG_GHOST = 0x200;
+	
 	/** Note is (opened) in canonical form */
 	public static final short NOTE_FLAG_CANONICAL = 0x4000;
 
@@ -3668,4 +3674,27 @@ This allows an Editor to assume some Designer-level access */
 	/** SI not converted to new fmt */ 
 	public short f1IDFH_SINotConverted = (short) (0x8000 & 0xffff);
 
+	public short NONS_NOASSIGN = (short) (0x8000 & 0xffff);
+	
+	/** Named Object "User Unread ID Table" Name Space */
+	public short NONS_USER_UNREAD = 0;
+	/** Named Note */
+	public short NONS_NAMED_NOTE = 1;
+	/** Named Object "User NameList" name space */
+	public short NONS_USER_NAMELIST = 2;
+	/** Named object - Folder Directory Object */
+	public short NONS_FDO = 3;
+	/** Named object - Execution Control List object */
+	public short NONS_ECL_OBJECT = 4;
+	/** Named object - design note (exists in ODS37+). */
+	public short NONS_DESIGN_NOTE = 5;
+	/** Named object - IMAP visable folders (exists in build 166+) */
+	public short NONS_IMAP_FOLDERS = 6;
+	/** Named object - activity log for unread marks */
+	public short NONS_USER_UNREAD_ACTIVITY_LOG = 7;
+	/** Named object - DAOS pending object delete */
+	public short NONS_DAOS_DELETED = 8;
+	/** Named object - DAOS pending object delete */
+	public short NONS_DAOS_OBJECT = 9;
+	
 }

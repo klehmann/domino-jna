@@ -5,6 +5,7 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.b32_NSFDbNamedObjectEnumPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b32_NSFGetAllFolderChangesCallback;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -836,6 +837,10 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFProfileDelete(int hDB, Memory ProfileName, short ProfileNameLength, Memory UserName,
 			short UserNameLength);
 
+	public native short NSFProfileEnum(int hDB, Memory ProfileName, short ProfileNameLength,
+			NotesCallbacks.b32_NSFPROFILEENUMPROC Callback,
+			Pointer CallbackCtx, int Flags);
+	
 	public native short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
 	public native short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
@@ -1417,4 +1422,9 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			boolean bIsMIME,
 			Pointer hCC);
 
+	public native short NSFDbNamedObjectEnum(int hDB, b32_NSFDbNamedObjectEnumPROC callback, Pointer param);
+
+	public native short NSFDbGetNamedObjectID(int hDB, short NameSpace, Memory Name, short NameLength,
+			IntByReference rtnObjectID);
+	
 }
