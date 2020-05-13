@@ -50,9 +50,7 @@ import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat2St
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat4Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormat5Struct;
 import com.mindoo.domino.jna.internal.structs.viewformat.NotesViewTableFormatStruct;
-import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
 
 /**
  * Extract of Notes C API constants, should only be used internally by the API.
