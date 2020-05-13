@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -6119,17 +6120,17 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	private void _getNamedObjectInfosLocal(NamedObjectEnumCallback callback) {
 		checkHandle();
-		
+
 		if (isRemote()) {
 			throw new IllegalStateException("This method cannot yet be called on remote databases");
 		}
-		
+
 		if (callback==null) {
 			throw new IllegalArgumentException("Callback cannot be null");
 		}
-		
+
 		Exception[] ex = new Exception[1];
-		
+
 		if (PlatformUtils.is64Bit()) {
 			NotesCallbacks.b64_NSFDbNamedObjectEnumPROC cCallback = new NotesCallbacks.b64_NSFDbNamedObjectEnumPROC() {
 
@@ -6166,18 +6167,25 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			};
 
-			short result = NotesNativeAPI64.get().NSFDbNamedObjectEnum(m_hDB64, cCallback, null);
-			if (result == INotesErrorConstants.ERR_CANCEL) {
-				if (ex[0] != null) {
-					throw new NotesError(0, "Error enumerating named objects", ex[0]);
+			AccessController.doPrivileged(new PrivilegedAction<Object>() {
+				@Override
+				public Object run() {
+					short result = NotesNativeAPI64.get().NSFDbNamedObjectEnum(m_hDB64, cCallback, null);
+					if (result == INotesErrorConstants.ERR_CANCEL) {
+						if (ex[0] != null) {
+							throw new NotesError(0, "Error enumerating named objects", ex[0]);
+						}
+						return null;
+					}
+					NotesErrorUtils.checkResult(result);
+
+					return null;
 				}
-				return;
-			}
-			NotesErrorUtils.checkResult(result);
+			});
 		}
 		else {
 			NotesCallbacks.b32_NSFDbNamedObjectEnumPROC cCallback;
-			
+
 			if (Platform.isWindows()) {
 				cCallback = new Win32NotesCallbacks.NSFDbNamedObjectEnumPROCWin32() {
 
@@ -6212,7 +6220,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							ex[0] = e;
 							return INotesErrorConstants.ERR_CANCEL;
 						}
-					
+
 					}};
 			}
 			else {
@@ -6249,18 +6257,25 @@ public class NotesDatabase implements IRecyclableNotesObject {
 							ex[0] = e;
 							return INotesErrorConstants.ERR_CANCEL;
 						}
-					
+
 					}};
 			}
-			
-			short result = NotesNativeAPI32.get().NSFDbNamedObjectEnum(m_hDB32, cCallback, null);
-			if (result == INotesErrorConstants.ERR_CANCEL) {
-				if (ex[0] != null) {
-					throw new NotesError(0, "Error enumerating named objects", ex[0]);
+
+			AccessController.doPrivileged(new PrivilegedAction<Object>() {
+				@Override
+				public Object run() {
+					short result = NotesNativeAPI32.get().NSFDbNamedObjectEnum(m_hDB32, cCallback, null);
+					if (result == INotesErrorConstants.ERR_CANCEL) {
+						if (ex[0] != null) {
+							throw new NotesError(0, "Error enumerating named objects", ex[0]);
+						}
+						return null;
+					}
+					NotesErrorUtils.checkResult(result);
+					return null;
 				}
-				return;
-			}
-			NotesErrorUtils.checkResult(result);
+			});
+
 		}
 	}
 
