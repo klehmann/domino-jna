@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.constants;
 
+import com.mindoo.domino.jna.NotesItem;
+
 /**
  * Open Flag Definitions.  These flags are passed to NSFNoteOpen.
  * 
@@ -68,13 +70,13 @@ public enum OpenNote {
 	WITH_FOLDERS,
 	
 	/**
-	 * Converts items of type {@link ItemDataType#TYPE_RFC822_TEXT} to {@link ItemDataType#TYPE_TEXT}
-	 * and {@link ItemDataType#TYPE_TIME}. If not set, we leave the items in their native format.
+	 * Converts items of type {@link NotesItem#TYPE_RFC822_TEXT} to {@link NotesItem#TYPE_TEXT}
+	 * and {@link NotesItem#TYPE_TIME}. If not set, we leave the items in their native format.
 	 */
 	CONVERT_RFC822_TO_TEXT_AND_TIME,
 
 	/**
-	 * Converts items of type {@link ItemDataType#TYPE_MIME_PART} to {@link ItemDataType#TYPE_COMPOSITE}
+	 * Converts items of type {@link NotesItem#TYPE_MIME_PART} to {@link NotesItem#TYPE_COMPOSITE}
 	 * (richtext). If not set, we leave the items in their native format.
 	 */
 	CONVERT_MIME_TO_RICHTEXT;
