@@ -884,7 +884,7 @@ public class NotesACL implements IAllocatedMemory {
 			return;
 		}
 		
-		Memory oldAclEntryNameMem = NotesStringUtils.toLMBCS(oldAclEntry.getName(), true);
+		Memory oldAclEntryNameMem = "-default-".equalsIgnoreCase(oldAclEntry.getName()) ? null : NotesStringUtils.toLMBCS(oldAclEntry.getName(), true);
 		
 		Memory newNameMem = null;
 		
