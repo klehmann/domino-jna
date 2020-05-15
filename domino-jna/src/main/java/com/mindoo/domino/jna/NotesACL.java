@@ -880,6 +880,9 @@ public class NotesACL implements IAllocatedMemory {
 		
 		NotesACLEntry oldAclEntry = getEntry(name);
 		if (oldAclEntry==null) {
+			if (newName==null) {
+				newName = name;
+			}
 			addEntry(newName, newAccessLevel, newRoles, newFlags);
 			return;
 		}
