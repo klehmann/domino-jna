@@ -1007,7 +1007,7 @@ public class NotesLookupResultBufferDecoder {
 						data.put(m_itemNames[i], val);
 					}
 				}
-				else if(val instanceof NotesTimeDate) {
+				else if(!isPreferNotesTimeDates() && val instanceof NotesTimeDate) {
 					data.put(m_itemNames[i], ((NotesTimeDate)val).toCalendar());
 				}
 				else if (val instanceof List) {
@@ -1022,7 +1022,7 @@ public class NotesLookupResultBufferDecoder {
 								hasLMBCS = true;
 								break;
 							}
-							else if (valAsList.get(j) instanceof NotesTimeDate) {
+							else if (!isPreferNotesTimeDates() && valAsList.get(j) instanceof NotesTimeDate) {
 								hasTimeDate = true;
 								break;
 							}
@@ -1035,7 +1035,7 @@ public class NotesLookupResultBufferDecoder {
 								if (currObj instanceof LMBCSString) {
 									convList.add(((LMBCSString)currObj).getValue());
 								}
-								else if (currObj instanceof NotesTimeDate) {
+								else if (!isPreferNotesTimeDates() && currObj instanceof NotesTimeDate) {
 									convList.add(((NotesTimeDate)currObj).toCalendar());
 								}
 								else {
