@@ -5,12 +5,16 @@ import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
+import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
 
 import lotus.domino.DbDirectory;
@@ -67,7 +71,7 @@ public class DirectoryScanner {
 
 				@Override
 				public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch, IItemTableData summaryBufferData) {
-
+					summaryBufferData.setPreferNotesTimeDates(true);
 					Map<String,Object> dataAsMap = summaryBufferData.asMap(true);
 
 					Object typeObj = dataAsMap.get("$type");
@@ -139,34 +143,34 @@ public class DirectoryScanner {
 								}
 							}
 
-							Calendar dbCreated = null;
+							NotesTimeDate dbCreated = null;
 							Object createdObj = dataAsMap.get("$DBCREATED");
-							if (createdObj instanceof Calendar) {
-								dbCreated = (Calendar) createdObj;
+							if (createdObj instanceof NotesTimeDate) {
+								dbCreated = (NotesTimeDate) createdObj;
 							}
 
-							Calendar dbModified = null;
+							NotesTimeDate dbModified = null;
 							Object modifiedObj = dataAsMap.get("$Modified");
-							if (modifiedObj instanceof Calendar) {
-								dbModified = (Calendar) modifiedObj;
+							if (modifiedObj instanceof NotesTimeDate) {
+								dbModified = (NotesTimeDate) modifiedObj;
 							}
 
-							Calendar lastFixup = null;
+							NotesTimeDate lastFixup = null;
 							Object lastFixupObj = dataAsMap.get("$lastfixup");
-							if (lastFixupObj instanceof Calendar) {
-								lastFixup = (Calendar) lastFixupObj;
+							if (lastFixupObj instanceof NotesTimeDate) {
+								lastFixup = (NotesTimeDate) lastFixupObj;
 							}
 							
-							Calendar lastCompact = null;
+							NotesTimeDate lastCompact = null;
 							Object lastCompactObj = dataAsMap.get("$lastcompact");
-							if (lastCompactObj instanceof Calendar) {
-								lastCompact = (Calendar) lastCompactObj;
+							if (lastCompactObj instanceof NotesTimeDate) {
+								lastCompact = (NotesTimeDate) lastCompactObj;
 							}
 							
-							Calendar nonDataMod  = null;
+							NotesTimeDate nonDataMod  = null;
 							Object nonDataModObj = dataAsMap.get("$nondatamod");
-							if (nonDataModObj instanceof Calendar) {
-								nonDataMod = (Calendar) nonDataModObj;
+							if (nonDataModObj instanceof NotesTimeDate) {
+								nonDataMod = (NotesTimeDate) nonDataModObj;
 							}
 
 							String fileName = null;
@@ -328,14 +332,15 @@ public class DirectoryScanner {
 		private String m_title;
 		private String m_fileName;
 		private String m_filePath;
-		private Calendar m_created;
-		private Calendar m_modified;
-		private Calendar m_lastFixup;
-		private Calendar m_lastCompact;
-		private Calendar m_nonDataMod;
+		private NotesTimeDate m_created;
+		private NotesTimeDate m_modified;
+		private NotesTimeDate m_lastFixup;
+		private NotesTimeDate m_lastCompact;
+		private NotesTimeDate m_nonDataMod;
 		private String m_category;
 		private String m_templateName;
 		private String m_ineritTemplateName;
+		private Set<DatabaseOption> m_dbOptions;
 		
 		/**
 		 * Returns the database title
@@ -397,15 +402,23 @@ public class DirectoryScanner {
 		 * @return creation date
 		 */
 		public Calendar getCreated() {
-			return m_created;
+			return m_created == null ? null : m_created.toCalendar();
 		}
 
+		/**
+		 * Returns the database creation date as a {@link NotesTimeDate}
+		 * @return
+		 */
+		public NotesTimeDate getCreatedAsTimeDate() {
+			return m_created;
+		}
+		
 		/**
 		 * Sets the database creation date
 		 * 
 		 * @param created creation date
 		 */
-		private void setCreated(Calendar created) {
+		private void setCreated(NotesTimeDate created) {
 			this.m_created = created;
 		}
 
@@ -415,15 +428,24 @@ public class DirectoryScanner {
 		 * @return modification date
 		 */
 		public Calendar getModified() {
-			return m_modified;
+			return m_modified == null ? null : m_modified.toCalendar();
 		}
 
+		/**
+		 * Returns the database modification date as a {@link NotesTimeDate}
+		 * 
+		 * @return modification date
+		 */
+		public NotesTimeDate getModifiedAsTimeDate() {
+			return m_modified;
+		}
+		
 		/**
 		 * Sets the database modification date
 		 * 
 		 * @param modified modification date
 		 */
-		private void setModified(Calendar modified) {
+		private void setModified(NotesTimeDate modified) {
 			this.m_modified = modified;
 		}
 		
@@ -433,6 +455,15 @@ public class DirectoryScanner {
 		 * @return last fixup
 		 */
 		public Calendar getLastFixup() {
+			return this.m_lastFixup == null ? null : this.m_lastFixup.toCalendar();
+		}
+		
+		/**
+		 * Returns the date of the last fixup as a {@link NotesTimeDate}
+		 * 
+		 * @return last fixup
+		 */
+		public NotesTimeDate getLastFixupAsTimeDate() {
 			return this.m_lastFixup;
 		}
 		
@@ -441,7 +472,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param lastFixup last fixup
 		 */
-		private void setLastFixup(Calendar lastFixup) {
+		private void setLastFixup(NotesTimeDate lastFixup) {
 			this.m_lastFixup = lastFixup;
 		}
 		
@@ -451,6 +482,15 @@ public class DirectoryScanner {
 		 * @return last compact
 		 */
 		public Calendar getLastCompact() {
+			return this.m_lastCompact == null ? null : this.m_lastCompact.toCalendar();
+		}
+		
+		/**
+		 * Returns the date of the last compact as a {@link NotesTimeDate}
+		 * 
+		 * @return last compact
+		 */
+		public NotesTimeDate getLastCompactAsTimeDate() {
 			return this.m_lastCompact;
 		}
 		
@@ -459,7 +499,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param lastCompact last compact
 		 */
-		private void setLastCompact(Calendar lastCompact) {
+		private void setLastCompact(NotesTimeDate lastCompact) {
 			this.m_lastCompact = lastCompact;
 		}
 		
@@ -469,6 +509,15 @@ public class DirectoryScanner {
 		 * @return design modified date
 		 */
 		public Calendar getDesignModifiedDate() {
+			return this.m_nonDataMod == null ? null : this.m_nonDataMod.toCalendar();
+		}
+		
+		/**
+		 * Returns the date of the last design change as a {@link NotesTimeDate}
+		 * 
+		 * @return design modified date
+		 */
+		public NotesTimeDate getDesignModifiedDateASTimeDate() {
 			return this.m_nonDataMod;
 		}
 		
@@ -477,7 +526,7 @@ public class DirectoryScanner {
 		 * 
 		 * @param nonDataMod design modified date
 		 */
-		private void setDesignModifiedDate(Calendar nonDataMod) {
+		private void setDesignModifiedDate(NotesTimeDate nonDataMod) {
 			this.m_nonDataMod = nonDataMod;
 		}
 		
@@ -528,6 +577,60 @@ public class DirectoryScanner {
 		 */
 		private void setInheritTemplateName(String inheritTemplateName) {
 			this.m_ineritTemplateName = inheritTemplateName;
+		}
+		
+		/**
+		 * Returns the {@link DatabaseOption} values for the database
+		 * 
+		 * @return options
+		 */
+		public Set<DatabaseOption> getOptions() {
+			if (m_dbOptions==null) {
+				Map<String, Object> rawData = getRawData();
+				
+				DisposableMemory dbOptionsMem = new DisposableMemory(4 * 4); //DWORD[4]
+				try {
+					Object opt1AsObj = rawData.get("$DBOPTIONS");
+					if (opt1AsObj instanceof Number) {
+						dbOptionsMem.setInt(0, ((Number)opt1AsObj).intValue());
+					}
+					
+					Object opt2AsObj = rawData.get("$DBOPTIONS2");
+					if (opt2AsObj instanceof Number) {
+						dbOptionsMem.setInt(1, ((Number)opt2AsObj).intValue());
+					}
+
+					Object opt3AsObj = rawData.get("$DBOPTIONS3");
+					if (opt3AsObj instanceof Number) {
+						dbOptionsMem.setInt(2, ((Number)opt3AsObj).intValue());
+					}
+
+					Object opt4AsObj = rawData.get("$DBOPTIONS4");
+					if (opt4AsObj instanceof Number) {
+						dbOptionsMem.setInt(3, ((Number)opt4AsObj).intValue());
+					}
+
+					byte[] dbOptionsArr = dbOptionsMem.getByteArray(0, 4 * 4);
+
+					m_dbOptions = EnumSet.noneOf(DatabaseOption.class);
+					
+					for (DatabaseOption currOpt : DatabaseOption.values()) {
+						int optionBit = currOpt.getValue();
+						int byteOffsetWithBit = optionBit / 8;
+						byte byteValueWithBit = dbOptionsArr[byteOffsetWithBit];
+						int bitToCheck = (int) Math.pow(2, optionBit % 8);
+						
+						boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
+						if (enabled) {
+							m_dbOptions.add(currOpt);
+						}
+					}
+				}
+				finally {
+					dbOptionsMem.dispose();
+				}
+			}
+			return m_dbOptions;
 		}
 	}
 }
