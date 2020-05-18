@@ -13,6 +13,7 @@ import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -131,6 +132,7 @@ public interface INotesNativeAPI extends Library {
 			short  Options,
 			byte  EncryptStrength,
 			long  MaxFileSize);
+	
 	public short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 	public short NSFDbMarkInService(Memory dbPath);
 	public short NSFDbMarkOutOfService(Memory dbPath);
@@ -462,4 +464,8 @@ public interface INotesNativeAPI extends Library {
             Memory ProfileName, short ProfileNameLength,
             Memory UserName, short UserNameLength, boolean bLeaveCase, Memory ProfileNoteName);
 
+	public short NSFDbModifiedTimeByName(
+			Memory DbName,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
 }

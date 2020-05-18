@@ -1726,4 +1726,28 @@ public interface INotesNativeAPI64 extends Library {
             Memory Name, short NameLength,
             IntByReference rtnObjectID);
 
+	public short NSFDbCreateAndCopyExtended(
+			Memory srcDb,
+			Memory dstDb,
+			short NoteClass,
+			short limit,
+			int flags,
+			long hNames,
+			LongByReference hNewDb);
+	
+	public short NSFDbCreateACLFromTemplate(
+			long hNTF,
+			long hNSF,
+			Memory Manager,
+			short DefaultAccess,
+			LongByReference rethACL);
+	
+	public short ACLCreate(LongByReference rethACL);
+
+	public short NSFDbCopy(
+			long hSrcDB,
+			long hDstDB,
+			NotesTimeDateStruct.ByValue Since,
+			short NoteClassMask);
+	
 }

@@ -720,6 +720,8 @@ public short DBCLASS_V8NOTEFILE = (short) (0xff11 & 0xffff);
 public short DBCLASS_V85NOTEFILE = (short) (0xff12 & 0xffff);
 /** Database was created specifically for Domino and Notes Release Notes/Domino 9. */
 public short DBCLASS_V9NOTEFILE = (short) (0xff13 & 0xffff);
+/** Database was created specifically for Domino and Notes Release Notes/Domino 10. */
+public short DBCLASS_V10NOTEFILE = (short) (0xff14 & 0xffff);
 
 
 public short DBCLASS_MASK	= (0x00ff & 0xffff);
@@ -3694,5 +3696,24 @@ This allows an Editor to assume some Designer-level access */
 	public short NONS_DAOS_DELETED = 8;
 	/** Named object - DAOS pending object delete */
 	public short NONS_DAOS_OBJECT = 9;
-	
+
+	/* Option flags for NSFDbCreateAndCopy */
+
+	public int DBCOPY_REPLICA = 0x00000001;
+	public int DBCOPY_SUBCLASS_TEMPLATE = 0x00000002;
+	public int DBCOPY_DBINFO2 = 0x00000004;
+	public int DBCOPY_SPECIAL_OBJECTS = 0x00000008;
+	public int DBCOPY_NO_ACL	 = 0x00000010;
+	public int DBCOPY_NO_FULLTEXT = 0x00000020;
+	public int DBCOPY_ENCRYPT_SIMPLE = 0x00000040;
+	public int DBCOPY_ENCRYPT_MEDIUM = 0x00000080;
+	public int DBCOPY_ENCRYPT_STRONG = 0x00000100;
+	public int DBCOPY_KEEP_NOTE_MODTIME = 0x00000200;
+	public int DBCOPY_REPLICA_NAMELIST = 0x01000000;	/* Copy the NameList (applicable only when DBCOPY_REPLICA is specified) */
+	public int DBCOPY_DEST_IS_NSF = 0x02000000;	/* Destination is NSF-backed database */
+	public int DBCOPY_DEST_IS_DB2 = 0x04000000;	/* Destination is DB2-backed database */
+	public int DBCOPY_OVERRIDE_DEST = 0x08000000;	/* Destination should override default if able to */
+	public int DBCOPY_DBCLASS_HIGHEST_NOTEFILE = 0x10000000; /* Create Db using the latest ODS, regardless of INI settings */
+	public int DBCOPY_COMPACT_REPLICA = 0x20000000; /* Create Db for copy style compaction */
+
 }

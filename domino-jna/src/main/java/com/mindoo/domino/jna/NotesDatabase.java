@@ -2,6 +2,7 @@ package com.mindoo.domino.jna;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -11,6 +12,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Formatter;
 import java.util.HashMap;
@@ -25,10 +27,12 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
+import com.mindoo.domino.jna.constants.CopyDatabase;
 import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
 import com.mindoo.domino.jna.constants.DBQuery;
@@ -46,8 +50,13 @@ import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
+import com.mindoo.domino.jna.directory.DirectoryScanner;
+import com.mindoo.domino.jna.directory.DirectoryScanner.DatabaseData;
+import com.mindoo.domino.jna.directory.DirectoryScanner.SearchResultData;
 import com.mindoo.domino.jna.dql.DQL;
 import com.mindoo.domino.jna.dql.DQL.DQLTerm;
+import com.mindoo.domino.jna.dxl.DXLImporter;
+import com.mindoo.domino.jna.dxl.DXLImporter.DXLImportOption;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -169,6 +178,43 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public NotesDatabase(String server, String filePath, String asUserCanonical, EnumSet<OpenDatabase> openFlags) {
 		this(server, filePath, (List<String>) null, asUserCanonical, openFlags);
+	}
+
+	/**
+	 * Checks if a database exists
+	 * 
+	 * @param server database server
+	 * @param filePath database filepath
+	 * @return true if DB exists
+	 */
+	public static boolean exists(String server, String filePath) {
+		boolean isOnServer = IDUtils.isOnServer();
+		
+		String idUserName = IDUtils.getIdUsername();
+		
+		if (!"".equals(server)) {
+			if (isOnServer) {
+				String serverCN = NotesNamingUtils.toCommonName(server);
+				String currServerCN = NotesNamingUtils.toCommonName(idUserName);
+				if (serverCN.equalsIgnoreCase(currServerCN)) {
+					//switch to "" as servername if server points to the server the API is running on
+					server = "";
+				}
+			}
+		}
+
+		Memory retFullNetPath = constructNetPath(server, filePath);
+
+		NotesTimeDateStruct retDataModified = NotesTimeDateStruct.newInstance();
+		NotesTimeDateStruct retNonDataModified = NotesTimeDateStruct.newInstance();
+		
+		short result = NotesNativeAPI.get().NSFDbModifiedTimeByName(retFullNetPath, retDataModified, retNonDataModified);
+		if (result == 259) { // File does not exist
+			return false;
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return true;
 	}
 	
 	/**
@@ -554,7 +600,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Locate and return name of template for a given template name.
 	 * 
 	 * @param templateName name of template to find
-	 * @return path to DB which is the template for this template name
+	 * @return path to DB which is the template for this template name or empty string if not found
 	 */
 	public static String findDatabaseByTemplateName(String templateName) {
 		return findDatabaseByTemplateName(templateName, (String) null);
@@ -565,7 +611,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * 
 	 * @param templateName name of template to find
 	 * @param excludeDbPath optional db path to exclude during search
-	 * @return path to DB which is the template for this template name or null if not found
+	 * @return path to DB which is the template for this template name or empty string if not found
 	 */
 	public static String findDatabaseByTemplateName(String templateName, String excludeDbPath) {
 		Memory templateNameMem = NotesStringUtils.toLMBCS(templateName, true);
@@ -575,7 +621,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			short result = NotesNativeAPI.get().DesignFindTemplate(templateNameMem,
 					excludeDbPathMem, retDbPath);
 			if ((result & NotesConstants.ERR_MASK)==1028) //entry not found in index
-				return null;
+				return "";
 			NotesErrorUtils.checkResult(result);
 			
 			return NotesStringUtils.fromLMBCS(retDbPath, -1);
@@ -586,13 +632,58 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Convenience function that uses the {@link DirectoryScanner} to find all databases
+	 * with the specified template name
+	 * 
+	 * @param serverName server to scan
+	 * @param directory top directory for search
+	 * @param templateName template name
+	 * @return list of filepaths
+	 */
+	public static List<String> findAllDatabasesByTemplateName(String serverName, String directory,
+			String templateName) {
+		
+		//make sure the template name does not contain invalid characters
+		templateName = templateName.replace("\"", "");
+		String templateNameLC = templateName.toLowerCase(Locale.ENGLISH);
+		
+//		$Info=Database title
+//				#2OpenEclipseUpdateSite
+				
+		DirectoryScanner scanner = new DirectoryScanner(serverName, directory, EnumSet.of(FileType.ANY));
+		//use formula to decode this crazy format
+		String formula = "@contains(@LowerCase($info);\"#1"+templateNameLC+"\"+@Char(10)) |" +
+				"@contains(@LowerCase($info);\"#1"+templateNameLC+"\"+@Char(13)) |" +
+				" @Ends(@LowerCase($info);\"#1" + templateNameLC + "\")";
+		
+		List<SearchResultData> results = scanner.scan(formula);
+
+		List<String> filePaths = results
+				.stream()
+				.map((data) -> {
+					if (data instanceof DatabaseData) {
+						return ((DatabaseData)data).getFilePath();
+					}
+					else {
+						return "";
+					}
+				})
+				.filter((filePath) -> {
+					return !StringUtil.isEmpty(filePath);
+				})
+				.collect(Collectors.toList());
+		
+		return filePaths;
+	}
+
+	/**
 	 * Searches for a database by its replica id in the data directory (and subdirectories) specified by this
 	 * scanner instance. The method only uses the server specified for this scanner instance, not the directory.
 	 * It always searches the whole directory.
 	 * 
 	 * @param server server to search db replica
 	 * @param replicaId replica id to search for
-	 * @return path to database matching this id or null if not found
+	 * @return path to database matching this id or empty string if not found
 	 */
 	public static String findDatabaseByReplicaId(String server, String replicaId) {
 		NotesDatabase dir = new NotesDatabase(server, "", "");
@@ -609,13 +700,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				result = NotesNativeAPI32.get().NSFDbLocateByReplicaID(dir.getHandle32(), replicaIdStruct, retPathNameMem, (short) (NotesConstants.MAXPATH & 0xffff));
 			}
 			if (result == 259) // File does not exist
-				return null;
+				return "";
 			
 			NotesErrorUtils.checkResult(result);
 
 			String retPathName = NotesStringUtils.fromLMBCS(retPathNameMem, -1);
 			if (retPathName==null || retPathName.length()==0) {
-				return null;
+				return "";
 			}
 			else {
 				return retPathName;
@@ -628,9 +719,35 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/** Available encryption strengths for database creation */
 	public static enum Encryption {None, Simple, Medium, Strong};
+
+	/**
+	 * Convenience method that calls {@link #createDatabase(String, String, DBClass, boolean, EnumSet, Encryption, long, String, AclLevel, String, boolean)}
+	 * with some defaults, e.g. large UNK table, "Optimize document table map", no quota.
+	 * 
+	 * @param serverName server name, either canonical, abbreviated or common name
+	 * @param filePath filepath to database
+	 * @param encryption encryption strength
+	 * @param dbTitle title
+	 * @param defaultAccessLevel access level for the "-Default-" ACL entry
+	 * @param manager user to add to the ACL with manager access, if empty/null, wen use the user returned by {@link IDUtils#getIdUsername()}
+	 * @param initDbDesign true to add a view, add the icon note and create the design collection so that the DB can be opened in the Notes Client; if false, you need to do this on your own, e.g. by importing the design as DXL
+	 */
+	public static void createDatabase(String serverName, String filePath, Encryption encryption, String dbTitle,
+			AclLevel defaultAccessLevel, String manager,
+			boolean initDbDesign) {
+		
+		createDatabase(serverName, filePath, DBClass.V10NOTEFILE, false,
+				EnumSet.noneOf(CreateDatabase.class), encryption,
+				0, dbTitle, defaultAccessLevel, manager, initDbDesign);
+	}
 	
 	/**
-	 * This function creates a new Domino database.
+	 * Creates a new database and initializes the ACL with default access level and an entry
+	 * with manager rights. The created database is not fully initialized unless you set
+	 * <code>initDbDesign</code> to true. This triggers a DXL import which creates a view,
+	 * adds the default database icon and creates the design collection. If you plan to run
+	 * our own DXL import with the DB design, you might want to set <code>initDbDesign</code>
+	 * to false.
 	 * 
 	 * @param serverName server name, either canonical, abbreviated or common name
 	 * @param filePath filepath to database
@@ -639,11 +756,20 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param options database creation option flags.  See {@link CreateDatabase}
 	 * @param encryption encryption strength
 	 * @param maxFileSize optional.  Maximum file size of the database, in bytes.  In order to specify a maximum file size, use the database class, {@link DBClass#BY_EXTENSION} and use the option, {@link CreateDatabase#MAX_SPECIFIED}.
+	 * @param dbTitle title
+	 * @param defaultAccessLevel access level for the "-Default-" ACL entry
+	 * @param manager user to add to the ACL with manager access, if empty/null, wen use the user returned by {@link IDUtils#getIdUsername()}
+	 * @param initDbDesign true to add a view, add the icon note and create the design collection so that the DB can be opened in the Notes Client; if false, you need to do this on your own, e.g. by importing the design as DXL
 	 */
-	public static void createDatabase(String serverName, String filePath, DBClass dbClass, boolean forceCreation, EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize) {
-		String fullPath = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
-		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath, true);
-		
+	public static void createDatabase(String serverName, String filePath, DBClass dbClass, boolean forceCreation,
+			EnumSet<CreateDatabase> options, Encryption encryption, long maxFileSize,
+			String dbTitle,
+			AclLevel defaultAccessLevel, String manager,
+			boolean initDbDesign) {
+
+		String fullPathTarget = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
+		Memory fullPathTargetMem = NotesStringUtils.toLMBCS(fullPathTarget, true);
+
 		byte encryptStrengthByte;
 		switch (encryption) {
 		case None:
@@ -658,14 +784,220 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		case Strong:
 			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_STRONG;
 			break;
-			default:
-				encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_NONE;
+		default:
+			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_NONE;
 		}
-		
+
+		short result;			
+
 		short dbClassShort = dbClass.getValue();
 		short optionsShort = CreateDatabase.toBitMask(options);
-		short result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
+		result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathTargetMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
+
+		NotesDatabase db = new NotesDatabase(serverName, filePath, "");
+		
+		//create ACL
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethACL = new LongByReference();
+			result = NotesNativeAPI64.get().ACLCreate(rethACL);
+			NotesErrorUtils.checkResult(result);
+
+			result = NotesNativeAPI64.get().NSFDbStoreACL(db.getHandle64(), rethACL.getValue(), 0, (short) 1);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			IntByReference rethACL = new IntByReference();
+			result = NotesNativeAPI32.get().ACLCreate(rethACL);
+			NotesErrorUtils.checkResult(result);
+
+			result = NotesNativeAPI32.get().NSFDbStoreACL(db.getHandle32(), rethACL.getValue(), 0, (short) 1);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		if (initDbDesign) {
+			InputStream in = null;
+			
+			try {
+				//use DXL importer to create basic structures like the icon note
+				//and the design collection
+				in = NotesNativeAPI.class.getResourceAsStream("blank_dxl.xml");
+				if (in==null) {
+					throw new NotesError("File blank_dxl.xml not found");
+				}
+				DXLImporter importer = new DXLImporter();
+				importer.setDesignImportOption(DXLImportOption.REPLACE_ELSE_CREATE);
+				importer.setReplaceDbProperties(true);
+				importer.importDxl(in, db);
+				importer.free();
+			} catch (IOException e) {
+				throw new NotesError(0, "Error initializing new database design", e);
+			}
+			finally {
+				if (in!=null) {
+					try {
+						in.close();
+					} catch (IOException e) {
+						//should not happen
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		
+		db.setTitle(dbTitle);
+		
+		//write default acl entries, might lock us out
+		NotesACL acl = db.getACL();
+
+		acl.updateEntry("-Default-", "-Default-", defaultAccessLevel,  Collections.emptyList(), EnumSet.noneOf(AclFlag.class));
+		acl.updateEntry("OtherDomainServers", null, AclLevel.NOACCESS, Collections.emptyList(), EnumSet.of(AclFlag.GROUP, AclFlag.SERVER));
+		acl.updateEntry(manager, null, AclLevel.MANAGER, Collections.emptyList(), EnumSet.noneOf(AclFlag.class));
+
+		if (db.isRemote()) {
+			acl.updateEntry(db.getServer(), null, AclLevel.MANAGER, Collections.emptyList(), EnumSet.of(AclFlag.SERVER, AclFlag.ADMIN_SERVER));
+			acl.setAdminServer(db.getServer());
+		}
+
+		acl.updateEntry("LocalDomainServers", null, AclLevel.MANAGER, Collections.emptyList(), EnumSet.of(AclFlag.GROUP, AclFlag.SERVER));
+
+		acl.save();
+
+		db.recycle();
+	}
+
+	/**
+	 * Calls {@link #createAndCopyDatabase(NotesDatabase, String, String, EnumSet, long, Set, NotesNamesList)}
+	 * with parameters/flags to create a replica copy for a database.
+	 * 
+	 * @param sourceDb database to copy
+	 * @param serverName server name of new database to be created
+	 * @param filePath filepath of new database to be created
+	 * @return replica DB
+	 */
+	public static NotesDatabase createDbReplica(NotesDatabase sourceDb, String serverName, String filePath) {
+		return createAndCopyDatabase(sourceDb, serverName, filePath, null, 0, EnumSet.of(
+				CopyDatabase.REPLICA,
+				CopyDatabase.REPLICA_NAMELIST
+				), null);
+	}
+	
+	/**
+	 * This convenience methods calls
+	 * {@link #createAndCopyDatabase(NotesDatabase, String, String, EnumSet, long, Set, NotesNamesList)}
+	 * with parameters to create a new database from the specified template database.<br>
+	 * <br>
+	 * It copies all data/design notes, creates an ACL derived from the template DB acl (e.g. "[Group1]"
+	 * entry becomes a "Group1" entry) and sets the inherited template name to the
+	 * template name of the template DB.<br>
+	 * <br>
+	 * You can use {@link #findDatabaseByTemplateName(String)} or {@link #findAllDatabasesByTemplateName(String, String, String)}
+	 * to find the template database filepath for a given template name.
+	 * 
+	 * @param templateDb template database
+	 * @param serverName server name of new database to be created
+	 * @param filePath filepath of new database to be created
+	 * @return new database
+	 */
+	public static NotesDatabase createDatabaseFromTemplate(NotesDatabase templateDb, String serverName, String filePath) {
+		NotesDatabase newDb = createAndCopyDatabase(templateDb, serverName, filePath, null, 0,
+				(Set<CopyDatabase>) null, null);
+		return newDb;
+	}
+	
+	/**
+	 * <b>Please note:<br>
+	 * There are two convenience functions {@link #createDbReplica(NotesDatabase, String, String)}
+	 * and {@link #createDatabaseFromTemplate(NotesDatabase, String, String)} that both use this powerful
+	 * copy function. Both are much easier to use than this method, so it's recommended to
+	 * use them instead of this one.</b><br>
+	 * <br>
+	 * This function creates a new copy of a Domino database based on the one supplied in <code>templateDb</code>
+	 * and allows for a {@link NotesNamesList} structure UserName to provide authentication for trusted servers.<br>
+	 * <br>
+	 * The database class of the new database is based on the file extension specified by <code>templateDb</code>.<br>
+	 * <br>
+	 * Specifically, the new copy will contain the replication settings, database options, Access Control List,
+	 * Full Text Index (if any),  as well as data and non-data notes (dependent on the NoteClass argument) of
+	 * the original database.<br>
+	 * <br>
+	 * You may specify the types of notes that you want copied to the new database with the
+	 * <code>noteClassesToCopy</code> argument.<br>
+	 * <br>
+	 * You may also specify the maximum size (database quota) that the database can grow to with the
+	 * <code>maxFileSize</code> argument.<br>
+	 * <br>
+	 * Additionally, you may specify that the new database is to be a replica copy of the original database,
+	 * meaning that it will share the same replica ID.<br>
+	 * 
+	 * @param sourceDb database to copy
+	 * @param serverName server name of new database to be created
+	 * @param filePath filepath of new database to be created
+	 * @param noteClassesToCopy type of notes to copy or <code>null</code> to copy all content
+	 * @param maxFileSize Size limit for new database in bytes, will be rounded to full megabytes. This argument will control how large the new copy can grow to.  Specify a value of zero if you do not wish to place a size limit on the newly copied database.
+	 * @param copyFlags Option flags determining type of copy. Currently, the only supported flags are {@link CopyDatabase#REPLICA}, {@link CopyDatabase#ENCRYPT_SIMPLE}, {@link CopyDatabase#ENCRYPT_MEDIUM}, {@link CopyDatabase#ENCRYPT_STRONG}, {@link CopyDatabase#REPLICA_NAMELIST}, {@link CopyDatabase#OVERRIDE_DEST}.
+	 * @param namesList may be null or a UserName that is used to provide authentication for trusted servers.  This causes the UserName's ACL permissions in the database to be enforced.  Please see {@link NotesNamingUtils#buildNamesList(String)} NSFBuildNamesList for more information on building a NAMES_LIST structure.
+	 * @return database copy
+	 */
+	public static NotesDatabase createAndCopyDatabase(NotesDatabase sourceDb, String serverName, String filePath,
+			EnumSet<NoteClass> noteClassesToCopy,
+			long maxFileSize, Set<CopyDatabase> copyFlags,
+			NotesNamesList namesList) {
+		
+		if (sourceDb==null) {
+			throw new IllegalArgumentException("Source database for copy operation cannot be null");
+		}
+		
+		if (sourceDb.isRecycled()) {
+			throw new NotesError("Source database for copy operation is recycled");
+		}
+
+		String fullPathTarget = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
+		Memory fullPathTargetMem = NotesStringUtils.toLMBCS(fullPathTarget, true);
+
+		String fullPathSource = NotesStringUtils.osPathNetConstruct(null, sourceDb.getServer(), sourceDb.getRelativeFilePath());
+		Memory fullPathSourceMem = NotesStringUtils.toLMBCS(fullPathSource, true);
+
+		short noteClassToCopy = noteClassesToCopy==null ? NotesConstants.NOTE_CLASS_ALL : NoteClass.toBitMask(noteClassesToCopy);
+
+		int createCopyFlags = CopyDatabase.toBitMask(copyFlags);
+		createCopyFlags |= NotesConstants.DBCOPY_DEST_IS_NSF;
+		
+		short result;
+		
+		NotesDatabase dbNew;
+		
+		NotesNamesList namesListForDbCreate;
+		if (namesList==null) {
+			namesListForDbCreate = NotesNamingUtils.buildNamesList(IDUtils.getIdUsername());
+			NotesNamingUtils.setPrivileges(namesListForDbCreate, EnumSet.of(Privileges.Authenticated));
+		}
+		else {
+			namesListForDbCreate = namesList;
+		}
+
+		short maxFileSizeInMB = (short) ((maxFileSize/(1024*1024)) & 0xffff);
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethNewDb = new LongByReference();
+			
+			result = NotesNativeAPI64.get().NSFDbCreateAndCopyExtended(fullPathSourceMem, fullPathTargetMem,
+					noteClassToCopy, maxFileSizeInMB, createCopyFlags, namesList==null ? 0 : namesList.getHandle64(), rethNewDb);
+			NotesErrorUtils.checkResult(result);
+			
+			dbNew = new NotesDatabase(rethNewDb.getValue(), namesListForDbCreate.getNames().get(0), namesListForDbCreate);
+		}
+		else {
+			IntByReference rethNewDb = new IntByReference();
+			
+			result = NotesNativeAPI32.get().NSFDbCreateAndCopyExtended(fullPathSourceMem, fullPathTargetMem,
+					noteClassToCopy, maxFileSizeInMB, createCopyFlags, namesList==null ? 0 : namesList.getHandle32(), rethNewDb);
+			NotesErrorUtils.checkResult(result);
+			
+			dbNew = new NotesDatabase(rethNewDb.getValue(), namesListForDbCreate.getNames().get(0), namesListForDbCreate);
+		}
+		NotesGC.__objectCreated(NotesDatabase.class, dbNew);
+		
+		return dbNew;
 	}
 	
 	/**
@@ -1594,9 +1926,34 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
 	 */
 	public NotesIDTable getModifiedNoteTable(EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, NotesTimeDate retUntil) {
+		short noteClassMask = NoteClass.toBitMask(noteClassMaskEnum);
+
+		return getModifiedNoteTable(noteClassMask, since, retUntil);
+	}
+	
+	/**
+	 * This function returns an ID Table of Note IDs of notes which have been modified in some way
+	 * from the given starting time until "now".  The ending time/date is returned, so that this
+	 * function can be performed incrementally.<br>
+	 * Except when TIMEDATE_MINIMUM is specified, the IDs of notes deleted during the time span will
+	 * also be returned in the ID Table, and the IDs of these deleted notes have been ORed with
+	 * {@link NotesConstants#RRV_DELETED} before being added to the table.  You must check the
+	 * {@link NotesConstants#RRV_DELETED} flag when using the resulting table.<br>
+	 * <br>
+	 * Note: If there are NO modified or deleted notes in the database since the specified time,
+	 * the Notes C API returns an error ERR_NO_MODIFIED_NOTES. In our wrapper code, we check for
+	 * this error and return an empty {@link NotesIDTable} instead.<br>
+	 * <br>
+	 * Note: You program is responsible for freeing up the returned id table handle.
+	 * 
+	 * @param noteClassMask {@link NoteClass} mask as short.  
+	 * @param since A TIMEDATE structure containing the starting date used when selecting notes to be added to the ID Table built by this function. To include ALL notes (including those deleted during the time span) of a given note class, use {@link NotesTimeDate#setWildcard()}.  To include ALL notes of a given note class, but excluding those notes deleted during the time span, use {@link NotesTimeDate#setMinimum()}.
+	 * @param retUntil A pointer to a {@link NotesTimeDate} structure into which the ending time of this search will be returned.  This can subsequently be used as the starting time in a later search.
+	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
+	 */
+	private NotesIDTable getModifiedNoteTable(short noteClassMask, NotesTimeDate since, NotesTimeDate retUntil) {
 		checkHandle();
 
-		short noteClassMask = NoteClass.toBitMask(noteClassMaskEnum);
 		
 		//make sure retUntil is not null
 		if (retUntil==null)
@@ -3644,6 +4001,45 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
 		return enabled;
+	}
+	
+	/**
+	 * Returns the {@link DatabaseOption} values for the database
+	 * 
+	 * @return options
+	 */
+	public Set<DatabaseOption> getOptions() {
+		DisposableMemory retDbOptions = new DisposableMemory(4 * 4); //DWORD[4]
+		try {
+			if (PlatformUtils.is64Bit()) {
+				short result = NotesNativeAPI64.get().NSFDbGetOptionsExt(m_hDB64, retDbOptions);
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				short result = NotesNativeAPI32.get().NSFDbGetOptionsExt(m_hDB32, retDbOptions);
+				NotesErrorUtils.checkResult(result);
+			}
+			byte[] dbOptionsArr = retDbOptions.getByteArray(0, 4 * 4);
+
+			Set<DatabaseOption> dbOptions = EnumSet.noneOf(DatabaseOption.class);
+			
+			for (DatabaseOption currOpt : DatabaseOption.values()) {
+				int optionBit = currOpt.getValue();
+				int byteOffsetWithBit = optionBit / 8;
+				byte byteValueWithBit = dbOptionsArr[byteOffsetWithBit];
+				int bitToCheck = (int) Math.pow(2, optionBit % 8);
+				
+				boolean enabled = (byteValueWithBit & bitToCheck) == bitToCheck;
+				if (enabled) {
+					dbOptions.add(currOpt);
+				}
+			}
+			
+			return dbOptions;
+		}
+		finally {
+			retDbOptions.dispose();
+		}
 	}
 	
 	/**
@@ -6496,4 +6892,5 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return result;
 	}
+	
 }

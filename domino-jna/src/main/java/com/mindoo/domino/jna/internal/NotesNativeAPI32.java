@@ -1427,4 +1427,28 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFDbGetNamedObjectID(int hDB, short NameSpace, Memory Name, short NameLength,
 			IntByReference rtnObjectID);
 	
+	public native short NSFDbCreateAndCopyExtended(
+			Memory srcDb,
+			Memory dstDb,
+			short NoteClass,
+			short limit,
+			int flags,
+			int hNames,
+			IntByReference hNewDb);
+	
+	public native short NSFDbCreateACLFromTemplate(
+			long hNTF,
+			long hNSF,
+			Memory Manager,
+			short DefaultAccess,
+			IntByReference rethACL);
+	
+	public native short ACLCreate(IntByReference rethACL);
+
+	public native short NSFDbCopy(
+			int hSrcDB,
+			int hDstDB,
+			NotesTimeDateStruct.ByValue Since,
+			short NoteClassMask);
+
 }

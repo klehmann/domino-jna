@@ -1441,6 +1441,27 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 
 	public native short NSFDbGetNamedObjectID(long hDB, short NameSpace, Memory Name, short NameLength,
 			IntByReference rtnObjectID);
+
+	public native short NSFDbCreateAndCopyExtended(
+			Memory srcDb,
+			Memory dstDb,
+			short NoteClass,
+			short limit,
+			int flags,
+			long hNames,
+			LongByReference hNewDb);
+	
+	public native short NSFDbCreateACLFromTemplate(
+			long hNTF,
+			long hNSF,
+			Memory Manager,
+			short DefaultAccess,
+			LongByReference rethACL);
+	
+	public native short ACLCreate(LongByReference rethACL);
+
+	public native short NSFDbCopy(long hSrcDB, long hDstDB,
+			NotesTimeDateStruct.ByValue Since, short NoteClassMask);
 	
 }
 

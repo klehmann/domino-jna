@@ -792,4 +792,9 @@ public class NotesNativeAPI implements INotesNativeAPI {
             Memory ProfileName, short ProfileNameLength,
             Memory UserName, short UserNameLength, boolean bLeaveCase, Memory ProfileNoteName);
 
+	public native short NSFDbModifiedTimeByName(
+			Memory DbName,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+
 }
