@@ -746,7 +746,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * with manager rights. The created database is not fully initialized unless you set
 	 * <code>initDbDesign</code> to true. This triggers a DXL import which creates a view,
 	 * adds the default database icon and creates the design collection. If you plan to run
-	 * our own DXL import with the DB design, you might want to set <code>initDbDesign</code>
+	 * your own DXL import with the DB design, you might want to set <code>initDbDesign</code>
 	 * to false.
 	 * 
 	 * @param serverName server name, either canonical, abbreviated or common name
