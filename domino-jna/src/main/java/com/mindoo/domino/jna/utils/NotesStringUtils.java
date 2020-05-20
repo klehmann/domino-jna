@@ -776,6 +776,8 @@ public class NotesStringUtils {
 	 * @return fully qualified network path
 	 */
 	public static String osPathNetConstruct(String portName, String serverName, String fileName) {
+		serverName = NotesNamingUtils.toCanonicalName(serverName);
+		
 		Memory portNameMem = toLMBCS(portName, true);
 		Memory serverNameMem = toLMBCS(serverName, true);
 		Memory fileNameMem = toLMBCS(fileName, true);
