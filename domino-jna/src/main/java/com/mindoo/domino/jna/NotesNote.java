@@ -445,26 +445,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return last modified date
 	 */
 	public Calendar getLastModified() {
-		checkHandle();
-
-		DisposableMemory retModified = new DisposableMemory(NotesConstants.timeDateSize);
-		try {
-			retModified.clear();
-
-			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_MODIFIED, retModified);
-			}
-			else {
-				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_MODIFIED, retModified);
-			}
-			NotesTimeDateStruct td = NotesTimeDateStruct.newInstance(retModified);
-			td.read();
-			Calendar cal = td.toCalendar();
-			return cal;
-		}
-		finally {
-			retModified.dispose();
-		}
+		NotesTimeDate td = getLastModifiedAsTimeDate();
+		return td==null ? null : td.toCalendar();
 	}
 
 	/**
