@@ -911,7 +911,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Calls {@link #createAndCopyDatabase(NotesDatabase, String, String, EnumSet, long, Set, NotesNamesList)}
+	 * Calls {@link #createAndCopyDatabase(String, String, String, String, EnumSet, long, Set, NotesNamesList)}
 	 * with parameters/flags to create a replica copy for a database.
 	 * 
 	 * @param sourceDbServer server of database to copy
@@ -930,7 +930,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * This convenience methods calls
-	 * {@link #createAndCopyDatabase(NotesDatabase, String, String, EnumSet, long, Set, NotesNamesList)}
+	 * {@link #createAndCopyDatabase(String, String, String, String, EnumSet, long, Set, NotesNamesList)}
 	 * with parameters to create a new database from the specified template database.<br>
 	 * <br>
 	 * It copies all data/design notes, creates an ACL derived from the template DB acl (e.g. "[Group1]"
@@ -955,8 +955,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * <b>Please note:<br>
-	 * There are two convenience functions {@link #createDbReplica(NotesDatabase, String, String)}
-	 * and {@link #createDatabaseFromTemplate(NotesDatabase, String, String)} that both use this powerful
+	 * There are two convenience functions {@link #createDbReplica(String, String, String, String)}
+	 * and {@link #createDatabaseFromTemplate(String, String, String, String)} that both use this powerful
 	 * copy function. Both are much easier to use than this method, so it's recommended to
 	 * use them instead of this one.</b><br>
 	 * <br>

@@ -8,7 +8,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Option flags for NSFDbCopyExtended and
- * and {@link NotesDatabase#createAndCopyDatabase(NotesDatabase, String, String, DBClass, long, EnumSet, String, AclLevel, String)}.
+ * and {@link NotesDatabase#createAndCopyDatabase(String, String, String, String, EnumSet, long, Set, com.mindoo.domino.jna.NotesNamesList)}.
  * 
  * @author Karsten Lehmann
  */
