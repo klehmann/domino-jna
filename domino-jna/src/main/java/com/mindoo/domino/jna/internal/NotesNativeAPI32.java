@@ -1451,4 +1451,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			NotesTimeDateStruct.ByValue Since,
 			short NoteClassMask);
 
+	public native short NSFDbOpenTemplateExtended(Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime,
+			IntByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
+	
 }

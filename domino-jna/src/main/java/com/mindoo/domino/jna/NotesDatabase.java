@@ -412,6 +412,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			while (retries>0 && result!=0);
 
+			if ((result & NotesConstants.ERR_MASK) == 259) { // File does not exist
+				//try to find this database in the folder configured via SharedDataDirectory
+				//in the Notes.ini
+
+				if (m_passNamesListToDbOpen) {
+					result = NotesNativeAPI64.get().NSFDbOpenTemplateExtended(retFullNetPath, openOptions,
+							m_namesList.getHandle64(),
+							null, hDB, retDataModified, retNonDataModified);
+				}
+				else {
+					result = NotesNativeAPI64.get().NSFDbOpenTemplateExtended(retFullNetPath, openOptions,
+							0,
+							null, hDB, retDataModified, retNonDataModified);
+				}
+			}
+			
+			if ((result & NotesConstants.ERR_MASK) == 259) {
+				throw new NotesError(result, "No database found on server '"+server+"' with filepath "+filePath);
+			}
+			
 			NotesErrorUtils.checkResult(result);
 
 			m_hDB64 = hDB.getValue();
@@ -449,6 +469,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				}
 			}
 			while (retries>0 && result!=0);
+
+			if ((result & NotesConstants.ERR_MASK) == 259) { // File does not exist
+				//try to find this database in the folder configured via SharedDataDirectory
+				//in the Notes.ini
+				
+				if (m_passNamesListToDbOpen) {
+					result = NotesNativeAPI32.get().NSFDbOpenTemplateExtended(retFullNetPath, openOptions,
+							m_namesList.getHandle32(),
+							null, hDB, retDataModified, retNonDataModified);
+				}
+				else {
+					result = NotesNativeAPI32.get().NSFDbOpenTemplateExtended(retFullNetPath, openOptions,
+							0,
+							null, hDB, retDataModified, retNonDataModified);
+				}
+			}
+			
+			if ((result & NotesConstants.ERR_MASK) == 259) {
+				throw new NotesError(result, "No database found on server '"+server+"' with filepath "+filePath);
+			}
 
 			NotesErrorUtils.checkResult(result);
 
@@ -736,7 +776,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			AclLevel defaultAccessLevel, String manager,
 			boolean initDbDesign) {
 		
-		createDatabase(serverName, filePath, DBClass.V10NOTEFILE, false,
+		createDatabase(serverName, filePath, DBClass.BY_EXTENSION, false,
 				EnumSet.noneOf(CreateDatabase.class), encryption,
 				0, dbTitle, defaultAccessLevel, manager, initDbDesign);
 	}
@@ -792,6 +832,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 		short dbClassShort = dbClass.getValue();
 		short optionsShort = CreateDatabase.toBitMask(options);
+		if (encryptStrengthByte!=0) {
+			optionsShort |= NotesConstants.DBCREATE_LOCALSECURITY;
+		}
+		
 		result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathTargetMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
 
@@ -870,13 +914,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Calls {@link #createAndCopyDatabase(NotesDatabase, String, String, EnumSet, long, Set, NotesNamesList)}
 	 * with parameters/flags to create a replica copy for a database.
 	 * 
-	 * @param sourceDb database to copy
-	 * @param serverName server name of new database to be created
-	 * @param filePath filepath of new database to be created
+	 * @param sourceDbServer server of database to copy
+	 * @param sourceDbFilePath filepath of database to copy
+	 * @param targetDbServerName server name of new database to be created
+	 * @param targetDbFilePath filepath of new database to be created
 	 * @return replica DB
 	 */
-	public static NotesDatabase createDbReplica(NotesDatabase sourceDb, String serverName, String filePath) {
-		return createAndCopyDatabase(sourceDb, serverName, filePath, null, 0, EnumSet.of(
+	public static NotesDatabase createDbReplica(String sourceDbServer, String sourceDbFilePath,
+			String targetDbServerName, String targetDbFilePath) {
+		return createAndCopyDatabase(sourceDbServer, sourceDbFilePath, targetDbServerName, targetDbFilePath, null, 0, EnumSet.of(
 				CopyDatabase.REPLICA,
 				CopyDatabase.REPLICA_NAMELIST
 				), null);
@@ -894,13 +940,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * You can use {@link #findDatabaseByTemplateName(String)} or {@link #findAllDatabasesByTemplateName(String, String, String)}
 	 * to find the template database filepath for a given template name.
 	 * 
-	 * @param templateDb template database
+	 * @param templateDbServer server of template database
+	 * @param templateDbFilePath filepath of template database
 	 * @param serverName server name of new database to be created
 	 * @param filePath filepath of new database to be created
 	 * @return new database
 	 */
-	public static NotesDatabase createDatabaseFromTemplate(NotesDatabase templateDb, String serverName, String filePath) {
-		NotesDatabase newDb = createAndCopyDatabase(templateDb, serverName, filePath, null, 0,
+	public static NotesDatabase createDatabaseFromTemplate(String templateDbServer, String templateDbFilePath,
+			String serverName, String filePath) {
+		NotesDatabase newDb = createAndCopyDatabase(templateDbServer, templateDbFilePath, serverName, filePath, null, 0,
 				(Set<CopyDatabase>) null, null);
 		return newDb;
 	}
@@ -930,32 +978,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * Additionally, you may specify that the new database is to be a replica copy of the original database,
 	 * meaning that it will share the same replica ID.<br>
 	 * 
-	 * @param sourceDb database to copy
-	 * @param serverName server name of new database to be created
-	 * @param filePath filepath of new database to be created
+	 * @param sourceDbServer server of database to copy
+	 * @param sourceDbFilePath filepath of database to copy
+	 * @param targetServerName server name of new database to be created
+	 * @param targetFilePath filepath of new database to be created
 	 * @param noteClassesToCopy type of notes to copy or <code>null</code> to copy all content
 	 * @param maxFileSize Size limit for new database in bytes, will be rounded to full megabytes. This argument will control how large the new copy can grow to.  Specify a value of zero if you do not wish to place a size limit on the newly copied database.
 	 * @param copyFlags Option flags determining type of copy. Currently, the only supported flags are {@link CopyDatabase#REPLICA}, {@link CopyDatabase#ENCRYPT_SIMPLE}, {@link CopyDatabase#ENCRYPT_MEDIUM}, {@link CopyDatabase#ENCRYPT_STRONG}, {@link CopyDatabase#REPLICA_NAMELIST}, {@link CopyDatabase#OVERRIDE_DEST}.
 	 * @param namesList may be null or a UserName that is used to provide authentication for trusted servers.  This causes the UserName's ACL permissions in the database to be enforced.  Please see {@link NotesNamingUtils#buildNamesList(String)} NSFBuildNamesList for more information on building a NAMES_LIST structure.
 	 * @return database copy
 	 */
-	public static NotesDatabase createAndCopyDatabase(NotesDatabase sourceDb, String serverName, String filePath,
+	public static NotesDatabase createAndCopyDatabase(String sourceDbServer, String sourceDbFilePath,
+			String targetServerName, String targetFilePath,
 			EnumSet<NoteClass> noteClassesToCopy,
 			long maxFileSize, Set<CopyDatabase> copyFlags,
 			NotesNamesList namesList) {
 		
-		if (sourceDb==null) {
-			throw new IllegalArgumentException("Source database for copy operation cannot be null");
-		}
-		
-		if (sourceDb.isRecycled()) {
-			throw new NotesError("Source database for copy operation is recycled");
-		}
-
-		String fullPathTarget = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
+		String fullPathTarget = NotesStringUtils.osPathNetConstruct(null, targetServerName, targetFilePath);
 		Memory fullPathTargetMem = NotesStringUtils.toLMBCS(fullPathTarget, true);
 
-		String fullPathSource = NotesStringUtils.osPathNetConstruct(null, sourceDb.getServer(), sourceDb.getRelativeFilePath());
+		String fullPathSource = NotesStringUtils.osPathNetConstruct(null, sourceDbServer, sourceDbFilePath);
 		Memory fullPathSourceMem = NotesStringUtils.toLMBCS(fullPathSource, true);
 
 		short noteClassToCopy = noteClassesToCopy==null ? NotesConstants.NOTE_CLASS_ALL : NoteClass.toBitMask(noteClassesToCopy);
@@ -969,7 +1011,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		NotesNamesList namesListForDbCreate;
 		if (namesList==null) {
-			namesListForDbCreate = NotesNamingUtils.buildNamesList(IDUtils.getIdUsername());
+			namesListForDbCreate = NotesNamingUtils.buildNamesList(targetServerName, IDUtils.getIdUsername());
 			NotesNamingUtils.setPrivileges(namesListForDbCreate, EnumSet.of(Privileges.Authenticated));
 		}
 		else {
@@ -998,6 +1040,19 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(NotesDatabase.class, dbNew);
 		
 		return dbNew;
+	}
+	
+	/**
+	 * Deletes a database
+	 * 
+	 * @param server server of database
+	 * @param filePath filepath of database
+	 */
+	public static void deleteDatabase(String server, String filePath) {
+		String fullPath = NotesStringUtils.osPathNetConstruct(null, server, filePath);
+		Memory fullPathMem = NotesStringUtils.toLMBCS(fullPath, true);
+
+		NotesErrorUtils.checkResult(NotesNativeAPI.get().NSFDbDelete(fullPathMem));
 	}
 	
 	/**
@@ -2003,32 +2058,57 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return view info
 	 */
 	public List<NotesCollectionSummary> getAllCollections() {
-		NotesCollection designCol = openDesignCollection();
+		LinkedHashMap<String,String> columnFormulas = new LinkedHashMap<String, String>();
+		columnFormulas.put("$title", "");
+		columnFormulas.put(NotesConstants.DESIGN_FLAGS, "");
+		columnFormulas.put("$comment", "");
+		columnFormulas.put("$language", "");
 
-		List<NotesCollectionSummary> collections = designCol.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT),
-				Integer.MAX_VALUE, EnumSet.of(ReadMask.SUMMARY, ReadMask.NOTEID, ReadMask.NOTECLASS),
-				new NotesCollection.ViewLookupCallback<List<NotesCollectionSummary>>() {
+		List<NotesCollectionSummary> collections = new ArrayList<>();
+
+		NotesSearch.search(this, null, "@True", columnFormulas, "-", EnumSet.of(Search.SUMMARY),
+				EnumSet.of(NoteClass.VIEW), null, new NotesSearch.SearchCallback() {
 
 			@Override
-			public List<NotesCollectionSummary> startingLookup() {
-				return new ArrayList<NotesCollectionSummary>();
-			}
+			public NotesSearch.SearchCallback.Action noteFound(NotesDatabase parentDb,
+					ISearchMatch searchMatch, IItemTableData summaryBufferData) {
 
-			@Override
-			public Action entryRead(List<NotesCollectionSummary> result, NotesViewEntryData entryData) {
-				if (entryData.getNoteClass() == 8) { // NoteClass.VIEW
-					result.add(new NotesCollectionSummary(entryData));
+				NotesCollectionSummary newInfo = new NotesCollectionSummary(NotesDatabase.this);
+				collections.add(newInfo);
+
+				newInfo.setNoteId(searchMatch.getNoteId());
+
+				String titleAndAliases = summaryBufferData.getAsString("$title", "");
+				if (titleAndAliases.contains("|")) {
+					StringTokenizerExt st = new StringTokenizerExt(titleAndAliases, "|");
+					String title = st.nextToken();
+					newInfo.setTitle(title);
+
+					List<String> aliases = new ArrayList<String>();
+					while (st.hasMoreTokens()) {
+						aliases.add(st.nextToken());
+					}
+					newInfo.setAliases(aliases);
 				}
-				return Action.Continue;
-			}
+				else {
+					newInfo.setTitle(titleAndAliases);
+					newInfo.setAliases(Collections.emptyList());
+				}
 
-			@Override
-			public List<NotesCollectionSummary> lookupDone(List<NotesCollectionSummary> result) {
-				return result;
-			}
+				String flags = summaryBufferData.getAsString(NotesConstants.DESIGN_FLAGS, "");
+				newInfo.setFlags(flags);
 
-		});
-		designCol.recycle();
+				String comment = summaryBufferData.getAsString("$comment", "");
+				newInfo.setComment(comment);
+
+				String language = summaryBufferData.getAsString("$language", "");
+				newInfo.setLanguage(language);
+
+				return SearchCallback.Action.Continue;
+			}
+		}
+				);
+
 		return collections;
 	}
 	
@@ -2352,6 +2432,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		String idUser = userId==null ? IDUtils.getIdUsername() : userId.getUsername();
 		
 		NotesCollection col = openDesignCollection();
+		col.update();
 		try {
 			NotesCollectionPosition pos = new NotesCollectionPosition("0");
 			boolean moreToDo = true;

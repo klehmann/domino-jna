@@ -1744,4 +1744,13 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct.ByValue Since,
 			short NoteClassMask);
 
+	public short NSFDbOpenTemplateExtended(
+			Memory PathName,
+			short Options,
+			int hNames,
+			NotesTimeDateStruct ModifiedTime,
+			IntByReference rethDB,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+
 }

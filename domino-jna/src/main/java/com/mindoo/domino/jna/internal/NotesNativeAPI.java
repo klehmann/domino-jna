@@ -797,4 +797,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
 
+	public native short NSFDbDelete(
+			Memory PathName
+			);
+
 }

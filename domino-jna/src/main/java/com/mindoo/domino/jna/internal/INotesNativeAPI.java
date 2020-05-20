@@ -468,4 +468,9 @@ public interface INotesNativeAPI extends Library {
 			Memory DbName,
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
+	
+	public short NSFDbDelete(
+			Memory PathName
+			);
+
 }

@@ -490,6 +490,7 @@ public interface INotesNativeAPI64 extends Library {
 
 	public short NSFDbStampNotesMultiItem(long hDB, long hTable, long hInNote);
 	public short NSFDbOpen(Memory dbName, LongByReference dbHandle);
+
 	public short NSFDbClose(long dbHandle);
 	public short NSFDbOpenExtended (Memory PathName, short Options, long hNames, NotesTimeDateStruct ModifiedTime, LongByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
 	public short NSFDbGenerateOID(long hDB, NotesOriginatorIdStruct retOID);
@@ -1749,5 +1750,14 @@ public interface INotesNativeAPI64 extends Library {
 			long hDstDB,
 			NotesTimeDateStruct.ByValue Since,
 			short NoteClassMask);
-	
+
+	public short NSFDbOpenTemplateExtended(
+			Memory PathName,
+			short Options,
+			long hNames,
+			NotesTimeDateStruct ModifiedTime,
+			LongByReference rethDB,
+			NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+
 }

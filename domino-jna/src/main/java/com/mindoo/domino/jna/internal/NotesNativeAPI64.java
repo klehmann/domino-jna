@@ -1463,5 +1463,9 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NSFDbCopy(long hSrcDB, long hDstDB,
 			NotesTimeDateStruct.ByValue Since, short NoteClassMask);
 	
+	public native short NSFDbOpenTemplateExtended(Memory PathName, short Options, long hNames,
+			NotesTimeDateStruct ModifiedTime, LongByReference rethDB, NotesTimeDateStruct retDataModified,
+			NotesTimeDateStruct retNonDataModified);
+	
 }
 
