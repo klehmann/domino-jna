@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesDatabase.DesignElement;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback;
 import com.mindoo.domino.jna.NotesUserId;
 import com.mindoo.domino.jna.NotesViewEntryData;
@@ -21,7 +22,7 @@ import lotus.domino.Session;
  */
 public class TestSignDb extends BaseJNATestClass {
 
-//	@Test
+	@Test
 	public void testSignDb() {
 
 		runWithSession(new IDominoCallable<Object>() {
@@ -32,18 +33,13 @@ public class TestSignDb extends BaseJNATestClass {
 				db.signAll(EnumSet.of(NoteClass.ALLNONDATA), new SignCallback() {
 
 					@Override
-					public boolean shouldSign(NotesViewEntryData noteData, String currSigner) {
-						return true;
-					}
-
-					@Override
-					public boolean shouldReadSummaryDataFromDesignCollection() {
+					public boolean shouldSign(DesignElement de, String currSigner) {
 						return true;
 					}
 					
 					@Override
-					public Action noteSigned(NotesViewEntryData noteData) {
-						System.out.println("Note signed: ID="+noteData.getNoteId()+", data="+noteData.getColumnDataAsMap());
+					public Action noteSigned(DesignElement de) {
+						System.out.println("Note signed: ID="+de.getNoteId()+", data="+de);
 						return Action.Continue;
 					}
 					
@@ -83,18 +79,13 @@ public class TestSignDb extends BaseJNATestClass {
 						new SignCallback() {
 
 					@Override
-					public boolean shouldSign(NotesViewEntryData noteData, String currSigner) {
-						return true;
-					}
-
-					@Override
-					public boolean shouldReadSummaryDataFromDesignCollection() {
+					public boolean shouldSign(DesignElement de, String currSigner) {
 						return true;
 					}
 					
 					@Override
-					public Action noteSigned(NotesViewEntryData noteData) {
-						System.out.println("Note signed: ID="+noteData.getNoteId()+", data="+noteData.getColumnDataAsMap());
+					public Action noteSigned(DesignElement de) {
+						System.out.println("Note signed: ID="+de.getNoteId()+", data="+de);
 						return Action.Continue;
 					}
 				});

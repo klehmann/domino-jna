@@ -41,12 +41,10 @@ import com.mindoo.domino.jna.constants.FTIndex;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.GetNotes;
-import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.OpenDatabase;
 import com.mindoo.domino.jna.constants.OpenNote;
-import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
@@ -2261,34 +2259,23 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	public static abstract class SignCallback {
 		/** Values to control sign process */
 		public enum Action {Stop, Continue}
-
-		/**
-		 * Override this method to get the full summary data in the callback
-		 * {@link #shouldSign(NotesViewEntryData, String)}. For performance reasons,
-		 * the default implementation returns false.
-		 * 
-		 * @return true to retrieve summary data for design elements
-		 */
-		public boolean shouldReadSummaryDataFromDesignCollection() {
-			return false;
-		}
 		
 		/**
 		 * Method to skip signing for specific notes
 		 * 
-		 * @param noteData note data from design collection
+		 * @param designElement design element
 		 * @param currentSigner current design element signer
 		 * @return true to sign
 		 */
-		public abstract boolean shouldSign(NotesViewEntryData noteData, String currentSigner);
+		public abstract boolean shouldSign(DesignElement designElement, String currentSigner);
 		
 		/**
 		 * Method is called after signing a note
 		 * 
-		 * @param noteData note data from design collection
+		 * @param designElement design element
 		 * @return return value to stop signing
 		 */
-		public abstract Action noteSigned(NotesViewEntryData noteData);
+		public abstract Action noteSigned(DesignElement designElement);
 	}
 
 	/**
@@ -2413,6 +2400,137 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		signAll(null, noteClassesEnum, false, callback);
 	}
 	
+	public static class DesignElement {
+		private String unid;
+		private int noteId;
+		private EnumSet<NoteClass> noteClass;
+		private String title;
+		private String flags;
+		private NotesTimeDate lastModified;
+		private NotesTimeDate sequenceTime;
+		private int sequenceNumber;
+		
+		private DesignElement() {
+		}
+
+		public String getUNID() {
+			return unid;
+		}
+		
+		private void setUNID(String unid) {
+			this.unid = unid;
+		}
+		
+		public int getNoteId() {
+			return noteId;
+		}
+
+		private void setNoteId(int noteId) {
+			this.noteId = noteId;
+		}
+
+		public EnumSet<NoteClass> getNoteClass() {
+			return noteClass;
+		}
+
+		private void setNoteClass(EnumSet<NoteClass> noteClass) {
+			this.noteClass = noteClass;
+		}
+
+		public String getTitle() {
+			return title;
+		}
+
+		private void setTitle(String title) {
+			this.title = title;
+		}
+		
+		public String getFlags() {
+			return this.flags;
+		}
+		
+		private void setFlags(String flags) {
+			this.flags = flags;
+		}
+
+		public NotesTimeDate getLastModified() {
+			return lastModified;
+		}
+
+		private void setLastModified(NotesTimeDate lastModified) {
+			this.lastModified = lastModified;
+		}
+
+		public NotesTimeDate getSequenceTime() {
+			return sequenceTime;
+		}
+
+		private void setSequenceTime(NotesTimeDate sequenceTime) {
+			this.sequenceTime = sequenceTime;
+		}
+
+		public int getSequenceNumber() {
+			return sequenceNumber;
+		}
+
+		private void setSequenceNumber(int sequenceNumber) {
+			this.sequenceNumber = sequenceNumber;
+		}
+
+		@Override
+		public String toString() {
+			return "DesignElement [unid=" + unid + ", noteId=" + noteId + ", noteClass=" + noteClass + ", title="
+					+ title + ", flags=" + flags + ", lastModified=" + lastModified + ", sequenceTime=" + sequenceTime
+					+ ", sequenceNumber=" + sequenceNumber + "]";
+		}
+	}
+	
+	/**
+	 * Performs a database search and returns basic information about design elements of
+	 * the specified types
+	 * 
+	 * @param noteClassesEnum note classes
+	 * @return design elements
+	 */
+	public List<DesignElement> getDesignElements(EnumSet<NoteClass> noteClassesEnum) {
+		checkHandle();
+		
+		LinkedHashMap<String, String> columnFormulas = new LinkedHashMap<>();
+		columnFormulas.put("$title", "");
+		columnFormulas.put("$flags", "");
+		
+		List<DesignElement> designElements = new ArrayList<>();
+
+		NotesSearch.search(this, null, "@True", columnFormulas, "-", EnumSet.of(Search.SUMMARY),
+				noteClassesEnum, null, new NotesSearch.SearchCallback() {
+
+					@Override
+					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
+							IItemTableData summaryBufferData) {
+						
+						String title = summaryBufferData.getAsString("$title", "");
+						int noteId = searchMatch.getNoteId();
+						EnumSet<NoteClass> noteClass = searchMatch.getNoteClass();
+						String flags = summaryBufferData.getAsString("$flags", "");
+						
+						DesignElement de = new DesignElement();
+						de.setNoteId(noteId);
+						de.setNoteClass(noteClass);
+						de.setTitle(title);
+						de.setFlags(flags);
+						de.setUNID(searchMatch.getUNID());
+						de.setLastModified(searchMatch.getNoteModified());
+						de.setSequenceNumber(searchMatch.getSeq());
+						de.setSequenceTime(searchMatch.getSeqTime());
+						
+						designElements.add(de);
+						
+						return Action.Continue;
+					}
+		});
+		
+		return designElements;
+	}
 	
 	/**
 	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesConstants}.
@@ -2426,167 +2544,138 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			SignCallback callback) {
 		
 		checkHandle();
-
-		int noteClasses = NoteClass.toBitMaskInt(noteClassesEnum);
 		
 		String idUser = userId==null ? IDUtils.getIdUsername() : userId.getUsername();
+		List<DesignElement> designElements = getDesignElements(noteClassesEnum);
 		
-		NotesCollection col = openDesignCollection();
-		col.update();
-		try {
-			NotesCollectionPosition pos = new NotesCollectionPosition("0");
-			boolean moreToDo = true;
-			boolean isFirstRun = true;
-			while (moreToDo) {
-				boolean shouldReadSummaryDataFromDesignCollection = callback!=null ? callback.shouldReadSummaryDataFromDesignCollection() : false;
-				EnumSet<ReadMask> readMask = EnumSet.of(ReadMask.NOTEID, ReadMask.NOTECLASS);
-				if (shouldReadSummaryDataFromDesignCollection) {
-					readMask.add(ReadMask.SUMMARY);
-				}
-				NotesViewLookupResultData data = col.readEntries(pos, isFirstRun ? EnumSet.of(Navigate.NEXT) : EnumSet.of(Navigate.CURRENT), isFirstRun ? 1 : 0, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, readMask);
-				moreToDo = data.hasMoreToDo();
-				isFirstRun=false;
+		for (DesignElement currDE : designElements) {
+			int currNoteId = currDE.getNoteId();
+
+			EnumSet<NoteClass> currNoteClass = currDE.getNoteClass();
+			
+			boolean expandNote = false;
+			if (currNoteClass.contains(NoteClass.FORM) || currNoteClass.contains(NoteClass.INFO) ||
+					currNoteClass.contains(NoteClass.HELP) || currNoteClass.contains(NoteClass.FIELD)) {
+				expandNote = true;
+			}
+
+			if (PlatformUtils.is64Bit()) {
+				LongByReference rethNote = new LongByReference();
 				
-				List<NotesViewEntryData> entries = data.getEntries();
-				for (NotesViewEntryData currEntry : entries) {
-					int currNoteClass = currEntry.getNoteClass();
-					if ((currNoteClass & noteClasses)!=0) {
-						int currNoteId = currEntry.getNoteId();
-						
-						boolean expandNote = false;
-						if ( ((currNoteClass & NotesConstants.NOTE_CLASS_FORM)==NotesConstants.NOTE_CLASS_FORM) || 
-								((currNoteClass & NotesConstants.NOTE_CLASS_INFO)==NotesConstants.NOTE_CLASS_INFO) ||
-								((currNoteClass & NotesConstants.NOTE_CLASS_HELP)==NotesConstants.NOTE_CLASS_HELP) ||
-								((currNoteClass & NotesConstants.NOTE_CLASS_FIELD)==NotesConstants.NOTE_CLASS_FIELD)) {
-							
-							expandNote = true;
-						}
-
-						if (PlatformUtils.is64Bit()) {
-							LongByReference rethNote = new LongByReference();
-							
-							short result = NotesNativeAPI64.get().NSFNoteOpen(m_hDB64, currNoteId, expandNote ? NotesConstants.OPEN_EXPAND : 0, rethNote);
-							NotesErrorUtils.checkResult(result);
-							try {
-								NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
-								Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
-								Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
-								
-								result = NotesNativeAPI64.get().NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
-								
-								boolean signRequired = false;
-								String currNoteSigner;
-								if (result != 0) {
-									signRequired = true;
-									currNoteSigner = "";
-								}
-								else {
-									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
-									if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
-										//we have no user id to be used for signing and the note is already signed by current user
-										continue;
-									}
-									else {
-										signRequired = true;
-									}
-								}
-								
-								if (callback!=null && !callback.shouldSign(currEntry, currNoteSigner)) {
-									signRequired = false;
-								}
-								
-								if (signRequired) {
-									if (userId!=null) {
-										result = NotesNativeAPI64.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle64(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
-									}
-									else {
-										result = NotesNativeAPI64.get().NSFNoteSign(rethNote.getValue());
-									}
-									NotesErrorUtils.checkResult(result);
-
-									if (expandNote) {
-										result = NotesNativeAPI64.get().NSFNoteContract(rethNote.getValue());
-										NotesErrorUtils.checkResult(result);
-									}
-									
-									result = NotesNativeAPI64.get().NSFNoteUpdateExtended(rethNote.getValue(), 0);
-									NotesErrorUtils.checkResult(result);
-								}
-							}
-							finally {
-								result = NotesNativeAPI64.get().NSFNoteClose(rethNote.getValue());
-								NotesErrorUtils.checkResult(result);
-							}
+				short result = NotesNativeAPI64.get().NSFNoteOpen(m_hDB64, currNoteId, expandNote ? NotesConstants.OPEN_EXPAND : 0, rethNote);
+				NotesErrorUtils.checkResult(result);
+				try {
+					NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
+					Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
+					Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
+					
+					result = NotesNativeAPI64.get().NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
+					
+					boolean signRequired = false;
+					String currNoteSigner;
+					if (result != 0) {
+						signRequired = true;
+						currNoteSigner = "";
+					}
+					else {
+						currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
+						if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
+							//we have no user id to be used for signing and the note is already signed by current user
+							continue;
 						}
 						else {
-							IntByReference rethNote = new IntByReference();
-							short result = NotesNativeAPI32.get().NSFNoteOpen(m_hDB32, currNoteId, expandNote ? NotesConstants.OPEN_EXPAND : 0, rethNote);
-							NotesErrorUtils.checkResult(result);
-							try {
-								NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
-								Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
-								Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
-								
-								result = NotesNativeAPI32.get().NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
-								
-								boolean signRequired = false;
-								String currNoteSigner;
-								if (result != 0) {
-									signRequired = true;
-									currNoteSigner = "";
-								}
-								else {
-									currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
-									if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
-										//we have no user id to be used for signing and the note is already signed by current user
-										continue;
-									}
-									else {
-										signRequired = true;
-									}
-								}
-								
-								if (callback!=null && !callback.shouldSign(currEntry, currNoteSigner)) {
-									signRequired = false;
-								}
-
-								if (signRequired) {
-									if (userId!=null) {
-										result = NotesNativeAPI32.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle32(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
-									}
-									else {
-										result = NotesNativeAPI32.get().NSFNoteSign(rethNote.getValue());
-									}
-									NotesErrorUtils.checkResult(result);
-
-									if (expandNote) {
-										result = NotesNativeAPI32.get().NSFNoteContract(rethNote.getValue());
-										NotesErrorUtils.checkResult(result);
-									}
-									
-									result = NotesNativeAPI32.get().NSFNoteUpdateExtended(rethNote.getValue(), 0);
-									NotesErrorUtils.checkResult(result);
-								}
-							}
-							finally {
-								result = NotesNativeAPI32.get().NSFNoteClose(rethNote.getValue());
-								NotesErrorUtils.checkResult(result);
-							}
-						}
-						
-						if (callback!=null) {
-							com.mindoo.domino.jna.NotesDatabase.SignCallback.Action action = callback.noteSigned(currEntry);
-							if (action==com.mindoo.domino.jna.NotesDatabase.SignCallback.Action.Stop) {
-								return;
-							}
+							signRequired = true;
 						}
 					}
+					
+					if (callback!=null && !callback.shouldSign(currDE, currNoteSigner)) {
+						signRequired = false;
+					}
+					
+					if (signRequired) {
+						if (userId!=null) {
+							result = NotesNativeAPI64.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle64(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+						}
+						else {
+							result = NotesNativeAPI64.get().NSFNoteSign(rethNote.getValue());
+						}
+						NotesErrorUtils.checkResult(result);
+
+						if (expandNote) {
+							result = NotesNativeAPI64.get().NSFNoteContract(rethNote.getValue());
+							NotesErrorUtils.checkResult(result);
+						}
+						
+						result = NotesNativeAPI64.get().NSFNoteUpdateExtended(rethNote.getValue(), 0);
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				finally {
+					result = NotesNativeAPI64.get().NSFNoteClose(rethNote.getValue());
+					NotesErrorUtils.checkResult(result);
 				}
 			}
-		}
-		finally {
-			if (col!=null) {
-				col.recycle();
+			else {
+				IntByReference rethNote = new IntByReference();
+				short result = NotesNativeAPI32.get().NSFNoteOpen(m_hDB32, currNoteId, expandNote ? NotesConstants.OPEN_EXPAND : 0, rethNote);
+				NotesErrorUtils.checkResult(result);
+				try {
+					NotesTimeDateStruct retWhenSigned = NotesTimeDateStruct.newInstance();
+					Memory retSigner = new Memory(NotesConstants.MAXUSERNAME);
+					Memory retCertifier = new Memory(NotesConstants.MAXUSERNAME);
+					
+					result = NotesNativeAPI32.get().NSFNoteVerifySignature(rethNote.getValue(), null, retWhenSigned, retSigner, retCertifier);
+					
+					boolean signRequired = false;
+					String currNoteSigner;
+					if (result != 0) {
+						signRequired = true;
+						currNoteSigner = "";
+					}
+					else {
+						currNoteSigner = NotesStringUtils.fromLMBCS(retSigner, NotesStringUtils.getNullTerminatedLength(retSigner));
+						if (userId==null && NotesNamingUtils.equalNames(idUser, currNoteSigner)) {
+							//we have no user id to be used for signing and the note is already signed by current user
+							continue;
+						}
+						else {
+							signRequired = true;
+						}
+					}
+					
+					if (callback!=null && !callback.shouldSign(currDE, currNoteSigner)) {
+						signRequired = false;
+					}
+
+					if (signRequired) {
+						if (userId!=null) {
+							result = NotesNativeAPI32.get().NSFNoteSignExt3(rethNote.getValue(), userId==null ? 0 : userId.getHandle32(), null, NotesConstants.MAXWORD, 0, signNotesIfMimePresent ? NotesConstants.SIGN_NOTES_IF_MIME_PRESENT : 0, 0, null);
+						}
+						else {
+							result = NotesNativeAPI32.get().NSFNoteSign(rethNote.getValue());
+						}
+						NotesErrorUtils.checkResult(result);
+
+						if (expandNote) {
+							result = NotesNativeAPI32.get().NSFNoteContract(rethNote.getValue());
+							NotesErrorUtils.checkResult(result);
+						}
+						
+						result = NotesNativeAPI32.get().NSFNoteUpdateExtended(rethNote.getValue(), 0);
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				finally {
+					result = NotesNativeAPI32.get().NSFNoteClose(rethNote.getValue());
+					NotesErrorUtils.checkResult(result);
+				}
+			}
+			
+			if (callback!=null) {
+				com.mindoo.domino.jna.NotesDatabase.SignCallback.Action action = callback.noteSigned(currDE);
+				if (action==com.mindoo.domino.jna.NotesDatabase.SignCallback.Action.Stop) {
+					return;
+				}
 			}
 		}
 	}
