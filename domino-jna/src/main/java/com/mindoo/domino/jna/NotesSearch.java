@@ -512,7 +512,6 @@ public class NotesSearch {
 //					filterFlags = NotesConstants.SEARCH_FILTER_FOLDER;
 				}
 				
-				int searchFlags1 = 0;
 				int searchFlags2 = 0;
 				int searchFlags3 = 0;
 				int searchFlags4 = 0;
@@ -521,7 +520,7 @@ public class NotesSearch {
 				final int hFilterFinal = hFilter;
 				final int filterFlagsFinal = filterFlags;
 				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
-				final int searchFlags1Final = searchFlags1;
+				final int searchFlags1Final = search1FlagsBitMask;
 				final int searchFlags2Final = searchFlags2;
 				final int searchFlags3Final = searchFlags3;
 				final int searchFlags4Final = searchFlags4;
