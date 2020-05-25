@@ -1660,6 +1660,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			IntByReference retNumHits = new IntByReference();
 			short arg = 0;
 			long hNames = 0;
+			if (m_passNamesListToDbOpen && m_namesList!=null) {
+				hNames = m_namesList.getHandle64();
+			}
 			
 			long t0=System.currentTimeMillis();
 			
@@ -1754,6 +1757,9 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			IntByReference retNumHits = new IntByReference();
 			short arg = 0;
 			int hNames = 0;
+			if (m_passNamesListToDbOpen && m_namesList!=null) {
+				hNames = m_namesList.getHandle32();
+			}
 
 			long t0=System.currentTimeMillis();
 			result = NotesNativeAPI32.get().FTSearchExt(m_hDB32, 
