@@ -2388,7 +2388,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return agent;
 	}
-	//NotesUserId
 	
 	/**
 	 * Sign all documents of a specified note class (see NOTE_CLASS_* in {@link NotesConstants}.
@@ -2683,7 +2682,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function creates a new full text index for a local database.<br>
 	 * <br>
-	 * Full text indexing of a remote database is not supported in the C API.
+	 * Synchronous full text indexing of a remote database is not supported in the C API.
+	 * Use {@link #ftIndexRequest()} to request an index update of a remote database.
 	 * 
 	 * @param options Indexing options. See {@link FTIndex}
 	 * @return indexing statistics
@@ -6285,6 +6285,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @since V10
 	 */
 	public void harvestDesign(HarvestMode mode) {
+		checkHandle();
+		
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64V1000.get().NSFDesignHarvest(m_hDB64, mode==HarvestMode.ADD ? 1 : 0);
