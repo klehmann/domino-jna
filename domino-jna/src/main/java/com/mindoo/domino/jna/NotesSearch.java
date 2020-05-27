@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.mindoo.domino.jna.NotesDatabase.DbMode;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.Action;
@@ -167,7 +168,7 @@ public class NotesSearch {
 	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, LinkedHashMap<String,String> columnFormulas, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, Map<String,String> columnFormulas, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, columnFormulas, viewTitle, searchFlags, NoteClass.toBitMaskInt(noteClasses), since, callback);
 	}
 	
@@ -358,7 +359,7 @@ public class NotesSearch {
 	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	private static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, LinkedHashMap<String,String> columnFormulas, String viewTitle,
+	private static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, Map<String,String> columnFormulas, String viewTitle,
 			final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since,
 			final SearchCallback callback) throws FormulaCompilationError {
 		if (db.isRecycled()) {
@@ -378,8 +379,10 @@ public class NotesSearch {
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
 
+		LinkedHashMap<String,String> columnFormulasSorted = columnFormulas==null ? null : new LinkedHashMap<>(columnFormulas);
+		
 		final EnumSet<Search> useSearchFlags = searchFlags.clone();
-		if (columnFormulas!=null) {
+		if (columnFormulasSorted!=null) {
 			useSearchFlags.add(Search.SUMMARY);
 			useSearchFlags.add(Search.NOITEMNAMES);
 		}
@@ -387,7 +390,7 @@ public class NotesSearch {
 		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(useSearchFlags);
 		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(useSearchFlags);
 		
-		final String[] columnItemNames = columnFormulas==null ? new String[0] : columnFormulas.keySet().toArray(new String[0]);
+		final String[] columnItemNames = columnFormulasSorted==null ? new String[0] : columnFormulasSorted.keySet().toArray(new String[0]);
 		
 		DbMode mode = db.getMode();
 
@@ -461,7 +464,7 @@ public class NotesSearch {
 		
 			long hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulas);
+				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulasSorted);
 			}
 
 			NotesIDTable tableWithHighOrderBit = null;
@@ -730,7 +733,7 @@ public class NotesSearch {
 			//formulaName only required of formula is used for collection columns
 			int hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulas);
+				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulasSorted);
 			}
 			
 			NotesIDTable tableWithHighOrderBit = null;
@@ -784,7 +787,7 @@ public class NotesSearch {
 				final int hFilterFinal = hFilter;
 				final int filterFlagsFinal = filterFlags;
 				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
-				final int searchFlags1Final = search1FlagsBitMask;
+				final int searchFlags1Final = 0;
 				final int searchFlags2Final = 0;
 				final int searchFlags3Final = 0;
 				final int searchFlags4Final = 0;
