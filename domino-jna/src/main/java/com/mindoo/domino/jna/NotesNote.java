@@ -1867,14 +1867,25 @@ public class NotesNote implements IRecyclableNotesObject {
 			return Arrays.asList((Object) clonedObjDescriptor);
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_NOTEREF_LIST) {
+			int numEntries = (int) (valueDataPtr.getShort(0) & 0xffff);
+			
 			//skip LIST structure, clone data to prevent invalid memory access when buffer gets disposed
-			byte[] unidBytes = valueDataPtr.share(2).getByteArray(0, NotesConstants.notesUniversalNoteIdSize);
-			Memory unidMem = new Memory(NotesConstants.notesUniversalNoteIdSize);
-			unidMem.write(0, unidBytes, 0, unidBytes.length);
-			NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(unidMem);
-			unidStruct.read();
-			NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
-			return Arrays.asList((Object) unid);
+			valueDataPtr = valueDataPtr.share(2);
+			
+			List<Object> unids = new ArrayList<>();
+			
+			for (int i=0; i<numEntries; i++) {
+				byte[] unidBytes = valueDataPtr.getByteArray(0, NotesConstants.notesUniversalNoteIdSize);
+				Memory unidMem = new Memory(NotesConstants.notesUniversalNoteIdSize);
+				unidMem.write(0, unidBytes, 0, unidBytes.length);
+				NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(unidMem);
+				unidStruct.read();
+				NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
+				unids.add(unid);
+				
+				valueDataPtr = valueDataPtr.share(NotesConstants.notesUniversalNoteIdSize);
+			}
+			return unids;
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_COLLATION) {
 			NotesCollationInfo colInfo = CollationDecoder.decodeCollation(valueDataPtr);
