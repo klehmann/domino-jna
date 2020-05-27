@@ -3716,4 +3716,13 @@ This allows an Editor to assume some Designer-level access */
 	public int DBCOPY_DBCLASS_HIGHEST_NOTEFILE = 0x10000000; /* Create Db using the latest ODS, regardless of INI settings */
 	public int DBCOPY_COMPACT_REPLICA = 0x20000000; /* Create Db for copy style compaction */
 
+	/**  If present, is ID table representing the contents of the folder */
+	public String VIEW_FOLDER_IDTABLE = "$FolderIDTable"	;
+	
+	/**  If present, is ODS version of FOHEADER and 
+	set of entries, see dbfolder.h.  The view
+	may have additional items with suffixes
+	on this item name, e.g., $FolderObject1 */
+	public String VIEW_FOLDER_OBJECT = "$FolderObject";
+
 }
