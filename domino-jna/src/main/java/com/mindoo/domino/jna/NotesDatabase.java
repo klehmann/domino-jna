@@ -1400,6 +1400,31 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 
 	/**
+	 * Open a collection by its design document UNID
+	 * 
+	 * @param unid UNID
+	 * @return collection or null if not found
+	 */
+	public NotesCollection openCollectionByUNID(String unid) {
+		return openCollectionByUNID(unid, (EnumSet<OpenCollection>) null);
+	}
+
+	/**
+	 * Open a collection by its design document UNID
+	 * 
+	 * @param unid UNID
+	 * @param openFlagSet open flags
+	 * @return collection or null if not found
+	 */
+	public NotesCollection openCollectionByUNID(String unid, EnumSet<OpenCollection> openFlagSet) {
+		int viewNoteId = toNoteId(unid);
+		if (viewNoteId==0) {
+			return null;
+		}
+		return openCollection(viewNoteId, openFlagSet);
+	}
+
+	/**
 	 * Locates a collection by its name and opens it. This method lets you store
 	 * the view in a separate database than the one containing the actual data,
 	 * which can be useful to reduce database size (by externalizing view indices) and
@@ -1441,7 +1466,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param openFlagSet open flags, see {@link OpenCollection}
 	 * @return collection
 	 */
-	NotesCollection openCollection(int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
+	public NotesCollection openCollection(int viewNoteId, EnumSet<OpenCollection> openFlagSet)  {
 		return openCollectionWithExternalData(this, viewNoteId, openFlagSet);
 	}
 
