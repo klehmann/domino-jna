@@ -379,10 +379,10 @@ public class NotesSearch {
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
 
-		LinkedHashMap<String,String> columnFormulasSorted = columnFormulas==null ? null : new LinkedHashMap<>(columnFormulas);
+		LinkedHashMap<String,String> columnFormulasFixedOrder = columnFormulas==null ? null : new LinkedHashMap<>(columnFormulas);
 		
 		final EnumSet<Search> useSearchFlags = searchFlags.clone();
-		if (columnFormulasSorted!=null) {
+		if (columnFormulasFixedOrder!=null) {
 			useSearchFlags.add(Search.SUMMARY);
 			useSearchFlags.add(Search.NOITEMNAMES);
 		}
@@ -390,7 +390,7 @@ public class NotesSearch {
 		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(useSearchFlags);
 		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(useSearchFlags);
 		
-		final String[] columnItemNames = columnFormulasSorted==null ? new String[0] : columnFormulasSorted.keySet().toArray(new String[0]);
+		final String[] columnItemNames = columnFormulasFixedOrder==null ? new String[0] : columnFormulasFixedOrder.keySet().toArray(new String[0]);
 		
 		DbMode mode = db.getMode();
 
@@ -464,7 +464,7 @@ public class NotesSearch {
 		
 			long hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulasSorted);
+				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulasFixedOrder);
 			}
 
 			NotesIDTable tableWithHighOrderBit = null;
@@ -733,7 +733,7 @@ public class NotesSearch {
 			//formulaName only required of formula is used for collection columns
 			int hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulasSorted);
+				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulasFixedOrder);
 			}
 			
 			NotesIDTable tableWithHighOrderBit = null;
