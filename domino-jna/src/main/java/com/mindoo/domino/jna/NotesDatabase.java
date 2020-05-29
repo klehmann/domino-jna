@@ -7095,5 +7095,188 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return result;
 	}
+
+	/**
+	 * This convenience function creates a new shared folder in the database with the default design.
+
+	 * @param newFolderName Name of new folder.  Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 * @throws NotesError with status code 1144 if view already exists
+	 */
+	public int createFolder(String newFolderName) throws NotesError {
+		return createFolder(this, 0, newFolderName);
+	}
 	
+	/**
+	 * This function creates a new shared folder in the database.
+
+	 * @param formatNoteId Folder/view note with which to base the new folder's design.  Specify 0 to use the default design. The default design is specified in an existing folder's design. If there is no default design specified in an existing folder's design, then the default view note is used.
+	 * @param newFolderName Name of new folder.  Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 * @throws NotesError with status code 1144 if view already exists
+	 */
+	public int createFolder(int formatNoteId, String newFolderName) throws NotesError {
+		return createFolder(this, formatNoteId, newFolderName);
+	}
+	
+	/**
+	 * This function creates a new shared folder in the database.
+
+	 * @param formatDb database which contains the folder/view note with which to base the new folder's design. You may specify <code>null</code> if this is the same as this database.
+	 * @param formatNoteId Folder/view note with which to base the new folder's design.  Specify 0 to use the default design. The default design is specified in an existing folder's design. If there is no default design specified in an existing folder's design, then the default view note is used.
+	 * @param newFolderName Name of new folder.  Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 * @throws NotesError with status code 1144 if view already exists
+	 */
+	public int createFolder(NotesDatabase formatDb, int formatNoteId, String newFolderName) throws NotesError {
+		checkHandle();
+		
+		if (formatDb!=null && formatDb.isRecycled()) {
+			throw new NotesError("Folder design DB is recycled");
+		}
+		
+		Memory newFolderNameMem = NotesStringUtils.toLMBCS(newFolderName, false);
+		if (newFolderNameMem.size() > NotesConstants.DESIGN_FOLDER_MAX_NAME) {
+			throw new IllegalArgumentException("Folder name too long (max "+NotesConstants.DESIGN_FOLDER_MAX_NAME+" bytes, found "+newFolderNameMem.size()+" bytes)");
+		}
+
+		short newFolderNameLength = (short) (newFolderNameMem.size() & 0xffff);
+		
+		IntByReference retNoteId = new IntByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().FolderCreate(getHandle64(), getHandle64(), formatNoteId,
+					formatDb==null ? 0 : formatDb.getHandle64(), newFolderNameMem, newFolderNameLength,
+							NotesConstants.DESIGN_TYPE_SHARED, 0, retNoteId);
+		}
+		else {
+			result = NotesNativeAPI32.get().FolderCreate(getHandle32(), getHandle32(), formatNoteId,
+					formatDb==null ? 0 : formatDb.getHandle32(), newFolderNameMem, newFolderNameLength,
+							NotesConstants.DESIGN_TYPE_SHARED, 0, retNoteId);
+		}
+		NotesErrorUtils.checkResult(result);
+
+		return retNoteId.getValue();
+	}
+	
+	/**
+	 * This function deletes the given folder. Subfolders within this folder are also deleted.
+	 * 
+	 * @param folderNoteId note id of folder to be deleted.
+	 */
+	public void deleteFolder(int folderNoteId) {
+		if (folderNoteId==0) {
+			throw new IllegalArgumentException("Folder note id cannot be 0");
+		}
+		
+		checkHandle();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().FolderDelete(m_hDB64, m_hDB64, folderNoteId, 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().FolderDelete(m_hDB32, m_hDB32, folderNoteId, 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function creates a new folder and copies the contents of the source folder to it.<br>
+	 * Any subfolders are also copied.
+	 * 
+	 * @param sourceFolderNoteId note id of source folder.
+	 * @param newFolderName Name for the new copy of the folder. Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64). If this is to be a cascading folder (a subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Copy"  In this example, New Copy will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 */
+	public int copyFolder(int sourceFolderNoteId, String newFolderName) {
+		if (sourceFolderNoteId==0) {
+			throw new IllegalArgumentException("Source folder note id cannot be 0");
+		}
+		
+		checkHandle();
+		
+		Memory newFolderNameMem = NotesStringUtils.toLMBCS(newFolderName, false);
+		if (newFolderNameMem.size() > NotesConstants.DESIGN_FOLDER_MAX_NAME) {
+			throw new IllegalArgumentException("Folder name too long (max "+NotesConstants.DESIGN_FOLDER_MAX_NAME+" bytes, found "+newFolderNameMem.size()+" bytes)");
+		}
+
+		short newFolderNameLength = (short) (newFolderNameMem.size() & 0xffff);
+
+		IntByReference retNewNoteId = new IntByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().FolderCopy(m_hDB64, getHandle64(), sourceFolderNoteId,
+					newFolderNameMem, newFolderNameLength, 0, retNewNoteId);
+		}
+		else {
+			result = NotesNativeAPI32.get().FolderCopy(m_hDB32, getHandle32(), sourceFolderNoteId,
+					newFolderNameMem, newFolderNameLength, 0, retNewNoteId);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return retNewNoteId.getValue();
+	}
+	
+	/**
+	 * This function moves the specified folder under a given parent folder.<br>
+	 * <br>
+	 * If the parent folder is a shared folder, then the child folder must be a shared folder.<br>
+	 * If the parent folder is a private folder, then the child folder must be a private folder.
+	 * 
+	 * @param folderNoteId note id of folder to be moved.
+	 * @param targetParentFolderNoteId note id of the new parent folder.
+	 */
+	public void moveFolder(int folderNoteId, int targetParentFolderNoteId) {
+		if (folderNoteId==0) {
+			throw new IllegalArgumentException("Folder note id cannot be 0");
+		}
+		if (targetParentFolderNoteId==0) {
+			throw new IllegalArgumentException("Target folder note id cannot be 0");
+		}
+
+		checkHandle();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().FolderMove(m_hDB64, 0, folderNoteId, 0,
+					targetParentFolderNoteId, 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().FolderMove(m_hDB32, 0, folderNoteId, 0,
+					targetParentFolderNoteId, 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function renames the specified folder and its subfolders.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param name new folder name
+	 */
+	public void renameFolder(int folderNoteId, String name) {
+		if (folderNoteId==0) {
+			throw new IllegalArgumentException("Folder note id cannot be 0");
+		}
+		
+		checkHandle();
+		
+		Memory pszName = NotesStringUtils.toLMBCS(name, false);
+		if (pszName.size() > NotesConstants.DESIGN_FOLDER_MAX_NAME) {
+			throw new IllegalArgumentException("Folder name too long (max "+NotesConstants.DESIGN_FOLDER_MAX_NAME+" bytes, found "+pszName.size()+" bytes)");
+		}
+		
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().FolderRename(m_hDB64, 0, folderNoteId, pszName, (short) pszName.size(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = NotesNativeAPI32.get().FolderRename(m_hDB32, 0, folderNoteId, pszName, (short) pszName.size(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+
 }

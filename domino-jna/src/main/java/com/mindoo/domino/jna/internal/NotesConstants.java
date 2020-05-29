@@ -3725,4 +3725,9 @@ This allows an Editor to assume some Designer-level access */
 	on this item name, e.g., $FolderObject1 */
 	public String VIEW_FOLDER_OBJECT = "$FolderObject";
 
+	/* Note is shared (always located in the database) */
+	public int DESIGN_TYPE_SHARED = 0;
+	/* Note is private and is located in the database */
+	public int DESIGN_TYPE_PRIVATE_DATABASE = 1;
+
 }

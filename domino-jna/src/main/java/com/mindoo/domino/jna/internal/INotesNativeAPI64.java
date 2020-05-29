@@ -926,13 +926,6 @@ public interface INotesNativeAPI64 extends Library {
 			long  hFolderDB,
 			int  FolderNoteID,
 			long  dwFlags);
-	public short FolderMove(
-			long  hDataDB,
-			long  hFolderDB,
-			int  FolderNoteID,
-			long  hParentDB,
-			int  ParentNoteID,
-			long  dwFlags);
 	public short FolderRename(
 			long  hDataDB,
 			long  hFolderDB,
@@ -941,6 +934,48 @@ public interface INotesNativeAPI64 extends Library {
 			short  wNameLen,
 			long  dwFlags);
 
+	public short FolderCreate(
+			long hDataDB,
+			long hFolderDB,
+			int FormatNoteID,
+			long hFormatDB,
+			Memory pszName,
+			short wNameLen,
+			int FolderType,
+			int dwFlags,
+			IntByReference pNoteID);
+	
+	public short FolderRename(
+			long hDataDB,
+			long hFolderDB,
+			int FolderNoteID,
+			Memory pszName,
+			short wNameLen,
+			int dwFlags);
+
+	public short FolderDelete(
+			long hDataDB,
+			long hFolderDB,
+			int FolderNoteID,
+			int dwFlags);
+	
+	public short FolderCopy(
+			long hDataDB,
+			long hFolderDB,
+			int FolderNoteID,
+			Memory pszName,
+			short wNameLen,
+			int dwFlags,
+			IntByReference pNewNoteID);
+
+	public short FolderMove(
+			long hDataDB,
+			long hFolderDB,
+			int FolderNoteID,
+			long hParentDB,
+			int ParentNoteID,
+			int dwFlags);
+	
 	public short NSFProfileOpen(
 			long hDB,
 			Memory ProfileName,
