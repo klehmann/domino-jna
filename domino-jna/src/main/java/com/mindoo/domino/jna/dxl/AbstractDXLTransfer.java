@@ -15,7 +15,6 @@ import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
-import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 public abstract class AbstractDXLTransfer implements IAllocatedMemory {
@@ -30,7 +29,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected List<String> getStringList(int index) {
 		checkHandle();
 
-		DisposableMemory m = new DisposableMemory(4);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
 			short result = getProperty(index, m);
@@ -76,7 +75,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected String getStringFromMemhandle(int index) {
 		checkHandle();
 
-		DisposableMemory m = new DisposableMemory(4);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
 			short result = getProperty(index, m);
@@ -140,7 +139,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 
 		}
 		else {
-			DisposableMemory m = new DisposableMemory(4);
+			DisposableMemory m = new DisposableMemory(8);
 			m.clear();
 			try {
 				short result = getProperty(index, m);
@@ -164,7 +163,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected boolean getBooleanProperty(int index) {
 		checkHandle();
 
-		DisposableMemory m = new DisposableMemory(2);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
 			short result = getProperty(index, m);
@@ -180,7 +179,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected void setBooleanProperty(int index, boolean value) {
 		checkHandle();
 
-		DisposableMemory m = new DisposableMemory(Native.BOOL_SIZE);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
 			m.setByte(0, (byte) (value ? 1 : 0));
@@ -195,7 +194,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected int getInt(int index) {
 		checkHandle();
 		
-		DisposableMemory m = new DisposableMemory(4);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
 			short result = getProperty(index, m);
@@ -229,6 +228,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 		try {
 			if (PlatformUtils.is64Bit()) {
 				DisposableMemory m = new DisposableMemory(8);
+				m.clear();
 				try {
 					m.setLong(0, lmbcsStrList.getHandle64());
 					short result = setProperty(index, m);
@@ -239,7 +239,8 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 				}
 			}
 			else {
-				DisposableMemory m = new DisposableMemory(4);
+				DisposableMemory m = new DisposableMemory(8);
+				m.clear();
 				try {
 					m.setInt(0, lmbcsStrList.getHandle32());
 					short result = setProperty(index, m);
@@ -258,10 +259,9 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected void setInt(int index, int value) {
 		checkHandle();
 		
-		DisposableMemory m = new DisposableMemory(4);
+		DisposableMemory m = new DisposableMemory(8);
 		m.clear();
 		try {
-			m.clear();
 			m.setInt(0, value);
 
 			short result = setProperty(index, m);
@@ -304,10 +304,8 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected short getShort(int index) {
 		checkHandle();
 		
-		DisposableMemory m = new DisposableMemory(4);
-		for (int i=0; i<m.size(); i++) {
-			m.setByte(i, (byte) 0xff);
-		}
+		DisposableMemory m = new DisposableMemory(8);
+		m.clear();
 		
 		try {
 			short result = getProperty(index, m);
@@ -323,7 +321,9 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 	protected void setShort(int index, short value) {
 		checkHandle();
 		
-		DisposableMemory m = new DisposableMemory(4);
+		DisposableMemory m = new DisposableMemory(8);
+		m.clear();
+		
 		try {
 			m.clear();
 			m.setShort(0, value);
