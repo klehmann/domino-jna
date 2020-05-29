@@ -901,31 +901,24 @@ public interface INotesNativeAPI32 extends Library {
 			int  hFolderDB,
 			int  FolderNoteID,
 			int  hTable,
-			long  dwFlags);
+			int  dwFlags);
 	public short FolderDocCount(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
-			long  dwFlags,
-			LongByReference pdwNumDocs);
+			int dwFlags,
+			IntByReference pdwNumDocs);
 	public short FolderDocRemove(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
 			int  hTable,
-			long  dwFlags);
+			int dwFlags);
 	public short FolderDocRemoveAll(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
-			long  dwFlags);
-	public short FolderRename(
-			int  hDataDB,
-			int  hFolderDB,
-			int  FolderNoteID,
-			Memory pszName,
-			short  wNameLen,
-			long  dwFlags);
+			int dwFlags);
 
 	public short FolderCreate(
 			int hDataDB,

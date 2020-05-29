@@ -12,6 +12,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Formatter;
@@ -7444,6 +7445,159 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			short result = NotesNativeAPI32.get().FolderRename(m_hDB32, 0, oldFolderNoteId, pszName, (short) pszName.size(), 0);
 			NotesErrorUtils.checkResult(result);
+		}
+	}
+
+	/**
+	 * This function adds the document(s) specified in an ID Table to this folder.
+	 * Throws an error if {@link #isFolder()} is <code>false</code>.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param idTable id table
+	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
+	 */
+	public void addToFolder(int folderNoteId, NotesIDTable idTable) {
+		checkHandle();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().FolderDocAdd(m_hDB64, 0, folderNoteId, idTable.getHandle64(), 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().FolderDocAdd(m_hDB32, 0, folderNoteId, idTable.getHandle32(), 0);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function adds the document(s) specified as note id set to this folder.
+	 * Throws an error if {@link #isFolder()} is <code>false</code>.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param noteIds ids of notes to add
+	 * @throws NotesError with id 947 (Attempt to perform folder operation on non-folder note) if not a folder
+	 */
+	public void addToFolder(int folderNoteId, Collection<Integer> noteIds) {
+		checkHandle();
+		
+		NotesIDTable idTable = new NotesIDTable();
+		try {
+			idTable.addNotes(noteIds);
+			addToFolder(folderNoteId, idTable);
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
+
+	/**
+	 * This function removes the document(s) specified in an ID Table from a folder.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param idTable id table
+	 */
+	public void removeFromFolder(int folderNoteId, NotesIDTable idTable) {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().FolderDocRemove(m_hDB64, 0, folderNoteId, idTable.getHandle64(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = NotesNativeAPI32.get().FolderDocRemove(m_hDB32, 0, folderNoteId, idTable.getHandle32(), 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+	
+	/**
+	 * This function removes the document(s) specified as note id set from a folder.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param noteIds ids of notes to remove
+	 */
+	public void removeFromFolder(int folderNoteId, Set<Integer> noteIds) {
+		checkHandle();
+		
+		NotesIDTable idTable = new NotesIDTable();
+		try {
+			idTable.addNotes(noteIds);
+			removeFromFolder(folderNoteId, idTable);
+		}
+		finally {
+			idTable.recycle();
+		}
+	}
+
+	/**
+	 * This function removes all documents from a specified folder.<br>
+	 * <br>
+	 * Subfolders and documents within the subfolders are not removed.
+	 * 
+	 * @param folderNoteId note id of folder
+	 */
+	public void removeAllFromFolder(int folderNoteId) {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			short result = NotesNativeAPI64.get().FolderDocRemoveAll(m_hDB64, 0, folderNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			short result = NotesNativeAPI32.get().FolderDocRemoveAll(m_hDB32, 0, folderNoteId, 0);
+			NotesErrorUtils.checkResult(result);
+		}
+	}
+
+	/**
+	 * This function returns the number of entries in the specified folder's index.<br>
+	 * <br>
+	 * This is the number of documents plus the number of cateogories (if any) in the folder.<br>
+	 * <br>
+	 * Subfolders and documents in subfolders are not included in the count.
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @return count
+	 */
+	public int getFolderDocCount(int folderNoteId) {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			IntByReference pdwNumDocs = new IntByReference();
+			short result = NotesNativeAPI64.get().FolderDocCount(m_hDB64, 0, folderNoteId, 0, pdwNumDocs);
+			NotesErrorUtils.checkResult(result);
+			return pdwNumDocs.getValue();
+		}
+		else {
+			IntByReference pdwNumDocs = new IntByReference();
+			short result = NotesNativeAPI32.get().FolderDocCount(m_hDB32, 0, folderNoteId, 0, pdwNumDocs);
+			NotesErrorUtils.checkResult(result);
+			return pdwNumDocs.getValue();
+		}
+	}
+
+	/**
+	 * Returns an id table of the folder content
+	 * 
+	 * @param folderNoteId note id of folder
+	 * @param validateIds If set, return only "validated" noteIDs
+	 * @return id table
+	 */
+	public NotesIDTable getIDTableForFolder(int folderNoteId, boolean validateIds) {
+		checkHandle();
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference hTable = new LongByReference();
+			short result = NotesNativeAPI64.get().NSFFolderGetIDTable(m_hDB64, m_hDB64, folderNoteId, validateIds ? NotesConstants.DB_GETIDTABLE_VALIDATE : 0, hTable);
+			NotesErrorUtils.checkResult(result);
+			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
+			return new NotesIDTable(hTable.getValue(), true);
+		}
+		else {
+			IntByReference hTable = new IntByReference();
+			short result = NotesNativeAPI32.get().NSFFolderGetIDTable(m_hDB32, m_hDB32, folderNoteId, validateIds ? NotesConstants.DB_GETIDTABLE_VALIDATE : 0, hTable);
+			NotesErrorUtils.checkResult(result);
+			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
+			return new NotesIDTable(hTable.getValue(), true);
 		}
 	}
 

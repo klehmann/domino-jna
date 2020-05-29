@@ -769,32 +769,25 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long  hFolderDB,
 			int  FolderNoteID,
 			long  hTable,
-			long  dwFlags);
+			int  dwFlags);
 	public native short FolderDocCount(
 			long  hDataDB,
 			long  hFolderDB,
 			int  FolderNoteID,
-			long  dwFlags,
-			LongByReference pdwNumDocs);
+			int dwFlags,
+			IntByReference pdwNumDocs);
 	public native short FolderDocRemove(
 			long  hDataDB,
 			long  hFolderDB,
 			int  FolderNoteID,
 			long  hTable,
-			long  dwFlags);
+			int dwFlags);
 	public native short FolderDocRemoveAll(
 			long  hDataDB,
 			long  hFolderDB,
 			int  FolderNoteID,
-			long  dwFlags);
-	public native short FolderRename(
-			long  hDataDB,
-			long  hFolderDB,
-			int  FolderNoteID,
-			Memory pszName,
-			short  wNameLen,
-			long  dwFlags);
-
+			int dwFlags);
+	
 	public native short FolderCreate(
 			long hDataDB,
 			long hFolderDB,
