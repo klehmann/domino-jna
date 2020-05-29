@@ -456,50 +456,6 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * This function moves the specified folder under a given parent folder.<br>
-	 * <br>
-	 * If the parent folder is a shared folder, then the child folder must be a shared folder.<br>
-	 * If the parent folder is a private folder, then the child folder must be a private folder.
-	 * 
-	 * @param newParentFolder parent folder
-	 */
-	public void moveFolder(NotesCollection newParentFolder) {
-		checkHandle();
-		
-		if (PlatformUtils.is64Bit()) {
-			short result = NotesNativeAPI64.get().FolderMove(m_hDB64, 0, m_viewNoteId, 0, newParentFolder.getNoteId(), 0);
-			NotesErrorUtils.checkResult(result);
-		}
-		else {
-			short result = NotesNativeAPI32.get().FolderMove(m_hDB32, 0, m_viewNoteId, 0, newParentFolder.getNoteId(), 0);
-			NotesErrorUtils.checkResult(result);
-		}
-	}
-	
-	/**
-	 * This function renames the specified folder and its subfolders.
-	 * 
-	 * @param name new folder name
-	 */
-	public void renameFolder(String name) {
-		checkHandle();
-		
-		Memory pszName = NotesStringUtils.toLMBCS(name, false);
-		if (pszName.size() > NotesConstants.DESIGN_FOLDER_MAX_NAME) {
-			throw new IllegalArgumentException("Folder name too long (max "+NotesConstants.DESIGN_FOLDER_MAX_NAME+" bytes, found "+pszName.size()+" bytes)");
-		}
-		
-		if (PlatformUtils.is64Bit()) {
-			short result = NotesNativeAPI64.get().FolderRename(m_hDB64, 0, m_viewNoteId, pszName, (short) pszName.size(), 0);
-			NotesErrorUtils.checkResult(result);
-		}
-		else {
-			short result = NotesNativeAPI32.get().FolderRename(m_hDB32, 0, m_viewNoteId, pszName, (short) pszName.size(), 0);
-			NotesErrorUtils.checkResult(result);
-		}
-	}
-	
-	/**
 	 * This function returns the number of entries in the specified folder's index.<br>
 	 * <br>
 	 * This is the number of documents plus the number of cateogories (if any) in the folder.<br>
@@ -3043,6 +2999,13 @@ public class NotesCollection implements IRecyclableNotesObject {
 		public boolean hasExactNumberOfMatches() {
 			return m_hasExactNumberOfMatches;
 		}
+
+		@Override
+		public String toString() {
+			return "FindResult [position=" + m_position + ", entriesFound=" + m_entriesFound
+					+ ", hasExactNumberOfMatches=" + m_hasExactNumberOfMatches + "]";
+		}
+		
 	}
 
 	/**
@@ -4096,4 +4059,5 @@ public class NotesCollection implements IRecyclableNotesObject {
 			}
 		}
 	}
+
 }
