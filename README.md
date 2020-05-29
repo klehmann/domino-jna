@@ -44,6 +44,9 @@ The project provides functionality that is not available in the classic Java API
 * APIs to **read and write Out-of-Office information (OOO) of any user** 
 * API to **read the item definition table** of a database (all fieldnames and fieldtypes, useful to track FT Search issues and provide fieldname typeahead)
 * **DXL exporter with the option to write the DXL into a stream** (Notes.jar classes fill up the Java heap with a giant DXL string)
+* **extended folder operations**, e.g. create/delete/move/copy with content/rename, creation of new folder with specifying where to get the design
+* **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
+* creation of **ghost notes** (documents that do not appear in any views)
 
 **Please note:**
 
