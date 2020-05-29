@@ -1595,27 +1595,27 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(NotesCollection.class, newCol);
 		return newCol;
 	}
-	
+
 	/**
-	 * Lookup method to find a collection
+	 * Lookup method to find a view
 	 * 
-	 * @param collectionName collection name
-	 * @return note id of collection or 0 if not found
+	 * @param viewName view name
+	 * @return note id of view or 0 if not found
 	 */
-	public int findCollection(String collectionName) {
+	public int findView(String viewName) {
 		checkHandle();
 		
-		Memory viewNameLMBCS = NotesStringUtils.toLMBCS(collectionName, true);
+		Memory viewNameLMBCS = NotesStringUtils.toLMBCS(viewName, true);
 
-		IntByReference viewNoteID = new IntByReference();
-		viewNoteID.setValue(0);
+		IntByReference retViewNoteID = new IntByReference();
+		retViewNoteID.setValue(0);
 
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), viewNoteID, 0);
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEW_DESIGN, true), retViewNoteID, 0);
 		}
 		else {
-			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), viewNoteID, 0);
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, viewNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEW_DESIGN, true), retViewNoteID, 0);
 		}
 		
 		if ((result & NotesConstants.ERR_MASK)==1028) { //view not found
@@ -1625,9 +1625,73 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		//throws an error if view cannot be found:
 		NotesErrorUtils.checkResult(result);
 
-		return viewNoteID.getValue();
+		return retViewNoteID.getValue();
+	}
+	
+	/**
+	 * Lookup method to find a collection (view or folder)
+	 * 
+	 * @param collectionName collection name
+	 * @return note id of collection or 0 if not found
+	 */
+	public int findCollection(String collectionName) {
+		checkHandle();
+		
+		Memory collectionNameLMBCS = NotesStringUtils.toLMBCS(collectionName, true);
+
+		IntByReference retCollectionNoteID = new IntByReference();
+		retCollectionNoteID.setValue(0);
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, collectionNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), retCollectionNoteID, 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, collectionNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true), retCollectionNoteID, 0);
+		}
+		
+		if ((result & NotesConstants.ERR_MASK)==1028) { //view not found
+			return 0;
+		}
+		
+		//throws an error if view cannot be found:
+		NotesErrorUtils.checkResult(result);
+
+		return retCollectionNoteID.getValue();
 	}
 
+	/**
+	 * Lookup method to find a folder
+	 * 
+	 * @param folderName folder name
+	 * @return note id of folder or 0 if not found
+	 */
+	public int findFolder(String folderName) {
+		checkHandle();
+		
+		Memory folderNameLMBCS = NotesStringUtils.toLMBCS(folderName, true);
+
+		IntByReference retFolderNoteID = new IntByReference();
+		retFolderNoteID.setValue(0);
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, folderNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_FOLDER_DESIGN, true), retFolderNoteID, 0);
+		}
+		else {
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, folderNameLMBCS, NotesConstants.NOTE_CLASS_VIEW, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_FOLDER_DESIGN, true), retFolderNoteID, 0);
+		}
+		
+		if ((result & NotesConstants.ERR_MASK)==1028) { //view not found
+			return 0;
+		}
+		
+		//throws an error if view cannot be found:
+		NotesErrorUtils.checkResult(result);
+
+		return retFolderNoteID.getValue();
+	}
+	
 	/**
 	 * Performs a fulltext search in the database
 	 * 
@@ -7122,6 +7186,43 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function creates a new shared folder in the database.
 
+	 * @param formatFolderName name of folder/view with which to base the new folder's design.  Specify ""/null to use the default design. The default design is specified in an existing folder's design. If there is no default design specified in an existing folder's design, then the default view note is used.
+	 * @param newFolderName Name of new folder. Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 * @throws NotesError with status code 1144 if view already exists
+	 */
+	public int createFolder(String formatFolderName, String newFolderName) throws NotesError {
+		return createFolder(null, formatFolderName, newFolderName);
+	}
+	
+	/**
+	 * This function creates a new shared folder in the database.
+
+	 * @param formatDb database which contains the folder/view note with which to base the new folder's design. You may specify <code>null</code> if this is the same as this database.
+	 * @param formatFolderName name of folder/view with which to base the new folder's design.  Specify ""/null to use the default design. The default design is specified in an existing folder's design. If there is no default design specified in an existing folder's design, then the default view note is used.
+	 * @param newFolderName Name of new folder. Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 * @throws NotesError with status code 1144 if view already exists
+	 */
+	public int createFolder(NotesDatabase formatDb, String formatFolderName, String newFolderName) throws NotesError {
+		if (StringUtil.isEmpty(formatFolderName)) {
+			return createFolder(formatDb, 0, newFolderName);
+		}
+		
+		int formatNoteId = formatDb==null ? findFolder(formatFolderName) : formatDb.findFolder(formatFolderName);
+		if (formatNoteId==0) {
+			formatNoteId = formatDb==null ? findView(formatFolderName) : formatDb.findView(formatFolderName);
+		}
+		if (formatNoteId==0) {
+			throw new NotesError(1028, "No format view/folder found with name "+formatFolderName);
+		}
+		
+		return createFolder(formatDb, formatNoteId, newFolderName);
+	}
+	
+	/**
+	 * This function creates a new shared folder in the database.
+
 	 * @param formatDb database which contains the folder/view note with which to base the new folder's design. You may specify <code>null</code> if this is the same as this database.
 	 * @param formatNoteId Folder/view note with which to base the new folder's design.  Specify 0 to use the default design. The default design is specified in an existing folder's design. If there is no default design specified in an existing folder's design, then the default view note is used.
 	 * @param newFolderName Name of new folder.  Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64).  If this is to be a cascading folder (subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Folder".  In this example, New Folder will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
@@ -7163,6 +7264,19 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function deletes the given folder. Subfolders within this folder are also deleted.
 	 * 
+	 * @param folderName name of folder to be deleted.
+	 */
+	public void deleteFolder(String folderName) {
+		int folderNoteId = findFolder(folderName);
+		if (folderNoteId==0) {
+			throw new NotesError(1028, "No source folder found with name "+folderName);
+		}
+		deleteFolder(folderNoteId);
+	}
+	
+	/**
+	 * This function deletes the given folder. Subfolders within this folder are also deleted.
+	 * 
 	 * @param folderNoteId note id of folder to be deleted.
 	 */
 	public void deleteFolder(int folderNoteId) {
@@ -7180,6 +7294,22 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			result = NotesNativeAPI32.get().FolderDelete(m_hDB32, m_hDB32, folderNoteId, 0);
 		}
 		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function creates a new folder and copies the contents of the source folder to it.<br>
+	 * Any subfolders are also copied.
+	 * 
+	 * @param sourceFolderName name of source folder.
+	 * @param newFolderName Name for the new copy of the folder. Individual folder names are limited to DESIGN_FOLDER_MAX_NAME bytes (64). If this is to be a cascading folder (a subfolder), use a backslash character to separate the folder names, for example, "Parent Folder\\New Copy"  In this example, New Copy will be a subfolder of Parent Folder.  If Parent Folder does not exist, it will be created.
+	 * @return note id of new folder
+	 */
+	public int copyFolder(String sourceFolderName, String newFolderName) {
+		int sourceFolderNoteId = findFolder(sourceFolderName);
+		if (sourceFolderNoteId==0) {
+			throw new NotesError(1028, "No source folder found with name "+sourceFolderNoteId);
+		}
+		return copyFolder(sourceFolderNoteId, newFolderName);
 	}
 	
 	/**
@@ -7226,6 +7356,29 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * If the parent folder is a shared folder, then the child folder must be a shared folder.<br>
 	 * If the parent folder is a private folder, then the child folder must be a private folder.
 	 * 
+	 * @param folderName name of folder to be moved.
+	 * @param targetParentFolderName name of the new parent folder.
+	 */
+	public void moveFolder(String folderName, String targetParentFolderName) {
+		int folderNoteId = findFolder(folderName);
+		if (folderNoteId==0) {
+			throw new NotesError(1028, "No folder found with name "+folderName);
+		}
+
+		int targetParentFolderNoteId = findFolder(targetParentFolderName);
+		if (targetParentFolderNoteId==0) {
+			throw new NotesError(1028, "No folder found with name "+targetParentFolderName);
+		}
+
+		moveFolder(folderNoteId, targetParentFolderNoteId);
+	}
+	
+	/**
+	 * This function moves the specified folder under a given parent folder.<br>
+	 * <br>
+	 * If the parent folder is a shared folder, then the child folder must be a shared folder.<br>
+	 * If the parent folder is a private folder, then the child folder must be a private folder.
+	 * 
 	 * @param folderNoteId note id of folder to be moved.
 	 * @param targetParentFolderNoteId note id of the new parent folder.
 	 */
@@ -7254,11 +7407,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function renames the specified folder and its subfolders.
 	 * 
-	 * @param folderNoteId note id of folder
+	 * @param oldFolderName name of folder to rename
 	 * @param name new folder name
 	 */
-	public void renameFolder(int folderNoteId, String name) {
+	public void renameFolder(String oldFolderName, String name) {
+		int folderNoteId = findFolder(oldFolderName);
 		if (folderNoteId==0) {
+			throw new NotesError(1028, "No folder found with name "+oldFolderName);
+		}
+		
+		renameFolder(folderNoteId, name);
+	}
+	
+	/**
+	 * This function renames the specified folder and its subfolders.
+	 * 
+	 * @param oldFolderNoteId note id of folder to rename
+	 * @param name new folder name
+	 */
+	public void renameFolder(int oldFolderNoteId, String name) {
+		if (oldFolderNoteId==0) {
 			throw new IllegalArgumentException("Folder note id cannot be 0");
 		}
 		
@@ -7270,11 +7438,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		
 		if (PlatformUtils.is64Bit()) {
-			short result = NotesNativeAPI64.get().FolderRename(m_hDB64, 0, folderNoteId, pszName, (short) pszName.size(), 0);
+			short result = NotesNativeAPI64.get().FolderRename(m_hDB64, 0, oldFolderNoteId, pszName, (short) pszName.size(), 0);
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			short result = NotesNativeAPI32.get().FolderRename(m_hDB32, 0, folderNoteId, pszName, (short) pszName.size(), 0);
+			short result = NotesNativeAPI32.get().FolderRename(m_hDB32, 0, oldFolderNoteId, pszName, (short) pszName.size(), 0);
 			NotesErrorUtils.checkResult(result);
 		}
 	}
