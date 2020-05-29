@@ -45,7 +45,7 @@ public class NotesCollectionSummary {
 		m_language = entry.getAsString("$language", "");
 	}
 
-	public void setTitle(String title) {
+	void setTitle(String title) {
 		m_title = title;
 	}
 	
@@ -53,7 +53,7 @@ public class NotesCollectionSummary {
 		return m_title==null ? "" : m_title;
 	}
 
-	public void setAliases(List<String> aliases) {
+	void setAliases(List<String> aliases) {
 		m_aliases = aliases;
 	}
 	
@@ -61,7 +61,7 @@ public class NotesCollectionSummary {
 		return m_aliases==null ? Collections.emptyList() : m_aliases;
 	}
 	
-	public void setFlags(String flags) {
+	void setFlags(String flags) {
 		m_flags = flags;
 	}
 	
@@ -72,7 +72,7 @@ public class NotesCollectionSummary {
 		return false;
 	}
 
-	public void setNoteId(int noteId) {
+	void setNoteId(int noteId) {
 		m_noteId = noteId;
 	}
 	
@@ -80,7 +80,7 @@ public class NotesCollectionSummary {
 		return m_noteId;
 	}
 	
-	public void setComment(String comment) {
+	void setComment(String comment) {
 		m_comment = comment;
 	}
 	
@@ -88,7 +88,7 @@ public class NotesCollectionSummary {
 		return m_comment==null ? "" : m_comment;
 	}
 	
-	public void setLanguage(String language) {
+	void setLanguage(String language) {
 		m_language = language;
 	}
 	
