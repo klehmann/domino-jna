@@ -29,7 +29,7 @@ public class NotesCollectionSummary {
 		m_parentDb = parentdb;
 	}
 
-	public void initFromDesignCollectionEntry(NotesViewEntryData entry) {
+	void initFromDesignCollectionEntry(NotesViewEntryData entry) {
 		String titleAndAliases = entry.getAsString("$title", "");
 		StringTokenizerExt st = new StringTokenizerExt(titleAndAliases, "|");
 		m_title = st.nextToken();
