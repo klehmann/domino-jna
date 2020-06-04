@@ -164,7 +164,16 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 			NotesScheduleStruct retpSchedule = NotesScheduleStruct.newInstance(schedulePtr);
 			retpSchedule.read();
 			
-			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(NotesConstants.scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
+			int scheduleSize = NotesConstants.scheduleSize;
+			if (PlatformUtils.isMac() && PlatformUtils.is64Bit()) {
+				//on Mac/64, this structure is 4 byte aligned, other's are not
+				int remainder = scheduleSize % 4;
+				if (remainder > 0) {
+					scheduleSize = 4 * (scheduleSize / 4) + 4;
+				}
+			}
+			
+			String owner = NotesStringUtils.fromLMBCS(retpSchedule.getPointer().share(scheduleSize), (retpSchedule.wOwnerNameSize-1) & 0xffff);
 
 			NotesSchedule schedule=new NotesSchedule(this, retpSchedule, owner, (int) rethObj.getValue());
 			NotesGC.__objectCreated(NotesSchedule.class, schedule);
