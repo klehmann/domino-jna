@@ -1335,12 +1335,6 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			IntByReference phData,
 			IntByReference pdwDataLen);
 	
-	public native short MIMEGetEntityDataSize(
-			int  hNote,
-			Pointer pME,
-			short wDataType,
-			IntByReference pdwDataLen);
-	
 	public native short MIMEGetEntityPartFlags(
 			int hNote,
 			Pointer pEntity,

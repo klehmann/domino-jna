@@ -1638,12 +1638,6 @@ public interface INotesNativeAPI64 extends Library {
 			LongByReference phData,
 			IntByReference pdwDataLen);
 
-	public short MIMEGetEntityDataSize(
-			long hNote,
-			Pointer pME,
-			short wDataType,
-			IntByReference pdwDataLen);
-
 	public short MIMEGetEntityPartFlags(
 			long hNote,
 			Pointer  pEntity,
