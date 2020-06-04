@@ -7450,7 +7450,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 
 	/**
 	 * This function adds the document(s) specified in an ID Table to this folder.
-	 * Throws an error if {@link #isFolder()} is <code>false</code>.
+	 * Throws an error if {@link NotesCollection#isFolder()} is <code>false</code>.
 	 * 
 	 * @param folderNoteId note id of folder
 	 * @param idTable id table
@@ -7471,7 +7471,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	
 	/**
 	 * This function adds the document(s) specified as note id set to this folder.
-	 * Throws an error if {@link #isFolder()} is <code>false</code>.
+	 * Throws an error if {@link NotesCollection#isFolder()} is <code>false</code>.
 	 * 
 	 * @param folderNoteId note id of folder
 	 * @param noteIds ids of notes to add
