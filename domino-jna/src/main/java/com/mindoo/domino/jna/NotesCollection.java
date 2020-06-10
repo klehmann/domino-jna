@@ -908,15 +908,27 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Locates a note in the collection
+	 * When a collection is modified (for example, when another user adds or deletes a document), the
+	 * collection position for a note may no longer be valid.<br>
+	 * This method will locate the specified note ID in the collection, and return the updated
+	 * collection position if it can be located (using the old position as a reference).
 	 * 
+	 * @param oldPosStr old collection position or null/empty string
 	 * @param noteId note id
 	 * @return collection position or empty string if not found
 	 */
-	public String locateNote(int noteId) {
+	public String locateNote(String oldPosStr, int noteId) {
 		checkHandle();
 
-		NotesCollectionPositionStruct foundPos = NotesCollectionPositionStruct.newInstance();
+		NotesCollectionPositionStruct foundPos;
+		if (StringUtil.isEmpty(oldPosStr)) {
+			foundPos = NotesCollectionPositionStruct.newInstance();
+		}
+		else {
+			NotesCollectionPosition oldPos = new NotesCollectionPosition(oldPosStr);
+			foundPos = oldPos.getAdapter(NotesCollectionPositionStruct.class);
+		}
+		
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64.get().NIFLocateNote(m_hCollection64, foundPos, noteId);
@@ -934,11 +946,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 	/**
 	 * Locates a note in the collection
 	 * 
+	 * @param oldPosStr old collection position or null/empty string
 	 * @param noteId note id as hex string
 	 * @return collection position or empty string if not found
 	 */
-	public String locateNote(String noteId) {
-		return locateNote(Integer.parseInt(noteId, 16));
+	public String locateNote(String oldPosStr, String noteId) {
+		return locateNote(oldPosStr, Integer.parseInt(noteId, 16));
 	}
 
 	/**
