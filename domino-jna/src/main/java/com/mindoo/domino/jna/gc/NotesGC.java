@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
@@ -17,66 +16,105 @@ import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
  * Utility class to simplify memory management with Notes handles. The class tracks
- * handle creation and disposal. By using {@link #runWithAutoGC(Callable)}, the
- * collected handles are automatically disposed when code execution is done.
+ * handle creation and disposal.<br>
+ * By using {@link #runWithAutoGC(Callable)}, the
+ * collected handles are automatically disposed when code execution is done.<br>
+ * <br>
+ * An alternative approach is to use a try-with-resources block on the {@link DominoGCContext}
+ * returned by {@link #initThread()}, e.g.<br>
+ * <br>
+ * <code>
+ * try (DominoGCContext ctx = initThread()) {<br>
+ * &nbsp;&nbsp;&nbsp;// use Domino JNA classes, e.g.<br>
+ * &nbsp;&nbsp;&nbsp;NotesDatabase db = new NotesDatabase("", "names.nsf", "");<br>
+ * <br>
+ * } catch (Exception e) {<br>
+ * &nbsp;&nbsp;&nbsp;log(Level.SEVERE, "Error accessing Domino data", e);<br>
+ * }<br>
+ * </code>
  * 
  * @author Karsten Lehmann
  */
 public class NotesGC {
-	private static ThreadLocal<Boolean> m_activeAutoGC = new ThreadLocal<Boolean>();
-	private static ThreadLocal<Map<String,Object>> m_activeAutoGCCustomValues = new ThreadLocal<Map<String,Object>>();
-	
-	//maps with open handles; using LinkedHashMap to keep insertion order for the keys
-	private static ThreadLocal<LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject, Long>>> m_b32OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject, Long>>>();
-	private static ThreadLocal<LinkedHashMap<Integer, Pair<IAllocatedMemory, Long>>> m_b32OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Integer,Pair<IAllocatedMemory, Long>>>();
-	private static ThreadLocal<LinkedHashMap<HashKey64, Pair<IRecyclableNotesObject, Long>>> m_b64OpenHandlesDominoObjects = new ThreadLocal<LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject, Long>>>();
-	private static ThreadLocal<LinkedHashMap<Long, Pair<IAllocatedMemory, Long>>> m_b64OpenHandlesMemory = new ThreadLocal<LinkedHashMap<Long,Pair<IAllocatedMemory, Long>>>();
-	private static ThreadLocal<Long> m_threadInvocationCount = new ThreadLocal<>();
-	
-	private static final AtomicLong m_globalInvocationCounter = new AtomicLong();
-	
-	private static ThreadLocal<Boolean> m_writeDebugMessages = new ThreadLocal<Boolean>() {
-		protected Boolean initialValue() {
-			return Boolean.FALSE;
-		};
-	};
-	private static ThreadLocal<Boolean> m_logCrashingThreadStackTrace = new ThreadLocal<Boolean>() {
-		protected Boolean initialValue() {
-			return Boolean.FALSE;
-		};
-	};
+	private static ThreadLocal<DominoGCContext> threadContext = new ThreadLocal<>();
+
+	/**
+	 * Returns the GC context for the current thread
+	 * 
+	 * @return context
+	 * @throws IllegalStateException if no context is active
+	 */
+	private static DominoGCContext getThreadContext() {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			throw new IllegalStateException("Thread is not enabled for auto GC. Either run your code via NotesGC.runWithAutoGC(Callable) or via try-with-resources on the object returned by NotesGC.initThread().");
+		}
+		return ctx;
+	}
 	
 	/**
-	 * Method to enable GC debug logging for the current {@link #runWithAutoGC(Callable)} call
+	 * Method to enable GC debug logging for the active thread's {@link DominoGCContext}
 	 * 
 	 * @param enabled true if enabled
 	 */
 	public static void setDebugLoggingEnabled(boolean enabled) {
-		m_writeDebugMessages.set(Boolean.valueOf(enabled));
+		DominoGCContext ctx = threadContext.get();
+		if (ctx!=null) {
+			ctx.setWriteDebugMessages(enabled);
+		}
+	}
+	
+	/**
+	 * Method to check if GC debug logging is enabled for the active thread's {@link DominoGCContext}
+	 * is enabled.
+	 * 
+	 * @return true if enabled
+	 */
+	public static boolean isDebugLoggingEnabled() {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			return false;
+		}
+		else {
+			return ctx.isWriteDebugMessages();
+		}
 	}
 	
 	/**
 	 * Method to write a stacktrace to disk right before each native method invocation. Consumes
 	 * much performance and is therefore disabled by default and just here to track down
 	 * handle panics.<br>
-	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.
+	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.<br>
+	 * <br>
+	 * Logging is enabled for the active thread's {@link DominoGCContext}.
 	 * 
 	 * @param log true to log
 	 */
 	public static void setLogCrashingThreadStacktrace(boolean log) {
-		m_logCrashingThreadStackTrace.set(Boolean.valueOf(log));
+		DominoGCContext ctx = threadContext.get();
+		if (ctx!=null) {
+			ctx.setLogCrashingThreadStackTrace(log);
+		}
 	}
 	
 	/**
 	 * Checks whether stacktraces for each native method invocation should be written to disk. Consumes
 	 * much performance and is therefore disabled by default and just here to track down
 	 * handle panics.<br>
-	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.
+	 * Stacktraces are written as files domino-jna-stack-&lt;threadid&gt;.txt in the temp directory.<br>
+	 * <br>
+	 * Logging is enabled for the active thread's {@link DominoGCContext}.
 	 * 
 	 * @return true to log
 	 */
 	public static boolean isLogCrashingThreadStacktrace() {
-		return Boolean.TRUE.equals(m_logCrashingThreadStackTrace.get());
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			return false;
+		}
+		else {
+			return ctx.isLogCrashingThreadStackTrace();
+		}
 	}
 	
 	/**
@@ -85,14 +123,13 @@ public class NotesGC {
 	 * @return handle count
 	 */
 	public static int getNumberOfOpenObjectHandles() {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
-		
+		DominoGCContext ctx = getThreadContext();
+
 		if (PlatformUtils.is64Bit()) {
-			return m_b64OpenHandlesDominoObjects.get().size();
+			return ctx.getOpenHandlesDominoObjects64().size();
 		}
 		else {
-			return m_b32OpenHandlesDominoObjects.get().size();
+			return ctx.getOpenHandlesDominoObjects32().size();
 		}
 	}
 
@@ -102,14 +139,13 @@ public class NotesGC {
 	 * @return handle count
 	 */
 	public static int getNumberOfOpenMemoryHandles() {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
-		
+		DominoGCContext ctx = getThreadContext();
+
 		if (PlatformUtils.is64Bit()) {
-			return m_b64OpenHandlesMemory.get().size();
+			return ctx.getOpenHandlesMemory64().size();
 		}
 		else {
-			return m_b32OpenHandlesMemory.get().size();
+			return ctx.getOpenHandlesMemory32().size();
 		}
 	}
 
@@ -212,19 +248,16 @@ public class NotesGC {
 	 * @param obj Notes object
 	 */
 	public static void __objectCreated(Class<?> clazz, IRecyclableNotesObject obj) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 		
-		long currInvCnt = m_threadInvocationCount.get();
-		
 		if (PlatformUtils.is64Bit()) {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
 			
-			Pair<IRecyclableNotesObject,Long> oldObjWithInvCnt = m_b64OpenHandlesDominoObjects.get().put(key, new Pair(obj, currInvCnt));
-			IRecyclableNotesObject oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
+			LinkedHashMap<HashKey64, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects64();
+			IRecyclableNotesObject oldObj = openHandles.put(key, obj);
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
@@ -232,14 +265,14 @@ public class NotesGC {
 		else {
 			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
 			
-			Pair<IRecyclableNotesObject,Long> oldObjWithInvCnt = m_b32OpenHandlesDominoObjects.get().put(key, new Pair(obj, currInvCnt));
-			IRecyclableNotesObject oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
+			LinkedHashMap<HashKey32, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects32();
+			IRecyclableNotesObject oldObj = openHandles.put(key, obj);
 			if (oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
 		
-		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
+		if (ctx.isWriteDebugMessages()) {
 			System.out.println("AutoGC - Added object: "+obj);
 		}
 	}
@@ -250,30 +283,27 @@ public class NotesGC {
 	 * @param mem Notes object
 	 */
 	public static void __memoryAllocated(IAllocatedMemory mem) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
 		if (mem.isFreed())
 			throw new NotesError(0, "Memory is already freed");
 		
-		long currInvCnt = m_threadInvocationCount.get();
-
 		if (PlatformUtils.is64Bit()) {
-			Pair<IAllocatedMemory,Long> oldObjWithInvCnt = m_b64OpenHandlesMemory.get().put(mem.getHandle64(), new Pair(mem, currInvCnt));
-			IAllocatedMemory oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
+			LinkedHashMap<Long, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory64();
+			IAllocatedMemory oldObj = openHandles.put(mem.getHandle64(), mem);
 			if (oldObj!=null && oldObj!=mem) {
 				throw new IllegalStateException("Duplicate handle detected. Memory to store: "+mem+", object found in open handle list: "+oldObj);
 			}
 		}
 		else {
-			Pair<IAllocatedMemory,Long> oldObjWithInvCnt = m_b32OpenHandlesMemory.get().put(mem.getHandle32(), new Pair(mem, currInvCnt));
-			IAllocatedMemory oldObj = oldObjWithInvCnt==null ? null : oldObjWithInvCnt.getValue1();
+			LinkedHashMap<Integer, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory32();
+			IAllocatedMemory oldObj = openHandles.put(mem.getHandle32(), mem);
 			if (oldObj!=null && oldObj!=mem) {
 				throw new IllegalStateException("Duplicate handle detected. Memory to store: "+mem+", object found in open handle list: "+oldObj);
 			}
 		}
 		
-		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
+		if (ctx.isWriteDebugMessages()) {
 			System.out.println("AutoGC - Added memory: "+mem);
 		}
 	}
@@ -287,19 +317,12 @@ public class NotesGC {
 	 * @throws NotesError if handle does not exist
 	 */
 	public static IRecyclableNotesObject __b64_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, long handle) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
 		HashKey64 key = new HashKey64(objClazz, handle);
-		Pair<IRecyclableNotesObject,Long> objWithInvCnt = m_b64OpenHandlesDominoObjects.get().get(key);
-		if (objWithInvCnt!=null) {
-			long currInvCnt = m_threadInvocationCount.get();
-			if (currInvCnt != objWithInvCnt.getValue2()) {
-				throw new NotesError(0, "Object was created in a different thread or auto-gc block!");
-			}
-		}
+		LinkedHashMap<HashKey64, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects64();
 
-		IRecyclableNotesObject obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
+		IRecyclableNotesObject obj = openHandles.get(key);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -316,18 +339,11 @@ public class NotesGC {
 	 * @throws NotesError if handle does not exist
 	 */
 	public static void __b64_checkValidMemHandle(Class<? extends IAllocatedMemory> memClazz, long handle) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
-		Pair<IAllocatedMemory,Long> objWithInvCnt = m_b64OpenHandlesMemory.get().get(handle);
-		if (objWithInvCnt!=null) {
-			long currInvCnt = m_threadInvocationCount.get();
-			if (currInvCnt != objWithInvCnt.getValue2()) {
-				throw new NotesError(0, "Memory was allocated in a different thread or auto-gc block!");
-			}
-		}
+		LinkedHashMap<Long, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory64();
 
-		IAllocatedMemory obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
+		IAllocatedMemory obj = openHandles.get(handle);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+memClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -342,19 +358,13 @@ public class NotesGC {
 	 * @throws NotesError if handle does not exist
 	 */
 	public static IRecyclableNotesObject __b32_checkValidObjectHandle(Class<? extends IRecyclableNotesObject> objClazz, int handle) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
+		
+		LinkedHashMap<HashKey32,IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects32();
 		
 		HashKey32 key = new HashKey32(objClazz, handle);
-		Pair<IRecyclableNotesObject,Long> objWithInvCnt = m_b32OpenHandlesDominoObjects.get().get(key);
-		if (objWithInvCnt!=null) {
-			long currInvCnt = m_threadInvocationCount.get();
-			if (currInvCnt != objWithInvCnt.getValue2()) {
-				throw new NotesError(0, "Object was created in a different thread or auto-gc block!");
-			}
-		}
 
-		IRecyclableNotesObject obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
+		IRecyclableNotesObject obj = openHandles.get(key);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of object with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -370,17 +380,11 @@ public class NotesGC {
 	 * @throws NotesError if handle does not exist
 	 */
 	public static void __b32_checkValidMemHandle(Class<? extends IAllocatedMemory> objClazz, int handle) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
+
+		LinkedHashMap<Integer, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory32();
 		
-		Pair<IAllocatedMemory,Long> objWithInvCnt = m_b32OpenHandlesMemory.get().get(handle);
-		if (objWithInvCnt!=null) {
-			long currInvCnt = m_threadInvocationCount.get();
-			if (currInvCnt != objWithInvCnt.getValue2()) {
-				throw new NotesError(0, "Memory was allocated in a different thread or auto-gc block!");
-			}
-		}
-		IAllocatedMemory obj = objWithInvCnt==null ? null : objWithInvCnt.getValue1();
+		IAllocatedMemory obj = openHandles.get(handle);
 		if (obj==null) {
 			throw new NotesError(0, "The provided C handle "+handle+" of memory with class "+objClazz.getName()+" does not seem to exist (anymore).");
 		}
@@ -393,23 +397,24 @@ public class NotesGC {
 	 * @param obj Notes object
 	 */
 	public static void __objectBeeingBeRecycled(Class<? extends IRecyclableNotesObject> clazz, IRecyclableNotesObject obj) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 
-		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
+		if (ctx.isWriteDebugMessages()) {
 			System.out.println("AutoGC - Removing object: "+obj.getClass()+" with handle="+(PlatformUtils.is64Bit() ? obj.getHandle64() : obj.getHandle32()));
 		}
 		
 		if (PlatformUtils.is64Bit()) {
 			HashKey64 key = new HashKey64(clazz, obj.getHandle64());
-			m_b64OpenHandlesDominoObjects.get().remove(key);
+			LinkedHashMap<HashKey64, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects64();
+			openHandles.remove(key);
 		}
 		else {
 			HashKey32 key = new HashKey32(clazz, obj.getHandle32());
-			m_b32OpenHandlesDominoObjects.get().remove(key);
+			LinkedHashMap<HashKey32, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects32();
+			openHandles.remove(key);
 		}
 	}
 
@@ -419,21 +424,22 @@ public class NotesGC {
 	 * @param mem Notes object
 	 */
 	public static void __memoryBeeingFreed(IAllocatedMemory mem) {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get()))
-			throw new IllegalStateException("Auto GC is not active");
+		DominoGCContext ctx = getThreadContext();
 		
 		if (mem.isFreed())
 			throw new NotesError(0, "Memory has already been freed");
 
-		if (Boolean.TRUE.equals(m_writeDebugMessages.get())) {
+		if (ctx.isWriteDebugMessages()) {
 			System.out.println("AutoGC - Removing memory: "+mem.getClass()+" with handle="+(PlatformUtils.is64Bit() ? mem.getHandle64() : mem.getHandle32()));
 		}
 		
 		if (PlatformUtils.is64Bit()) {
-			m_b64OpenHandlesMemory.get().remove(mem.getHandle64());
+			LinkedHashMap<Long, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory64();
+			openHandles.remove(mem.getHandle64());
 		}
 		else {
-			m_b32OpenHandlesMemory.get().remove(mem.getHandle32());
+			LinkedHashMap<Integer, IAllocatedMemory> openHandles = ctx.getOpenHandlesMemory32();
+			openHandles.remove(mem.getHandle32());
 		}
 	}
 
@@ -446,10 +452,9 @@ public class NotesGC {
 	 * @return previous value
 	 */
 	public static Object setCustomValue(String key, Object value) {
-		Map<String,Object> map = m_activeAutoGCCustomValues.get();
-		if (map==null) {
-			throw new IllegalStateException("No auto gc block is active");
-		}
+		DominoGCContext ctx = getThreadContext();
+
+		Map<String,Object> map = ctx.getCustomValues();
 		return map.put(key, value);
 	}
 	
@@ -462,10 +467,9 @@ public class NotesGC {
 	 * @return value or null if not set
 	 */
 	public static Object getCustomValue(String key) {
-		Map<String,Object> map = m_activeAutoGCCustomValues.get();
-		if (map==null) {
-			throw new IllegalStateException("No auto gc block is active");
-		}
+		DominoGCContext ctx = getThreadContext();
+		
+		Map<String,Object> map = ctx.getCustomValues();
 		return map.get(key);
 	}
 	
@@ -476,10 +480,9 @@ public class NotesGC {
 	 * @return true if value is set
 	 */
 	public boolean hasCustomValue(String key) {
-		Map<String,Object> map = m_activeAutoGCCustomValues.get();
-		if (map==null) {
-			throw new IllegalStateException("No auto gc block is active");
-		}
+		DominoGCContext ctx = getThreadContext();
+
+		Map<String,Object> map = ctx.getCustomValues();
 		return map.containsKey(key);
 	}
 	
@@ -487,8 +490,9 @@ public class NotesGC {
 	 * Throws an exception when the code is currently not running in a runWithAutoGC block
 	 */
 	public static void ensureRunningInAutoGC() {
-		if (!Boolean.TRUE.equals(m_activeAutoGC.get())) {
-			throw new NotesError(0, "Please wrap code accessing the JNA API in a NotesGC.runWithAutoGC(Callable) block");
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			throw new IllegalStateException("Thread is not enabled for auto GC. Either run your code via runWithAutoGC(Callable) or via try-with-resources on the object returned by initThread().");
 		}
 	}
 	
@@ -499,9 +503,21 @@ public class NotesGC {
 	 * @return true if in auto GC
 	 */
 	public static boolean isAutoGCActive() {
-		return Boolean.TRUE.equals(m_activeAutoGC.get());
+		return threadContext.get() != null;
 	}
-	
+
+	/**
+	 * When using {@link NotesGC#setCustomValue(String, Object)} to store your own
+	 * values, use this
+	 * interface for your value to get called for disposal when the {@link NotesGC#runWithAutoGC(Callable)}
+	 * block is finished. Otherwise the value is just removed from the intermap map.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IDisposableCustomValue {
+		public void dispose();
+	}
+
 	/**
 	 * Runs a piece of code and automatically disposes any allocated Notes objects at the end.
 	 * The method supported nested calls.
@@ -512,215 +528,336 @@ public class NotesGC {
 	 * 
 	 * @param <T> return value type of code to be run
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static <T> T runWithAutoGC(final Callable<T> callable) throws Exception {
-		if (Boolean.TRUE.equals(m_activeAutoGC.get())) {
-			//nested call
-			return callable.call();
+		try (DominoGCContext ctx = initThread()) {
+			return AccessController.doPrivileged(new PrivilegedAction<T>() {
+
+				@Override
+				public T run() {
+					try {
+						return callable.call();
+					} catch (Exception e) {
+						if (e instanceof RuntimeException) {
+							throw (RuntimeException) e;
+						}
+						else {
+							throw new NotesError(0, "Error during code execution", e);
+						}
+					}
+				}
+			});
+		}
+	}
+	
+	/**
+	 * Initializes the current thread for Domino JNA C and memory resource
+	 * tracking.<br>
+	 * <b>The returned {@link DominoGCContext} must be closed to free up all allocated resources.
+	 * Otherwise the client/server will run out of handles sooner or later!</b><br>
+	 * <br>
+	 * It is recommented to use a try-with-resources block to ensure calling the close() method
+	 * even in case of execution errors, e.g.<br>
+	 * <br>
+	 * <code>
+	 * try (DominoGCContext ctx = initThread()) {<br>
+	 * &nbsp;&nbsp;&nbsp;// use Domino JNA classes, e.g.<br>
+	 * &nbsp;&nbsp;&nbsp;NotesDatabase db = new NotesDatabase("", "names.nsf", "");<br>
+	 * <br>
+	 * } catch (Exception e) {<br>
+	 * &nbsp;&nbsp;&nbsp;log(Level.SEVERE, "Error accessing Domino data", e);<br>
+	 * }<br>
+	 * </code>
+	 *
+	 * @return garbage collection context
+	 */
+	public static DominoGCContext initThread() {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			NotesNativeAPI.initialize();
+			ctx = new DominoGCContext(null);
+			threadContext.set(ctx);
+			return ctx;
 		}
 		else {
-			long incCnt = m_globalInvocationCounter.getAndIncrement();
-			m_threadInvocationCount.set(incCnt);
-			
-			NotesNativeAPI.initialize();
+			return new DominoGCContext(ctx);
+		}
+	}
 
-			m_activeAutoGC.set(Boolean.TRUE);
-			m_activeAutoGCCustomValues.set(new HashMap<String, Object>());
-			
-			LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject,Long>> b32HandlesDominoObjects = null;
-			LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject,Long>> b64HandlesDominoObjects = null;
-			
-			LinkedHashMap<Integer,Pair<IAllocatedMemory,Long>> b32HandlesMemory = null;
-			LinkedHashMap<Long,Pair<IAllocatedMemory,Long>> b64HandlesMemory = null;
-			
-			try {
-				if (PlatformUtils.is64Bit()) {
-					b64HandlesDominoObjects = new LinkedHashMap<HashKey64,Pair<IRecyclableNotesObject,Long>>();
-					m_b64OpenHandlesDominoObjects.set(b64HandlesDominoObjects);
-					
-					b64HandlesMemory = new LinkedHashMap<Long,Pair<IAllocatedMemory,Long>>();
-					m_b64OpenHandlesMemory.set(b64HandlesMemory);
-				}
-				else {
-					b32HandlesDominoObjects = new LinkedHashMap<HashKey32,Pair<IRecyclableNotesObject,Long>>();
-					m_b32OpenHandlesDominoObjects.set(b32HandlesDominoObjects);
-					
-					b32HandlesMemory = new LinkedHashMap<Integer,Pair<IAllocatedMemory,Long>>();
-					m_b32OpenHandlesMemory.set(b32HandlesMemory);
-				}
-				
-				return AccessController.doPrivileged(new PrivilegedAction<T>() {
-
-					@Override
-					public T run() {
-						try {
-							return callable.call();
-						} catch (Exception e) {
-							if (e instanceof RuntimeException) {
-								throw (RuntimeException) e;
-							}
-							else {
-								throw new NotesError(0, "Error during code execution", e);
-							}
-						}
-					}
-				});
+	public static class DominoGCContext implements AutoCloseable {
+		private DominoGCContext m_parentCtx;
+		private Thread m_parentThread;
+		private Map<String,Object> m_activeAutoGCCustomValues;
+		
+		//maps with open handles; using LinkedHashMap to keep insertion order for the keys and disposed in reverse order
+		private LinkedHashMap<HashKey32,IRecyclableNotesObject> m_b32OpenHandlesDominoObjects;
+		private LinkedHashMap<Integer, IAllocatedMemory> m_b32OpenHandlesMemory;
+		private LinkedHashMap<HashKey64, IRecyclableNotesObject> m_b64OpenHandlesDominoObjects;
+		private LinkedHashMap<Long, IAllocatedMemory> m_b64OpenHandlesMemory;
+		private boolean m_writeDebugMessages;
+		private boolean m_logCrashingThreadStackTrace;
+		
+		private DominoGCContext(DominoGCContext parentCtx) {
+			m_parentCtx = parentCtx;
+			m_parentThread = Thread.currentThread();
+		}
+		
+		/**
+		 * Returns true if this GC context is the first created for the current
+		 * thread and false if it's a nested context.
+		 * 
+		 * @return true if top context
+		 */
+		public boolean isTopContext() {
+			return m_parentCtx==null;
+		}
+		
+		private void checkValidThread() {
+			if (!m_parentThread.equals(Thread.currentThread())) {
+				throw new IllegalStateException("This context cannot be used across threads");
 			}
-			finally {
-				boolean writeDebugMsg = Boolean.TRUE.equals(m_writeDebugMessages.get());
-				
-				if (PlatformUtils.is64Bit()) {
-					{
+		}
+		
+		public boolean isWriteDebugMessages() {
+			if (m_parentCtx!=null) {
+				return m_parentCtx.isWriteDebugMessages();
+			}
+			return m_writeDebugMessages;
+		}
+		
+		public void setWriteDebugMessages(boolean b) {
+			if (m_parentCtx!=null) {
+				m_parentCtx.setWriteDebugMessages(b);
+				return;
+			}
+			m_writeDebugMessages = b;
+		}
+		
+		public boolean isLogCrashingThreadStackTrace() {
+			if (m_parentCtx!=null) {
+				return m_parentCtx.isLogCrashingThreadStackTrace();
+			}
+			return m_logCrashingThreadStackTrace;
+		}
+		
+		public void setLogCrashingThreadStackTrace(boolean b) {
+			if (m_parentCtx!=null) {
+				m_parentCtx.setLogCrashingThreadStackTrace(b);
+				return;
+			}
+			m_logCrashingThreadStackTrace = b;
+		}
+		
+		private Map<String,Object> getCustomValues() {
+			checkValidThread();
+			if (m_parentCtx!=null) {
+				return m_parentCtx.getCustomValues();
+			}
+			if (m_activeAutoGCCustomValues==null) {
+				m_activeAutoGCCustomValues = new HashMap<>();
+			}
+			return m_activeAutoGCCustomValues;
+		}
+		
+		private LinkedHashMap<HashKey32,IRecyclableNotesObject> getOpenHandlesDominoObjects32() {
+			checkValidThread();
+			if (m_parentCtx!=null) {
+				return m_parentCtx.getOpenHandlesDominoObjects32();
+			}
+			if (m_b32OpenHandlesDominoObjects==null) {
+				m_b32OpenHandlesDominoObjects = new LinkedHashMap<>();
+			}
+			return m_b32OpenHandlesDominoObjects;
+		}
+		
+		private LinkedHashMap<Integer, IAllocatedMemory> getOpenHandlesMemory32() {
+			checkValidThread();
+			if (m_parentCtx!=null) {
+				return m_parentCtx.getOpenHandlesMemory32();
+			}
+			if (m_b32OpenHandlesMemory==null) {
+				m_b32OpenHandlesMemory = new LinkedHashMap<>();
+			}
+			return m_b32OpenHandlesMemory;
+		}
+		
+		private LinkedHashMap<HashKey64, IRecyclableNotesObject> getOpenHandlesDominoObjects64() {
+			checkValidThread();
+			if (m_parentCtx!=null) {
+				return m_parentCtx.getOpenHandlesDominoObjects64();
+			}
+			if (m_b64OpenHandlesDominoObjects==null) {
+				m_b64OpenHandlesDominoObjects = new LinkedHashMap<>();
+			}
+			return m_b64OpenHandlesDominoObjects;
+		}
+		
+		private LinkedHashMap<Long, IAllocatedMemory> getOpenHandlesMemory64() {
+			checkValidThread();
+			if (m_parentCtx!=null) {
+				return m_parentCtx.getOpenHandlesMemory64();
+			}
+			if (m_b64OpenHandlesMemory==null) {
+				m_b64OpenHandlesMemory = new LinkedHashMap<>();
+			}
+			return m_b64OpenHandlesMemory;
+		}
+		
+		@Override
+		public void close() throws Exception {
+			checkValidThread();
+			
+			if (!isTopContext()) {
+				//don't free up resources in nested calls on NotesGC.initThread()
+				return;
+			}
+
+			if (PlatformUtils.is64Bit()) {
+				{
+					//recycle created Domino objects
+					if (m_b64OpenHandlesDominoObjects!=null && !m_b64OpenHandlesDominoObjects.isEmpty()) {
+						Entry[] mapEntries = m_b64OpenHandlesDominoObjects.entrySet().toArray(new Entry[m_b64OpenHandlesDominoObjects.size()]);
+						if (mapEntries.length>0) {
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Auto-recycling "+mapEntries.length+" Domino objects:");
+							}
+							
+							for (int i=mapEntries.length-1; i>=0; i--) {
+								Entry<HashKey64,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
+								IRecyclableNotesObject obj = currEntry.getValue().getValue1();
+								try {
+									if (!obj.isRecycled()) {
+										if (m_writeDebugMessages) {
+											System.out.println("AutoGC - Auto-recycling "+obj);
+										}
+										obj.recycle();
+									}
+								}
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
+								m_b64OpenHandlesDominoObjects.remove(currEntry.getKey());
+							}
+							
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Done auto-recycling "+mapEntries.length+" Domino objects");
+							}
+							
+							m_b64OpenHandlesDominoObjects.clear();
+							m_b64OpenHandlesDominoObjects = null;
+						}
+					}
+				}
+				{
+					//dispose allocated memory
+					if (m_b64OpenHandlesMemory!=null && !m_b64OpenHandlesMemory.isEmpty()) {
+						Entry[] mapEntries = m_b64OpenHandlesMemory.entrySet().toArray(new Entry[m_b64OpenHandlesMemory.size()]);
+						if (mapEntries.length>0) {
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
+							}
+
+							for (int i=mapEntries.length-1; i>=0; i--) {
+								Entry<Long,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
+								IAllocatedMemory obj = currEntry.getValue().getValue1();
+								try {
+									if (!obj.isFreed()) {
+										if (m_writeDebugMessages) {
+											System.out.println("AutoGC - Freeing "+obj);
+										}
+										obj.free();
+									}
+								}
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
+								m_b64OpenHandlesMemory.remove(currEntry.getKey());
+							}
+
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
+							}
+
+							m_b64OpenHandlesMemory.clear();
+							m_b64OpenHandlesMemory = null;
+						}
+					}
+				}
+			}
+			else {
+				{
+					if (m_b32OpenHandlesDominoObjects!=null && !m_b32OpenHandlesDominoObjects.isEmpty()) {
 						//recycle created Domino objects
-						if (!b64HandlesDominoObjects.isEmpty()) {
-							Entry[] mapEntries = b64HandlesDominoObjects.entrySet().toArray(new Entry[b64HandlesDominoObjects.size()]);
-							if (mapEntries.length>0) {
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Auto-recycling "+mapEntries.length+" Domino objects:");
-								}
-								
-								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<HashKey64,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
-									IRecyclableNotesObject obj = currEntry.getValue().getValue1();
-									try {
-										if (!obj.isRecycled()) {
-											if (writeDebugMsg) {
-												System.out.println("AutoGC - Auto-recycling "+obj);
-											}
-											obj.recycle();
-										}
-									}
-									catch (Throwable e) {
-										e.printStackTrace();
-									}
-									b64HandlesDominoObjects.remove(currEntry.getKey());
-								}
-								
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Done auto-recycling "+mapEntries.length+" Domino objects");
-								}
-								
-								b64HandlesDominoObjects.clear();
-								m_b64OpenHandlesDominoObjects.set(null);
+						Entry[] mapEntries = m_b32OpenHandlesDominoObjects.entrySet().toArray(new Entry[m_b32OpenHandlesDominoObjects.size()]);
+						if (mapEntries.length>0) {
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Recycling "+mapEntries.length+" Domino objects:");
 							}
+
+							for (int i=mapEntries.length-1; i>=0; i--) {
+								Entry<HashKey32,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
+								IRecyclableNotesObject obj = currEntry.getValue().getValue1();
+								try {
+									if (!obj.isRecycled()) {
+										if (m_writeDebugMessages) {
+											System.out.println("AutoGC - Recycling "+obj);
+										}
+										obj.recycle();
+									}
+								}
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
+								m_b32OpenHandlesDominoObjects.remove(currEntry.getKey());
+							}
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Done recycling "+mapEntries.length+" memory handles");
+							}
+
+							m_b32OpenHandlesDominoObjects.clear();
+							m_b32OpenHandlesDominoObjects = null;
 						}
 					}
-					{
+				}
+				{
+					if (m_b32OpenHandlesMemory!=null && !m_b32OpenHandlesMemory.isEmpty()) {
 						//dispose allocated memory
-						if (!b64HandlesMemory.isEmpty()) {
-							Entry[] mapEntries = b64HandlesMemory.entrySet().toArray(new Entry[b64HandlesMemory.size()]);
-							if (mapEntries.length>0) {
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
-								}
-
-								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<Long,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
-									IAllocatedMemory obj = currEntry.getValue().getValue1();
-									try {
-										if (!obj.isFreed()) {
-											if (writeDebugMsg) {
-												System.out.println("AutoGC - Freeing "+obj);
-											}
-											obj.free();
-										}
-									}
-									catch (Throwable e) {
-										e.printStackTrace();
-									}
-									b64HandlesMemory.remove(currEntry.getKey());
-								}
-
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
-								}
-
-								b64HandlesMemory.clear();
-								m_b64OpenHandlesMemory.set(null);
+						Entry[] mapEntries = m_b32OpenHandlesMemory.entrySet().toArray(new Entry[m_b32OpenHandlesMemory.size()]);
+						if (mapEntries.length>0) {
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
 							}
+
+							for (int i=mapEntries.length-1; i>=0; i--) {
+								Entry<Integer,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
+								IAllocatedMemory obj = currEntry.getValue().getValue1();
+								try {
+									if (!obj.isFreed()) {
+										if (m_writeDebugMessages) {
+											System.out.println("AutoGC - Freeing "+obj);
+										}
+										obj.free();
+									}
+								}
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
+								m_b32OpenHandlesMemory.remove(currEntry.getKey());
+							}
+							if (m_writeDebugMessages) {
+								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
+							}
+
+							m_b32OpenHandlesMemory.clear();
+							m_b32OpenHandlesMemory = null;
 						}
 					}
 				}
-				else {
-					{
-						if (!b32HandlesDominoObjects.isEmpty()) {
-							//recycle created Domino objects
-							Entry[] mapEntries = b32HandlesDominoObjects.entrySet().toArray(new Entry[b32HandlesDominoObjects.size()]);
-							if (mapEntries.length>0) {
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Recycling "+mapEntries.length+" Domino objects:");
-								}
-
-								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<HashKey32,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
-									IRecyclableNotesObject obj = currEntry.getValue().getValue1();
-									try {
-										if (!obj.isRecycled()) {
-											if (writeDebugMsg) {
-												System.out.println("AutoGC - Recycling "+obj);
-											}
-											obj.recycle();
-										}
-									}
-									catch (Throwable e) {
-										e.printStackTrace();
-									}
-									b32HandlesDominoObjects.remove(currEntry.getKey());
-								}
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Done recycling "+mapEntries.length+" memory handles");
-								}
-
-								b32HandlesDominoObjects.clear();
-								m_b32OpenHandlesDominoObjects.set(null);
-							}
-						}
-					}
-					{
-						if (!b32HandlesMemory.isEmpty()) {
-							//dispose allocated memory
-							Entry[] mapEntries = b32HandlesMemory.entrySet().toArray(new Entry[b32HandlesMemory.size()]);
-							if (mapEntries.length>0) {
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
-								}
-
-								for (int i=mapEntries.length-1; i>=0; i--) {
-									Entry<Integer,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
-									IAllocatedMemory obj = currEntry.getValue().getValue1();
-									try {
-										if (!obj.isFreed()) {
-											if (writeDebugMsg) {
-												System.out.println("AutoGC - Freeing "+obj);
-											}
-											obj.free();
-										}
-									}
-									catch (Throwable e) {
-										e.printStackTrace();
-									}
-									b32HandlesMemory.remove(currEntry.getKey());
-								}
-								if (writeDebugMsg) {
-									System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
-								}
-
-								b32HandlesMemory.clear();
-								m_b32OpenHandlesMemory.set(null);
-							}
-						}
-					}
-				}
-				
-				Map<String,Object> customValues = m_activeAutoGCCustomValues.get();
-				if (customValues!=null) {
-					cleanupCustomValues(customValues);
-					customValues.clear();
-				}
-				m_activeAutoGCCustomValues.set(null);
-				m_activeAutoGC.set(null);
-				m_writeDebugMessages.set(Boolean.FALSE);
-				m_threadInvocationCount.set(null);
+			}
+			
+			if (m_activeAutoGCCustomValues!=null) {
+				cleanupCustomValues(m_activeAutoGCCustomValues);
+				m_activeAutoGCCustomValues.clear();
+				m_activeAutoGCCustomValues = null;
 			}
 		}
 	}
@@ -743,17 +880,4 @@ public class NotesGC {
 			}
 		}
 	}
-
-	/**
-	 * When using {@link NotesGC#setCustomValue(String, Object)} to store your own
-	 * values, use this
-	 * interface for your value to get called for disposal when the {@link NotesGC#runWithAutoGC(Callable)}
-	 * block is finished. Otherwise the value is just removed from the intermap map.
-	 * 
-	 * @author Karsten Lehmann
-	 */
-	public static interface IDisposableCustomValue {
-		public void dispose();
-	}
-
 }
