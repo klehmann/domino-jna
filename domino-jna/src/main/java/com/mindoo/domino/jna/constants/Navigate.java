@@ -136,6 +136,11 @@ public enum Navigate {
 	MAXLEVEL(0x0200),
 
 	/**
+	 * make sure that entries in the selected list IDTable are expanded
+	 */
+	NAVIGATE_AUTOEXPAND_SELECTED(0x0400),
+	
+	/**
 	 * This flag can be combined with any navigation directive to 
 	 * prevent having a navigation (Skip) failure abort the (ReadEntries) operation. 
 	 * For example, this is used by the Notes user interface when
