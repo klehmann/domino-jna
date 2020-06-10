@@ -612,6 +612,16 @@ public class NotesGC {
 		}
 		
 		/**
+		 * Returns the parent GC context if nested calls on {@link NotesGC#initThread()}
+		 * are used.
+		 * 
+		 * @return parent context or null for top context
+		 */
+		public DominoGCContext getParentContext() {
+			return m_parentCtx;
+		}
+		
+		/**
 		 * Returns true if this GC context is the first created for the current
 		 * thread and false if it's a nested context.
 		 * 
