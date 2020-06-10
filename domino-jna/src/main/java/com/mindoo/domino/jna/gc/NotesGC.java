@@ -11,7 +11,6 @@ import java.util.concurrent.Callable;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
@@ -733,8 +732,8 @@ public class NotesGC {
 							}
 							
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<HashKey64,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
-								IRecyclableNotesObject obj = currEntry.getValue().getValue1();
+								Entry<HashKey64,IRecyclableNotesObject> currEntry = mapEntries[i];
+								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {
 										if (m_writeDebugMessages) {
@@ -768,8 +767,8 @@ public class NotesGC {
 							}
 
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Long,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
-								IAllocatedMemory obj = currEntry.getValue().getValue1();
+								Entry<Long,IAllocatedMemory> currEntry = mapEntries[i];
+								IAllocatedMemory obj = currEntry.getValue();
 								try {
 									if (!obj.isFreed()) {
 										if (m_writeDebugMessages) {
@@ -805,8 +804,8 @@ public class NotesGC {
 							}
 
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<HashKey32,Pair<IRecyclableNotesObject,Long>> currEntry = mapEntries[i];
-								IRecyclableNotesObject obj = currEntry.getValue().getValue1();
+								Entry<HashKey32,IRecyclableNotesObject> currEntry = mapEntries[i];
+								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {
 										if (m_writeDebugMessages) {
@@ -839,8 +838,8 @@ public class NotesGC {
 							}
 
 							for (int i=mapEntries.length-1; i>=0; i--) {
-								Entry<Integer,Pair<IAllocatedMemory,Long>> currEntry = mapEntries[i];
-								IAllocatedMemory obj = currEntry.getValue().getValue1();
+								Entry<Integer,IAllocatedMemory> currEntry = mapEntries[i];
+								IAllocatedMemory obj = currEntry.getValue();
 								try {
 									if (!obj.isFreed()) {
 										if (m_writeDebugMessages) {
