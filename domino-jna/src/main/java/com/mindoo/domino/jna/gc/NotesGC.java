@@ -552,6 +552,7 @@ public class NotesGC {
 	/**
 	 * Initializes the current thread for Domino JNA C and memory resource
 	 * tracking.<br>
+	 * <br>
 	 * <b>The returned {@link DominoGCContext} must be closed to free up all allocated resources.
 	 * Otherwise the client/server will run out of handles sooner or later!</b><br>
 	 * <br>
@@ -567,7 +568,11 @@ public class NotesGC {
 	 * &nbsp;&nbsp;&nbsp;log(Level.SEVERE, "Error accessing Domino data", e);<br>
 	 * }<br>
 	 * </code>
-	 *
+	 * <br>
+	 * Nested invocation of this method is supported. The current implementation only
+	 * frees up resources when calling {@link DominoGCContext#close()} on the outer most
+	 * context. Other calls are ignored.
+	 * 
 	 * @return garbage collection context
 	 */
 	public static DominoGCContext initThread() {
@@ -583,6 +588,12 @@ public class NotesGC {
 		}
 	}
 
+	/**
+	 * Domino handle collection context to collect all allocated C object
+	 * and memory handles for the current thread.
+	 * 
+	 * @author Karsten Lehmann
+	 */
 	public static class DominoGCContext implements AutoCloseable {
 		private DominoGCContext m_parentCtx;
 		private Thread m_parentThread;
