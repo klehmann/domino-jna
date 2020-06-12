@@ -913,7 +913,7 @@ public class NotesCollection implements IRecyclableNotesObject {
 	 * This method will locate the specified note ID in the collection, and return the updated
 	 * collection position if it can be located (using the old position as a reference).
 	 * 
-	 * @param oldPosStr old collection position or null/empty string
+	 * @param oldPosStr old collection position, e.g. "1"; should not be empty, because the method only returns a position in views with multiple note occurrences when there's a known old position
 	 * @param noteId note id
 	 * @return collection position or empty string if not found
 	 */
