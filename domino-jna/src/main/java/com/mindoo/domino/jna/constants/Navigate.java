@@ -114,8 +114,15 @@ public enum Navigate {
 	NEXT_NONCATEGORY(43),
 	/** PREV, but only "non-category" entries */
 	PREV_NONCATEGORY(44),
-
-
+	/** CURRENT_MAIN, then PREV_PEER regardless if already there */
+	PREV_MAIN_ALWAYS(45),
+	/** Same as NEXT_NONCATEGORY but skip responses also */
+	NEXT_NONCATEGORY_NONRESP(46),
+	/** Same as NAVIGATE_ALL_DESCENDANTS but navigate/check for one or more children this
+	 * user has access, with proper reader access checking etc.<br>
+	 * Note: This will over ride the Maxlevel Navigation setting for access checking. */
+	ALL_DESCENDANTS_ACCESS(47),
+	 
 	/*
 	 * Flag which can be used with ALL navigators which causes the navigation
 	 * to be limited to entries at a specific level (specified by the
@@ -135,11 +142,14 @@ public enum Navigate {
 	/** Honor "Maxlevel" field in position */
 	MAXLEVEL(0x0200),
 
-	/**
-	 * make sure that entries in the selected list IDTable are expanded
-	 */
+	/** When parents are in the select list, autoexpand immediate children */
 	NAVIGATE_AUTOEXPAND_SELECTED(0x0400),
 	
+	/** Flag that can be combined with a navigation directive to cause
+	 * the search to be limited based on the top level tumbler position
+	 * (Don't navigate to next/prev main) */
+	NAVIGATE_WITHIN_MAIN(0x4000),
+
 	/**
 	 * This flag can be combined with any navigation directive to 
 	 * prevent having a navigation (Skip) failure abort the (ReadEntries) operation. 
