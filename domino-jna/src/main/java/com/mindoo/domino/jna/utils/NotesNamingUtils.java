@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -91,7 +92,7 @@ public class NotesNamingUtils {
 	 * @param names list of names
 	 * @return list of names in canonical format
 	 */
-	public static List<String> toCanonicalNames(List<String> names) {
+	public static List<String> toCanonicalNames(Collection<String> names) {
 		if (names==null)
 			return null;
 		
@@ -188,7 +189,7 @@ public class NotesNamingUtils {
 	 * @param names list of names to convert
 	 * @return list of abbreviated names
 	 */
-	public static List<String> toAbbreviatedNames(List<String> names) {
+	public static List<String> toAbbreviatedNames(Collection<String> names) {
 		if (names==null)
 			return null;
 		
@@ -242,7 +243,7 @@ public class NotesNamingUtils {
 	 * @param names list of abbreviated or canonical name
 	 * @return list of common names
 	 */
-	public static List<String> toCommonNames(List<String> names) {
+	public static List<String> toCommonNames(Collection<String> names) {
 		if (names==null)
 			return null;
 		
