@@ -473,4 +473,8 @@ public interface INotesNativeAPI extends Library {
 			Memory PathName
 			);
 
+	public void DesignGetNameAndAlias(Memory pString, PointerByReference ppName, ShortByReference pNameLen, PointerByReference ppAlias, ShortByReference pAliasLen);
+
+	public boolean StoredFormHasSubformToken(Memory pString);
+	
 }

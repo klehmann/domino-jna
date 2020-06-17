@@ -67,4 +67,8 @@ public interface Win32NotesCallbacks {
 
 	interface NSFDbNamedObjectEnumPROCWin32 extends NotesCallbacks.b32_NSFDbNamedObjectEnumPROC,  StdCallCallback {};
 
+	interface FPMailNoteJitEx2CallBackWin32 extends NotesCallbacks.b32_FPMailNoteJitEx2CallBack, StdCallCallback {};
+
+	interface DESIGN_COLL_OPENCLOSE_PROCWin32 extends NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC, StdCallCallback {};
+
 }

@@ -4056,6 +4056,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			options = options | NotesConstants.OPEN_WITH_FOLDERS;
 		}
 
+		if (flags.contains(OpenNote.CACHE)) {
+			options = options | NotesConstants.OPEN_CACHE;
+		}
+
 		// we negated the following two OPEN_XXX constants, so we keep
 		// the items in their native format if conversion is not explicitly requested
 		

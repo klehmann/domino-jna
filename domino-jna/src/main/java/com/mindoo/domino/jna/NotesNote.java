@@ -12,6 +12,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
@@ -58,6 +59,7 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
@@ -87,9 +89,12 @@ import com.mindoo.domino.jna.richtext.IRichTextNavigator.RichTextNavPosition;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.richtext.StandaloneRichText;
 import com.mindoo.domino.jna.richtext.conversion.IRichTextConversion;
+import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
+import com.mindoo.domino.jna.utils.ListUtil;
 import com.mindoo.domino.jna.utils.Loop;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
+import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.Ref;
@@ -102,6 +107,7 @@ import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 import lotus.domino.Database;
@@ -1286,6 +1292,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	private final int MAX_STRINGRETVALUE_LENGTH = 65535;
 
 	private ThreadLocal<DisposableMemory> stringretBuffer = new ThreadLocal<DisposableMemory>();
+	private boolean m_saveMessageOnSend;
 	
 	/**
 	 * Use this function to read the value of a text item.<br>
@@ -6693,5 +6700,719 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		return "";
+	}
+
+	private NotesNote cloneNote() {
+		checkHandle();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethDstNote = new LongByReference();
+			result = NotesNativeAPI64.get().NSFNoteCreateClone(m_hNote64, rethDstNote);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote clone = new NotesNote(m_parentDb, rethDstNote.getValue());
+			NotesGC.__objectCreated(NotesNote.class, clone);
+			return clone;
+		}
+		else {
+			IntByReference rethDstNote = new IntByReference();
+			result = NotesNativeAPI32.get().NSFNoteCreateClone(m_hNote32, rethDstNote);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesNote clone = new NotesNote(m_parentDb, rethDstNote.getValue());
+			NotesGC.__objectCreated(NotesNote.class, clone);
+			return clone;
+		}
+	}
+	
+	/**
+	 * Mails the note<br>
+	 * Convenience function that calls {@link #send(boolean, Collection)}.
+	 */
+	public void send() {
+		send(false, (Collection<String>) null);
+	}
+
+	/**
+	 * Mails the note<br>
+	 * Convenience function that calls {@link #send(boolean, Collection)}.
+	 *  
+	 * @param recipients The recipients of the document, may include people, groups, or mail-in databases.
+	 */
+	public void send(String recipient) {
+		send(false, Arrays.asList(recipient));
+	}
+
+	/**
+	 * Mails the note<br>
+	 * Convenience function that calls {@link #send(boolean, Collection)}.
+	 * 
+	 * @param recipients The recipients of the document, may include people, groups, or mail-in databases.
+	 */
+	public void send(Collection<String> recipients) {
+		send(false, recipients);
+	}
+
+	/**
+	 * Mails the note<br>
+	 * Convenience function that calls {@link #send(boolean, Collection)}.
+	 * 
+	 * @param attachform If true, the form is stored and sent along with the document. If false, it isn't. Do not attach a form that uses computed subforms.
+	 */
+	public void send(boolean attachform) {
+		send(attachform, (Collection<String>) null);
+	}
+
+	/**
+	 * Mails the note<br>
+	 * Convenience function that calls {@link #send(boolean, Collection)}.
+	 * 
+	 * @param attachform If true, the form is stored and sent along with the document. If false, it isn't. Do not attach a form that uses computed subforms.
+	 * @param recipient The recipient of the document, may include people, groups, or mail-in databases.
+	 */
+	public void send(boolean attachform, String recipient) {
+		send(attachform, Arrays.asList(recipient));
+	}
+
+	/**
+	 * Indicates whether a document is saved to a database when mailed.
+	 * 
+	 * @return true to save on send
+	 */
+	public boolean isSaveMessageOnSend() {
+		return m_saveMessageOnSend;
+	}
+
+	/**
+	 * Indicates whether a document is saved to a database when mailed.
+	 * 
+	 * @param b true to save on send
+	 */
+	public void setSaveMessageOnSend(boolean b) {
+		m_saveMessageOnSend = b;
+	}
+
+	/**
+	 * Mails the note<br>
+	 * <br>
+	 * Two kinds of items can affect the mailing of the document when you use send:<br>
+	 * <ul>
+	 * <li>If the document contains additional recipient items, such as CopyTo or BlindCopyTo, the documents mailed to those recipients.</li>
+	 * <li>If the document contains items to control the routing of mail, such as DeliveryPriority, DeliveryReport, or ReturnReceipt, they are used when sending the document.</li>
+	 * </ul>
+	 * The {@link #isSaveMessageOnSend()} property controls whether the sent document is saved
+	 * in the database. If {@link #isSaveMessageOnSend()} is true and you attach the form to the document,
+	 * the form is saved with the document.<br>
+	 * Sending the form increases the size of the document, but ensures that the recipient can see
+	 * all of the items on the document.
+	 * 
+	 * @param attachform If true, the form is stored and sent along with the document. If false, it isn't. Do not attach a form that uses computed subforms.
+	 * @param recipients The recipients of the document, may include people, groups, or mail-in databases.
+	 */
+	public void send(boolean attachform, Collection<String> recipients) {
+		checkHandle();
+		
+		if (m_parentDb.isRecycled()) {
+			throw new NotesError("Parent database is recycled");
+		}
+		
+		short flags = 0;
+		
+		if (this.isSigned() || attachform) {
+			flags |= NotesConstants.MSN_SIGN;
+		}
+
+		if (this.isSealed()) {
+			flags |= NotesConstants.MSN_SEAL;
+		}
+		
+		boolean cancelsend = false;
+		if (cancelsend) {
+			flags |= NotesConstants.MSN_PUBKEY_ONLY;
+		}
+
+		Ref<Boolean> foundNonBodyMIME = new Ref<>();
+		Ref<Boolean> foundBodyMIME = new Ref<>();
+		this.searchForNonBodyMIME(foundNonBodyMIME, foundBodyMIME);
+		
+		if (Boolean.TRUE.equals(foundNonBodyMIME.get())) {
+			throw new NotesError("Found items of type MIME_PART that are not named 'Body'. This is currently unsupported.");
+		}
+		
+		short wMailNoteFlags = NotesConstants.MAILNOTE_ANYRECIPIENT;
+		
+		if (Boolean.TRUE.equals(foundBodyMIME.get())) {
+			wMailNoteFlags |= NotesConstants.MAILNOTE_MIMEBODY;
+			wMailNoteFlags |= NotesConstants.MAILNOTE_NOTES_ENCRYPT_MIME;
+		}
+		
+		/* SPR ajrs39vm4l: We're about to modify the user's note.
+		 * If they do something stupid, like send it a second time,
+		 * we're going to modify it again, ending up with all sorts
+		 * of duplicate items that will cause problems for the recipient.
+		 * So, we fix that by cloning the hnote here, making all
+		 * modifications on the copy.
+		 * 
+		 * Note that we use NULL for the hdb when creating the note
+		 * to prevent a network round trip. Then we have to set the
+		 * hdb explicitly into the note. Later, after sending the thing,
+		 * we have to check to see if the original hnote needs updating
+		 * (for example, if the current note is not on disk, but the
+		 * user specified "save on send", then we have to update the
+		 * note id).
+		 */
+
+		//create a clone to not modify this note instance and prevent issues when sending a second time
+		NotesNote tmpNote = cloneNote();
+		
+		// now copy all items to the new note
+		if (PlatformUtils.is64Bit()) {
+			short copyItemsResult = NotesNativeAPI64.get().NSFNoteReplaceItems(getHandle64(), tmpNote.getHandle64(),
+					null, true);
+			NotesErrorUtils.checkResult(copyItemsResult);
+		}
+		else {
+			short copyItemsResult = NotesNativeAPI32.get().NSFNoteReplaceItems(getHandle32(), tmpNote.getHandle32(),
+					null, true);
+			NotesErrorUtils.checkResult(copyItemsResult);
+		}
+
+		// did caller provide a recipients list?
+		if (recipients!=null) {
+			// if there's already a SendTo item, delete it
+			NotesItem sendto = tmpNote.getFirstItem(NotesConstants.MAIL_SENDTO_ITEM);
+			if (sendto!=null) {
+				sendto.remove();
+			}
+
+			recipients = NotesNamingUtils.toCanonicalNames(recipients);
+			tmpNote.replaceItemValue(NotesConstants.MAIL_SENDTO_ITEM, recipients);
+		}
+
+		if (tmpNote.hasItem(NotesConstants.MAIL_COPYTO_ITEM)) {
+			List<String> copyToNames = tmpNote.getItemValueStringList(NotesConstants.MAIL_COPYTO_ITEM);
+			copyToNames = NotesNamingUtils.toCanonicalNames(copyToNames);
+			tmpNote.replaceItemValue(NotesConstants.MAIL_COPYTO_ITEM, copyToNames);
+		}
+		
+		if (tmpNote.hasItem(NotesConstants.MAIL_BLINDCOPYTO_ITEM)) {
+			List<String> blindCopyToNames = tmpNote.getItemValueStringList(NotesConstants.MAIL_COPYTO_ITEM);
+			blindCopyToNames = NotesNamingUtils.toCanonicalNames(blindCopyToNames);
+			tmpNote.replaceItemValue(NotesConstants.MAIL_BLINDCOPYTO_ITEM, blindCopyToNames);
+		}
+
+		if (!tmpNote.hasItem(NotesConstants.MAIL_SENDTO_ITEM) && !tmpNote.hasItem(NotesConstants.MAIL_COPYTO_ITEM) &&
+				!tmpNote.hasItem(NotesConstants.MAIL_BLINDCOPYTO_ITEM)) {
+			throw new NotesError(0, "Missing mail recipient items");
+		}
+
+		/* To attach the form, find it in the database, get the all
+		 * items from the form note beginning with '$' (with some
+		 * exceptions), and copy them to the mail note. Then,
+		 * we have to delete the Form item, which points to the original
+		 * form name. By deleting it, we're telling the editor to look
+		 * for the stored form instead.
+		 * 
+		 * If the form contains a SUBFORM_ITEM (textlist of the
+		 * names of subforms used in the form), then we have
+		 * to copy a bunch of sub-form stuff too
+		 */
+
+		if (attachform) {
+			// Remove old stored form items before adding items from another form
+			short removeStoredFormResult;
+			if (PlatformUtils.is64Bit()) {
+				removeStoredFormResult = NotesNativeAPI64.get().StoredFormRemoveItems(tmpNote.getHandle64(), 0);
+			}
+			else {
+				removeStoredFormResult = NotesNativeAPI32.get().StoredFormRemoveItems(tmpNote.getHandle32(), 0);
+			}
+			NotesErrorUtils.checkResult(removeStoredFormResult);
+			
+			NotesItem formname = tmpNote.getFirstItem(NotesConstants.FIELD_FORM);
+			NotesItem body = tmpNote.getFirstItem(NotesConstants.ITEM_NAME_TEMPLATE);
+			
+			IntByReference fnid = new IntByReference();
+			fnid.setValue(0);
+			
+			if (formname!=null) {
+				String formnameStr = tmpNote.getItemValueString(NotesConstants.FIELD_FORM);
+				/* Delete the form item from the note, we copied the name.
+				 * We don't want a Form item on the note when we attach
+				 * the form itself, otherwise the editor gets confused.
+				 * Doing the Remove also deletes the object. */
+				formname.remove();
+				
+				if (!StringUtil.isEmpty(formnameStr)) {
+					Memory formnameStrMem = NotesStringUtils.toLMBCS(formnameStr, true);
+					PointerByReference pName = new PointerByReference();
+					ShortByReference wNameLen = new ShortByReference();
+					PointerByReference pAlias = new PointerByReference();
+					ShortByReference wAliasLen = new ShortByReference();
+					
+					NotesNativeAPI.get().DesignGetNameAndAlias(formnameStrMem, pName, wNameLen, pAlias, wAliasLen);
+					
+					DisposableMemory szBuffer = new DisposableMemory(NotesConstants.DESIGN_ALL_NAMES_MAX);
+					szBuffer.clear();
+					
+					if (wAliasLen.getValue()>0) {
+						byte[] aliasArr = pAlias.getValue().getByteArray(0, (int) (wAliasLen.getValue() & 0xffff));
+						szBuffer.write(0, aliasArr, 0, aliasArr.length);
+					}
+					else {
+						byte[] wNameArr = pName.getValue().getByteArray(0, (int) (wNameLen.getValue() & 0xffff));
+						szBuffer.write(0, wNameArr, 0, wNameArr.length);
+					}
+					
+					short lkFormResult;
+					Memory szFlagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWFORM_ALL_VERSIONS, true);
+					
+					if (PlatformUtils.is64Bit()) {
+						lkFormResult = NotesNativeAPI64.get().DesignLookupNameFE(m_parentDb.getHandle64(),
+								NotesConstants.NOTE_CLASS_FORM, szFlagsPatternMem,
+								szBuffer, wAliasLen.getValue()>0 ? wAliasLen.getValue() : wNameLen.getValue(),
+										NotesConstants.DGN_ONLYSHARED, fnid, (IntByReference) null, 
+										(NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC) null, null);
+					}
+					else {
+						lkFormResult = NotesNativeAPI32.get().DesignLookupNameFE(m_parentDb.getHandle32(),
+								NotesConstants.NOTE_CLASS_FORM, szFlagsPatternMem,
+								szBuffer, wAliasLen.getValue()>0 ? wAliasLen.getValue() : wNameLen.getValue(),
+										NotesConstants.DGN_ONLYSHARED, fnid, (IntByReference) null, 
+										(NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC) null, null);
+						
+					}
+					
+					if (lkFormResult!=0) {
+						/* Try private. */
+						if (PlatformUtils.is64Bit()) {
+							lkFormResult = NotesNativeAPI64.get().DesignLookupNameFE(m_parentDb.getHandle64(),
+									NotesConstants.NOTE_CLASS_FORM, szFlagsPatternMem,
+									szBuffer, wAliasLen.getValue()>0 ? wAliasLen.getValue() : wNameLen.getValue(),
+											NotesConstants.DGN_ONLYPRIVATE, fnid, (IntByReference) null, 
+											(NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC) null, null);
+						}
+						else {
+							lkFormResult = NotesNativeAPI32.get().DesignLookupNameFE(m_parentDb.getHandle32(),
+									NotesConstants.NOTE_CLASS_FORM, szFlagsPatternMem,
+									szBuffer, wAliasLen.getValue()>0 ? wAliasLen.getValue() : wNameLen.getValue(),
+											NotesConstants.DGN_ONLYPRIVATE, fnid, (IntByReference) null, 
+											(NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC) null, null);
+						}
+					}
+
+					if (lkFormResult==0) {
+						// delete existing $body
+						while (tmpNote.hasItem(NotesConstants.ITEM_NAME_TEMPLATE)) {
+							tmpNote.removeItem(NotesConstants.ITEM_NAME_TEMPLATE);
+						}
+
+						NotesNote formNote = getParent().openNoteById(fnid.getValue(), EnumSet.of(OpenNote.CACHE));
+						if (formNote!=null) {
+							List<String> excludeList = Arrays.asList(
+									NotesConstants.DESIGN_CLASS,
+									NotesConstants.DESIGN_FLAGS,
+									NotesConstants.FIELD_UPDATED_BY);
+							
+							// do the $ items
+							copyFormItems(formNote, tmpNote, excludeList);
+							
+							// check for subforms
+							copySubformItems(formNote, tmpNote);
+							
+							// this will add the new, more secure style of stored form and subform items
+							// to the target doc
+							// Note: This has to be done after $Body item(s) have been added to the note
+							// by copyFormItems
+
+							short addStoredFormResult;
+							if (PlatformUtils.is64Bit()) {
+								addStoredFormResult = NotesNativeAPI64.get().StoredFormAddItems(m_parentDb.getHandle64(),
+										formNote.getHandle64(),
+										tmpNote.getHandle64(), true, 0);
+							}
+							else {
+								addStoredFormResult = NotesNativeAPI32.get().StoredFormAddItems(m_parentDb.getHandle32(),
+										formNote.getHandle32(),
+										tmpNote.getHandle32(), true, 0);
+								
+							}
+							NotesErrorUtils.checkResult(addStoredFormResult);
+							
+							formNote.recycle();
+						}
+					}
+				}
+			}
+			else {
+				/* If have body and blank form, use existing body */
+				if (body==null) {
+					throw new NotesError("No form found to attach");
+				}
+			}
+		}
+		
+		final boolean isMsgComingFromAgent = false;
+		if (isMsgComingFromAgent) {
+			if (!tmpNote.hasItem(NotesConstants.ASSIST_MAIL_ITEM)) {
+				tmpNote.replaceItemValue(NotesConstants.ASSIST_MAIL_ITEM, "1");
+			}
+		}
+		
+		/* IETF standard auto flag  */
+		tmpNote.replaceItemValue(NotesConstants.MAIL_ITEM_AUTOSUBMITTED, NotesConstants.MAIL_AUTOGENERATED);
+		
+		/* If this is happening on a server, then we want to tag the
+		 * message as being from the effective user, not from the server.
+		 * Always check for the special "from" item, though, in case the
+		 * user is getting tricky with us */
+
+		// if there's already a From item, delete it
+		NotesItem from = tmpNote.getFirstItem(NotesConstants.MAIL_FROM_ITEM);
+		if (from!=null) {
+			from.remove();
+		}
+		
+		if (IDUtils.isOnServer() || Boolean.TRUE.equals(NotesGC.getCustomValue("notesnote.sendasotheruser"))) { // we added a flag here to test this in the client
+			String effUserName = IDUtils.getEffectiveUsername();
+			if (!StringUtil.isEmpty(effUserName)) {
+				effUserName = NotesNamingUtils.toCanonicalName(effUserName);
+				
+				tmpNote.replaceItemValue(NotesConstants.MAIL_FROM_ITEM, effUserName);
+			}
+		}
+		
+		// Contract before sending to be editor-compatible
+		short contractResult;
+		if (PlatformUtils.is64Bit()) {
+			contractResult = NotesNativeAPI64.get().NSFNoteContract(m_hNote64);
+		}
+		else {
+			contractResult = NotesNativeAPI32.get().NSFNoteContract(m_hNote32);
+		}
+		NotesErrorUtils.checkResult(contractResult);
+
+		/*spr bban3kzhk9 -- allow sendto AND/OR copyto AND/OR blindcopyto */
+		/* snis6z2taf et al. -- reinstate ability to MIME encrypt, 
+		   by flagging any MIME body for the mailer */
+		short mailNoteResult;
+		if (PlatformUtils.is64Bit()) {
+			mailNoteResult = NotesNativeAPI64.get().MailNoteJitEx2(null, tmpNote.getHandle64(), flags, null,
+					NotesConstants.MAIL_NO_JIT, wMailNoteFlags, null, null);
+		}
+		else {
+			mailNoteResult = NotesNativeAPI32.get().MailNoteJitEx2(null, tmpNote.getHandle32(), flags, null,
+					NotesConstants.MAIL_NO_JIT, wMailNoteFlags, null, null);
+		}
+		NotesErrorUtils.checkResult(mailNoteResult);
+
+		/* must replace certain critical item(s) on original note with their new after
+		 * mailing values so that the note will appear in 'Sent' view, etc.
+		 * Note: wholesale replacement of all items with new values will result in a
+		 * regression problem with spr ajrs39vm4l
+		 */
+
+		/* here we query the new copy for posted date */
+		NotesTimeDate postedDate = tmpNote.getItemValueAsTimeDate(NotesConstants.MAIL_POSTEDDATE_ITEM);
+
+		removeItem(NotesConstants.MAIL_POSTEDDATE_ITEM);
+		if (postedDate!=null) {
+			replaceItemValue(NotesConstants.MAIL_POSTEDDATE_ITEM, postedDate);
+		}
+
+		// save the msg?
+		if (isSaveMessageOnSend()) {
+			// Message recall does not work for mails sent from a DIIOP program
+			// need to generate message id for the recall feature to work. 
+			// Make sure deleting the existing message id if it is present and re-create new one to match with 
+			// the one in local mail.box for the recall feature to work.
+
+			if (hasItem(NotesConstants.MAIL_ID_ITEM)) {
+				removeItem(NotesConstants.MAIL_ID_ITEM);
+			}
+			
+			DisposableMemory messageId = new DisposableMemory(NotesConstants.MAXPATH+1);
+			short setMsgIdResult;
+			if (PlatformUtils.is64Bit()) {
+				setMsgIdResult = NotesNativeAPI64.get().MailSetSMTPMessageID(m_hNote64, null, messageId, (short) (NotesConstants.MAXPATH & 0xffff));
+			}
+			else {
+				setMsgIdResult = NotesNativeAPI32.get().MailSetSMTPMessageID(m_hNote32, null, messageId, (short) (NotesConstants.MAXPATH & 0xffff));
+			}
+			NotesErrorUtils.checkResult(setMsgIdResult);
+			
+			String messageIdStr = NotesStringUtils.fromLMBCS(messageId, -1);
+			replaceItemValue(NotesConstants.MAIL_ID_ITEM, messageIdStr);
+			
+			// we save the original note, not the new one
+			update();
+		}
+	
+		// now we can kill the temp note and reset
+		tmpNote.recycle();
+	}
+	
+	/**
+	 * copy relevant subform items
+	 * 
+	 * @param formNote source note
+	 * @param tmpNote target note
+	 */
+	private void copySubformItems(NotesNote formNote, NotesNote tmpNote) {
+		checkHandle();
+		if (m_parentDb.isRecycled()) {
+			throw new NotesError("Parent DB is recycled");
+		}
+		
+		List<String> exclude_list = Arrays.asList(
+				NotesConstants.DESIGN_CLASS,
+				NotesConstants.DESIGN_FLAGS,
+				NotesConstants.FIELD_UPDATED_BY,
+				NotesConstants.ITEM_NAME_TEMPLATE,
+				NotesConstants.FIELD_TITLE,
+				NotesConstants.ITEM_NAME_DOCUMENT
+				);
+		
+		/* If the form doesn't contain a subform name list, then there's nothing to do */
+		if (!formNote.hasItem(NotesConstants.SUBFORM_ITEM_NAME)) {
+			return;
+		}
+		
+		// get the list, iterate over the subform names
+		List<String> subformNames = formNote.getItemValueStringList(NotesConstants.SUBFORM_ITEM_NAME);
+		for (int i = 0; i < subformNames.size(); i++) {
+			String subformname = subformNames.get(i);
+			Memory subformnameMem = NotesStringUtils.toLMBCS(subformname, true);
+			
+			if (NotesNativeAPI.get().StoredFormHasSubformToken(subformnameMem)) {
+				continue;
+			}
+			
+			PointerByReference ppName = new PointerByReference();
+			ShortByReference pNameLen = new ShortByReference();
+			PointerByReference ppAlias = new PointerByReference();
+			ShortByReference pAliasLen = new ShortByReference();
+			
+			NotesNativeAPI.get().DesignGetNameAndAlias(subformnameMem,
+					ppName, pNameLen, ppAlias, pAliasLen);
+			
+			Pointer subformaliasMem;
+			short subformaliasLen;
+			
+			if (Short.toUnsignedInt(pAliasLen.getValue()) > 0) {
+				subformaliasMem = ppAlias.getValue();
+				subformaliasLen = pAliasLen.getValue();
+			}
+			else {
+				subformaliasMem = ppName.getValue();
+				subformaliasLen = pNameLen.getValue();
+			}
+			String subformalias = NotesStringUtils.fromLMBCS(subformaliasMem, Short.toUnsignedInt(subformaliasLen));
+			
+			Memory designPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_SUBFORM_ALL_VERSIONS, true);
+			
+			IntByReference fnid = new IntByReference();
+			
+			short lkDesignResult;
+			if (PlatformUtils.is64Bit()) {
+				lkDesignResult = NotesNativeAPI64.get().DesignLookupNameFE(m_parentDb.getHandle64(), NotesConstants.NOTE_CLASS_FORM,
+						designPatternMem, subformaliasMem, subformaliasLen, NotesConstants.DGN_ONLYSHARED,
+						fnid, null, null, null);
+			}
+			else {
+				lkDesignResult = NotesNativeAPI32.get().DesignLookupNameFE(m_parentDb.getHandle32(), NotesConstants.NOTE_CLASS_FORM,
+						designPatternMem, subformaliasMem, subformaliasLen, NotesConstants.DGN_ONLYSHARED,
+						fnid, null, null, null);
+			}
+			
+			if (lkDesignResult!=0) {
+				/* Try private. */
+				if (PlatformUtils.is64Bit()) {
+					lkDesignResult = NotesNativeAPI64.get().DesignLookupNameFE(m_parentDb.getHandle64(), NotesConstants.NOTE_CLASS_FORM,
+							designPatternMem, subformaliasMem, subformaliasLen, NotesConstants.DGN_ONLYPRIVATE,
+							fnid, null, null, null);
+				}
+				else {
+					lkDesignResult = NotesNativeAPI32.get().DesignLookupNameFE(m_parentDb.getHandle32(), NotesConstants.NOTE_CLASS_FORM,
+							designPatternMem, subformaliasMem, subformaliasLen, NotesConstants.DGN_ONLYPRIVATE,
+							fnid, null, null, null);
+				}
+			}
+			
+			if (lkDesignResult!=0) {
+				continue;
+			}
+
+			try {
+				NotesNote subformNote = m_parentDb.openNoteById(fnid.getValue(), EnumSet.of(OpenNote.CACHE));
+				if (subformNote!=null) {
+					copyFormItems(subformNote, tmpNote, exclude_list, (short) ((i+2) & 0xffff), subformname);
+				}
+			}
+			catch (NotesError e) {
+				throw new NotesError(e.getId(), "Error opening subform "+subformalias, e);
+			}
+		}
+	}
+
+	/**
+	 * copy specified items from form when mailing
+	 * 
+	 * @param formNote form note
+	 * @param tmpNote target note
+	 * @param excludeList exclude list of item names
+	 */
+	private void copyFormItems(NotesNote formNote, NotesNote tmpNote, List<String> excludeList) {
+		copyFormItems(formNote, tmpNote, excludeList, (short) 0, null);
+	}
+	
+	/**
+	 * copy specified items from form when mailing
+	 * 
+	 * @param formNote form note
+	 * @param tmpNote target note
+	 * @param excludeList exclude list of item names
+	 * @param namemod counter
+	 * @param subformname subform name or null
+	 */
+	private void copyFormItems(NotesNote formNote, NotesNote tmpNote, List<String> excludeList,
+			short namemod, String subformname) {
+		checkHandle();
+		
+		// table of items which get renamed, if this is a subform copy
+		List<String> rename_list = Arrays.asList(
+				NotesConstants.FORM_SCRIPT_ITEM_NAME,
+				NotesConstants.DOC_SCRIPT_ITEM,
+				NotesConstants.DOC_SCRIPT_NAME,
+				NotesConstants.DOC_ACTION_ITEM
+				
+				);
+		
+		/* These are the object-code item names, derived
+		from the ones above (prepended '$', appended "_O") */
+		List<String> rename_list_special = Arrays.asList(
+				"$" + NotesConstants.FORM_SCRIPT_ITEM_NAME + "_O",
+				"$" + NotesConstants.DOC_SCRIPT_ITEM + "_O"
+				);
+		
+		/* Copy all items beginning with '$' from the form note to 
+		 * the current note. Certain item names are skipped for the
+		 * form ($FLAGS, $CLASS, $UPDATEDBY) and for subforms (indicated by
+		 * namemod > 0) ($TITLE, $BODY).
+		 * 
+		 * If the "namemod" argument is > 0, then we also have to make
+		 * the new item name different: append the integer to the name
+		 * again, for selected item names.
+		 */
+		formNote.getItems((item, loop) -> {
+			String itemName = item.getName();
+			if (itemName.startsWith("$")) {
+				boolean exclude = false;
+				
+				if (ListUtil.containsIgnoreCase(excludeList, itemName)) {
+					exclude = true;
+				}
+				else if (NotesConstants.ITEM_NAME_NOTE_SIGNATURE.equals(itemName)) {
+					exclude = true;
+				}
+				
+				if (!exclude) {
+					/* If the item's name is not being modified, then use the
+					easy ItemCopy call. If it is, though, we have to do a
+					bit more work. If this is a subform, check the rename
+					list to see if it really is getting renamed.
+
+					Note that there are script object-code items with the
+					same name as the source-code items, but with an appended
+					"_O". If we find one of those, then we have to specially
+					rename it, the number goes before the _O, not after
+				*/
+					
+					boolean rename = false;
+					boolean rename_special = false;
+					boolean rename_signature = false;
+
+					String itemname2 = "";
+					
+					if (NotesConstants.ITEM_NAME_NOTE_SIGNATURE.equalsIgnoreCase(itemName)) {
+						rename = true;
+						rename_signature = true;
+						
+						if (namemod == 0) {
+							itemname2 = NotesConstants.ITEM_NAME_NOTE_STOREDFORM_SIG;
+						}
+						else {
+							itemname2 = NotesConstants.ITEM_NAME_NOTE_STOREDFORM_SIG_PREFIX + subformname;
+							if (itemname2.length() > NotesConstants.MAXPATH) {
+								itemname2 = itemname2.substring(0, NotesConstants.MAXPATH);
+							}
+						}
+						
+					}
+					
+					// if (namemod &&
+					if (namemod>0 && !rename_signature) {
+						if (ListUtil.containsIgnoreCase(rename_list, itemName)) {
+							rename = true;
+						}
+						else if (ListUtil.containsIgnoreCase(rename_list_special, itemName)) { // check for special
+							rename = true;
+							rename_special = true;
+						}
+					}
+					
+					// "special" rename?
+					if (rename_special) {
+						itemname2 = itemName.substring(0, itemName.length()-2); // trim _O
+						itemname2 += Short.toString(namemod);
+					}
+					else if (!rename_signature) {
+						itemname2 = itemName + Short.toString(namemod);
+					}
+					
+					if (rename) {
+						//we need to check if this call does the same as the C code below
+						item.copyToNote(tmpNote, itemname2, false);
+					}
+					else {
+						item.copyToNote(tmpNote, false);
+					}
+				}
+			}
+		});
+	}
+
+	/**
+	 * detect any MIME_PART items not named "Body"; if not found, detect any TYPE_MIME_PART item named "Body"
+	 * 
+	 * @param foundNonBodyMIME returns {@link Boolean#TRUE} if there are TYPE_MIME_PART items with a different name than "body"
+	 * @param foundBodyMIME returns {@link Boolean#TRUE} if there are TYPE_MIME_PART items with the name than "body"
+	 */
+	private void searchForNonBodyMIME(Ref<Boolean> foundNonBodyMIME, Ref<Boolean> foundBodyMIME) {
+		foundNonBodyMIME.set(Boolean.FALSE);
+		foundBodyMIME.set(Boolean.FALSE);
+		
+		/* Optimization: assume by this point that if there is no $NoteHasNativeMIME item, then
+		 * there aren't any MIME_PART items at all.
+		 */	
+		if (!hasItem(NotesConstants.ITEM_IS_NATIVE_MIME)) {
+			return;
+		}
+		
+		/* Finally, scan all the items, looking for non-"Body" item of TYPE_MIME_PART */
+		getItems((item, loop) -> {
+			if (item.getType() == NotesItem.TYPE_MIME_PART) {
+				String itemName = item.getName();
+				if (NotesConstants.MAIL_BODY_ITEM.equalsIgnoreCase(itemName)) {
+					// don't stop here; finding MIME "Body" is secondary to finding MIME non-"Body"s
+					foundBodyMIME.set(Boolean.TRUE);
+				}
+				else {
+					foundNonBodyMIME.set(Boolean.TRUE);
+					loop.stop();
+				}
+			}
+		});
 	}
 }

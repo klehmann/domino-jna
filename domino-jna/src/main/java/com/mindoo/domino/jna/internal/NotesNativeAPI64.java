@@ -4,7 +4,9 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.b64_FPMailNoteJitEx2CallBack;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFDbNamedObjectEnumPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFGetAllFolderChangesCallback;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
@@ -1483,6 +1485,34 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short NSFDbOpenTemplateExtended(Memory PathName, short Options, long hNames,
 			NotesTimeDateStruct ModifiedTime, LongByReference rethDB, NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
+
+	@Override
+	public native short NSFNoteCreateClone(long hSrcNote, LongByReference rethDstNote);
+
+	@Override
+	public native short NSFNoteReplaceItems(long hSrcNote, long hDstNote, ShortByReference pwRetItemReplaceCount,
+			boolean fAllowDuplicates);
+
+	@Override
+	public native short StoredFormAddItems(long hSrcDbHandle, long hSrcNote, long hDstNote, boolean bDoSubforms, int dwFlags);
+
+	@Override
+	public native short StoredFormRemoveItems(long hNote, int dwFlags);
+
+	@Override
+	public native short MailNoteJitEx2(Pointer vpRunCtx, long hNote, short wMailFlags, IntByReference retdwRecipients,
+			short jitflag, short wMailNoteFlags, b64_FPMailNoteJitEx2CallBack vCallBack, Pointer vCallBackCtx);
+	
+	@Override
+	public native short MailSetSMTPMessageID(long hNote, Memory domain, Memory string, short stringLength);
+	
+	@Override
+	public native short NSFDbReopenWithFullAccess(long hDb, LongByReference hReopenedDb);
+
+	@Override
+	public native short DesignLookupNameFE(long hDB, short wClass, Pointer szFlagsPattern, Pointer szName, short wNameLen,
+			int flags, IntByReference retNoteID, IntByReference retbIsPrivate,
+			DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
 	
 }
 

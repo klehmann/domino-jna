@@ -1782,4 +1782,32 @@ public interface INotesNativeAPI64 extends Library {
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
 
+	public short NSFNoteCreateClone (long hSrcNote, LongByReference rethDstNote);
+
+	public short NSFNoteReplaceItems (long hSrcNote, long hDstNote, ShortByReference pwRetItemReplaceCount, boolean fAllowDuplicates);
+
+	public short StoredFormAddItems (long hSrcDbHandle, long hSrcNote, long hDstNote, boolean bDoSubforms, int dwFlags);
+
+	public short StoredFormRemoveItems(long hNote, int dwFlags);
+
+	public short MailNoteJitEx2(Pointer vpRunCtx, long hNote, short wMailFlags, IntByReference retdwRecipients,
+			short jitflag, short wMailNoteFlags, NotesCallbacks.b64_FPMailNoteJitEx2CallBack vCallBack, Pointer vCallBackCtx);
+
+	public short MailSetSMTPMessageID(long hNote, Memory domain, Memory string, short stringLength);
+	
+	public short NSFDbReopenWithFullAccess(long hDb, LongByReference hReopenedDb);
+
+	/*	This is exactly the same as lookup name BE, except it will use the
+	cache of the design collection as known to the client.  This is safe
+	to use outside the client since it will map to the BE code.  Using this
+	version will only be as up to date as the last time the design was
+	fetched for the client.  This was added explicitly to avoid cases of
+	backend code executing in their world where backend changes to design
+	things was not seen immediately. */
+	public short DesignLookupNameFE (long hDB, short wClass, Pointer szFlagsPattern, Pointer szName,
+									  	short wNameLen, int flags,
+										IntByReference retNoteID, IntByReference retbIsPrivate,
+										NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
+
+
 }

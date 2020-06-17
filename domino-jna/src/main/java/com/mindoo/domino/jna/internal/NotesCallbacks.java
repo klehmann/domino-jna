@@ -227,4 +227,16 @@ public interface NotesCallbacks {
 		short invoke(int hDB, Pointer param, short nameSpace, Pointer name, short nameLength, IntByReference objectID, NotesTimeDateStruct entryTime);
 	}
 
+	interface b64_FPMailNoteJitEx2CallBack extends Callback {
+		short invoke(long hdl, Pointer ptr1, Pointer ptr2);
+	}
+	
+	interface b32_FPMailNoteJitEx2CallBack extends Callback {
+		short invoke(int hdl, Pointer ptr1, Pointer ptr2);
+	}
+	
+	interface DESIGN_COLL_OPENCLOSE_PROC extends Callback {
+		short invoke(int dwFlags, Pointer phColl, Pointer ctx);
+	}
+
 }

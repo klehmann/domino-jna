@@ -323,6 +323,14 @@ public interface NotesConstants {
 	public static final short OPEN_RESPONSE_ID_TABLE = 0x1000;
 	/** Include folder objects - default is not to */
 	public static final int OPEN_WITH_FOLDERS	= 0x00020000;
+	/** If specified, the open will check to see if this note had already been read and
+	 * saved in memory.  If not, and the database is server	based, we will also check
+	 * the on-disk cache.  If the note is not found, it is cached in memory and at some
+	 * time in the future commited to a local on disk cache.
+	 * The notes are guaranteed to be as up to date as the last time NSFValidateNoteCache was called.#
+	 * Minimally, this should be called	the 1st time a database is opened prior to specifying
+	 * this flag. */
+	public static final int OPEN_CACHE = 0x00100000;
 	/** If set, leave TYPE_RFC822_TEXT items in native
 	format.  Otherwise, convert to TYPE_TEXT/TYPE_TIME. */
 	public static final int OPEN_RAW_RFC822_TEXT = 0x01000000;
@@ -3735,5 +3743,161 @@ This allows an Editor to assume some Designer-level access */
 	public int DESIGN_TYPE_SHARED = 0;
 	/* Note is private and is located in the database */
 	public int DESIGN_TYPE_PRIVATE_DATABASE = 1;
+
+	/* wMailNoteFlags -- for extended control via MailNoteJitEx */
+	
+	/* mail the note if there is at least one recipient, i.e. To, CC, or BCC */
+	public short MAILNOTE_ANYRECIPIENT = 0x0001;
+	/* enabled logging */
+	public short MAIL_JIT_LOG = 0x0002;
+
+	/* wMailNoteFlags -- for extended control via MailNoteJitEx2 */
+	
+	/* caller is enforcing OSGetEnvironmentInt(SECUREMAIL) ... don't force MSN_SIGN OR MSN_SEAL */
+	public short MAILNOTE_NO_SECUREMAIL_MODE = 0x0004;
+	/* use local mail.box, regardless of LOCINFO_REALMAILSERVER or LOCINFO_MAILSERVER setting. */
+	public short MAILNOTE_USELOCALMAILBOX = 0x0008;
+	/* don't use $$LNABHAS* in place of actual cert  */
+	public short MAILNOTE_NO_LNAB_ENTRIES = 0x0010;
+	/* don't have NAMELookup use local directories */
+	public short MAILNOTE_NO_SEARCH_LOCAL_DIRECTORIES = 0x0020;
+	/* if recips only have Notes certs, do Notes encryption of MIME message */
+	public short MAILNOTE_NOTES_ENCRYPT_MIME = 0x0040;
+	/* message is in mime format */
+	public short MAILNOTE_MIMEBODY = 0x0080;
+	/* use X509 cert if it's the only one found */
+	public short MAILNOTE_CANUSEX509 = 0x0100;
+	public short MAILNOTE_SKIP_LOOKUP = 0x0200;
+
+	/* mail note that is not a jit canidate*/
+	public short MAIL_NO_JIT = 0;
+	/* mail a JIT canidate note*/
+	public short MAIL_JIT = 1;
+	/* mail a miem message that is not a jit canidate*/
+	public short MAIL_MIME_NO_JIT = 2;
+	/* mail a note that is not a JIT, but caller has set recipient's field */
+	public short MAIL_NO_JIT_RECIPIENTS_DONE = 3;
+
+	/* Query for Sign/Seal */
+	public short MSN_QUERY = 0x0001;
+	/* Sign */
+	public short MSN_SIGN = 0x0002;
+	/* Seal */
+	public short MSN_SEAL = 0x0004;
+	/* Use results of previous query */
+	public short MSN_PREVQUERY = 0x0008;
+	/* Must send to North American */
+	public short MSN_AMERICAN_ONLY = 0x0010;
+	
+	/* license holders. */
+	
+	/* Recipient must have valid */
+	public short MSN_PUBKEY_ONLY = 0x0020;
+	/* Sending a receit message. */
+	public short MSN_RECEIPT = 0x0040;
+	/* The dialog is for a DDE request */
+	public short MSN_DDEDIALOG = 0x0080;
+	/* Don't allow mail encryption */
+	public short MSN_NOSEAL = 0x0100;
+	/* Used by alternate mail */
+	public short MSN_FWDASATT = 0x0200;
+	
+	/* The mailer should process the */
+	/* note, skip recipient work */
+	/* and prompt the user for */
+	/* addressing. */ 
+	
+	/* Disregard all other flags */
+	public short MSN_ADDRESS_ONLY = 0x0400;
+	
+	/* and refresh the mail addresses */
+	/* via lookup */
+	
+	/* Don't lookup the supplied names */
+	public short MSN_NOLOOKUP = 0x0800;
+	/*  MailForwardNoteNoEdit only */
+	
+	/* Used by alternate mail */
+	public short MSN_FWDASTEXT = 0x1000; 
+	/* The mailer should process the */
+	/* note, skip recipient work */
+	/* and prompt the user for */
+	/* addressing. */
+	
+	/* Indicates that the From field has */
+	/* already been set up and that the */
+	/* mailer should not slam it with the */
+	/* user name. This is used by agents */
+	/* running on the server */
+	public short MSN_FROMOVERRIDE = 0x2000;
+	/* deposit in smtp.box instead of mail.box */
+	public short MSN_SMTP_MAILBOX = 0X4000;
+
+	/* 2 pass mailer */
+	public short MSN_2PASSMAILER = (short) (0x8000 & 0xffff);
+
+	public String DESIGN_CLASS = "$Class";
+	
+	public String FIELD_UPDATED_BY = "$UpdatedBy";
+	public String FIELD_FORM = "Form";
+
+	/* form item to hold form CD */
+	public String ITEM_NAME_TEMPLATE = "$Body";
+
+	/* SendTo item name */
+	public String MAIL_SENDTO_ITEM = "SendTo";
+	/* CopyTo item name */
+	public String MAIL_COPYTO_ITEM = "CopyTo";
+	/* Blind copy to item name */
+	public String MAIL_BLINDCOPYTO_ITEM = "BlindCopyTo";
+
+	public short DGN_ONLYSHARED = 0x0040;
+	public short DGN_ONLYPRIVATE = 0x0080;
+
+	/* display things editable with dialog box; no version filtering (for design) */
+	public String DFLAGPAT_VIEWFORM_ALL_VERSIONS = "-FQMUGXWy#i:|@K;g~%z^}";
+
+	/*	If this field exists in a mail note, it means that */
+	/*	mail message was created by an agent. */
+	public String ASSIST_MAIL_ITEM = "$AssistMail";
+
+	/* indicates if message was auto generated */
+	public String MAIL_ITEM_AUTOSUBMITTED = "Auto-submitted";
+	/* value for 	MAIL_ITEM_AUTOSUBMITTED */
+	public String MAIL_AUTOGENERATED = "auto-generated";
+
+	/* From item name */
+	public String MAIL_FROM_ITEM = "From";
+
+	/* Posted date item name */
+	public String MAIL_POSTEDDATE_ITEM = "PostedDate";
+
+	/* Unique ID of this message */
+	public String MAIL_ID_ITEM = "$MessageID";
+
+	public String ITEM_IS_NATIVE_MIME = "$NoteHasNativeMIME";
+
+	/* Body item name */
+	public String MAIL_BODY_ITEM = "Body";
+
+	public String FORM_SCRIPT_ITEM_NAME = "$$FormScript";
+	public String DOC_SCRIPT_ITEM = "$Script";
+	public String DOC_SCRIPT_NAME = "$$ScriptName";
+	public String DOC_ACTION_ITEM = "$$FormAction";
+
+	public String ITEM_NAME_NOTE_SIGNATURE = "$Signature";
+	/* stored form signature */
+	public String ITEM_NAME_NOTE_STOREDFORM_SIG = "$SIG$Form";
+	/* stored form and subform signature prefix - followed by either $FORM or the subform name*/
+	public String ITEM_NAME_NOTE_STOREDFORM_SIG_PREFIX = "$SIG";
+
+	public String FIELD_TITLE = "$TITLE";
+	/* document header info */
+	public String ITEM_NAME_DOCUMENT = "$Info";
+	public String SUBFORM_ITEM_NAME = "$SubForms";
+
+	/* only subforms; no version filtering */
+	public String DFLAGPAT_SUBFORM_ALL_VERSIONS = "+U";
+
 
 }

@@ -69,6 +69,16 @@ public enum OpenNote {
 	 * NSFNoteOpenExt. You do not need to set this flag when calling NSFDbCopyNoteExt. */
 	WITH_FOLDERS,
 	
+	/** If specified, the open will check to see if this note had already been read and
+	 * saved in memory.  If not, and the database is server based, we will also check
+	 * the on-disk cache.  If the note is not found, it is cached in memory and at some
+	 * time in the future commited to a local on disk cache.<br>
+	 * <br>
+	 * The notes are guaranteed to be as up to date as the last time NSFValidateNoteCache was called.
+	 * Minimally, this should be called	the 1st time a database is opened prior to specifying
+	 * this flag. */
+	CACHE,
+	
 	/**
 	 * Converts items of type {@link NotesItem#TYPE_RFC822_TEXT} to {@link NotesItem#TYPE_TEXT}
 	 * and {@link NotesItem#TYPE_TIME}. If not set, we leave the items in their native format.

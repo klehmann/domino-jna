@@ -801,4 +801,9 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			Memory PathName
 			);
 
+	public native void DesignGetNameAndAlias(Memory pString, PointerByReference ppName, ShortByReference pNameLen, PointerByReference ppAlias, ShortByReference pAliasLen);
+
+	@Override
+	public native boolean StoredFormHasSubformToken(Memory pString);
+	
 }
