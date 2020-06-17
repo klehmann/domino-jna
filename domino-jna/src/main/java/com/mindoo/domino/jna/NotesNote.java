@@ -6738,7 +6738,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * Mails the note<br>
 	 * Convenience function that calls {@link #send(boolean, Collection)}.
 	 *  
-	 * @param recipients The recipients of the document, may include people, groups, or mail-in databases.
+	 * @param recipient The recipient of the document, may include people, groups, or mail-in databases.
 	 */
 	public void send(String recipient) {
 		send(false, Arrays.asList(recipient));
