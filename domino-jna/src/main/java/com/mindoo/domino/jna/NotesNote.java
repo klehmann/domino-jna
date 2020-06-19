@@ -7048,7 +7048,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			else {
 				/* If have body and blank form, use existing body */
 				if (body==null) {
-					throw new NotesError("No form found to attach");
+					throw new NotesError("Found no form name in the note to look up the form to attach");
 				}
 			}
 		}
@@ -7086,10 +7086,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		// Contract before sending to be editor-compatible
 		short contractResult;
 		if (PlatformUtils.is64Bit()) {
-			contractResult = NotesNativeAPI64.get().NSFNoteContract(m_hNote64);
+			contractResult = NotesNativeAPI64.get().NSFNoteContract(tmpNote.getHandle64());
 		}
 		else {
-			contractResult = NotesNativeAPI32.get().NSFNoteContract(m_hNote32);
+			contractResult = NotesNativeAPI32.get().NSFNoteContract(tmpNote.getHandle32());
 		}
 		NotesErrorUtils.checkResult(contractResult);
 
@@ -7351,7 +7351,6 @@ public class NotesNote implements IRecyclableNotesObject {
 						
 					}
 					
-					// if (namemod &&
 					if (namemod>0 && !rename_signature) {
 						if (ListUtil.containsIgnoreCase(rename_list, itemName)) {
 							rename = true;
