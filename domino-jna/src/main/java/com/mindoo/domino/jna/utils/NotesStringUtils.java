@@ -399,7 +399,7 @@ public class NotesStringUtils {
 	 * @return decoded String
 	 */
 	public static String fromLMBCS(Pointer inPtr, int textLen) {
-		if (textLen==0) {
+		if (inPtr==null || textLen==0) {
 			return "";
 		}
 		else if (textLen==-1) {
