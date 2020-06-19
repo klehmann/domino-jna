@@ -5088,10 +5088,11 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		Memory serverNameMem = NotesStringUtils.toLMBCS(NotesNamingUtils.toAbbreviatedName(serverName), true);
 
-		ReplServStatsStruct retStatsStruct = new ReplServStatsStruct();
-		ReplExtensionsStruct extendedOptions = new ReplExtensionsStruct();
+		ReplServStatsStruct retStatsStruct = ReplServStatsStruct.newInstance();
+		ReplExtensionsStruct extendedOptions = ReplExtensionsStruct.newInstance();
 		extendedOptions.Size = 2 + 2;
 		extendedOptions.TimeLimit = (short) (timeLimitMin & 0xffff);
+		extendedOptions.write();
 		
 		short numFiles = 0;
 		Memory fileListMem = null;
