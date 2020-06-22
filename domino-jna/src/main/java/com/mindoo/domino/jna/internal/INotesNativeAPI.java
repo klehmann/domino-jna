@@ -164,6 +164,8 @@ public interface INotesNativeAPI extends Library {
 			int  dwReserved,
 			Pointer vpReserved);
 
+	public short SECidvIsIDInVault(Memory pServer, Memory pUserName);
+	
 	public short ODSLength(short type);
 	public void ODSWriteMemory(
 			Pointer ppDest,

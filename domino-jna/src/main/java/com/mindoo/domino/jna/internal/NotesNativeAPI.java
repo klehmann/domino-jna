@@ -548,6 +548,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 			int  dwReserved,
 			Pointer vpReserved);
 
+	public native short SECidvIsIDInVault(Memory pServer, Memory pUserName);
+	
 	public native short ODSLength(short type);
 	public native void ODSWriteMemory(
 			Pointer ppDest,

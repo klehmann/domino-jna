@@ -701,4 +701,27 @@ public class IDUtils {
 			idFlags1Mem.dispose();
 		}
 	}
+	
+	/**
+	 * Checks if the ID vault on the specified server contains an ID for a user
+	 * 
+	 * @param userName user to check
+	 * @param server server
+	 * @return true if ID is in vault
+	 */
+	public static boolean isIDInVault(String userName, String server) {
+		String serverCanonical = NotesNamingUtils.toCanonicalName(server);
+		String usernameCanonical = NotesNamingUtils.toCanonicalName(userName);
+		
+		Memory serverCanonicalMem = NotesStringUtils.toLMBCS(serverCanonical, true);
+		Memory usernameCanonicalMem = NotesStringUtils.toLMBCS(usernameCanonical, true);
+		
+		short result = NotesNativeAPI.get().SECidvIsIDInVault(serverCanonicalMem, usernameCanonicalMem);
+		if ((result & NotesConstants.ERR_MASK) == 16372) {
+			return false;
+		}
+		NotesErrorUtils.checkResult(result);
+
+		return result == 0;
+	}
 }
