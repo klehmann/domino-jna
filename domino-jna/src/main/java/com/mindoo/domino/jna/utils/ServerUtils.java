@@ -36,13 +36,13 @@ public class ServerUtils {
 	 * Note that the list returned does not include the input server name (or home server
 	 * name if NULL was specified).<br>
 	 * <br>
-	 * {@link #getServerClusterMates} uses the Address book specified by the user's location record.<br>
+	 * {@link #getServerClusterMates(String, ClusterLookup)} uses the Address book specified by the user's location record.<br>
 	 * Unless cascading Address books or Directory Assistance is enabled, the Notes mail
 	 * domain field in the user's location record must be set to the domain name for the
 	 * server(s) in the cluster and the Home/mail server field must be set to a server in this domain.<br>
 	 * <br>
 	 * If the target server is in a different domain than specified in the user's location record
-	 * then in order for {@link #getServerClusterMates} to succeed, you must have cascading Address
+	 * then in order for {@link #getServerClusterMates(String, ClusterLookup)} to succeed, you must have cascading Address
 	 * books or Directory Assistance enabled and the target domain's Address book must be in the
 	 * list of Address books to be searched.
 
