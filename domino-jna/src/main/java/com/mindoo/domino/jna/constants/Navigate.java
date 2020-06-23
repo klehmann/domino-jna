@@ -143,12 +143,12 @@ public enum Navigate {
 	MAXLEVEL(0x0200),
 
 	/** When parents are in the select list, autoexpand immediate children */
-	NAVIGATE_AUTOEXPAND_SELECTED(0x0400),
+	AUTOEXPAND_SELECTED(0x0400),
 	
 	/** Flag that can be combined with a navigation directive to cause
 	 * the search to be limited based on the top level tumbler position
 	 * (Don't navigate to next/prev main) */
-	NAVIGATE_WITHIN_MAIN(0x4000),
+	WITHIN_MAIN(0x4000),
 
 	/**
 	 * This flag can be combined with any navigation directive to 
