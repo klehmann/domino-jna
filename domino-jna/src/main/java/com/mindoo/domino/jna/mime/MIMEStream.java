@@ -543,8 +543,8 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	/**
 	 * This function copies the MIME stream content into a {@link Writer}.
 	 * 
-	 * @param writer writer to receive the MIME stream data
-	 * @return content length read or -1 for end of stream (EOS)
+	 * @param appendable appendable to receive the MIME stream data
+	 * @param maxBufferSize max characters to read from the stream into the appendable
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
 	public int read(Appendable appendable, int maxBufferSize) throws IOException {
