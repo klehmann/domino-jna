@@ -410,12 +410,12 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 
 	@Override
 	public int getHandle32() {
-		return 0;
+		return m_hMIMEStream==null ? 0 : (int) (Pointer.nativeValue(m_hMIMEStream) & 0xffffffff);
 	}
 
 	@Override
 	public long getHandle64() {
-		return 0;
+		return m_hMIMEStream==null ? 0 : Pointer.nativeValue(m_hMIMEStream);
 	}
 	
 	@Override
