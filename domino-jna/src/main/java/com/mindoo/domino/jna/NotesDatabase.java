@@ -4279,6 +4279,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return options
 	 */
 	public Set<DatabaseOption> getOptions() {
+		checkHandle();
+		
 		DisposableMemory retDbOptions = new DisposableMemory(4 * 4); //DWORD[4]
 		try {
 			if (PlatformUtils.is64Bit()) {
