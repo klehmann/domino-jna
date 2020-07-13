@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.dql;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
@@ -589,6 +590,36 @@ public class DQL {
 			return new ValueContainsTerm(this, true, searchWords);
 		}
 
+		public <T> ValueComparisonTerm in(Collection<T> values, Class<T> clazz) {
+			if (Integer.class == clazz) {
+				int[] valuesArr = new int[values.size()];
+				int idx = 0;
+				for (T currVal : values) {
+					valuesArr[idx++] = ((Number) currVal).intValue();
+				}
+				return in(valuesArr);
+			}
+			else if (Double.class ==clazz) {
+				double[] valuesArr = new double[values.size()];
+				int idx = 0;
+				for (T currVal : values) {
+					valuesArr[idx++] = ((Number)currVal).doubleValue();
+				}
+				return in(valuesArr);
+			}
+			else if (String.class == clazz) {
+				String[] valuesArr = new String[values.size()];
+				int idx = 0;
+				for (T currVal : values) {
+					valuesArr[idx++] = (String) currVal;
+				}
+				return in(valuesArr);
+			}
+			else {
+				throw new IllegalArgumentException("Unsupported class type: "+clazz.getName()+". Try Integer, Double or String.");
+			}
+		}
+		
 		public ValueComparisonTerm in(String... strValues) {
 			if (strValues==null)
 				throw new IllegalArgumentException("Values ist cannot be null");
