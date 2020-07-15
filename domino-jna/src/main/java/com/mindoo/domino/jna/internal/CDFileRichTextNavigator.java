@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
@@ -40,6 +41,13 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		m_cdRecordSizeAtIndex = new TreeMap<Integer, Integer>();
 		m_cdRecordIndexAtFilePos = new TreeMap<Long, Integer>();
 		gotoFirst();
+	}
+	
+	@Override
+	protected void finalize() throws Throwable {
+		if (m_fileChannel!=null) {
+			m_fileChannel.close();
+		}
 	}
 	
 	/**
@@ -272,6 +280,13 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	}
 
 	@Override
+	public Set<CDRecordType> getCurrentRecordType() {
+		if (m_currentCDRecord==null)
+			return null;
+		return m_currentCDRecord.getType();
+	}
+	
+	@Override
 	public int getCurrentRecordDataLength() {
 		if (m_currentCDRecord==null)
 			return 0;
@@ -412,6 +427,10 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		 */
 		public short getTypeAsShort() {
 			return m_typeAsShort;
+		}
+		
+		public Set<CDRecordType> getType() {
+			return CDRecordType.getRecordTypesForConstant(m_typeAsShort);
 		}
 		
 		public int getDataSize() {

@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.richtext;
 
+import java.util.Set;
+
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.sun.jna.Memory;
 
@@ -71,7 +73,7 @@ public interface IRichTextNavigator {
 	 * Returns a read-only buffer to access the CD record data (CD record header BSIG/WSIG/LSIG is included
 	 * in the returned data)
 	 * 
-	 * @return data buffer with length {@link #getCurrentRecordDataLength()}
+	 * @return data buffer with length {@link #getCurrentRecordDataLength()} + {@link #getCurrentRecordHeaderLength()}
 	 */
 	public Memory getCurrentRecordDataWithHeader();
 
@@ -90,6 +92,13 @@ public interface IRichTextNavigator {
 	 * @return type as short
 	 */
 	public short getCurrentRecordTypeAsShort();
+	
+	/**
+	 * Returns the type of the current CD record.
+	 * 
+	 * @return a set of {@link CDRecordType} values that have the value {@link CDRecordType#getConstant()} (there may be duplicates like PABHIDE/VMTEXTBOX or ACTION/VMPOLYRGN)
+	 */
+	public Set<CDRecordType> getCurrentRecordType();
 	
 	/**
 	 * Returns the length of the actual data stored in the CD record (CD record lengths minus header bytes)

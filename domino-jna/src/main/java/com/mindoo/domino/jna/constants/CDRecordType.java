@@ -1,7 +1,9 @@
 package com.mindoo.domino.jna.constants;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
 
@@ -509,6 +511,24 @@ public enum CDRecordType {
 		ALTERNATE_SEQ
 	}
 	
+	/**
+	 * Looks up an {@link CDRecordType} for the signature WORD value contained
+	 * in a CD record.
+	 * 
+	 * @param constant signature WORD defining the record type
+	 * @param area type of data you are processing, e.g. {@link Area#TYPE_COMPOSITE} for richtext or design element $Body items (required because the same record type constant value is used multiple times)
+	 * @return a set of {@link CDRecordType} values that have the value {@link #getConstant()} (there may be duplicates like PABHIDE/VMTEXTBOX or ACTION/VMPOLYRGN)
+	 */
+	public static Set<CDRecordType> getRecordTypesForConstant(short constant) {
+		Set<CDRecordType> types = new HashSet<>();
+		for (CDRecordType currType : CDRecordType.values()) {
+			if (constant == currType.getConstant()) {
+				types.add(currType);
+			}
+		}
+		return types;
+	}
+
 	/**
 	 * Looks up an {@link CDRecordType} for the signature WORD value contained
 	 * in a CD record.

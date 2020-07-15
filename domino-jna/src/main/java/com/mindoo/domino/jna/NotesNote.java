@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,6 +29,7 @@ import java.util.function.BiConsumer;
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesMIMEPart.PartType;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
+import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.MimePartOptions;
@@ -3110,7 +3112,6 @@ public class NotesNote implements IRecyclableNotesObject {
 					}
 					else {
 						Pointer errorTextPtr = Mem64.OSLockObject(hErrorText);
-						System.out.println("ErrorTextPtr: "+errorTextPtr.dump(0, (int) (wErrorTextSize & 0xffff)));
 						try {
 							//TODO find out where this offset 6 comes from
 							errorTxt = NotesStringUtils.fromLMBCS(errorTextPtr.share(6), (wErrorTextSize & 0xffff)-6);
@@ -3130,7 +3131,7 @@ public class NotesNote implements IRecyclableNotesObject {
 						action = CWF_Action.CWF_ABORT;
 					}
 					else {
-						action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+						action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 					}
 					return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
 				}
@@ -3174,7 +3175,7 @@ public class NotesNote implements IRecyclableNotesObject {
 							action = CWF_Action.CWF_ABORT;
 						}
 						else {
-							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 						}
 						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
 					}
@@ -3213,7 +3214,7 @@ public class NotesNote implements IRecyclableNotesObject {
 							action = CWF_Action.CWF_ABORT;
 						}
 						else {
-							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, hErrorText);
+							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 						}
 						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
 					}
@@ -6283,6 +6284,17 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		@Override
+		public Set<CDRecordType> getCurrentRecordType() {
+			CDRecordMemory record = getCurrentRecord();
+			if (record==null) {
+				return null;
+			}
+			else {
+				return record.getType();
+			}
+		}
+		
+		@Override
 		public int getCurrentRecordDataLength() {
 			CDRecordMemory record = getCurrentRecord();
 			return record==null ? 0 : record.getDataSize();
@@ -6348,6 +6360,10 @@ public class NotesNote implements IRecyclableNotesObject {
 			
 			public short getTypeAsShort() {
 				return m_typeAsShort;
+			}
+
+			public Set<CDRecordType> getType() {
+				return CDRecordType.getRecordTypesForConstant(m_typeAsShort);
 			}
 			
 			public int getDataSize() {
