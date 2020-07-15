@@ -146,6 +146,9 @@ public class NotesOOOUtils {
 				NotesErrorUtils.checkResult(result);
 				m_hOOOContext32 = 0;
 			}
+			
+			short result = NotesNativeAPI.get().OOOTerm();
+			NotesErrorUtils.checkResult(result);
 		}
 
 		@Override
