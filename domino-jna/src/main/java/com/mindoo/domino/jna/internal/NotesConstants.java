@@ -14,6 +14,7 @@ import com.mindoo.domino.jna.internal.structs.NotesNumberPairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesObjectDescriptorStruct;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesRangeStruct;
+import com.mindoo.domino.jna.internal.structs.NotesReplicationHistorySummaryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryExtStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleListStruct;
@@ -126,7 +127,8 @@ public interface NotesConstants {
 	public final int notesCDHotspotBeginStructSize = NotesCdHotspotBeginStruct.newInstance().size();
 	public final int notesCDIdNameStructSize = NotesCDIdNameStruct.newInstance().size();
 	public final int notesCDResourceStructSize = NotesCDResourceStruct.newInstance().size();
-	
+	public final int notesReplicationHistorySummaryStructSize = NotesReplicationHistorySummaryStruct.newInstance().size();
+
 	public static final short MAXALPHATIMEDATE = 80;
 
 	public static final short ERR_MASK = 0x3fff;

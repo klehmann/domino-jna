@@ -1513,6 +1513,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short DesignLookupNameFE(long hDB, short wClass, Pointer szFlagsPattern, Pointer szName, short wNameLen,
 			int flags, IntByReference retNoteID, IntByReference retbIsPrivate,
 			DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
+
+	@Override
+	public native short NSFDbGetReplHistorySummary(long hDb, int Flags, LongByReference rethSummary,
+			IntByReference retNumEntries);
 	
 }
 

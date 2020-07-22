@@ -1802,4 +1802,10 @@ public interface INotesNativeAPI32 extends Library {
 										IntByReference retNoteID, IntByReference retbIsPrivate,
 										NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
 
+	public short NSFDbGetReplHistorySummary(
+			int hDb,
+			int Flags,
+			IntByReference rethSummary,
+			IntByReference retNumEntries);
+
 }

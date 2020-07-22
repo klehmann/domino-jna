@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
+import com.mindoo.domino.jna.NotesReplicationHistorySummary.ReplicationDirection;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CopyDatabase;
@@ -85,6 +86,7 @@ import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableExt;
 import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableLock;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesReplicationHistorySummaryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.ReplExtensionsStruct;
@@ -1150,6 +1152,167 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 		NotesErrorUtils.checkResult(result);
 		return new NotesDbReplicaInfo(retReplicationInfo);
+	}
+	
+	/**
+	 * Optional flags that can be used with {@link NotesDatabase#getReplicationHistory()}.
+	 */
+	public enum ReplicationHistoryFlags {
+		/** Don't copy wild card entries */
+		REMOVE_WILDCARDS(0x00000001),
+		
+		SORT_BY_DATE(0x00000002),
+		
+		ONLY_COMPLETE(0x00000004);
+		
+		private int m_value;
+		
+		private ReplicationHistoryFlags(int value) {
+			m_value = value;
+		}
+
+		public int getValue() {
+			return m_value;
+		}
+	}
+	
+	/**
+	 * Reads the replication history of the database
+	 * 
+	 * @param flags Optional history summary flags enabling you to specify that wildcard entries are not to be returned and/or that sorting is to be done by date rather than by the default, server name
+	 * @return replication history or empty list
+	 */
+	public List<NotesReplicationHistorySummary> getReplicationHistory(Set<ReplicationHistoryFlags> flags) {
+		checkHandle();
+		
+		int flagsAsInt = 0;
+		if (flags!=null) {
+			for (ReplicationHistoryFlags currFlag : flags) {
+				flagsAsInt |= currFlag.getValue();
+			}
+		}
+		
+		IntByReference retNumEntries = new IntByReference();
+		
+		List<NotesReplicationHistorySummary> history = new ArrayList<>();
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethSummary = new LongByReference();
+			short result = NotesNativeAPI64.get().NSFDbGetReplHistorySummary(m_hDB64, flagsAsInt, rethSummary, retNumEntries);
+			NotesErrorUtils.checkResult(result);
+
+			int numEntries = retNumEntries.getValue();
+			long hSummary = rethSummary.getValue();
+			
+			if (numEntries>0 && rethSummary.getValue()!=0) {
+				Pointer ptr = Mem64.OSLockObject(hSummary);
+				Pointer currPosPtr = ptr;
+				try {
+					for (int i=0; i<numEntries; i++) {
+						NotesReplicationHistorySummaryStruct struct = NotesReplicationHistorySummaryStruct.newInstance(currPosPtr);
+						struct.read();
+						
+						NotesTimeDate replicationTime = struct.ReplicationTime==null ? null : new NotesTimeDate(struct.ReplicationTime);
+						AclLevel aclLevel = AclLevel.toLevel((int) (struct.AccessLevel & 0xffff));
+						
+						Set<AclFlag> accessFlags = AclFlag.valuesOf((int) (struct.AccessFlags & 0xffff));
+						ReplicationDirection direction;
+						if (struct.Direction == ReplicationDirection.SEND.getValue()) {
+							direction = ReplicationDirection.SEND;
+						}
+						else if (struct.Direction == ReplicationDirection.RECEIVE.getValue()) {
+							direction = ReplicationDirection.RECEIVE;
+						}
+						else {
+							direction = ReplicationDirection.NEVER;
+						}
+						
+						String serverFilePath = NotesStringUtils.fromLMBCS(ptr.share(struct.ServerNameOffset), -1);
+						int iPos = serverFilePath.indexOf("!!");
+						String server;
+						String filePath;
+						if (iPos==-1) {
+							server = "";
+							filePath = "";
+						}
+						else {
+							server = serverFilePath.substring(0, iPos);
+							filePath = serverFilePath.substring(iPos+2);
+						}
+						
+						NotesReplicationHistorySummary entry = new NotesReplicationHistorySummary(replicationTime, 
+								aclLevel, accessFlags, direction, server, filePath);
+						history.add(entry);
+						
+						currPosPtr = currPosPtr.share(NotesConstants.notesReplicationHistorySummaryStructSize);
+					}
+				}
+				finally {
+					Mem64.OSUnlockObject(hSummary);
+					Mem64.OSMemFree(hSummary);
+				}
+			}
+		}
+		else {
+			IntByReference rethSummary = new IntByReference();
+			short result = NotesNativeAPI32.get().NSFDbGetReplHistorySummary(m_hDB32, flagsAsInt, rethSummary, retNumEntries);
+			NotesErrorUtils.checkResult(result);
+			
+			int numEntries = retNumEntries.getValue();
+			int hSummary = rethSummary.getValue();
+
+			if (numEntries>0 && rethSummary.getValue()!=0) {
+				Pointer ptr = Mem32.OSLockObject(rethSummary.getValue());
+				Pointer currPosPtr = ptr;
+				try {
+					for (int i=0; i<numEntries; i++) {
+
+						NotesReplicationHistorySummaryStruct struct = NotesReplicationHistorySummaryStruct.newInstance(currPosPtr);
+						struct.read();
+						
+						NotesTimeDate replicationTime = struct.ReplicationTime==null ? null : new NotesTimeDate(struct.ReplicationTime);
+						AclLevel aclLevel = AclLevel.toLevel((int) (struct.AccessLevel & 0xffff));
+						
+						Set<AclFlag> accessFlags = AclFlag.valuesOf((int) (struct.AccessFlags & 0xffff));
+						ReplicationDirection direction;
+						if (struct.Direction == ReplicationDirection.SEND.getValue()) {
+							direction = ReplicationDirection.SEND;
+						}
+						else if (struct.Direction == ReplicationDirection.RECEIVE.getValue()) {
+							direction = ReplicationDirection.RECEIVE;
+						}
+						else {
+							direction = ReplicationDirection.NEVER;
+						}
+						
+						String serverFilePath = NotesStringUtils.fromLMBCS(ptr.share(struct.ServerNameOffset), -1);
+						int iPos = serverFilePath.indexOf("!!");
+						String server;
+						String filePath;
+						if (iPos==-1) {
+							server = "";
+							filePath = "";
+						}
+						else {
+							server = serverFilePath.substring(0, iPos);
+							filePath = serverFilePath.substring(iPos+2);
+						}
+						
+						NotesReplicationHistorySummary entry = new NotesReplicationHistorySummary(replicationTime, 
+								aclLevel, accessFlags, direction, server, filePath);
+						history.add(entry);
+						
+						currPosPtr = currPosPtr.share(NotesConstants.notesReplicationHistorySummaryStructSize);
+					}
+				}
+				finally {
+					Mem32.OSUnlockObject(hSummary);
+					Mem32.OSMemFree(hSummary);
+				}
+			}
+		}
+		
+		return history;
 	}
 	
 	/**

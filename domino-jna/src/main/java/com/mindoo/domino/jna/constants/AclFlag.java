@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
 
@@ -125,4 +126,13 @@ This allows an Editor to assume some Designer-level access */
 		return result;
 	}
 
+	public static Set<AclFlag> valuesOf(int accessFlagBitMask) {
+		EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
+		for (AclFlag currFlag : AclFlag.values()) {
+			if ((accessFlagBitMask & currFlag.getValue()) == currFlag.getValue()) {
+				retFlags.add(currFlag);
+			}
+		}
+		return retFlags;
+	}
 }

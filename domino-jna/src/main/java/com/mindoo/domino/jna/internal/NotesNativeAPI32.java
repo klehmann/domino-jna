@@ -1500,5 +1500,9 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short DesignLookupNameFE(int hDB, short wClass, Pointer szFlagsPattern, Pointer szName, short wNameLen,
 			int flags, IntByReference retNoteID, IntByReference retbIsPrivate,
 			DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
+
+	@Override
+	public native short NSFDbGetReplHistorySummary(int hDb, int Flags, IntByReference rethSummary,
+			IntByReference retNumEntries);
 	
 }
