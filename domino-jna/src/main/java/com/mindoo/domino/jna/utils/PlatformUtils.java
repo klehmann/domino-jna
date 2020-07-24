@@ -6,6 +6,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Properties;
 
 import com.mindoo.domino.jna.constants.OSDirectory;
@@ -227,6 +228,22 @@ public class PlatformUtils {
 			@Override
 			public Properties run() {
 				return System.getProperties();
+			}
+		});
+	}
+	
+	/**
+	 * Calls {@link System#getenv()} in an {@link AccessController#doPrivileged(PrivilegedAction)}
+	 * block.
+	 * 
+	 * @return system environment
+	 */
+	public static Map<String,String> getSystemEmv() {
+		return AccessController.doPrivileged(new PrivilegedAction<Map<String,String>>() {
+
+			@Override
+			public Map<String,String> run() {
+				return System.getenv();
 			}
 		});
 	}
