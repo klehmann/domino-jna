@@ -2,5 +2,5 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Domino JNA XSP Integrator Plugin Source
 Bundle-SymbolicName: com.mindoo.domino.jna.xsp.source
-Bundle-Version: 0.9.37.qualifier
+Bundle-Version: 0.9.38.qualifier
 Bundle-Vendor: Mindoo GmbH
