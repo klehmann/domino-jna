@@ -6,6 +6,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.Properties;
 
 import com.mindoo.domino.jna.constants.OSDirectory;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
@@ -214,4 +215,19 @@ public class PlatformUtils {
 		return AccessController.doPrivileged(action);
 	}
 
+	/**
+	 * Calls {@link System#getProperties()} in an {@link AccessController#doPrivileged(PrivilegedAction)}
+	 * block.
+	 * 
+	 * @return system properties
+	 */
+	public static Properties getSystemProperties() {
+		return AccessController.doPrivileged(new PrivilegedAction<Properties>() {
+
+			@Override
+			public Properties run() {
+				return System.getProperties();
+			}
+		});
+	}
 }

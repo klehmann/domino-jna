@@ -17,6 +17,7 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.constants.MimeStreamItemizeOptions;
 import com.mindoo.domino.jna.constants.MimeStreamOpenOptions;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -169,7 +170,7 @@ public class JakartaMailMIMEHelper {
 					try (FileInputStream fIn = new FileInputStream(tmpFile);
 							BufferedInputStream bufIn = new BufferedInputStream(fIn)) {
 						
-						Properties props = System.getProperties(); 
+						Properties props = PlatformUtils.getSystemProperties(); 
 						jakarta.mail.Session mailSession = jakarta.mail.Session.getInstance(props, null);
 						MimeMessage message = new MimeMessage(mailSession, bufIn);
 						return message;

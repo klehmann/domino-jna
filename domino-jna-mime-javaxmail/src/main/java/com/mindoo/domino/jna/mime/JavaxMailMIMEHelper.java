@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.constants.MimeStreamItemizeOptions;
 import com.mindoo.domino.jna.constants.MimeStreamOpenOptions;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
  * Helper class that connects the javax.mail API with Domino JNA's {@link MIMEStream} class.
@@ -169,7 +170,7 @@ public class JavaxMailMIMEHelper {
 					try (FileInputStream fIn = new FileInputStream(tmpFile);
 							BufferedInputStream bufIn = new BufferedInputStream(fIn)) {
 						
-						Properties props = System.getProperties(); 
+						Properties props = PlatformUtils.getSystemProperties(); 
 						javax.mail.Session mailSession = javax.mail.Session.getInstance(props, null);
 						MimeMessage message = new MimeMessage(mailSession, bufIn);
 						return message;
