@@ -879,6 +879,8 @@ public class NotesGC {
 				m_activeAutoGCCustomValues.clear();
 				m_activeAutoGCCustomValues = null;
 			}
+			
+			threadContext.set(null);
 		}
 	}
 	
