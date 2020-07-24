@@ -405,6 +405,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * 
 	 * @param appendable appendable to receive the MIME stream data
 	 * @param maxBufferSize max characters to read from the stream into the appendable
+	 * @return number of bytes read or -1 for EOF
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
 	public int read(Appendable appendable, int maxBufferSize) throws IOException {

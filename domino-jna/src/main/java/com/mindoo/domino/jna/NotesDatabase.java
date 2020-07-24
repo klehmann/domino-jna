@@ -1155,7 +1155,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Optional flags that can be used with {@link NotesDatabase#getReplicationHistory()}.
+	 * Optional flags that can be used with {@link NotesDatabase#getReplicationHistory(Set)}.
 	 */
 	public enum ReplicationHistoryFlags {
 		/** Don't copy wild card entries */
