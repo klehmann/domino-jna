@@ -30,7 +30,7 @@
 	<variableList>
 		<variable>
 			<name>NOTESJAR_DIR_LOC</name>
-			<value>file:/Applications/HCL%20Notes.app/Contents/MacOS/jvm/lib/ext</value>
+			<value>file:/Applications/HCL%20Notes.app/Contents/Resources/jvm/lib/ext</value>
 		</variable>
 	</variableList>
 </projectDescription>
