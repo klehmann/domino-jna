@@ -25,6 +25,16 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 	/** C type : DWORD[2] */
 	public int[] Innards = new int[2];
 	
+	public static NotesTimeDateStruct.ByReference newInstanceByReference() {
+		return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct.ByReference>() {
+
+			@Override
+			public NotesTimeDateStruct.ByReference run() {
+				return new NotesTimeDateStruct.ByReference();
+			}
+		});
+	}
+
 	public static NotesTimeDateStruct newInstance() {
 		return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct>() {
 
@@ -34,7 +44,7 @@ public class NotesTimeDateStruct extends BaseStructure implements Serializable, 
 			}
 		});
 	}
-
+	
 	public static NotesTimeDateStruct newInstance(final int Innards[]) {
 		return AccessController.doPrivileged(new PrivilegedAction<NotesTimeDateStruct>() {
 
