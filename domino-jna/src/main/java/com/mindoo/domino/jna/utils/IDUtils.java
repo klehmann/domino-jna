@@ -5,6 +5,7 @@ import java.util.Set;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.NotesUserId;
 import com.mindoo.domino.jna.constants.IDFlag;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
@@ -13,11 +14,16 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Handle;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
+import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
@@ -723,5 +729,127 @@ public class IDUtils {
 		NotesErrorUtils.checkResult(result);
 
 		return result == 0;
+	}
+	
+	public static interface RegistrationMessageHandler {
+		
+		public void messageReceived(String msg);
+		
+	}
+	
+	/**
+	/**
+	 * This function will cross-certify an ID with another organization's hierarchy.<br>
+	 * <br>
+	 * It will open the Domino Directory (Server's Address book) on the specified registration
+	 * server, verify write access to the book, and add a new Cross Certificate entry.
+	 * 
+	 * @param certFilePath Pathname of the certifier id file
+	 * @param certPW certifier password
+	 * @param certLogPath Pathname of the certifier's log file.  This parameter is required for Domino installations that use the Administration Process so that when using other C API function that require a Certifier Context, the proper entries will be entered in the Certification Log file (CERTLOG.NSF) .  If your Domino installation does not include a Certification Log (does not use the Administration Process), then you should pass in NULL for this parameter.
+	 * @param expirationDateTime certificate expiration date for the entity that is being certified
+	 * @param regServer name of the Lotus Domino registration server containing the Domino Directory.  The string should be no longer than MAXUSERNAME (256 bytes). If you want to specify "no server" (the local machine), pass "".
+	 * @param idFilePath the pathname of the ID file to be cross-certified
+	 * @param comment Any additional identifying information to be stored in the Domino Directory
+	 * @param msgHandler optional callback to receive status messages or null
+	 */
+	public static void registerCrossCertificate(String certFilePath, String certPW, String certLogPath,
+			NotesTimeDate expirationDateTime, String regServer, String idFilePath,
+			String comment, RegistrationMessageHandler msgHandler) {
+		
+		Memory certPWMem = NotesStringUtils.toLMBCS(certPW, true);
+		
+		KFM_PASSWORDStruct.ByReference kfmPwd = KFM_PASSWORDStruct.newInstanceByReference();
+		NotesNativeAPI.get().SECKFMCreatePassword(certPWMem, kfmPwd);
+		
+		Memory certFilePathMem = NotesStringUtils.toLMBCS(certFilePath, true);
+		Memory certLogPathMem = NotesStringUtils.toLMBCS(certLogPath, true);
+		
+		NotesTimeDateStruct.ByReference expirationDateTimeStruct = NotesTimeDateStruct.newInstanceByReference();
+		expirationDateTimeStruct.Innards = expirationDateTime==null ? new int[] {0,0} : expirationDateTime.getInnards();
+		expirationDateTimeStruct.write();
+		
+		Memory retCertNameMem = new Memory(NotesConstants.MAXUSERNAME);
+		ShortByReference retfIsHierarchical = new ShortByReference();
+		ShortByReference retwFileVersion = new ShortByReference();
+		
+		String regServerCanonical = NotesNamingUtils.toCanonicalName(regServer);
+		Memory regServerCanonicalMem = NotesStringUtils.toLMBCS(regServerCanonical, true);
+
+		NotesCallbacks.REGSIGNALPROC statusCallback;
+		if (PlatformUtils.isWin32()) {
+			statusCallback = new Win32NotesCallbacks.REGSIGNALPROCWin32() {
+
+				@Override
+				public void invoke(Pointer ptrMessage) {
+					if (msgHandler!=null) {
+						String msg = NotesStringUtils.fromLMBCS(ptrMessage, -1);
+						msgHandler.messageReceived(msg);
+					}
+				}
+			};
+		}
+		else {
+			statusCallback = new NotesCallbacks.REGSIGNALPROC() {
+
+				@Override
+				public void invoke(Pointer ptrMessage) {
+					if (msgHandler!=null) {
+						String msg = NotesStringUtils.fromLMBCS(ptrMessage, -1);
+						msgHandler.messageReceived(msg);
+					}
+				}
+			};
+		}
+		
+		Memory idFilePathMem = NotesStringUtils.toLMBCS(idFilePath.toString(), true);
+		Memory errorPathNameMem = new Memory(NotesConstants.MAXPATH);
+		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
+		Memory locationMem = null;
+		Memory forwardAddressMem = null;
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			LongByReference rethKfmCertCtx = new LongByReference();
+			result = NotesNativeAPI64.get().SECKFMGetCertifierCtx(certFilePathMem, kfmPwd, certLogPathMem, expirationDateTimeStruct, retCertNameMem,
+					rethKfmCertCtx, retfIsHierarchical, retwFileVersion);
+			NotesErrorUtils.checkResult(result);
+			
+			long hKfmCertCtx = rethKfmCertCtx.getValue();
+			if (hKfmCertCtx==0) {
+				throw new NotesError(0, "Received null handle creating a certifier context");
+			}
+			
+			try {
+				result = NotesNativeAPI64.get().REGCrossCertifyID(hKfmCertCtx, (short) 0, regServerCanonicalMem,
+						idFilePathMem,
+						locationMem, commentMem, forwardAddressMem, (short) 0, statusCallback, errorPathNameMem);
+				NotesErrorUtils.checkResult(result);
+			}
+			finally {
+				NotesNativeAPI64.get().SECKFMFreeCertifierCtx(hKfmCertCtx);
+			}
+		}
+		else {
+			IntByReference rethKfmCertCtx = new IntByReference();
+			result = NotesNativeAPI32.get().SECKFMGetCertifierCtx(certFilePathMem, kfmPwd, certLogPathMem, expirationDateTimeStruct, retCertNameMem,
+					rethKfmCertCtx, retfIsHierarchical, retwFileVersion);
+			NotesErrorUtils.checkResult(result);
+			
+			int hKfmCertCtx = rethKfmCertCtx.getValue();
+			if (hKfmCertCtx==0) {
+				throw new NotesError(0, "Received null handle creating a certifier context");
+			}
+
+			try {
+				result = NotesNativeAPI32.get().REGCrossCertifyID(hKfmCertCtx, (short) 0, regServerCanonicalMem,
+						idFilePathMem,
+						locationMem, commentMem, forwardAddressMem, (short) 0, statusCallback, errorPathNameMem);
+				NotesErrorUtils.checkResult(result);
+			}
+			finally {
+				NotesNativeAPI32.get().SECKFMFreeCertifierCtx(hKfmCertCtx);
+			}
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
+import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -478,5 +479,10 @@ public interface INotesNativeAPI extends Library {
 	public void DesignGetNameAndAlias(Memory pString, PointerByReference ppName, ShortByReference pNameLen, PointerByReference ppAlias, ShortByReference pAliasLen);
 
 	public boolean StoredFormHasSubformToken(Memory pString);
+
+	public void SECKFMCreatePassword(
+			Memory pPassword,
+			KFM_PASSWORDStruct.ByReference retHashedPassword);
 	
+
 }

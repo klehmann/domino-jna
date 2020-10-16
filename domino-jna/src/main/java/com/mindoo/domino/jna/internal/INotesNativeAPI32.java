@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.internal;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
@@ -1807,5 +1808,33 @@ public interface INotesNativeAPI32 extends Library {
 			int Flags,
 			IntByReference rethSummary,
 			IntByReference retNumEntries);
+
+	public short REGCrossCertifyID(
+			int hCertCtx,
+			short spare1,
+			Memory regServer,
+			Memory idFileName,
+			Memory location,
+			Memory comment,
+			Memory forwardAddress,
+			short spare2,
+			NotesCallbacks.REGSIGNALPROC  pStatusFunc,
+			Memory errorPathName);
+	
+	public short SECKFMGetCertifierCtx(
+			Memory pCertFile,
+			KFM_PASSWORDStruct.ByReference pKfmPW,
+			Memory pLogFile,
+			NotesTimeDateStruct.ByReference pExpDate,
+			Memory retCertName,
+			IntByReference rethKfmCertCtx,
+			ShortByReference retfIsHierarchical,
+			ShortByReference retwFileVersion);
+	
+	public void SECKFMFreeCertifierCtx(
+			int hKfmCertCtx);
+
+	@UndocumentedAPI
+	public short SECKFMMakeSafeCopy(int hKFC, short Type, short Version, Memory pFileName);
 
 }

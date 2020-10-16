@@ -3901,5 +3901,15 @@ This allows an Editor to assume some Designer-level access */
 	/* only subforms; no version filtering */
 	public String DFLAGPAT_SUBFORM_ALL_VERSIONS = "+U";
 
+	/*	Define function codes for SECKFMMakeSafeCopy */
+
+	/** Create a safe-copy containing the "active" RSA keys. */
+	public short KFM_safecopy_Standard = 0;
+	
+	/** Create a safe-copy containing the "pending" RSA keys */
+	public short KFM_safecopy_NewPubKey = 1;
+	
+	/** Create a safe-copy containing the "pending" RSA keys if any, else use the "active" RSA keys. */
+	public short KFM_safecopy_NewestKey = 2;
 
 }

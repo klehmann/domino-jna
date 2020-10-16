@@ -239,4 +239,8 @@ public interface NotesCallbacks {
 		short invoke(int dwFlags, Pointer phColl, Pointer ctx);
 	}
 
+	interface REGSIGNALPROC extends Callback {
+		void invoke(Pointer message);
+	}
+
 }

@@ -22,6 +22,7 @@ import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.STATTRAVERSEPROC;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
+import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct.ByReference;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -807,5 +808,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	@Override
 	public native boolean StoredFormHasSubformToken(Memory pString);
-	
+
+	public native void SECKFMCreatePassword(Memory pPassword, ByReference retHashedPassword);
+
 }

@@ -6,9 +6,11 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.REGSIGNALPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_FPMailNoteJitEx2CallBack;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFDbNamedObjectEnumPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFGetAllFolderChangesCallback;
+import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct.ByReference;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct.ByValue;
@@ -1517,6 +1519,21 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	@Override
 	public native short NSFDbGetReplHistorySummary(long hDb, int Flags, LongByReference rethSummary,
 			IntByReference retNumEntries);
+
+	@Override
+	public native short REGCrossCertifyID(long hCertCtx, short spare1, Memory regServer, Memory idFileName, Memory location,
+			Memory comment, Memory forwardAddress, short spare2, REGSIGNALPROC pStatusFunc, Memory errorPathName);
+
+	@Override
+	public native short SECKFMGetCertifierCtx(Memory pCertFile, ByReference pKfmPW, Memory pLogFile,
+			com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct.ByReference pExpDate, Memory retCertName,
+			LongByReference rethKfmCertCtx, ShortByReference retfIsHierarchical, ShortByReference retwFileVersion);
+
+	@Override
+	public native void SECKFMFreeCertifierCtx(long hKfmCertCtx);
+
+	@Override
+	public native short SECKFMMakeSafeCopy(long hKFC, short Type, short Version, Memory pFileName);
 	
 }
 

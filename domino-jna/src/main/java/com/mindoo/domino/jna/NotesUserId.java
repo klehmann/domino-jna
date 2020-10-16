@@ -9,6 +9,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.sun.jna.Memory;
 
 /**
  * Container for an in-memory user ID fetched from the ID vault
@@ -16,17 +17,17 @@ import com.mindoo.domino.jna.utils.PlatformUtils;
  * @author Karsten Lehmann
  */
 public class NotesUserId  {
-	private long m_memHandle64;
-	private int m_memHandle32;
+	private long m_hKFC64;
+	private int m_hKFC32;
 	
 	public NotesUserId(IAdaptable adaptable) {
 		Handle hdl = adaptable.getAdapter(Handle.class);
 		if (hdl!=null) {
 			if (PlatformUtils.is64Bit()) {
-				m_memHandle64 = hdl.getHandle64();
+				m_hKFC64 = hdl.getHandle64();
 			}
 			else {
-				m_memHandle32 = hdl.getHandle32();
+				m_hKFC32 = hdl.getHandle32();
 			}
 			return;
 		}
@@ -38,10 +39,10 @@ public class NotesUserId  {
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().SECKFMAccess((short) 32, m_memHandle64, retUsernameMem, null);
+			result = NotesNativeAPI64.get().SECKFMAccess((short) 32, m_hKFC64, retUsernameMem, null);
 		}
 		else {
-			result = NotesNativeAPI32.get().SECKFMAccess((short) 32, m_memHandle32, retUsernameMem, null);
+			result = NotesNativeAPI32.get().SECKFMAccess((short) 32, m_hKFC32, retUsernameMem, null);
 		}
 		NotesErrorUtils.checkResult(result);
 		
@@ -50,12 +51,32 @@ public class NotesUserId  {
 	}
 	
 	/**
+	 * Writes a safe copy of the ID to disk
+	 * 
+	 * @param targetFilePath filepath to write the safe.id
+	 */
+	public void makeSafeCopy(String targetFilePath) {
+		Memory targetFilePathMem = NotesStringUtils.toLMBCS(targetFilePath, true);
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().SECKFMMakeSafeCopy(m_hKFC64, NotesConstants.KFM_safecopy_Standard,
+					(short) 0, targetFilePathMem);
+		}
+		else {
+			result = NotesNativeAPI32.get().SECKFMMakeSafeCopy(m_hKFC32, NotesConstants.KFM_safecopy_Standard,
+					(short) 0, targetFilePathMem);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
 	 * Returns the handle to the in-memory ID for 32 bit
 	 * 
 	 * @return handle
 	 */
 	public int getHandle32() {
-		return m_memHandle32;
+		return m_hKFC32;
 	}
 	
 	/**
@@ -64,7 +85,7 @@ public class NotesUserId  {
 	 * @return handle
 	 */
 	public long getHandle64() {
-		return m_memHandle64;
+		return m_hKFC64;
 	}
 
 }
