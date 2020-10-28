@@ -70,6 +70,10 @@ Here are installation instructions how to do this: [link](http://www.tlcc.com/ad
 
 The API is available in the code editor after you activate the `com.mindoo.domino.jna.xsp.library` entry in the xsp.properties file.
 
+If you are having **trouble getting Domino JNA to work in Designer 9.0.1 FP10 or later**, see this blog posting for a workaround: [link](https://frostillic.us/blog/posts/058650E080E352178525832B00519D2C)
+
+In short, you need to add ```<notesdata>\workspace\applications\eclipse``` to your target platform (replace ```<notesdata>``` with your data directory path).
+
 ## Maven
 Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna](https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna).
 
