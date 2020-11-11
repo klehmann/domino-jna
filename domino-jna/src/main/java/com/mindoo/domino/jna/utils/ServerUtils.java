@@ -130,6 +130,10 @@ public class ServerUtils {
 	 * @return returned server's response
 	 */
 	public static String sendConsoleCommand(String server, String command) {
+		if (StringUtil.isEmpty(server)) {
+			//prevent error "Invalid server or network name syntax" (error code: 274)
+			server = IDUtils.getIdUsername();
+		}
 		Memory serverMem = NotesStringUtils.toLMBCS(server, true);
 		Memory commandMem = NotesStringUtils.toLMBCS(command, true);
 
