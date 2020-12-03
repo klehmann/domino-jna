@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-mime-javaxmail</artifactId>
-	<version>0.9.40</version>
+	<version>0.9.41</version>
 
 	<name>Domino JNA Javax Mail Connector</name>
 	<description>Utilities to connect the Javax Mail API with the Domino JNA MIMEStream</description>
@@ -149,7 +149,7 @@
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
-			<version>0.9.40-SNAPSHOT</version>
+			<version>0.9.41-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
