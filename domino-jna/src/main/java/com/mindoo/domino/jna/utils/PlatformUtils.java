@@ -6,13 +6,16 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ServiceLoader;
 
 import com.mindoo.domino.jna.constants.OSDirectory;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.mime.IMimeDataAccessService;
 import com.sun.jna.Memory;
 
 /**
@@ -244,6 +247,49 @@ public class PlatformUtils {
 			@Override
 			public Map<String,String> run() {
 				return System.getenv();
+			}
+		});
+	}
+
+	/**
+	 * Invokes the {@link ServiceLoader} within an {@link AccessController#doPrivileged(PrivilegedAction)}
+	 * block to find service implementations.
+	 * 
+	 * @param <T> service type
+	 * @param clazz class of service
+	 * @return iterator with implementations
+	 */
+	public static <T> Iterator<T> getService(Class<T> clazz) {
+		return AccessController.doPrivileged(new PrivilegedAction<Iterator<T>>() {
+
+			@Override
+			public Iterator<T> run() {
+				Iterator<T> wrappedIt = ServiceLoader.load(clazz).iterator();
+				return new Iterator<T>() {
+
+					@Override
+					public boolean hasNext() {
+						return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+
+							@Override
+							public Boolean run() {
+								return wrappedIt.hasNext();
+							}
+						});
+					}
+
+					@Override
+					public T next() {
+						return AccessController.doPrivileged(new PrivilegedAction<T>() {
+
+							@Override
+							public T run() {
+								return wrappedIt.next();
+							}
+						});
+					}
+					
+				};
 			}
 		});
 	}
