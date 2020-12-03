@@ -1534,6 +1534,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 
 	@Override
 	public native short SECKFMMakeSafeCopy(long hKFC, short Type, short Version, Memory pFileName);
-	
+
+	@Override
+	public native short AssistantGetLSDataNote(long hDB, int NoteID,
+			NotesUniversalNoteIdStruct.ByReference retUNID);
+
 }
 

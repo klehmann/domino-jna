@@ -1844,4 +1844,7 @@ public interface INotesNativeAPI64 extends Library {
 	@UndocumentedAPI
 	public short SECKFMMakeSafeCopy(long hKFC, short Type, short Version, Memory pFileName);
 
+	@UndocumentedAPI
+	public short AssistantGetLSDataNote (long hDB, int NoteID, NotesUniversalNoteIdStruct.ByReference retUNID);
+
 }

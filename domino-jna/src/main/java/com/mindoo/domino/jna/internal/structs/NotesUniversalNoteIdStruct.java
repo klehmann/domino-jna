@@ -116,6 +116,16 @@ public class NotesUniversalNoteIdStruct extends BaseStructure implements IAdapta
 		});
 	}
 	
+	public static NotesUniversalNoteIdStruct.ByReference newInstanceByReference() {
+		return AccessController.doPrivileged(new PrivilegedAction<NotesUniversalNoteIdStruct.ByReference>() {
+
+			@Override
+			public NotesUniversalNoteIdStruct.ByReference run() {
+				return new NotesUniversalNoteIdStruct.ByReference();
+			}
+		});
+	}
+	
 	public static class ByReference extends NotesUniversalNoteIdStruct implements Structure.ByReference {
 		
 	};

@@ -444,6 +444,9 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	/** display things that are runnable; version filtering */
 	public static final String DFLAGPAT_TOOLSRUNMACRO = "-QXMBESIst5nmz{";
 
+	/** display things that show up in agents list. No version filtering (for design) */
+	public static final String DFLAGPAT_AGENTSLIST = "-QXstmz{";
+
 	/** At least one of the "definition"
 	 * view items ($FORMULA, $COLLATION,
 	 * or $FORMULACLASS) has been modified
@@ -3853,8 +3856,36 @@ This allows an Editor to assume some Designer-level access */
 	/* Blind copy to item name */
 	public String MAIL_BLINDCOPYTO_ITEM = "BlindCopyTo";
 
+	public short DGN_SKIPBLANK = 0x0001;
+	/** only match with the main name of the design element. */
+	public short DGN_SKIPSYNONYMS = 0x0002;
+	
+	/** remove underlines from the names (they indicate a hotkey) */
+	public short DGN_STRIPUNDERS = 0x0004;
+
+	/** convert underscore to a character that identifies the next character as a hotkey (&amp; on windows) */
+	public short DGN_CONVUNDERS = 0x0008;
+	public short DGN_CASEINSENSITIVE = 0x0010;
+	public short DGN_STRIPBACKS = 0x0020;
+
 	public short DGN_ONLYSHARED = 0x0040;
 	public short DGN_ONLYPRIVATE = 0x0080;
+
+	public short DGN_FILTERPRIVATE1STUSE = 0x0100;
+	public short DGN_ALLPRIVATE = 0x0200;
+	public short DGN_HASUNID = 0x0400;
+	public short DGN_NOCHECKACCESS = 0x0800;
+	public short DGN_LISTBOX = (DGN_STRIPUNDERS|DGN_SKIPSYNONYMS|DGN_SKIPBLANK);
+	public short DGN_MENU = (DGN_SKIPSYNONYMS|DGN_SKIPBLANK);
+	
+	/** tells enumeration functions to only enumerate if readily available not if NIFReadEntries necessary.
+	 * Used to allow Desk cache to work or fallback to NSFDbFindDesignNote direct lookup
+	 */
+	public short DGN_ONLYIFFAST = 0x1000;
+	/** return alias only if it has, don't return display name as alias */
+	public short DGN_ONLYALIAS = 0x2000;
+	/** only match if the name or alias is exactly the same as the name supplied */
+	public short DGN_EXACTNAME = 0x4000;
 
 	/* display things editable with dialog box; no version filtering (for design) */
 	public String DFLAGPAT_VIEWFORM_ALL_VERSIONS = "-FQMUGXWy#i:|@K;g~%z^}";

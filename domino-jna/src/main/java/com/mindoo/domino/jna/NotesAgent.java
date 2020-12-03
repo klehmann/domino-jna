@@ -15,10 +15,12 @@ import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -187,6 +189,42 @@ public class NotesAgent implements IRecyclableNotesObject {
 		return isRunAsWebUser;
 	}
 	
+	/**
+	 * The returned document is created when you save an agent, and it is stored in
+	 * the same database as the agent.<br>
+	 * The document replicates, but is not displayed in views.<br>
+	 * Each time you edit and re-save an agent, its saved data document is deleted
+	 * and a new, blank one is created. When you delete an agent, its saved data document is deleted.
+	 * 
+	 * @return document or null if agent could not be found
+	 */
+	public NotesNote getAgentSavedData(String agentName) {
+		checkHandle();
+
+		NotesDatabase parentDb = getParent();
+		if (parentDb.isRecycled()) {
+			throw new NotesError(0, "Parent database is recycled");
+		}
+		
+		NotesUniversalNoteIdStruct.ByReference retUNID = NotesUniversalNoteIdStruct.newInstanceByReference();
+		
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().AssistantGetLSDataNote(parentDb.getHandle64(), m_hNoteId, retUNID);
+		}
+		else {
+			result = NotesNativeAPI32.get().AssistantGetLSDataNote(parentDb.getHandle32(), m_hNoteId, retUNID);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		String unid = retUNID.toString();
+		if (StringUtil.isEmpty(unid) || "00000000000000000000000000000000".equals(unid)) {
+			return null;
+		}
+		else {
+			return parentDb.openNoteByUnid(unid);
+		}
+	}
 	/**
 	 * Executes the agent on a context document
 	 * 

@@ -2608,10 +2608,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		retAgentNoteID.setValue(0);
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_AGENTSLIST, true), retAgentNoteID, NotesConstants.DGN_STRIPUNDERS);
 		}
 		else {
-			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true), retAgentNoteID, 0);
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_AGENTSLIST, true), retAgentNoteID, NotesConstants.DGN_STRIPUNDERS);
 		}
 		if ((result & NotesConstants.ERR_MASK)==1028) {
 			//Entry not found in index
@@ -2646,6 +2646,62 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesGC.__objectCreated(NotesAgent.class, agent);
 		
 		return agent;
+	}
+
+	/**
+	 * The returned document is created when you save an agent, and it is stored in
+	 * the same database as the agent.<br>
+	 * The document replicates, but is not displayed in views.<br>
+	 * Each time you edit and re-save an agent, its saved data document is deleted
+	 * and a new, blank one is created. When you delete an agent, its saved data document is deleted.
+	 * 
+	 * @param agentName agent name
+	 * @return document or null if agent could not be found
+	 */
+	public NotesNote getAgentSavedData(String agentName) {
+		checkHandle();
+
+		Memory agentNameLMBCS = NotesStringUtils.toLMBCS(agentName, true);
+
+		IntByReference retAgentNoteID = new IntByReference();
+		retAgentNoteID.setValue(0);
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().NIFFindDesignNoteExt(m_hDB64, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_AGENTSLIST, true), retAgentNoteID, NotesConstants.DGN_STRIPUNDERS);
+		}
+		else {
+			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, agentNameLMBCS, NotesConstants.NOTE_CLASS_FILTER, NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_AGENTSLIST, true), retAgentNoteID, NotesConstants.DGN_STRIPUNDERS);
+		}
+		if ((result & NotesConstants.ERR_MASK)==1028) {
+			//Entry not found in index
+			return null;
+		}
+		
+		//throws an error if agent cannot be found:
+		NotesErrorUtils.checkResult(result);
+		
+		int agentNoteId = retAgentNoteID.getValue();
+		if (agentNoteId==0) {
+			throw new NotesError(0, "Agent not found in database: "+agentName);
+		}
+
+		NotesUniversalNoteIdStruct.ByReference retUNID = NotesUniversalNoteIdStruct.newInstanceByReference();
+		
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().AssistantGetLSDataNote(m_hDB64, agentNoteId, retUNID);
+		}
+		else {
+			result = NotesNativeAPI32.get().AssistantGetLSDataNote(m_hDB32, agentNoteId, retUNID);
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		String unid = retUNID.toString();
+		if (StringUtil.isEmpty(unid) || "00000000000000000000000000000000".equals(unid)) {
+			return null;
+		}
+		else {
+			return openNoteByUnid(unid);
+		}
 	}
 	
 	/**
@@ -6184,6 +6240,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return item definition table with case-insensitive key access
 	 */
 	public NavigableMap<String,Integer> getItemDefinitionTable() {
+		checkHandle();
+		
 		NavigableMap<String,Integer> table = new TreeMap<String,Integer>(String.CASE_INSENSITIVE_ORDER);
 		
 		short result;
