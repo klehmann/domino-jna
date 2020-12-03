@@ -1,0 +1,9 @@
+Contains a copy of Apache Commons Email moved to the package "com.mindoo.domino.jna.mime.internal.jakarta"
+to avoid classloader conflicts.
+Apache Commons Email has also been tweaked to work with the new jakarta.mail instead of javax.mail.
+
+https://commons.apache.org/proper/commons-email/
+
+Copyright The Apache Software Foundation
+Apache 2.0 license
+

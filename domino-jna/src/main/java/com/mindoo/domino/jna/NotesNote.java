@@ -84,6 +84,8 @@ import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
+import com.mindoo.domino.jna.mime.MIMEData;
+import com.mindoo.domino.jna.mime.MIMEUtils;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -3625,6 +3627,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (value instanceof FormulaExecution) {
 			return true;
 		}
+		else if (value instanceof MIMEData) {
+			return true;
+		}
 		return false;
 	}
 	
@@ -3675,6 +3680,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flagsOrig, Object value) {
 		checkHandle();
 
+		if (value instanceof MIMEData) {
+			//special case for MimeData
+			MIMEUtils.setMimeData(this, itemName, (MIMEData) value);
+			return getFirstItem(itemName);
+		}
+		
 		//remove our own pseudo flags:
 		boolean keepLineBreaks = flagsOrig.contains(ItemType.KEEPLINEBREAKS);
 		EnumSet<ItemType> flags = flagsOrig.clone();

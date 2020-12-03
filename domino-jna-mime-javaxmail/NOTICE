@@ -1,0 +1,7 @@
+Contains a copy of Apache Commons Email moved to the package "com.mindoo.domino.jna.mime.internal.javaxmail"
+to avoid classloader conflicts.
+
+https://commons.apache.org/proper/commons-email/
+
+Copyright The Apache Software Foundation
+Apache 2.0 license
