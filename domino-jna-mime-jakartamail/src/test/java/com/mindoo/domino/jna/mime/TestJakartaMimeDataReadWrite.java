@@ -53,7 +53,7 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 				NotesDatabase dbFakenames = getFakeNamesDb();
 				NotesNote note = dbFakenames.createNote();
 
-				MIMEData mimeData = MIMEUtils.getMimeData(note, "ItemDoesNotExist");
+				MIMEData mimeData = NotesMimeUtils.getMimeData(note, "ItemDoesNotExist");
 				Assert.assertNull(mimeData);
 
 				note.replaceItemValue("TextItem", "Hello world.");
@@ -62,7 +62,7 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 					//using the MIME stream C API on a non MIME_PART item should throw an error
 					NotesError ex = null;
 					try {
-						MIMEUtils.getMimeData(note, "TextItem");
+						NotesMimeUtils.getMimeData(note, "TextItem");
 					}
 					catch (NotesError e) {
 						ex = e;
@@ -91,7 +91,7 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 					//should also throw an error, still no MIME_PART item
 					NotesError ex = null;
 					try {
-						MIMEUtils.getMimeData(note, "Body");
+						NotesMimeUtils.getMimeData(note, "Body");
 					}
 					catch (NotesError e) {
 						ex = e;
@@ -111,7 +111,7 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 				Assert.assertNotNull(itm);
 				Assert.assertEquals(itm.getType(), NotesItem.TYPE_MIME_PART);
 
-				MIMEData mimeDataFromRichText = MIMEUtils.getMimeData(note, "Body");
+				MIMEData mimeDataFromRichText = NotesMimeUtils.getMimeData(note, "Body");
 				Assert.assertNotNull(mimeDataFromRichText);
 
 				// <html><body><div align="right"><font size="1" face="serif"><b>Hello World.</b></font></div></body></html>
@@ -164,7 +164,7 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 				note.replaceItemValue("BodyMime", writtenMimeData);
 
 				//now read the MIME data and compare it with what we have just written
-				MIMEData checkMimeData = MIMEUtils.getMimeData(note, "BodyMime");
+				MIMEData checkMimeData = NotesMimeUtils.getMimeData(note, "BodyMime");
 				Assert.assertNotNull("MIMEItemData not null", checkMimeData);
 
 				String checkHtml = checkMimeData.getHtml();

@@ -19,12 +19,11 @@ import com.mindoo.domino.jna.constants.MimeStreamItemizeOptions;
 import com.mindoo.domino.jna.constants.MimeStreamOpenOptions;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.mime.IMimeDataAccessService;
-import com.mindoo.domino.jna.mime.JavaxMailMIMEHelper;
 import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
-import com.mindoo.domino.jna.mime.internal.javaxmail.org.apache.commons.mail.EmailAttachment;
-import com.mindoo.domino.jna.mime.internal.javaxmail.org.apache.commons.mail.EmailException;
-import com.mindoo.domino.jna.mime.internal.javaxmail.org.apache.commons.mail.HtmlEmail;
+import com.mindoo.domino.jna.mime.internal.javax.mail.org.apache.commons.mail.EmailAttachment;
+import com.mindoo.domino.jna.mime.internal.javax.mail.org.apache.commons.mail.EmailException;
+import com.mindoo.domino.jna.mime.internal.javax.mail.org.apache.commons.mail.HtmlEmail;
 import com.mindoo.domino.jna.utils.StringUtil;
 
 public class JavaxMailMimeDataAccessService implements IMimeDataAccessService {
@@ -244,5 +243,10 @@ public class JavaxMailMimeDataAccessService implements IMimeDataAccessService {
 			}
 		}
 
+	}
+
+	@Override
+	public int getPriority() {
+		return 20;
 	}
 }

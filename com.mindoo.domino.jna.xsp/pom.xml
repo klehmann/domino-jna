@@ -18,6 +18,12 @@
 			<version>9.0.1</version>
 			<scope>compile</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.sun.mail</groupId>
+			<artifactId>javax.mail</artifactId>
+			<version>1.5.2</version>
+			<scope>provided</scope>
+		</dependency>
 	</dependencies>
 	
 	<build>
@@ -33,6 +39,7 @@
 									inheritAll="true">
 									<property name="maven_plugin_classpath" refid="maven.plugin.classpath" />
 									<property name="domino_jna_loc" value="${basedir}${file.separator}..${file.separator}domino-jna" />
+									<property name="domino_jna_javaxmail_loc" value="${basedir}${file.separator}..${file.separator}domino-jna-mime-javaxmail" />
 									<property name="project_loc" value="${basedir}" />
 									<property name="workspace_loc" value="${basedir}${file.separator}.." />
 								</ant>

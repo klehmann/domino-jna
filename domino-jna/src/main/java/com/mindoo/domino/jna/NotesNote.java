@@ -84,8 +84,8 @@ import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
+import com.mindoo.domino.jna.mime.NotesMimeUtils;
 import com.mindoo.domino.jna.mime.MIMEData;
-import com.mindoo.domino.jna.mime.MIMEUtils;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -3682,7 +3682,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 		if (value instanceof MIMEData) {
 			//special case for MimeData
-			MIMEUtils.setMimeData(this, itemName, (MIMEData) value);
+			NotesMimeUtils.setMimeData(this, itemName, (MIMEData) value);
 			return getFirstItem(itemName);
 		}
 		

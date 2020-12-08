@@ -11,8 +11,7 @@ Import-Package: com.ibm.designer.runtime.domino.adapter,
  lotus.domino
 Require-Bundle: com.sun.jna;bundle-version="[4.4.0,5.0.0)",
  com.ibm.xsp.core,
- org.eclipse.core.runtime;bundle-version="3.4.0",
- com.ibm.designer.lib.javamail;visibility:=reexport
+ org.eclipse.core.runtime;bundle-version="3.4.0"
 Export-Package: com.mindoo.domino.jna,
  com.mindoo.domino.jna.constants,
  com.mindoo.domino.jna.directory,

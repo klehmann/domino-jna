@@ -5,6 +5,14 @@ import com.mindoo.domino.jna.NotesNote;
 public interface IMimeDataAccessService {
 
 	/**
+	 * If there are multiple service implementations, order them by ascending
+	 * priority and pick the one with the lowest value.
+	 * 
+	 * @return priority
+	 */
+	public int getPriority();
+	
+	/**
 	 * Reads {@link MIMEData} from a note
 	 * 
 	 * @param note note

@@ -251,4 +251,9 @@ public class JakartaMailMimeDataAccessService implements IMimeDataAccessService 
 		}
 
 	}
+
+	@Override
+	public int getPriority() {
+		return 20;
+	}
 }
