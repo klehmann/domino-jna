@@ -1094,6 +1094,8 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static byte SE_FNOACCESS = 0x20;
 	/** note has truncated attachments. Returned only when SEARCH1_ONLY_ABSTRACTS is used */
 	public static byte SE_FTRUNCATT	= 0x40;
+	/** note has a large summary, a note open is required to get the data, only valid if SEARCH1_LARGE_BUCKETS is passed in */
+	public static byte SE_FLARGESUMMARY = (byte) (0x80 & 0xff);
 
 	/*	File type flags (used with NSFSearch directory searching). */
 

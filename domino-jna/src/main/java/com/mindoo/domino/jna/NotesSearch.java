@@ -1042,6 +1042,14 @@ public class NotesSearch {
 		public boolean matchesFormula();
 		
 		/**
+		 * Returns true if this note has a large summary. In this case,
+		 * the note needs to be opened to read the summary buffer data.
+		 * 
+		 * @return true if large summary
+		 */
+		public boolean isLargeSummary();
+		
+		/**
 		 * Returns the length of the returned summary buffer
 		 * 
 		 * @return summary buffer

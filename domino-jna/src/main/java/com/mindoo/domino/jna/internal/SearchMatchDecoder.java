@@ -226,6 +226,11 @@ public class SearchMatchDecoder {
 		}
 		
 		@Override
+		public boolean isLargeSummary() {
+			return ((this.seRetFlags & NotesConstants.SE_FLARGESUMMARY) == NotesConstants.SE_FLARGESUMMARY);
+		}
+		
+		@Override
 		public NotesTimeDate getSeqTime() {
 			if (m_seqTime==null) {
 				m_seqTime = new NotesTimeDate(getSeqTimeInnards());
