@@ -1003,6 +1003,15 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	/** Return soft deleted documents */
 	public int SEARCH_SOFTDELETIONS = 0x40000000;
 
+	/*
+	 * the SEARCH2_* flags are passed to NSFSearchExt only &amp; mapped to SEARCH1_* flags
+	 * passed to NSFSearchExtended3
+	 */
+	/** return flag in orig structs if > MAXONESEGSIZE */
+	public int SEARCH2_LARGE_BUCKETS = 0x00000001;
+	/** return SEARCH_MATCH_LARGE etc structs */
+	public int SEARCH2_RET_LARGE_DATA = 0x00000002;
+
 	/** for setting/verifying that bits 28-31 of search 1 flags are 1000 */
 	public int SEARCH1_SIGNATURE = 0x80000000;
 
@@ -1037,6 +1046,11 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	 * corrupt documents.
 	 */
 	public int SEARCH1_FIXUP_PURGED = (0x000000040 | SEARCH1_SIGNATURE);
+
+	/** used to indicate large summary buckets is supported by caller */
+	public int SEARCH1_LARGE_BUCKETS = (0x00000080 | SEARCH1_SIGNATURE);
+	/** used to indicate to return SEARCH_MATCH_LARGE &amp; ilk */
+	public int SEARCH1_RET_LARGE_DATA = (0x00000100 | SEARCH1_SIGNATURE);
 
 	public int CWF_CONTINUE_ON_ERROR = 0x0001;		/*	Ignore compute errors */
 
