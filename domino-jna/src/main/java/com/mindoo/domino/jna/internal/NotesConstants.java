@@ -1007,7 +1007,7 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	 * the SEARCH2_* flags are passed to NSFSearchExt only &amp; mapped to SEARCH1_* flags
 	 * passed to NSFSearchExtended3
 	 */
-	/** return flag in orig structs if > MAXONESEGSIZE */
+	/** return flag in orig structs if &gt; MAXONESEGSIZE */
 	public int SEARCH2_LARGE_BUCKETS = 0x00000001;
 	/** return SEARCH_MATCH_LARGE etc structs */
 	public int SEARCH2_RET_LARGE_DATA = 0x00000002;
