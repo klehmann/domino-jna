@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,11 +29,16 @@ import org.junit.BeforeClass;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesDatabase.Encryption;
 import com.mindoo.domino.jna.NotesViewEntryData;
+import com.mindoo.domino.jna.constants.AclLevel;
+import com.mindoo.domino.jna.constants.CreateDatabase;
+import com.mindoo.domino.jna.constants.DBClass;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
 
 import lotus.domino.Database;
@@ -492,9 +499,69 @@ public class BaseJNATestClass {
 		}
 	}
 
+	@FunctionalInterface
+	public interface DatabaseConsumer {
+		public void accept(NotesDatabase db) throws Exception;
+	}
+	
+	public void withTempDb(DatabaseConsumer consumer) throws Exception {
+		File tmpFile = File.createTempFile("jnatmp_", ".nsf");
+		String tmpFilePath = tmpFile.getAbsolutePath();
+		tmpFile.delete();
+		
+		NotesDatabase.createDatabase("", tmpFilePath, DBClass.V10NOTEFILE, true,
+				EnumSet.of(CreateDatabase.LARGE_UNKTABLE), Encryption.None, 0, "Temp Db", 
+				AclLevel.MANAGER, IDUtils.getIdUsername(), true);
+		
+		NotesDatabase db = new NotesDatabase("", tmpFilePath, "");
+		try {
+			consumer.accept(db);
+		}
+		finally {
+			db.recycle();
+			NotesDatabase.deleteDatabase("", tmpFilePath);
+		}
+	}
+	
 	public static interface IDominoCallable<T> {
 
 		public T call(Session session) throws Exception;
 
+	}
+	
+	protected byte[] produceTestData(int size) {
+		byte[] data = new byte[size];
+
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				data[offset++] = (byte) (c & 0xff);
+			}
+		}
+
+		return data;
+	}
+
+	protected void produceTestData(int size, OutputStream out) throws IOException {
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				out.write((byte) (c & 0xff));
+				offset++;
+			}
+		}
+	}
+
+	protected void produceTestData(int size, Writer writer) throws IOException {
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				writer.write(c);
+				offset++;
+			}
+		}
 	}
 }
