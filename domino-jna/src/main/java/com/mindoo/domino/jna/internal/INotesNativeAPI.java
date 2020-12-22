@@ -14,7 +14,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -484,5 +483,6 @@ public interface INotesNativeAPI extends Library {
 			Memory pPassword,
 			KFM_PASSWORDStruct.ByReference retHashedPassword);
 	
+	public boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
 
 }

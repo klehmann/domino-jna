@@ -110,10 +110,10 @@ public class NotesSearch {
 	 * @param noteClasses noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, Set, Set, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, String viewTitle, final Set<Search> searchFlags, Set<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, null, viewTitle, searchFlags, NoteClass.toBitMaskInt(noteClasses), since, callback);
 	}
 	
@@ -174,10 +174,10 @@ public class NotesSearch {
 	 * @param noteClasses noteclasses to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, Set, Set, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, Map<String,String> columnFormulas, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate search(final NotesDatabase db, NotesIDTable searchFilter, final String formula, Map<String,String> columnFormulas, String viewTitle, final Set<Search> searchFlags, Set<NoteClass> noteClasses, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, columnFormulas, viewTitle, searchFlags, NoteClass.toBitMaskInt(noteClasses), since, callback);
 	}
 	
@@ -237,10 +237,10 @@ public class NotesSearch {
 	 * @param fileTypes filetypes to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, NotesIDTable, String, String, Set, Set, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate searchFiles(final NotesDatabase db, Object searchFilter, final String formula, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<FileType> fileTypes, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate searchFiles(final NotesDatabase db, Object searchFilter, final String formula, String viewTitle, final Set<Search> searchFlags, Set<FileType> fileTypes, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, null, viewTitle, searchFlags, FileType.toBitMaskInt(fileTypes), since, callback);
 	}
 	
@@ -301,10 +301,10 @@ public class NotesSearch {
 	 * @param fileTypes filetypes to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #searchFiles(NotesDatabase, Object, String, String, EnumSet, EnumSet, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #searchFiles(NotesDatabase, Object, String, String, Set, Set, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
-	public static NotesTimeDate searchFiles(final NotesDatabase db, Object searchFilter, final String formula, LinkedHashMap<String,String> columnFormulas, String viewTitle, final EnumSet<Search> searchFlags, EnumSet<FileType> fileTypes, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
+	public static NotesTimeDate searchFiles(final NotesDatabase db, Object searchFilter, final String formula, LinkedHashMap<String,String> columnFormulas, String viewTitle, final Set<Search> searchFlags, EnumSet<FileType> fileTypes, NotesTimeDate since, final SearchCallback callback) throws FormulaCompilationError {
 		return search(db, searchFilter, formula, columnFormulas, viewTitle, searchFlags, FileType.toBitMaskInt(fileTypes), since, callback);
 	}
 
@@ -365,11 +365,11 @@ public class NotesSearch {
 	 * @param noteClassMask bitmask of {@link NoteClass} or {@link FileType} to search
 	 * @param since The date of the earliest modified note that is matched. The note's "Modified in this file" date is compared to this date. Specify NULL if you do not wish any filtering by date.
 	 * @param callback callback to be called for every found note
-	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, EnumSet, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
+	 * @return The ending (current) time/date of this search. Returned so that it can be used in a subsequent call to {@link #search(NotesDatabase, Object, String, String, Set, int, NotesTimeDate, SearchCallback)} as the "Since" argument.
 	 * @throws FormulaCompilationError if formula syntax is invalid
 	 */
 	private static NotesTimeDate search(final NotesDatabase db, Object searchFilter, final String formula, Map<String,String> columnFormulas, String viewTitle,
-			final EnumSet<Search> searchFlags, int noteClassMask, NotesTimeDate since,
+			final Set<Search> searchFlags, int noteClassMask, NotesTimeDate since,
 			final SearchCallback callback) throws FormulaCompilationError {
 		if (db.isRecycled()) {
 			throw new NotesError(0, "Database already recycled");
@@ -390,7 +390,7 @@ public class NotesSearch {
 
 		LinkedHashMap<String,String> columnFormulasFixedOrder = columnFormulas==null ? null : new LinkedHashMap<>(columnFormulas);
 		
-		final EnumSet<Search> useSearchFlags = searchFlags.clone();
+		final EnumSet<Search> useSearchFlags = EnumSet.copyOf(searchFlags);
 		if (columnFormulasFixedOrder!=null) {
 			useSearchFlags.add(Search.SUMMARY);
 			useSearchFlags.add(Search.NOITEMNAMES);

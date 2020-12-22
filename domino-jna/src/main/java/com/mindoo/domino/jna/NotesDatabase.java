@@ -7829,4 +7829,12 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Creates a new empty/unselected {@link NotesNoteCollection} instance
+	 * 
+	 * @return note collection
+	 */
+	public NotesNoteCollection createNoteCollection() {
+		return new NotesNoteCollection(this);
+	}
 }

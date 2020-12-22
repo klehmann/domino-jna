@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.constants;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
 
@@ -111,7 +112,7 @@ public enum NoteClass {
 		return set;
 	}
 	
-	public static short toBitMask(EnumSet<NoteClass> noteClassSet) {
+	public static short toBitMask(Set<NoteClass> noteClassSet) {
 		int result = 0;
 		if (noteClassSet!=null) {
 			for (NoteClass currFind : values()) {
@@ -123,7 +124,7 @@ public enum NoteClass {
 		return (short) (result & 0xffff);
 	}
 	
-	public static int toBitMaskInt(EnumSet<NoteClass> noteClassSet) {
+	public static int toBitMaskInt(Set<NoteClass> noteClassSet) {
 		int result = 0;
 		if (noteClassSet!=null) {
 			for (NoteClass currFind : values()) {
@@ -135,4 +136,15 @@ public enum NoteClass {
 		return result;
 	}
 
+	public static boolean isDesignElement(Set<NoteClass> docClass) {
+		return docClass.contains(NoteClass.INFO) ||
+				docClass.contains(NoteClass.FORM) ||
+				docClass.contains(NoteClass.VIEW) ||
+				docClass.contains(NoteClass.ICON) ||
+				docClass.contains(NoteClass.DESIGN) ||
+				docClass.contains(NoteClass.HELP_INDEX) ||
+				docClass.contains(NoteClass.HELP) ||
+				docClass.contains(NoteClass.FILTER) ||
+				docClass.contains(NoteClass.FIELD);
+	}
 }

@@ -811,4 +811,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	public native void SECKFMCreatePassword(Memory pPassword, ByReference retHashedPassword);
 
+	@Override
+	public native boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
+
 }

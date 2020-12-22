@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.constants;
 
 import java.util.EnumSet;
+import java.util.Set;
 
 import com.mindoo.domino.jna.directory.DirectoryScanner;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -91,7 +92,7 @@ public enum FileType {
 		return set;
 	}
 	
-	public static short toBitMask(EnumSet<FileType> noteClassSet) {
+	public static short toBitMask(Set<FileType> noteClassSet) {
 		int result = 0;
 		if (noteClassSet!=null) {
 			for (FileType currFind : values()) {
@@ -103,7 +104,7 @@ public enum FileType {
 		return (short) (result & 0xffff);
 	}
 	
-	public static int toBitMaskInt(EnumSet<FileType> noteClassSet) {
+	public static int toBitMaskInt(Set<FileType> noteClassSet) {
 		int result = 0;
 		if (noteClassSet!=null) {
 			for (FileType currFind : values()) {

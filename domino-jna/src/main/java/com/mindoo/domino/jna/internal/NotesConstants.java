@@ -447,6 +447,24 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	/** display things that show up in agents list. No version filtering (for design) */
 	public static final String DFLAGPAT_AGENTSLIST = "-QXstmz{";
 
+	/** display only folders; no version filtering (for design) */
+	public static final String DFLAGPAT_FOLDER_ALL_VERSIONS = "*F";
+
+	/** display only GraphicViews; all notes &amp; web navs */
+	public String DFLAGPAT_VIEWMAP_DESIGN = "(+-04*G";
+
+	/** SiteMap notes (actually, "mQ345") */
+	public String DFLAGPAT_SITEMAP = "+m";
+	
+	/** display only database level script */
+	public String DFLAGPAT_DATABASESCRIPT = "+t";
+	
+	/** display only database global script libraries */
+	public String DFLAGPAT_SCRIPTLIB = "+sh.";
+	
+	/** display only shared data connection resources */
+	public String DFLAGPAT_DATA_CONNECTION_RESOURCE = "+k";
+
 	/** At least one of the "definition"
 	 * view items ($FORMULA, $COLLATION,
 	 * or $FORMULACLASS) has been modified
@@ -3947,6 +3965,24 @@ This allows an Editor to assume some Designer-level access */
 
 	/* only subforms; no version filtering */
 	public String DFLAGPAT_SUBFORM_ALL_VERSIONS = "+U";
+
+	/* display only shared image resources */
+	public String DFLAGPAT_IMAGE_RESOURCE = "+i";
+	/* display only shared style sheet resources */
+	public String DFLAGPAT_STYLE_SHEET_RESOURCE = "+=";
+	/* display only shared Java resources */
+	public String DFLAGPAT_JAVA_RESOURCE = "+@";
+
+	/* Shared actions must be visible to both Notes and the Web since there is
+	only one of these puppies - there is no list in the designer to get at
+	more than one.  However, for completeness, I'll make the appropriate
+	patterns for the day we may want to have separateness. */
+
+	public String DFLAGPAT_SACTIONS_DESIGN = "+y";
+	/* display only Frameset notes */
+	public String DFLAGPAT_FRAMESET = "(+-*#";
+	/* display WebPages	*/
+	public String DFLAGPAT_WEBPAGE = "(+-*W";
 
 	/*	Define function codes for SECKFMMakeSafeCopy */
 
