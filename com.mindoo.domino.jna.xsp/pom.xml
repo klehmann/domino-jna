@@ -15,7 +15,7 @@
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
-			<version>9.0.1</version>
+			<version>${domino.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

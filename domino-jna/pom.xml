@@ -17,6 +17,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
 		<jna.version>4.4.0</jna.version>
+		<domino.version>11.0.0</domino.version>
 	</properties>
 
 	<licenses>
@@ -152,17 +153,10 @@
 			<artifactId>jna</artifactId>
 			<version>4.5.1</version>
 		</dependency>
-		<!--
-		<dependency>
-		    <groupId>net.java.dev.jna</groupId>
-		    <artifactId>jna</artifactId>
-		    <version>5.5.0</version>
-		</dependency>		
-		-->
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
-			<version>11.0.0</version>
+			<version>${domino.version}</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
