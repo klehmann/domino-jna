@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -83,9 +84,9 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference32Struct;
 import com.mindoo.domino.jna.internal.structs.html.HTMLAPIReference64Struct;
 import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStruct;
+import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
 import com.mindoo.domino.jna.mime.NotesMimeUtils;
-import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -7441,4 +7442,19 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		});
 	}
+	
+	public Set<String> getItemNames() {
+		Set<String> itemNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		getItems("", new IItemCallback() {
+
+			@Override
+			public Action itemFound(NotesItem item) {
+				itemNames.add(item.getName());
+				return Action.Continue;
+			}
+		});
+		
+		return itemNames;
+	}
+	
 }

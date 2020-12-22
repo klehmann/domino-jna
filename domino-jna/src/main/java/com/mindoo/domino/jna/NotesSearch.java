@@ -3,22 +3,29 @@ package com.mindoo.domino.jna;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import com.mindoo.domino.jna.NotesDatabase.DbMode;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.Action;
 import com.mindoo.domino.jna.NotesSearch.SearchCallback.NoteFlags;
 import com.mindoo.domino.jna.constants.FileType;
 import com.mindoo.domino.jna.constants.NoteClass;
+import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -27,10 +34,12 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.SearchMatchDecoder;
+import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.internal.ViewFormulaCompiler;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.sync.NotesOriginatorIdData;
+import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -389,6 +398,7 @@ public class NotesSearch {
 		
 		int searchFlagsBitMask = Search.toBitMaskStdFlagsInt(useSearchFlags);
 		int search1FlagsBitMask = Search.toBitMaskSearch1Flags(useSearchFlags);
+		search1FlagsBitMask = search1FlagsBitMask | NotesConstants.SEARCH1_LARGE_BUCKETS;
 		
 		final String[] columnItemNames = columnFormulasFixedOrder==null ? new String[0] : columnFormulasFixedOrder.keySet().toArray(new String[0]);
 		
@@ -406,11 +416,18 @@ public class NotesSearch {
 					ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 					
 					IItemTableData itemTableData=null;
+					NotesNote note=null;
 					try {
 						boolean isMatch = formula==null || searchMatch.matchesFormula();
 						
 						if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
-							if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
+							if (searchMatch.isLargeSummary()) {
+								//getting summary data for large summary docs is unsupported <=V11,
+								//so open the note instead and create a fake IItemTableData
+								note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
+								itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+							}
+							else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
 								boolean convertNotesTimeDateToCalendar = false;
 								
@@ -456,6 +473,9 @@ public class NotesSearch {
 					finally {
 						if (itemTableData!=null) {
 							itemTableData.free();
+						}
+						if (note!=null) {
+							note.recycle();
 						}
 					}
 				}
@@ -515,19 +535,14 @@ public class NotesSearch {
 //					filterFlags = NotesConstants.SEARCH_FILTER_FOLDER;
 				}
 				
-				int searchFlags1 = 0;
-				int searchFlags2 = 0;
-				int searchFlags3 = 0;
-				int searchFlags4 = 0;
-
 				final long hFormulaFinal = hFormula;
 				final int hFilterFinal = hFilter;
 				final int filterFlagsFinal = filterFlags;
 				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
-				final int searchFlags1Final = searchFlags1;
-				final int searchFlags2Final = searchFlags2;
-				final int searchFlags3Final = searchFlags3;
-				final int searchFlags4Final = searchFlags4;
+				final int searchFlags1Final = search1FlagsBitMask;
+				final int searchFlags2Final = 0;
+				final int searchFlags3Final = 0;
+				final int searchFlags4Final = 0;
 				final int noteClassMaskFinal = noteClassMask;
 
 				final long hNamesList;
@@ -608,11 +623,18 @@ public class NotesSearch {
 						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 
 						IItemTableData itemTableData=null;
+						NotesNote note=null;
 						try {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
-								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
+								if (searchMatch.isLargeSummary()) {
+									//getting summary data for large summary docs is unsupported <=V11,
+									//so open the note instead and create a fake IItemTableData
+									note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
+									itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+								}
+								else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									boolean convertNotesTimeDateToCalendar = false;
 									
@@ -658,6 +680,9 @@ public class NotesSearch {
 							if (itemTableData!=null) {
 								itemTableData.free();
 							}
+							if (note!=null) {
+								note.recycle();
+							}
 						}
 					}
 
@@ -673,11 +698,18 @@ public class NotesSearch {
 						ISearchMatch searchMatch = SearchMatchDecoder.decodeSearchMatch(searchMatchPtr);
 						
 						IItemTableData itemTableData=null;
+						NotesNote note=null;
 						try {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
-								if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
+								if (searchMatch.isLargeSummary()) {
+									//getting summary data for large summary docs is unsupported <=V11,
+									//so open the note instead and create a fake IItemTableData
+									note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
+									itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+								}
+								else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
 									boolean convertNotesTimeDateToCalendar = false;
 									
@@ -723,11 +755,12 @@ public class NotesSearch {
 							if (itemTableData!=null) {
 								itemTableData.free();
 							}
+							if (note!=null) {
+								note.recycle();
+							}
 						}
 					}
-
 				};
-
 			}
 
 			//formulaName only required of formula is used for collection columns
@@ -787,7 +820,7 @@ public class NotesSearch {
 				final int hFilterFinal = hFilter;
 				final int filterFlagsFinal = filterFlags;
 				final int searchFlagsBitMaskFinal = searchFlagsBitMask;
-				final int searchFlags1Final = 0;
+				final int searchFlags1Final = search1FlagsBitMask;
 				final int searchFlags2Final = 0;
 				final int searchFlags3Final = 0;
 				final int searchFlags4Final = 0;
@@ -1095,4 +1128,324 @@ public class NotesSearch {
 		public NotesTimeDate getSeqTime();
 		
 	}
+	
+	/**
+	 * Adapter that maps the {@link IItemTableData} interface onto a docunent
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	private static class ItemTableDataDocAdapter implements IItemTableData {
+		private NotesNote m_doc;
+		private LinkedHashMap<String,String> m_columnValues;
+		private boolean m_preferTimeDate = true;
+		private Map<String,List<Object>> m_docValues;
+		private TypedItemAccess m_typedItems;
+		private Map<String,FormulaExecution> m_compiledFormulas;
+		private Map<String,List<Object>> m_compiledFormulaValues;
+		private String[] m_itemNames;
+		
+		public ItemTableDataDocAdapter(NotesNote doc, LinkedHashMap<String,String> columnValues) {
+			m_doc = doc;
+			m_docValues = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+			m_compiledFormulas = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+			m_compiledFormulaValues  = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+			
+			m_typedItems = new TypedItemAccess() {
+				
+				@Override
+				public Object get(String itemName) {
+					checkDisposed();
+					
+					if (m_columnValues!=null) {
+						String formulaStr = m_columnValues.get(itemName);
+
+						if (StringUtil.isEmpty(formulaStr)) {
+							return m_doc.getItemValue(itemName);
+						}
+						else {
+							List<Object> computedValues = m_compiledFormulaValues.get(itemName);
+							if (computedValues==null) {
+								FormulaExecution compiledFormula = m_compiledFormulas.get(itemName);
+								if (compiledFormula==null) {
+									compiledFormula = new FormulaExecution(formulaStr);
+									m_compiledFormulas.put(itemName, compiledFormula);
+								}
+								computedValues = compiledFormula.evaluate(m_doc);
+								m_compiledFormulaValues.put(itemName, computedValues);
+							}
+							return computedValues;
+						}
+					}
+					else {
+						return m_doc.getItemValue(itemName);
+					}
+				}
+			};
+		}
+		
+		@Override
+		public Object get(String itemName) {
+			return m_typedItems.get(itemName);
+		}
+		
+		@Override
+		public Calendar getAsCalendar(String itemName, Calendar defaultValue) {
+			return m_typedItems.getAsCalendar(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<Calendar> getAsCalendarList(String itemName, List<Calendar> defaultValue) {
+			return m_typedItems.getAsCalendarList(itemName, defaultValue);
+		}
+		
+		@Override
+		public Double getAsDouble(String itemName, Double defaultValue) {
+			return m_typedItems.getAsDouble(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<Double> getAsDoubleList(String itemName, List<Double> defaultValue) {
+			return m_typedItems.getAsDoubleList(itemName, defaultValue);
+		}
+		
+		@Override
+		public Integer getAsInteger(String itemName, Integer defaultValue) {
+			return m_typedItems.getAsInteger(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<Integer> getAsIntegerList(String itemName, List<Integer> defaultValue) {
+			return m_typedItems.getAsIntegerList(itemName, defaultValue);
+		}
+		
+		@Override
+		public String getAsNameAbbreviated(String itemName) {
+			return m_typedItems.getAsNameAbbreviated(itemName);
+		}
+		
+		@Override
+		public String getAsNameAbbreviated(String itemName, String defaultValue) {
+			return m_typedItems.getAsNameAbbreviated(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<String> getAsNamesListAbbreviated(String itemName) {
+			return m_typedItems.getAsNamesListAbbreviated(itemName);
+		}
+		
+		@Override
+		public List<String> getAsNamesListAbbreviated(String itemName, List<String> defaultValue) {
+			return m_typedItems.getAsNamesListAbbreviated(itemName, defaultValue);
+		}
+		
+		@Override
+		public String getAsString(String itemName, String defaultValue) {
+			return m_typedItems.getAsString(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<String> getAsStringList(String itemName, List<String> defaultValue) {
+			return m_typedItems.getAsStringList(itemName, defaultValue);
+		}
+		
+		@Override
+		public NotesTimeDate getAsTimeDate(String itemName, NotesTimeDate defaultValue) {
+			return m_typedItems.getAsTimeDate(itemName, defaultValue);
+		}
+		
+		@Override
+		public List<NotesTimeDate> getAsTimeDateList(String itemName, List<NotesTimeDate> defaultValue) {
+			return m_typedItems.getAsTimeDateList(itemName, defaultValue);
+		}
+		
+		@Override
+		public Object getItemValue(int index) {
+			String[] itemNames = getItemNames();
+			String itemName = itemNames[index];
+			return get(itemName);
+		}
+
+		@Override
+		public int getItemDataType(int index) {
+			String[] itemNames = getItemNames();
+			String itemName = itemNames[index];
+			
+			if (m_columnValues!=null) {
+				String formulaStr = m_columnValues.get(itemName);
+				if (StringUtil.isEmpty(formulaStr)) {
+					NotesItem item = m_doc.getFirstItem(itemName);
+					return item==null ? 0 : item.getType();
+				}
+				else {
+					List<Object> computedValues = m_compiledFormulaValues.get(itemName);
+					if (computedValues==null) {
+						FormulaExecution compiledFormula = m_compiledFormulas.get(itemName);
+						if (compiledFormula==null) {
+							compiledFormula = new FormulaExecution(formulaStr);
+							m_compiledFormulas.put(itemName, compiledFormula);
+						}
+						computedValues = compiledFormula.evaluate(m_doc);
+						m_compiledFormulaValues.put(itemName, computedValues);
+					}
+					
+					if (computedValues!=null) {
+						if (!computedValues.isEmpty()) {
+							Object firstVal = computedValues.get(0);
+							if (firstVal instanceof String) {
+								return NotesItem.TYPE_TEXT_LIST;
+							}
+							else if (firstVal instanceof NotesTimeDate) {
+								return NotesItem.TYPE_TIME_RANGE;
+							}
+							else if (firstVal instanceof Number) {
+								return NotesItem.TYPE_NUMBER_RANGE;
+							}
+						}
+						else {
+							return NotesItem.TYPE_TEXT;
+						}
+					}
+					return 0;
+				}
+			}
+			else {
+				NotesItem item = m_doc.getFirstItem(itemName);
+				return item==null ? 0 : item.getType();
+			}
+		}
+
+		@Override
+		public int getItemsCount() {
+			return getItemNames().length;
+		}
+
+		@Override
+		public void setPreferNotesTimeDates(boolean b) {
+			m_preferTimeDate  = b;
+		}
+
+		@Override
+		public boolean isPreferNotesTimeDates() {
+			return m_preferTimeDate;
+		}
+
+		@Override
+		public boolean has(String itemName) {
+			String[] itemNames = getItemNames();
+			for (String currItemName : itemNames) {
+				if (itemName.equalsIgnoreCase(currItemName)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		@Override
+		public String[] getItemNames() {
+			if (m_itemNames==null) {
+				if (m_columnValues!=null) {
+					Set<String> keys = m_columnValues.keySet();
+					m_itemNames = keys.toArray(new String[keys.size()]);
+				}
+				else {
+					Set<String> docItemNames = m_doc.getItemNames();
+					m_itemNames = docItemNames.toArray(new String[docItemNames.size()]);
+				}
+			}
+			return m_itemNames;
+		}
+
+		@Override
+		public Map<String, Object> asMap() {
+			return asMap(true);
+		}
+
+		@Override
+		public Map<String, Object> asMap(boolean decodeLMBCS) {
+			String[] itemNames = getItemNames();
+			
+			Map<String,Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+			int itemCount = getItemsCount();
+			for (int i=0; i<itemCount; i++) {
+				Object val = getItemValue(i);
+				
+				if (val instanceof LMBCSString) {
+					if (decodeLMBCS) {
+						data.put(itemNames[i], ((LMBCSString)val).getValue());
+					}
+					else {
+						data.put(itemNames[i], val);
+					}
+				}
+				else if(!isPreferNotesTimeDates() && val instanceof NotesTimeDate) {
+					data.put(itemNames[i], NotesDateTimeUtils.timeDateToCalendar((NotesTimeDate)val));
+				}
+				else if (val instanceof List) {
+					if (decodeLMBCS) {
+						//check for LMBCS strings and JNADominoDateTime
+						List<?> valAsList = (List<?>) val;
+						boolean hasLMBCS = false;
+						boolean hasTimeDate = false;
+						
+						for (int j=0; j<valAsList.size(); j++) {
+							if (valAsList.get(j) instanceof LMBCSString) {
+								hasLMBCS = true;
+								break;
+							}
+							else if (!isPreferNotesTimeDates() && valAsList.get(j) instanceof NotesTimeDate) {
+								hasTimeDate = true;
+								break;
+							}
+						}
+						
+						if (hasLMBCS || hasTimeDate) {
+							List<Object> convList = new ArrayList<Object>(valAsList.size());
+							for (int j=0; j<valAsList.size(); j++) {
+								Object currObj = valAsList.get(j);
+								if (currObj instanceof LMBCSString) {
+									convList.add(((LMBCSString)currObj).getValue());
+								}
+								else if (!isPreferNotesTimeDates() && currObj instanceof NotesTimeDate) {
+									convList.add(NotesDateTimeUtils.timeDateToCalendar((NotesTimeDate)currObj));
+								}
+								else {
+									convList.add(currObj);
+								}
+							}
+							data.put(itemNames[i], convList);
+						}
+						else {
+							data.put(itemNames[i], val);
+						}
+					}
+					else {
+						data.put(itemNames[i], val);
+					}
+				}
+				else {
+					data.put(itemNames[i], val);
+				}
+			}
+			return data;
+		}
+
+		private void checkDisposed() {
+			if (isFreed()) {
+				throw new NotesError("Document already disposed");
+			}
+		}
+		
+		@Override
+		public void free() {
+			if (!m_doc.isRecycled()) {
+				m_doc.recycle();
+			}
+		}
+
+		@Override
+		public boolean isFreed() {
+			return m_doc.isRecycled();
+		}
+	}
+	
 }
