@@ -3,9 +3,7 @@ package com.mindoo.domino.jna.html;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.EnumSet;
 
-import com.mindoo.domino.jna.NotesNote.HtmlConvertOption;
 import com.mindoo.domino.jna.NotesNote.IHtmlItemImageConversionCallback;
 
 /**
@@ -45,11 +43,12 @@ public interface IHtmlImageRef {
 	public int getItemOffset();
 	
 	/**
-	 * Returns the conversion options used for the richtext-html conversion
+	 * Returns the conversion properties used for the
+	 * richtext-html conversion
 	 * 
-	 * @return conversion options
+	 * @return conversion properties
 	 */
-	public EnumSet<HtmlConvertOption> getOptions();
+	public HtmlConvertProperties getProperties();
 	
 	/**
 	 * Method to directly access the image data

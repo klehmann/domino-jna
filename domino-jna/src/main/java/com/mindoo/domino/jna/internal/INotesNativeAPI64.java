@@ -1164,10 +1164,15 @@ public interface INotesNativeAPI64 extends Library {
 			long hHTML,
 			long PropertyType,
 			Pointer pProperty);
+	
+	@UndocumentedAPI
+	public short HTMLGetPropertyV (long hHTML,
+			 long PropertyType, Pointer pProperty, int count);
+
 	public short HTMLSetProperty(
-			int hHTML,
+			long hHTML,
 			long PropertyType,
-			Memory pProperty);
+			Pointer pProperty);
 	public short HTMLGetText(
 			long hHTML,
 			int startingOffset,
@@ -1846,5 +1851,11 @@ public interface INotesNativeAPI64 extends Library {
 
 	@UndocumentedAPI
 	public short AssistantGetLSDataNote (long hDB, int NoteID, NotesUniversalNoteIdStruct.ByReference retUNID);
+
+	@UndocumentedAPI
+	public short NSFRemoteConsoleAsync(Memory ServerName, Memory ConsoleCommand, int Flags,
+            LongByReference phConsoleText, LongByReference phTasksText, LongByReference phUsersText,
+            ShortByReference pSignals, IntByReference pConsoleBufferID, long hQueue,
+            NotesCallbacks.ASYNCNOTIFYPROC Proc, Pointer Param, PointerByReference retactx);
 
 }

@@ -243,4 +243,8 @@ public interface NotesCallbacks {
 		void invoke(Pointer message);
 	}
 
+	interface ASYNCNOTIFYPROC extends Callback {
+		void invoke(Pointer vactx, Pointer pvReadCtx);
+	}
+	
 }

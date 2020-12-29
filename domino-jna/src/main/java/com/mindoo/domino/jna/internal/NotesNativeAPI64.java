@@ -4,6 +4,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ASYNCNOTIFYPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.REGSIGNALPROC;
@@ -995,10 +996,14 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			long hHTML,
 			long PropertyType,
 			Pointer pProperty);
+	
+	@Override
+	public native short HTMLGetPropertyV(long hHTML, long PropertyType, Pointer pProperty, int count);
+	
 	public native short HTMLSetProperty(
-			int hHTML,
+			long hHTML,
 			long PropertyType,
-			Memory pProperty);
+			Pointer pProperty);
 	public native short HTMLGetText(
 			long hHTML,
 			int startingOffset,
@@ -1539,5 +1544,10 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short AssistantGetLSDataNote(long hDB, int NoteID,
 			NotesUniversalNoteIdStruct.ByReference retUNID);
 
+	@Override
+	public native short NSFRemoteConsoleAsync(Memory ServerName, Memory ConsoleCommand, int Flags,
+			LongByReference phConsoleText, LongByReference phTasksText, LongByReference phUsersText,
+			ShortByReference pSignals, IntByReference pConsoleBufferID, long hQueue, ASYNCNOTIFYPROC Proc,
+			Pointer Param, PointerByReference retactx);
 }
 

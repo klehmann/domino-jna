@@ -483,6 +483,7 @@ public interface INotesNativeAPI extends Library {
 			Memory pPassword,
 			KFM_PASSWORDStruct.ByReference retHashedPassword);
 	
+	@UndocumentedAPI
 	public boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
 
 }

@@ -1997,6 +1997,7 @@ This allows an Editor to assume some Designer-level access */
 	public int HTMLAPI_PROP_NUMREFS = 1;
 	public int HTMLAPI_PROP_USERAGENT_LEN = 3;
 	public int HTMLAPI_PROP_USERAGENT = 4;
+	public int HTMLAPI_PROP_LINKHANDLING = 5;
 	public int HTMLAPI_PROP_BINARYDATA = 6;
 	public int HTMLAPI_PROP_MIMEMAXLINELENSEEN = 102;
 	
@@ -3994,5 +3995,12 @@ This allows an Editor to assume some Designer-level access */
 	
 	/** Create a safe-copy containing the "pending" RSA keys if any, else use the "active" RSA keys. */
 	public short KFM_safecopy_NewestKey = 2;
+
+	public int REMCON_GET_CONSOLE = 0x000000001;
+	public int REMCON_GET_TASKS = 0x000000002;
+	public int REMCON_GET_USERS = 0x000000004;
+	public int REMCON_CMD_ONLY = 0x000000008;
+	public int REMCON_GET_CONSOLE_META = 0x000000010;
+	public int REMCON_SYNC = 0x000000020;
 
 }

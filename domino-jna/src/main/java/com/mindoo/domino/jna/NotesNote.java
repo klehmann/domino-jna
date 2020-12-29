@@ -26,6 +26,7 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesMIMEPart.PartType;
@@ -46,6 +47,8 @@ import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.html.CommandId;
+import com.mindoo.domino.jna.html.HtmlConvertProperties;
+import com.mindoo.domino.jna.html.HtmlConvertProperties.HtmlLinkHandling;
 import com.mindoo.domino.jna.html.IHtmlApiReference;
 import com.mindoo.domino.jna.html.IHtmlApiUrlTargetComponent;
 import com.mindoo.domino.jna.html.IHtmlConversionResult;
@@ -2599,61 +2602,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		 */
 		public Action itemFound(NotesItem item);
 	}
-	
-	/**
-	 * Utility class to decode the item flag bitmask
-	 * 
-	 * @author Karsten Lehmann
-	 */
-	public static class ItemFlags {
-		private int m_itemFlags;
-		
-		public ItemFlags(int itemFlags) {
-			m_itemFlags = itemFlags;
-		}
-		
-		public int getBitMask() {
-			return m_itemFlags;
-		}
-		
-		public boolean isSigned() {
-			return (m_itemFlags & NotesConstants.ITEM_SIGN) == NotesConstants.ITEM_SIGN;
-		}
-		
-		public boolean isSealed() {
-			return (m_itemFlags & NotesConstants.ITEM_SEAL) == NotesConstants.ITEM_SEAL;
-		}
-		
-		public boolean isSummary() {
-			return (m_itemFlags & NotesConstants.ITEM_SUMMARY) == NotesConstants.ITEM_SUMMARY;
-		}
-		
-		public boolean isReadWriters() {
-			return (m_itemFlags & NotesConstants.ITEM_READWRITERS) == NotesConstants.ITEM_READWRITERS;
-		}
-		
-		public boolean isNames() {
-			return (m_itemFlags & NotesConstants.ITEM_NAMES) == NotesConstants.ITEM_NAMES;
-		}
-		
-		public boolean isPlaceholder() {
-			return (m_itemFlags & NotesConstants.ITEM_PLACEHOLDER) == NotesConstants.ITEM_PLACEHOLDER;
-		}
-		
-		public boolean isProtected() {
-			return (m_itemFlags & NotesConstants.ITEM_PROTECTED) == NotesConstants.ITEM_PROTECTED;
-		}
-		
-		public boolean isReaders() {
-			return (m_itemFlags & NotesConstants.ITEM_READERS) == NotesConstants.ITEM_READERS;
-		}
-		
-		public boolean isUnchanged() {
-			return (m_itemFlags & NotesConstants.ITEM_UNCHANGED) == NotesConstants.ITEM_UNCHANGED;
-		}
 
-	}
-	
 	/**
 	 * Scans through all items of this note
 	 * 
@@ -4997,32 +4946,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		public Action read(byte[] data);
 	}
 	
-	public enum HtmlConvertOption {
-		/** Forces all sections to be expanded, regardless of their expansion in the Notes® rich text fields. */
-		ForceSectionExpand,
-		/** Forces alternate formatting of tables with tabbed sections.<br>
-		 * All of the tabs are displayed at the same time, one below the other, with the tab labels included as headers. */
-		RowAtATimeTableAlt,
-		/** Forces all outlines to be expanded, regardless of their expansion in the Notes rich text. */
-		ForceOutlineExpand,
-		/** Disables passthru HTML, treating the HTML as plain text. */
-		DisablePassThruHTML,
-		/** Preserves Notes intraline whitespace (spaces between characters). */
-		TextExactSpacing,
-		/** use styles instead of &lt;FONT&gt; tags */
-		FontConversion,
-		/** enable new code for better representation of indented lists */
-		ListFidelity;
-		
-		public static String[] toStringArray(EnumSet<HtmlConvertOption> options) {
-			List<String> optionsAsStrList = new ArrayList<String>(options.size());
-			for (HtmlConvertOption currOption : options) {
-				optionsAsStrList.add(currOption.toString()+"=1");
-			}
-			return optionsAsStrList.toArray(new String[optionsAsStrList.size()]);
-		}
-	}
-	
+
 	/**
 	 * Convenience method to read the binary data of a {@link IHtmlImageRef}
 	 * 
@@ -5033,9 +4957,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		String itemName = image.getItemName();
 		int itemIndex = image.getItemIndex();
 		int itemOffset = image.getItemOffset();
-		EnumSet<HtmlConvertOption> options = image.getOptions();
+		HtmlConvertProperties props = image.getProperties();
 		
-		convertHtmlElement(itemName, options, itemIndex, itemOffset, callback);
+		convertHtmlElement(itemName, props, itemIndex, itemOffset, callback);
 	}
 	
 	/**
@@ -5043,45 +4967,25 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * from the img tag path like this: 1.3E =&gt; index=1, offset=63
 	 * 
 	 * @param itemName  rich text field which is being converted
-	 * @param options conversion options
+	 * @param props conversion properties
 	 * @param itemIndex the relative item index -- if there is more than one, Item with the same pszItemName, then this indicates which one (zero relative)
 	 * @param itemOffset byte offset in the Item where the element starts
 	 * @param callback callback to receive the data
 	 */
-	public void convertHtmlElement(String itemName, EnumSet<HtmlConvertOption> options, int itemIndex, int itemOffset, IHtmlItemImageConversionCallback callback) {
+	public void convertHtmlElement(String itemName, HtmlConvertProperties props, int itemIndex, int itemOffset, IHtmlItemImageConversionCallback callback) {
 		checkHandle();
 		
-		LongByReference phHTML64 = new LongByReference();
-		IntByReference phHTML32 = new IntByReference();
-		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().HTMLCreateConverter(phHTML64);
-		}
-		else {
-			result = NotesNativeAPI32.get().HTMLCreateConverter(phHTML32);
-		}
-		NotesErrorUtils.checkResult(result);
-		
-		long hHTML64 = phHTML64.getValue();
-		int hHTML32 = phHTML32.getValue();
+		HtmlConverter htmlConverter = setupHtmlConverter(props);
 		
 		try {
-			if (!options.isEmpty()) {
-				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
-				}
-				else {
-					result = NotesNativeAPI32.get().HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
-				}
-				NotesErrorUtils.checkResult(result);
-			}
+			long hHTML64 = htmlConverter.getHandle64();
+			int hHTML32 = htmlConverter.getHandle32();
 
 			Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 
 			int totalLen;
-			
 			int skip;
+			short result;
 			
 			if (PlatformUtils.is64Bit()) {
 				result = NotesNativeAPI64.get().HTMLConvertElement(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem, itemIndex, itemOffset);
@@ -5132,69 +5036,48 @@ public class NotesNote implements IRecyclableNotesObject {
 			}
 		}
 		finally {
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().HTMLDestroyConverter(hHTML64);
-			}
-			else {
-				result = NotesNativeAPI32.get().HTMLDestroyConverter(hHTML32);
-			}
-			NotesErrorUtils.checkResult(result);
+			htmlConverter.recycle();
 		}
 	}
 
 	/**
 	 * Method to convert the whole note to HTML
 	 * 
-	 * @param options conversion options
+	 * @param props conversion properties
 	 * @return conversion result
 	 */
-	public IHtmlConversionResult convertNoteToHtml(EnumSet<HtmlConvertOption> options) {
-		return convertNoteToHtml(options, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
+	public IHtmlConversionResult convertNoteToHtml(HtmlConvertProperties props) {
+		return internalConvertItemToHtml(null, props, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
 	}
 
-	/**
-	 * Method to convert the whole note to HTML with additional filters for the
-	 * data returned in the conversion result
-	 * 
-	 * @param options conversion options
-	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
-	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
-	 * @return conversion result
-	 */
-	public IHtmlConversionResult convertNoteToHtml(EnumSet<HtmlConvertOption> options,
-			EnumSet<ReferenceType> refTypeFilter,
-			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
-		return internalConvertItemToHtml(null, options, refTypeFilter, targetTypeFilter);
-	}
-	
 	/**
 	 * Method to convert a single item of this note to HTML
 	 * 
 	 * @param itemName item name
-	 * @param options conversion options
+	 * @param props conversion properties
 	 * @return conversion result
 	 */
-	public IHtmlConversionResult convertItemToHtml(String itemName, EnumSet<HtmlConvertOption> options) {
-		return convertItemToHtml(itemName, options, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
+	public IHtmlConversionResult convertItemToHtml(String itemName, HtmlConvertProperties props) {
+		return convertItemToHtml(itemName, props, (EnumSet<ReferenceType>) null, (Map<ReferenceType,EnumSet<TargetType>>) null);
 	}
-	
+
 	/**
 	 * Method to convert a single item of this note to HTML with additional filters for the
 	 * data returned in the conversion result
 	 * 
 	 * @param itemName item name
-	 * @param options conversion options
+	 * @param props conversion properties
 	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
 	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
 	 * @return conversion result
 	 */
-	public IHtmlConversionResult convertItemToHtml(String itemName, EnumSet<HtmlConvertOption> options,
+	public IHtmlConversionResult convertItemToHtml(String itemName, HtmlConvertProperties props,
 			EnumSet<ReferenceType> refTypeFilter,
 			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
 		if (StringUtil.isEmpty(itemName))
 			throw new NullPointerException("Item name cannot be null");
 		
-		return internalConvertItemToHtml(itemName, options, refTypeFilter, targetTypeFilter);
+		return internalConvertItemToHtml(itemName, props, refTypeFilter, targetTypeFilter);
 	}
 
 	/**
@@ -5205,12 +5088,13 @@ public class NotesNote implements IRecyclableNotesObject {
 	private class HtmlConversionResult implements IHtmlConversionResult {
 		private String m_html;
 		private List<IHtmlApiReference> m_references;
-		private EnumSet<HtmlConvertOption> m_options;
+		private HtmlConvertProperties m_props;
 		
-		private HtmlConversionResult(String html, List<IHtmlApiReference> references, EnumSet<HtmlConvertOption> options) {
+		private HtmlConversionResult(String html, List<IHtmlApiReference> references,
+				HtmlConvertProperties props) {
 			m_html = html;
 			m_references = references;
-			m_options = options;
+			m_props = props;
 		}
 		
 		@Override
@@ -5302,8 +5186,8 @@ public class NotesNote implements IRecyclableNotesObject {
 				}
 				
 				@Override
-				public EnumSet<HtmlConvertOption> getOptions() {
-					return m_options;
+				public HtmlConvertProperties getProperties() {
+					return m_props;
 				}
 				
 				@Override
@@ -5465,17 +5349,13 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Internal method doing the HTML conversion work
+	 * Creates a new {@link HtmlConverter} preconfigured with the
+	 * specified conversion properties
 	 * 
-	 * @param itemName item name to be converted or null for whole note
-	 * @param options conversion options
-	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
-	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
-	 * @return conversion result
+	 * @param props conversion properties
+	 * @return HTML converter
 	 */
-	private IHtmlConversionResult internalConvertItemToHtml(String itemName,
-			EnumSet<HtmlConvertOption> options, EnumSet<ReferenceType> refTypeFilter,
-			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
+	private HtmlConverter setupHtmlConverter(HtmlConvertProperties props) {
 		checkHandle();
 		
 		LongByReference phHTML64 = new LongByReference();
@@ -5486,26 +5366,258 @@ public class NotesNote implements IRecyclableNotesObject {
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64.get().HTMLCreateConverter(phHTML64);
+			NotesErrorUtils.checkResult(result);
 		}
 		else {
 			result = NotesNativeAPI32.get().HTMLCreateConverter(phHTML32);
+			NotesErrorUtils.checkResult(result);
 		}
-		NotesErrorUtils.checkResult(result);
-		
+
 		long hHTML64 = phHTML64.getValue();
 		int hHTML32 = phHTML32.getValue();
+
+		HtmlConverter converter;
+		if (PlatformUtils.is64Bit()) {
+			converter = new HtmlConverter(hHTML64);
+		}
+		else {
+			converter = new HtmlConverter(hHTML32);
+		}
+		NotesGC.__objectCreated(HtmlConverter.class, converter);
 		
-		try {
-			if (!options.isEmpty()) {
-				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().HTMLSetHTMLOptions(hHTML64, new StringArray(HtmlConvertOption.toStringArray(options)));
-				}
-				else {
-					result = NotesNativeAPI32.get().HTMLSetHTMLOptions(hHTML32, new StringArray(HtmlConvertOption.toStringArray(options)));
+		String userAgent = props.getUserAgent();
+		if (!StringUtil.isEmpty(userAgent)) {
+			//not sure if this is of any use; tried @BrowserInfo("BrowserType") / @BrowserInfo("Platform")
+			//without success
+			Memory userAgentMem = NotesStringUtils.toLMBCS(userAgent, true);
+			
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLSetProperty(hHTML64,
+						NotesConstants.HTMLAPI_PROP_USERAGENT, userAgentMem);
+				if (result!=0) {
+					converter.checkError();
 				}
 				NotesErrorUtils.checkResult(result);
 			}
+			else {
+				result = NotesNativeAPI32.get().HTMLSetProperty(hHTML32,
+						NotesConstants.HTMLAPI_PROP_USERAGENT, userAgentMem);
+				if (result!=0) {
+					converter.checkError();
+				}
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+		
+		if (props.getLinkHandling()!=null && props.getLinkHandling()!=HtmlLinkHandling.FOREIGN_LINKS_REDIRECTED) {
+			Memory linkHandling = new Memory(2);
+			linkHandling.setShort(0, props.getLinkHandling().getValue());
+			
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLSetProperty(hHTML64,
+						NotesConstants.HTMLAPI_PROP_LINKHANDLING, linkHandling);
+				if (result!=0) {
+					converter.checkError();
+				}
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = NotesNativeAPI32.get().HTMLSetProperty(hHTML32,
+						NotesConstants.HTMLAPI_PROP_LINKHANDLING, linkHandling);
+				if (result!=0) {
+					converter.checkError();
+				}
+				NotesErrorUtils.checkResult(result);
+			}
+		}
 
+		Map<String,String> htmlOptions = props.getOptions();
+		if (!htmlOptions.isEmpty()) {
+			List<String> keyValuePairs = htmlOptions
+					.entrySet()
+					.stream()
+					.map((entry) -> {
+						return entry.getKey() + "=" + entry.getValue();
+					})
+					.collect(Collectors.toList());
+			String[] keyValuePairsArr = keyValuePairs.toArray(new String[keyValuePairs.size()]);
+			
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLSetHTMLOptions(hHTML64, new StringArray(keyValuePairsArr));
+				if (result!=0) {
+					converter.checkError();
+				}
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = NotesNativeAPI32.get().HTMLSetHTMLOptions(hHTML32, new StringArray(keyValuePairsArr));
+				if (result!=0) {
+					converter.checkError();
+				}
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+	
+		return converter;
+	}
+	
+	private static class HtmlConverter implements IRecyclableNotesObject {
+		private long m_hHTML64;
+		private int m_hHTML32;
+		
+		public HtmlConverter(long hHTML) {
+			m_hHTML64 = hHTML;
+		}
+
+		public HtmlConverter(int hHTML) {
+			m_hHTML32 = hHTML;
+		}
+
+		/**
+		 * Checks if there is an error text in the converter from the last
+		 * conversion operation. Throws a {@link NotesError} if this is the case
+		 */
+		public void checkError() {
+			if (isRecycled()) {
+				return;
+			}
+			
+			short result;
+			Memory retErrorLen = new Memory(4);
+			retErrorLen.clear();
+			
+			//read property HTMLAPI_PROP_ERRORTEXT_LEN (301) - Length of the ERRORSTRING property
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLGetProperty(m_hHTML64, 301, retErrorLen);
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = NotesNativeAPI32.get().HTMLGetProperty(m_hHTML32, 301, retErrorLen);
+				NotesErrorUtils.checkResult(result);
+			}
+			
+			int errorLen = retErrorLen.getInt(0);
+			if (errorLen==0) {
+				//no error
+				return;
+			}
+			
+			Memory retErrorText = new Memory(errorLen+1);
+			retErrorText.clear();
+			
+			//read property HTMLAPI_PROP_ERRORTEXT (302) - error string
+			/* (r char *)  NULL-terminated string.
+			  If the most recent "Convert" or other operation resulted in a
+			  status != NOERROR, this string may contain a text description of
+			  that error.  
+			
+			  Read this with HTMLGetPropertyV.  The output string buffer must be sized
+			  at PROP_ERRORSTRING_LEN + 1
+			  If PROP_ERRORSTRING_LEN == 0 and PROP_ERRORSTRING is read,
+			  the string buffer must be at least 1 byte and will be assigned
+			  the '\0' character.
+			
+			  There is no way to set the language of the error string.
+			*/	
+
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLGetPropertyV(m_hHTML64, 301, retErrorText, 0);
+				NotesErrorUtils.checkResult(result);
+			}
+			else {
+				result = NotesNativeAPI32.get().HTMLGetPropertyV(m_hHTML32, 301, retErrorText, 0);
+				NotesErrorUtils.checkResult(result);
+			}
+			
+			String errorTxt = NotesStringUtils.fromLMBCS(retErrorText, errorLen);
+			if (StringUtil.isEmpty(errorTxt)) {
+				return;
+			}
+			
+			throw new NotesError("HtmlConverter error: "+errorTxt);
+		}
+		
+		private void checkHandle() {
+			if (PlatformUtils.is64Bit()) {
+				if (m_hHTML64==0)
+					throw new NotesError(0, "HtmlConverter already recycled");
+				NotesGC.__b64_checkValidObjectHandle(NotesNote.class, m_hHTML64);
+			}
+			else {
+				if (m_hHTML32==0)
+					throw new NotesError(0, "HtmlConverter already recycled");
+				NotesGC.__b64_checkValidObjectHandle(NotesNote.class, m_hHTML32);
+			}
+		}
+		
+		@Override
+		public long getHandle64() {
+			return m_hHTML64;
+		}
+		
+		@Override
+		public int getHandle32() {
+			return m_hHTML32;
+		}
+		
+		@Override
+		public void recycle() {
+			if (isRecycled()) {
+				return;
+			}
+
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().HTMLDestroyConverter(m_hHTML64);
+				NotesErrorUtils.checkResult(result);
+				m_hHTML64 = 0;
+			}
+			else {
+				result = NotesNativeAPI32.get().HTMLDestroyConverter(m_hHTML32);
+				NotesErrorUtils.checkResult(result);
+				m_hHTML32 = 0;
+			}
+		}
+
+		@Override
+		public boolean isRecycled() {
+			if (PlatformUtils.is64Bit()) {
+				return m_hHTML64==0;
+			}
+			else {
+				return m_hHTML32==0;
+			}
+		}
+
+		@Override
+		public boolean isNoRecycle() {
+			return false;
+		}
+		
+	}
+	
+	/**
+	 * Internal method doing the HTML conversion work
+	 * 
+	 * @param itemName item name to be converted or null for whole note
+	 * @param props conversion properties
+	 * @param refTypeFilter optional filter for ref types to be returned or null for no filter
+	 * @param targetTypeFilter optional filter for target types to be returned or null for no filter
+	 * @return conversion result
+	 */
+	private IHtmlConversionResult internalConvertItemToHtml(String itemName,
+			HtmlConvertProperties props, Set<ReferenceType> refTypeFilter,
+			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
+		
+		checkHandle();
+		
+		HtmlConverter htmlConverter = setupHtmlConverter(props);
+		
+		long hHTML64 = htmlConverter.getHandle64();
+		int hHTML32 = htmlConverter.getHandle32();
+		short result;
+		
+		try {
 			Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, true);
 			
 			int totalLen;
@@ -5513,10 +5625,16 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (PlatformUtils.is64Bit()) {
 				if (itemName==null) {
 					result = NotesNativeAPI64.get().HTMLConvertNote(hHTML64, getParent().getHandle64(), m_hNote64, 0, null);
+					if (result!=0) {
+						htmlConverter.checkError();
+					}
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
 					result = NotesNativeAPI64.get().HTMLConvertItem(hHTML64, getParent().getHandle64(), m_hNote64, itemNameMem);
+					if (result!=0) {
+						htmlConverter.checkError();
+					}
 					NotesErrorUtils.checkResult(result);
 				}
 				
@@ -5528,19 +5646,23 @@ public class NotesNote implements IRecyclableNotesObject {
 			else {
 				if (itemName==null) {
 					result = NotesNativeAPI32.get().HTMLConvertNote(hHTML32, getParent().getHandle32(), m_hNote32, 0, null);
+					if (result!=0) {
+						htmlConverter.checkError();
+					}
 					NotesErrorUtils.checkResult(result);
 				}
 				else {
 					result = NotesNativeAPI32.get().HTMLConvertItem(hHTML32, getParent().getHandle32(), m_hNote32, itemNameMem);
+					if (result!=0) {
+						htmlConverter.checkError();
+					}
 					NotesErrorUtils.checkResult(result);
-					
 				}
 
 				Memory tLenMem = new Memory(4);
 				result = NotesNativeAPI32.get().HTMLGetProperty(hHTML32, NotesConstants.HTMLAPI_PROP_TEXTLENGTH, tLenMem);
 				NotesErrorUtils.checkResult(result);
 				totalLen = tLenMem.getInt(0);
-
 			}
 			
 			IntByReference len = new IntByReference();
@@ -5729,21 +5851,10 @@ public class NotesNote implements IRecyclableNotesObject {
 				}
 			}
 			
-			return new HtmlConversionResult(htmlText, references, options);
+			return new HtmlConversionResult(htmlText, references, props);
 		}
 		finally {
-			if (PlatformUtils.is64Bit()) {
-				if (hHTML64!=0) {
-					result = NotesNativeAPI64.get().HTMLDestroyConverter(hHTML64);
-				}
-				
-			}
-			else {
-				if (hHTML32!=0) {
-					result = NotesNativeAPI32.get().HTMLDestroyConverter(hHTML32);
-				}
-			}
-			NotesErrorUtils.checkResult(result);
+			htmlConverter.recycle();
 		}
 	}
 
@@ -7456,5 +7567,5 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		return itemNames;
 	}
-	
+
 }

@@ -70,4 +70,5 @@ public interface Win32NotesCallbacks {
 
 	interface REGSIGNALPROCWin32 extends NotesCallbacks.REGSIGNALPROC, StdCallCallback { }
 
+	interface ASYNCNOTIFYPROCWin32 extends NotesCallbacks.ASYNCNOTIFYPROC, StdCallCallback { }
 }

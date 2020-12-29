@@ -18,12 +18,13 @@ import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesCollectionPosition;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.NotesNote.IHtmlItemImageConversionCallback;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
-import com.mindoo.domino.jna.NotesNote.HtmlConvertOption;
-import com.mindoo.domino.jna.NotesNote.IHtmlItemImageConversionCallback;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.html.HtmlConvertOption;
+import com.mindoo.domino.jna.html.HtmlConvertProperties;
 import com.mindoo.domino.jna.html.IHtmlApiReference;
 import com.mindoo.domino.jna.html.IHtmlApiUrlTargetComponent;
 import com.mindoo.domino.jna.html.IHtmlConversionResult;
@@ -41,7 +42,7 @@ import lotus.domino.Session;
 public class TestRichtextConversionToHTML extends BaseJNATestClass {
 
 	@Test
-	public void testSignDb() {
+	public void testConvertRichtext() {
 
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -74,22 +75,43 @@ public class TestRichtextConversionToHTML extends BaseJNATestClass {
 				NotesNote lastMailNote = db.openNoteById(lastMail.getNoteId());
 
 				System.out.println("Converting mail with UNID "+lastMailNote.getUNID()+" and subject "+
-						lastMailNote.getItemValueString("Subject"));
+						lastMailNote.getItemValueAsText("Subject", ','));
 				
-				//not all of these options seemed to work in our tests (e.g. the FontConversion did nothing
-				//in a Notes 10 client)
-				EnumSet<HtmlConvertOption> convOptions = EnumSet.of(
-						HtmlConvertOption.ForceOutlineExpand,
-						HtmlConvertOption.ForceSectionExpand,
-						HtmlConvertOption.RowAtATimeTableAlt,
-						HtmlConvertOption.FontConversion,
-						HtmlConvertOption.ListFidelity,
-						HtmlConvertOption.TextExactSpacing);
+				HtmlConvertProperties props = new HtmlConvertProperties()
+						//expand outlines and sections
+						.option(HtmlConvertOption.ForceOutlineExpand)
+						.option(HtmlConvertOption.ForceSectionExpand)
+						//display all tabs of tabbed tables
+						.option(HtmlConvertOption.RowAtATimeTableAlt)
+						.option(HtmlConvertOption.ListFidelity)
+						.option(HtmlConvertOption.TextExactSpacing)
+						//use Notes URLs in links instead of web URLs
+						.option(HtmlConvertOption.OfferNotesURLInLink)
+						//enable the font conversion master option so that we
+						//can set "specs" and "tags" options to produce modern HTML
+						.option(HtmlConvertOption.FontConversion)
+						.options(HtmlConvertOption.allSpecs(), "2")
+						.options(HtmlConvertOption.allTags(), "0");
 				
+						//some more options commented out:
+				
+						//only relevant if OfferNotesURLInLink is not set, can
+						//be used to control how doclink urls are formatted; in our
+						//tests, HtmlLinkHandling.FOREIGN_LINKS_DIRECT was required to produce any doclink
+						//url at all when running in the Notes Client (worked on the server), so
+						//we made it default; use HtmlLinkHandling.FOREIGN_LINKS_REDIRECTED for
+						//a different format that did not work in the Notes Client in our tests
+				
+//						.setLinkHandling(HtmlLinkHandling.FOREIGN_LINKS_REDIRECTED)
+						
+						//setting a user agent string did not have any influence on the HTML in our test,
+						//we tried various @BrowserInfo formula results in the richtext
+//						.setUserAgent("Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0)");
+
 				File tmpFolder = new File(System.getProperty("java.io.tmpdir"));
 				File targetHtmlFileName = new File(tmpFolder, "htmlexport-"+lastMailNote.getUNID()+".html");
-				
-				writeRichtext(lastMailNote, "body", targetHtmlFileName, convOptions);
+
+				writeRichtext(lastMailNote, "body", targetHtmlFileName, props);
 				
 				// use null for the itemName argument to convert the document with its form:
 				// writeRichtext(lastMailNote, null, targetHtmlFileName, convOptions);
@@ -105,10 +127,11 @@ public class TestRichtextConversionToHTML extends BaseJNATestClass {
 			 * @param note note to convert
 			 * @param itemName name of richtext item to convert, use <code>null</code> to convert the whole note
 			 * @param bodyHtmlFile target file to write HTML
-			 * @param convOptions richtext conversion options
+			 * @param props richtext conversion properties
 			 * @throws IOException in case of I/O errors
 			 */
-			private void writeRichtext(NotesNote note, String itemName, File bodyHtmlFile, EnumSet<HtmlConvertOption> convOptions) throws IOException {
+			private void writeRichtext(NotesNote note, String itemName, File bodyHtmlFile,
+					HtmlConvertProperties props) throws IOException {
 				File parentOutputFolder = bodyHtmlFile.getParentFile();
 				
 				if (bodyHtmlFile.exists()) {
@@ -120,15 +143,16 @@ public class TestRichtextConversionToHTML extends BaseJNATestClass {
 				IHtmlConversionResult convResult;
 				if (itemName==null) {
 					//convert the specified item to HTML format
-					convResult = note.convertNoteToHtml(convOptions);
+					convResult = note.convertNoteToHtml(props);
 				}
 				else {
 					//convert the whole note with its form to HTML format
-					convResult = note.convertItemToHtml(itemName, convOptions);
+					convResult = note.convertItemToHtml(itemName, props);
 				}
 
 				//get body content as HTML:
 				String bodyAsHTML = convResult.getText();
+System.out.println(bodyAsHTML);
 
 				//now process all contained images
 				List<IHtmlImageRef> images = convResult.getImages();
