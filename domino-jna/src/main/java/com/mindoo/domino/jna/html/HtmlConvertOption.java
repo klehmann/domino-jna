@@ -39,12 +39,6 @@ public enum HtmlConvertOption {
 	DisablePassThruHTML,
 	/** Preserves Notes intraline whitespace (spaces between characters). */
 	TextExactSpacing,
-	/** FontConversion - the master option<br>
-	 * <ul>
-	 * <li>0 (classic) - the original web server handling</li>
-	 * <li>1 (style) - use combinations of span and other new tags, as controlled by the remaining options.</li>
-	 * </ul> */
-	FontConversion,
 	/** enable new code for better representation of indented lists */
 	ListFidelity,
 	
@@ -100,7 +94,16 @@ public enum HtmlConvertOption {
 	FieldKeywordTrim,
 	/** Enable XML-compatible HTML output */
 	XMLCompatibleHTML,
-	
+
+	/** FontConversion - the master option<br>
+	 * <ul>
+	 * <li>0 (classic) - the original web server handling</li>
+	 * <li>1 (style) - use combinations of span and other new tags, as controlled by the remaining options.</li>
+	 * </ul> */
+	FontConversion,
+
+	FontSizeBase,
+
 	//set these to "2" to get modern inline CSS attributes
 	FontColorSpec,
 	FontFaceSerifSpec,
@@ -118,9 +121,7 @@ public enum HtmlConvertOption {
 	FontStyleBoldTag,
 	FontStyleItalicTag,
 	FontStyleUnderlineTag,
-	FontStyleStrikethroughTag,
-
-	FontSizeBase;
+	FontStyleStrikethroughTag;
 	
 	/**
 	 * Returns all "spec" options, e.g. {@link #FontColorSpec}
