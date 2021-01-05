@@ -185,7 +185,7 @@ public class NotesItem {
 	 * 
 	 * @return length
 	 */
-	int getValueLength() {
+	public int getValueLength() {
 		loadItemNameAndFlags();
 
 		return m_valueLength;

@@ -7568,4 +7568,31 @@ public class NotesNote implements IRecyclableNotesObject {
 		return itemNames;
 	}
 
+	/**
+	 * Returns the total size of the note
+	 * 
+	 * @return size
+	 */
+	public int size() {
+		checkHandle();
+		
+		int[] totalSize = new int[1];
+		
+		getItems(null, (item) -> {
+			totalSize[0] += item.getValueLength();
+			
+			if (item.getType() == NotesItem.TYPE_OBJECT) {
+				List<Object> fileDataAsList = item.getValues();
+				if (!fileDataAsList.isEmpty() && fileDataAsList.get(0) instanceof NotesAttachment) {
+					NotesAttachment att = (NotesAttachment) fileDataAsList.get(0);
+					totalSize[0] += att.getFileSize();
+				}
+			}
+			
+			return IItemCallback.Action.Continue;
+		});
+		
+		return totalSize[0];
+	}
+
 }
