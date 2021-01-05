@@ -69,7 +69,7 @@ public class HtmlConvertProperties {
 	 * Sets the value of multiple HTML convert options to the specified value
 	 * (e.g. {@link HtmlConvertOption#allSpecs()} or {@link HtmlConvertOption#allTags()}).
 	 * 
-	 * @param option option
+	 * @param options options
 	 * @param value value
 	 * @return properties instance
 	 */
