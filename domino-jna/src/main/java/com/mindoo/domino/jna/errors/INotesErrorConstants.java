@@ -9,6 +9,7 @@ import com.mindoo.domino.jna.errors.errortexts.IEventErr;
 import com.mindoo.domino.jna.errors.errortexts.IFtErr;
 import com.mindoo.domino.jna.errors.errortexts.IGlobalErr;
 import com.mindoo.domino.jna.errors.errortexts.IHtmlErr;
+import com.mindoo.domino.jna.errors.errortexts.IMailMiscErr;
 import com.mindoo.domino.jna.errors.errortexts.IMiscErr;
 import com.mindoo.domino.jna.errors.errortexts.INetErr;
 import com.mindoo.domino.jna.errors.errortexts.INifErr;
@@ -27,7 +28,7 @@ import com.mindoo.domino.jna.errors.errortexts.IXmlErr;
  * @author Karsten Lehmann
  */
 public interface INotesErrorConstants extends IAgntsErr, IBsafeErr, IClErr, IDbdrvErr, IDirErr,
-IEventErr, IFtErr, IGlobalErr, IHtmlErr, IMiscErr, INetErr, INifErr, INsfErr, IOdsErr,
+IEventErr, IFtErr, IGlobalErr, IHtmlErr, IMailMiscErr, IMiscErr, INetErr, INifErr, INsfErr, IOdsErr,
 IOsErr, IRegErr, IRouteErr, ISecErr, ISrvErr, IXmlErr {
 	
 }

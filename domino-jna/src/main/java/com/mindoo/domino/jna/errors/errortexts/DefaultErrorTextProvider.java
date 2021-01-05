@@ -32,6 +32,7 @@ public class DefaultErrorTextProvider implements IErrorTextProvider {
 				IEventErr.class,
 				IFtErr.class,
 				IHtmlErr.class,
+				IMailMiscErr.class,
 				IMiscErr.class,
 				INetErr.class,
 				INifErr.class,
