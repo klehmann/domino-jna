@@ -6,6 +6,8 @@ import java.io.InputStream;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesAttachment;
+import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.sun.jna.Memory;
 
@@ -14,7 +16,23 @@ import com.sun.jna.Memory;
  * 
  * @author Karsten Lehmann
  */
-public interface ICompoundText extends IAdaptable {
+public interface ICompoundText<T extends ICompoundText<?>> extends IAdaptable {
+
+	/**
+	 * This function inserts a DocLink for the specified {@link NotesDatabase}.
+	 * 
+	 * @param db database to create the link
+	 * @param comment This string appears when the DocLink is selected (clicked on).
+	 */
+	public T addDatabaseLink(NotesDatabase db, String comment);
+
+	/**
+	 * This function inserts a DocLink for the specified {@link NotesCollection}.
+	 * 
+	 * @param collection collection to create the link
+	 * @param comment This string appears when the DocLink is selected (clicked on).
+	 */
+	public T addCollectionLink(NotesCollection collection, String comment);
 
 	/**
 	 * This function inserts a DocLink for the specified {@link NotesNote}.
@@ -22,17 +40,17 @@ public interface ICompoundText extends IAdaptable {
 	 * @param note note to create the link
 	 * @param comment This string appears when the DocLink is selected (clicked on).
 	 */
-	public void addDocLink(NotesNote note, String comment);
+	public T addDocLink(NotesNote note, String comment);
 	
 	/**
 	 * This function inserts a DocLink using manual values.
 	 * 
 	 * @param dbReplicaId Replica ID of the database that contains the note (document) pointed to by the DocLink.
-	 * @param viewUnid UNID of the view that contains the note (document) pointed to by the DocLink.
-	 * @param noteUNID UNID of the note (document) pointed to by the DocLink.
+	 * @param viewUnid UNID of the view that contains the note (document) pointed to by the DocLink; empty/null to create a database link
+	 * @param noteUNID UNID of the note (document) pointed to by the DocLink; empty/null to create a collection link
 	 * @param comment This string appears when the DocLink is selected (clicked on).
 	 */
-	public void addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment);
+	public T addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment);
 	
 	/**
 	 * The function will render the specified note in Composite Data format (i.e., richtext) and add the rendered
@@ -41,7 +59,7 @@ public interface ICompoundText extends IAdaptable {
 	 * 
 	 * @param note note to render
 	 */
-	public void addRenderedNote(NotesNote note);
+	public T addRenderedNote(NotesNote note);
 	
 	/**
 	 * The function will render the specified note in Composite Data format (i.e., richtext) and add the rendered
@@ -51,14 +69,14 @@ public interface ICompoundText extends IAdaptable {
 	 * @param note note to render
 	 * @param form name of form used to render the note, null for default form
 	 */
-	public void addRenderedNote(NotesNote note, String form);
+	public T addRenderedNote(NotesNote note, String form);
 	
 	/**
 	 * Adds text with default text and font style
 	 * 
 	 * @param txt text to add
 	 */
-	public void addText(String txt);
+	public T addText(String txt);
 	
 	/**
 	 * Adds text with the specified text and font style. Creates a paragraph for each linebreak found in the text
@@ -67,7 +85,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param textStyle text style
 	 * @param fontStyle font style
 	 */
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle);
+	public T addText(String txt, TextStyle textStyle, FontStyle fontStyle);
 	
 	/**
 	 * Adds text with the specified text and font style
@@ -77,7 +95,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param fontStyle font style
 	 * @param createParagraphForLinebreak true to create a paragraph for each linebreak found in the text
 	 */
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphForLinebreak);
+	public T addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphForLinebreak);
 	
 	/**
 	 * This routine assimilates the contents of one or more named richtext items (type TYPE_COMPOSITE) from a document
@@ -102,7 +120,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param otherNote note containing the item to append
 	 * @param itemName name of item to append
 	 */
-	public void addRichTextItem(NotesNote otherNote, String itemName);
+	public T addRichTextItem(NotesNote otherNote, String itemName);
 	
 	/**
 	 * Adds an image to the richtext item
@@ -110,7 +128,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param f image file
 	 * @throws IOException if data cannot be read
 	 */
-	public void addImage(File f) throws IOException;
+	public T addImage(File f) throws IOException;
 	
 	/**
 	 * Adds an image to the richtext item. We support GIF, JPEG and BMP files.
@@ -120,7 +138,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param f image file
 	 * @throws IOException if data cannot be read
 	 */
-	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException;
+	public T addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException;
 	
 	/**
 	 * Adds an image to the richtext item
@@ -129,7 +147,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param imageData image data as bytestream
 	 * @throws IOException if data cannot be read
 	 */
-	public void addImage(int fileSize, InputStream imageData) throws IOException;
+	public T addImage(int fileSize, InputStream imageData) throws IOException;
 	
 	/**
 	 * Adds an image to the richtext item
@@ -140,14 +158,14 @@ public interface ICompoundText extends IAdaptable {
 	 * @param imageData image data as bytestream
 	 * @throws IOException if data cannot be read
 	 */
-	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
+	public T addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
 	
 	/**
 	 * Adds a file hotspot to the richtext item containing a default file icon
 	 * @param attachment attachment to open when the hotspot is clicked
 	 * @param filenameToDisplay filename to display in the hotspot properties
 	 */
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay);
+	public T addFileHotspot(NotesAttachment attachment, String filenameToDisplay);
 	
 	/**
 	 * Adds a file hotspot to the richtext item with a custom icon
@@ -158,7 +176,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param image image file on disk to use for the file hotspot
 	 * @throws IOException in case of I/O errors
 	 */
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException;
+	public T addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException;
 	
 	/**
 	 * Adds a file hotspot to the richtext item with a custom icon
@@ -177,7 +195,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param imageData stream with image data
 	 * @throws IOException in case of I/O errors
 	 */
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public T addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
 
@@ -187,7 +205,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param attachmentProgrammaticName name returned by {@link NotesAttachment#getFileName()}
 	 * @param filenameToDisplay filename to display in the hotspot properties
 	 */
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay);
+	public T addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay);
 	
 	/**
 	 * Adds a file hotspot to the richtext item with a custom icon
@@ -198,7 +216,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param image image file on disk to use for the file hotspot
 	 * @throws IOException in case of I/O errors
 	 */
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException;
+	public T addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException;
 	
 	/**
 	 * Adds a file hotspot to the richtext item with a custom icon
@@ -217,7 +235,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param imageData stream with image data
 	 * @throws IOException in case of I/O errors
 	 */
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public T addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException;
 
@@ -227,7 +245,7 @@ public interface ICompoundText extends IAdaptable {
 	 * 
 	 * @param rt standalone richtext
 	 */
-	public void addClosedStandaloneRichText(StandaloneRichText rt);
+	public T addClosedStandaloneRichText(StandaloneRichText rt);
 	
 	/**
 	 * Method to add raw CD record data to the compound text.<br>
@@ -242,7 +260,7 @@ public interface ICompoundText extends IAdaptable {
 	 * @param cdRecordMem CD record data including BSIG/WSIG/LSIG prefix
 	 * @param cdRecordMem CD record data to add including BSIG/WSIG/LSIG prefix (one or more records, calls the C API method CompoundTextAddCDRecords internally)
 	 */
-	public void addCDRecords(Memory cdRecordMem);
+	public T addCDRecords(Memory cdRecordMem);
 
 	public boolean isRecycled();
 	

@@ -153,7 +153,7 @@ public class FixFieldResponsivenessConversion implements IRichTextConversion {
 	}
 	
 	@Override
-	public void convert(IRichTextNavigator source, ICompoundText target) {
+	public void convert(IRichTextNavigator source, ICompoundText<?> target) {
 		if (source.gotoFirst()) {
 			do {
 				boolean processed = false;

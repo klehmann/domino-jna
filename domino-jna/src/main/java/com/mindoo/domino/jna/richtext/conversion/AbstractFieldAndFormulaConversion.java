@@ -295,7 +295,7 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 	}
 
 	@Override
-	public void convert(IRichTextNavigator source, ICompoundText target) {
+	public void convert(IRichTextNavigator source, ICompoundText<?> target) {
 		if (source.gotoFirst()) {
 			do {
 				if (CDRecordType.FIELD.getConstant() == source.getCurrentRecordTypeAsShort()) {

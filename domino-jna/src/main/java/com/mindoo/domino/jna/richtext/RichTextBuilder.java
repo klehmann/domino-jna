@@ -6,6 +6,8 @@ import java.io.InputStream;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesAttachment;
+import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -25,7 +27,7 @@ import com.sun.jna.Memory;
  * 
  * @author Karsten Lehmann
  */
-public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText, IAdaptable {
+public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText<RichTextBuilder>, IAdaptable, AutoCloseable {
 	private NotesNote m_parentNote;
 	private CompoundTextWriter m_compoundText;
 	
@@ -54,131 +56,165 @@ public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText, I
 	}
 
 	@Override
-	public void addDocLink(NotesNote note, String comment) {
+	public RichTextBuilder addDatabaseLink(NotesDatabase db, String comment) {
+		checkHandle();
+		m_compoundText.addDatabaseLink(db, comment);
+		return this;
+	}
+	
+	@Override
+	public RichTextBuilder addCollectionLink(NotesCollection collection, String comment) {
+		checkHandle();
+		m_compoundText.addCollectionLink(collection, comment);
+		return this;
+	}
+	
+	@Override
+	public RichTextBuilder addDocLink(NotesNote note, String comment) {
 		checkHandle();
 		m_compoundText.addDocLink(note, comment);
+		return this;
 	}
 
 	@Override
-	public void addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
+	public RichTextBuilder addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
 		checkHandle();
 		m_compoundText.addDocLink(dbReplicaId, viewUnid, noteUNID, comment);
+		return this;
 	}
 
 	@Override
-	public void addRenderedNote(NotesNote note) {
+	public RichTextBuilder addRenderedNote(NotesNote note) {
 		checkHandle();
 		m_compoundText.addRenderedNote(note);
+		return this;
 	}
 
 	@Override
-	public void addRenderedNote(NotesNote note, String form) {
+	public RichTextBuilder addRenderedNote(NotesNote note, String form) {
 		checkHandle();
 		m_compoundText.addRenderedNote(note, form);
+		return this;
 	}
 
 	@Override
-	public void addText(String txt) {
+	public RichTextBuilder addText(String txt) {
 		checkHandle();
 		m_compoundText.addText(txt);
+		return this;
 	}
 
 	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
+	public RichTextBuilder addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
 		checkHandle();
 		m_compoundText.addText(txt, textStyle, fontStyle);
+		return this;
 	}
 
 	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
+	public RichTextBuilder addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
 		checkHandle();
 		m_compoundText.addText(txt, textStyle, fontStyle, createParagraphOnLinebreak);
+		return this;
 	}
 	
 	@Override
-	public void addRichTextItem(NotesNote otherNote, String itemName) {
+	public RichTextBuilder addRichTextItem(NotesNote otherNote, String itemName) {
 		checkHandle();
 		m_compoundText.addRichTextItem(otherNote, itemName);
+		return this;
 	}
 	
 	@Override
-	public void addImage(File f) throws IOException {
+	public RichTextBuilder addImage(File f) throws IOException {
 		checkHandle();
 		m_compoundText.addImage(f);
+		return this;
 	}
 	
 	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
+	public RichTextBuilder addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
 		checkHandle();
 		m_compoundText.addImage(resizeToWidth, resizeToHeight, f);
+		return this;
 	}
 	
 	@Override
-	public void addImage(int fileSize, InputStream imageData) throws IOException {
+	public RichTextBuilder addImage(int fileSize, InputStream imageData) throws IOException {
 		checkHandle();
 		m_compoundText.addImage(fileSize, imageData);
+		return this;
 	}
 	
 	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
+	public RichTextBuilder addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		checkHandle();
 		m_compoundText.addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
 	}
 	
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
+	public RichTextBuilder addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
 		checkHandle();
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay);
+		return this;
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
+	public RichTextBuilder addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
 		checkHandle();
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay);
+		return this;
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException {
+	public RichTextBuilder addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException {
 		checkHandle();
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, image);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException {
+	public RichTextBuilder addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException {
 		checkHandle();
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay, captionText, image);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public RichTextBuilder addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		
 		checkHandle();
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay, captionText, captionStyle, captionPos,
 				captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public RichTextBuilder addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		
 		checkHandle();
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, captionStyle, captionPos,
 				captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
 	}
 	
 	@Override
-	public void addClosedStandaloneRichText(StandaloneRichText rt) {
+	public RichTextBuilder addClosedStandaloneRichText(StandaloneRichText rt) {
 		checkHandle();
 		m_compoundText.addClosedStandaloneRichText(rt);
+		return this;
 	}
 
 	@Override
-	public void addCDRecords(Memory cdRecordMem) {
+	public RichTextBuilder addCDRecords(Memory cdRecordMem) {
 		checkHandle();
 		m_compoundText.addCDRecords(cdRecordMem);
+		return this;
 	}
 	
 	/**

@@ -32,7 +32,7 @@ public interface IRichTextConversion {
 	 * @param source source richtext navigator
 	 * @param target target to write conversion result
 	 */
-	public void convert(IRichTextNavigator source, ICompoundText target);
+	public void convert(IRichTextNavigator source, ICompoundText<?> target);
 	
 	/**
 	 * Method is called when the richtext navigation is done

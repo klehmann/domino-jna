@@ -72,14 +72,10 @@ public class TestJakartaMimeDataReadWrite extends BaseJNATestClass {
 				}
 
 				//now we create formatted richtext content
-				RichTextBuilder rtBuilder = note.createRichTextItem("Body");
-				try {
+				try (RichTextBuilder rtBuilder = note.createRichTextItem("Body");) {
 					rtBuilder.addText("Hello World.",
 							new TextStyle("MyStyle").setAlign(Justify.RIGHT),
 							new FontStyle().setBold(true));
-				}
-				finally {
-					rtBuilder.close();
 				}
 
 				NotesItem itm = note.getFirstItem("Body");

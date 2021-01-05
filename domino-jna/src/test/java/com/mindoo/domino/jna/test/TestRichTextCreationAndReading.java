@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesAttachment;
@@ -29,7 +30,6 @@ import com.mindoo.domino.jna.richtext.TextStyle.Justify;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 
-import junit.framework.Assert;
 import lotus.domino.Session;
 
 /**
@@ -83,15 +83,17 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 				NotesTimeDate fileModified = NotesTimeDate.adjustedFromNow(0, 0, 2, 0, 0, 0);
 				NotesAttachment att = note.attachFile(attProducer, "testfile.txt", fileCreated.toDate(), fileModified.toDate());
 
-				RichTextBuilder rt = note.createRichTextItem("Body");
-				rt.addText("Here is the file:\n");
-				rt.addFileHotspot(att, "captiontext for testfile.txt");
+				try (RichTextBuilder rt = note.createRichTextItem("Body");) {
+					rt
+					.addText("Here is the file:\n")
+					.addFileHotspot(att, "captiontext for testfile.txt");
 
-				// use this for more advanced options, e.g. use a different file icon and caption color/text placement:
-				// rt.addFileHotspot(attachment, filenameToDisplay, captionText, captionStyle, captionPos, captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
+					// use this for more advanced options, e.g. use a different file icon and caption color/text placement:
+					// rt.addFileHotspot(attachment, filenameToDisplay, captionText, captionStyle, captionPos, captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
 
-				// code richtext item
-				rt.close();
+					// code richtext item
+				}
+				
 				// save document
 				note.update();
 
@@ -124,34 +126,33 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 				NotesNote note = db.createNote();
 				note.replaceItemValue("Form", "Memo");
 
-				RichTextBuilder rt = note.createRichTextItem("Body");
+				try (RichTextBuilder rt = note.createRichTextItem("Body")) {
+					//add some multiline text
+					rt.addText("Line 1\nLine2\n");
 
-				//add some multiline text
-				rt.addText("Line 1\nLine2\n");
+					//add another paragraph with formatted text
+					TextStyle txtStyle = new TextStyle("Test").setAlign(Justify.RIGHT);
+					FontStyle fontStyle = new FontStyle().setItalic(true);
+					rt.addText("Formatted text", txtStyle, fontStyle);
 
-				//add another paragraph with formatted text
-				TextStyle txtStyle = new TextStyle("Test").setAlign(Justify.RIGHT);
-				FontStyle fontStyle = new FontStyle().setItalic(true);
-				rt.addText("Formatted text", txtStyle, fontStyle);
+					//now add a PNG image (that's not possible in the Notes Client UI)
+					String imgResourcePath = "/images/test-png-large.png";
+					URL imgUrl = getClass().getResource(imgResourcePath);
+					if (imgUrl==null) {
+						throw new FileNotFoundException("Image resource not found at "+imgResourcePath);
+					}
+					URLConnection conn = imgUrl.openConnection();
+					int fileSize = conn.getContentLength();
 
-				//now add a PNG image (that's not possible in the Notes Client UI)
-				String imgResourcePath = "/images/test-png-large.png";
-				URL imgUrl = getClass().getResource(imgResourcePath);
-				if (imgUrl==null) {
-					throw new FileNotFoundException("Image resource not found at "+imgResourcePath);
+					InputStream imageStream = conn.getInputStream();
+					try {
+						rt.addImage(fileSize, imageStream);
+					}
+					finally {
+						imageStream.close();
+					}
 				}
-				URLConnection conn = imgUrl.openConnection();
-				int fileSize = conn.getContentLength();
 
-				InputStream imageStream = conn.getInputStream();
-				try {
-					rt.addImage(fileSize, imageStream);
-				}
-				finally {
-					imageStream.close();
-				}
-
-				rt.close();
 				note.update();
 				System.out.println("Document created with Notes URL Notes://"+
 						NotesNamingUtils.toCommonName(db.getServer())+"/"+
@@ -206,73 +207,72 @@ public class TestRichTextCreationAndReading extends BaseJNATestClass {
 				
 				{
 					//write richtext item 1
-					RichTextBuilder rt = note.createRichTextItem("Body");
+					try (RichTextBuilder rt = note.createRichTextItem("Body");) {
 
-					//add some multiline text
-					rt.addText("Line 1\nLine2\n");
+						//add some multiline text
+						rt.addText("Line 1\nLine2\n");
 
-					NotesAttachment file1 = note.attachFile(new IAttachmentProducer() {
+						NotesAttachment file1 = note.attachFile(new IAttachmentProducer() {
 
-						@Override
-						public void produceAttachment(OutputStream out) throws IOException {
-							out.write("test".getBytes(Charset.forName("UTF-8")));
-						}
+							@Override
+							public void produceAttachment(OutputStream out) throws IOException {
+								out.write("test".getBytes(Charset.forName("UTF-8")));
+							}
 
-						@Override
-						public int getSizeEstimation() {
-							return -1;
-						}
-					}, "file1.txt", new Date(), new Date());
+							@Override
+							public int getSizeEstimation() {
+								return -1;
+							}
+						}, "file1.txt", new Date(), new Date());
 
-					rt.addText("More text");
+						rt.addText("More text");
 
-					NotesAttachment file2 = note.attachFile(new IAttachmentProducer() {
+						NotesAttachment file2 = note.attachFile(new IAttachmentProducer() {
 
-						@Override
-						public void produceAttachment(OutputStream out) throws IOException {
-							out.write("test2".getBytes(Charset.forName("UTF-8")));
-						}
+							@Override
+							public void produceAttachment(OutputStream out) throws IOException {
+								out.write("test2".getBytes(Charset.forName("UTF-8")));
+							}
 
-						@Override
-						public int getSizeEstimation() {
-							return -1;
-						}
-					}, "file2.txt", new Date(), new Date());
+							@Override
+							public int getSizeEstimation() {
+								return -1;
+							}
+						}, "file2.txt", new Date(), new Date());
 
-					//insert in reverse order, to test if our scan results get returned in order of appearance
-					rt.addFileHotspot(file2, "file2-dsp.txt");
-					rt.addFileHotspot(file1, "file1-dsp.txt");
+						//insert in reverse order, to test if our scan results get returned in order of appearance
+						rt.addFileHotspot(file2, "file2-dsp.txt");
+						rt.addFileHotspot(file1, "file1-dsp.txt");
 
-					insertedFieldBodyItem.add(file2.getFileName());
-					insertedFieldBodyItem.add(file1.getFileName());
-					
-					rt.close();
+						insertedFieldBodyItem.add(file2.getFileName());
+						insertedFieldBodyItem.add(file1.getFileName());
+
+					}
 				}
 
 				LinkedHashSet<String> insertedFieldBody2Item = new LinkedHashSet<>();
 
 				{
 					//write richtext item 1
-					RichTextBuilder rt = note.createRichTextItem("Body2");
+					try (RichTextBuilder rt = note.createRichTextItem("Body2");) {
 
-					NotesAttachment file3 = note.attachFile(new IAttachmentProducer() {
+						NotesAttachment file3 = note.attachFile(new IAttachmentProducer() {
 
-						@Override
-						public void produceAttachment(OutputStream out) throws IOException {
-							out.write("test3".getBytes(Charset.forName("UTF-8")));
-						}
+							@Override
+							public void produceAttachment(OutputStream out) throws IOException {
+								out.write("test3".getBytes(Charset.forName("UTF-8")));
+							}
 
-						@Override
-						public int getSizeEstimation() {
-							return -1;
-						}
-					}, "file3.txt", new Date(), new Date());
+							@Override
+							public int getSizeEstimation() {
+								return -1;
+							}
+						}, "file3.txt", new Date(), new Date());
 
-					rt.addFileHotspot(file3, "file3-dsp.txt");
-					
-					insertedFieldBody2Item.add(file3.getFileName());
+						rt.addFileHotspot(file3, "file3-dsp.txt");
 
-					rt.close();
+						insertedFieldBody2Item.add(file3.getFileName());
+					}
 				}
 
 				// add a file that is not part of a richtext item

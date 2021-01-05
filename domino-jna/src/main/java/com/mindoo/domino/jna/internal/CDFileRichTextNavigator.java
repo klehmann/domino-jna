@@ -328,7 +328,7 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 	}
 	
 	@Override
-	public void copyCurrentRecordTo(ICompoundText target) {
+	public void copyCurrentRecordTo(ICompoundText<?> target) {
 		if (m_currentCDRecord==null)
 			throw new IllegalStateException("Current CD record is null");
 		

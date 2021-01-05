@@ -55,7 +55,7 @@ public abstract class AbstractMailMergeConversion implements IRichTextConversion
 	protected abstract String replaceAllMatches(String txt);
 	
 	@Override
-	public void convert(IRichTextNavigator source, ICompoundText target) {
+	public void convert(IRichTextNavigator source, ICompoundText<?> target) {
 		if (source.gotoFirst()) {
 			do {
 				if (CDRecordType.TEXT.getConstant() == source.getCurrentRecordTypeAsShort()) {

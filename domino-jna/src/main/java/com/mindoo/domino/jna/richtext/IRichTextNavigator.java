@@ -137,7 +137,7 @@ public interface IRichTextNavigator {
 	 * 
 	 * @param target compound text
 	 */
-	public void copyCurrentRecordTo(ICompoundText target);
+	public void copyCurrentRecordTo(ICompoundText<?> target);
 	
 	/**
 	 * Position in a richtext item's CD record stream. The class implementing this interface

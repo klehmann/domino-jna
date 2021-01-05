@@ -6430,7 +6430,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		@Override
-		public void copyCurrentRecordTo(ICompoundText ct) {
+		public void copyCurrentRecordTo(ICompoundText<?> ct) {
 			if (ct.isRecycled())
 				throw new NotesError(0, "ICompoundText already recycled");
 			

@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.test;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -13,7 +14,6 @@ import com.mindoo.domino.jna.richtext.TextStyle;
 import com.mindoo.domino.jna.richtext.conversion.SimpleMailMergeConversion;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 
-import junit.framework.Assert;
 import lotus.domino.Session;
 
 /**
@@ -51,9 +51,9 @@ public class TestRichTextMailMerge extends BaseJNATestClass {
 					
 					String expectedOutputStr = "Text before abc, abc,\n \"123\" ~|~ Text after";
 
-					RichTextBuilder rtBuilder = note.createRichTextItem("Body");
-					rtBuilder.addText(inputStr, (TextStyle) null, (FontStyle) null, false);
-					rtBuilder.close();
+					try (RichTextBuilder rtBuilder = note.createRichTextItem("Body");) {
+						rtBuilder.addText(inputStr, (TextStyle) null, (FontStyle) null, false);
+					}
 					
 					String importedTxt = note.getRichtextContentAsText("Body");
 					Assert.assertEquals("Text got imported without extra newlines or other changes.", inputStr, importedTxt);

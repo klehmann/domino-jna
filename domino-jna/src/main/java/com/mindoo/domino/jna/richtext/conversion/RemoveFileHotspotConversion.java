@@ -90,7 +90,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 	 * @param copyToTarget if not null, we copy all records we find until the right BEGIN record to this target
 	 * @return position of the BEGIN record or null if not found
 	 */
-	private RichTextNavPosition scanForBeginOfHotspot(IRichTextNavigator nav, RichTextNavPosition startPos, ICompoundText copyToTarget) {
+	private RichTextNavPosition scanForBeginOfHotspot(IRichTextNavigator nav, RichTextNavPosition startPos, ICompoundText<?> copyToTarget) {
 		if (startPos!=null) {
 			nav.restoreCurrentRecordPosition(startPos);
 		}
@@ -169,7 +169,7 @@ public class RemoveFileHotspotConversion implements IRichTextConversion {
 	}
 
 	@Override
-	public void convert(IRichTextNavigator source, ICompoundText target) {
+	public void convert(IRichTextNavigator source, ICompoundText<?> target) {
 		RichTextNavPosition currPos = null;
 		if (source.gotoFirst()) {
 			while (true) {

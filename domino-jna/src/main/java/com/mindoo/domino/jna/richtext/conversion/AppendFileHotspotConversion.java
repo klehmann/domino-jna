@@ -49,7 +49,7 @@ public class AppendFileHotspotConversion implements IRichTextConversion {
 	}
 
 	@Override
-	public void convert(IRichTextNavigator source, ICompoundText target) {
+	public void convert(IRichTextNavigator source, ICompoundText<?> target) {
 		//TODO provide another method to append file hotspots with less copy operations, e.g. by modifying the last item value of the last TYPE_COMPOSITE item or add another item if the hotspot would exceed the segment size
 		if (source.gotoFirst()) {
 			do {

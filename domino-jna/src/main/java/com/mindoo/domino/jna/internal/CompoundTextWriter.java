@@ -69,7 +69,7 @@ import com.sun.jna.ptr.LongByReference;
  * 
  * @author Karsten Lehmann
  */
-public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText, IAdaptable {
+public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText<CompoundTextWriter>, IAdaptable {
 	private long m_handle64;
 	private int m_handle32;
 	
@@ -140,64 +140,111 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	@Override
-	public void addDocLink(NotesNote note, String comment) {
-		if (note.isRecycled())
-			throw new NotesError(0, "Provided note is already recycled");
-
+	public CompoundTextWriter addDatabaseLink(NotesDatabase db, String comment) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 		
+		if (db.isRecycled())
+			throw new NotesError(0, "Provided database is already recycled");
+		
+		String replicaId = db.getReplicaID();
+		addDocLink(replicaId, null, null, comment);
+		return this;
+	}
+	
+	@Override
+	public CompoundTextWriter addCollectionLink(NotesCollection collection, String comment) {
+		checkHandle();
+		if (isClosed())
+			throw new NotesError(0, "CompoundText already closed");
+		
+		if (collection.isRecycled())
+			throw new NotesError(0, "Provided collection is already recycled");
+
+		NotesDatabase parentDb = collection.getParent();
+		if (parentDb.isRecycled())
+			throw new NotesError(0, "Parent database is already recycled");
+		
+		String replicaId = parentDb.getReplicaID();
+		addDocLink(replicaId, null, null, comment);	
+		return this;
+	}
+	
+	@Override
+	public CompoundTextWriter addDocLink(NotesNote note, String comment) {
+		checkHandle();
+		if (isClosed())
+			throw new NotesError(0, "CompoundText already closed");
+		
+		if (note.isRecycled())
+			throw new NotesError(0, "Provided note is already recycled");
+		
 		NotesDatabase parentDb = note.getParent();
+		if (parentDb.isRecycled())
+			throw new NotesError(0, "Parent database is already recycled");
 		String replicaId = parentDb.getReplicaID();
 		String noteUnid = note.getUNID();
 		NotesCollection defaultCollection = parentDb.openDefaultCollection();
+		if (defaultCollection==null) {
+			throw new NotesError(0, "Unable to locate the required default view in database "+parentDb.getServer()+"!!"+parentDb.getRelativeFilePath());
+		}
 		addDocLink(replicaId, defaultCollection.getUNID(), noteUnid, comment);
+		return this;
 	}
 
 	@Override
-	public void addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
+	public CompoundTextWriter addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 		
-		Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
-		short result;
-		NotesUniversalNoteIdStruct viewUNIDStruct = NotesUniversalNoteIdStruct.fromString(viewUnid);
-		NotesUniversalNoteIdStruct noteUNIDStruct = NotesUniversalNoteIdStruct.fromString(noteUNID);
+		if (!StringUtil.isEmpty(dbReplicaId)) {
+			int[] dbReplicaIdInnards = NotesStringUtils.replicaIdToInnards(dbReplicaId);
+			NotesTimeDateStruct.ByValue dbReplicaIdStructByVal = NotesTimeDateStruct.ByValue.newInstance();
+			dbReplicaIdStructByVal.Innards[0] = dbReplicaIdInnards[0];
+			dbReplicaIdStructByVal.Innards[1] = dbReplicaIdInnards[1];
 
-		NotesUniversalNoteIdStruct.ByValue viewUNIDStructByVal = NotesUniversalNoteIdStruct.ByValue.newInstance();
-		viewUNIDStructByVal.File = viewUNIDStruct.File;
-		viewUNIDStructByVal.Note = viewUNIDStruct.Note;
+			NotesUniversalNoteIdStruct.ByValue viewUNIDStructByVal = NotesUniversalNoteIdStruct.ByValue.newInstance();
+			NotesUniversalNoteIdStruct.ByValue noteUNIDStructByVal = NotesUniversalNoteIdStruct.ByValue.newInstance();
 
-		NotesUniversalNoteIdStruct.ByValue noteUNIDStructByVal = NotesUniversalNoteIdStruct.ByValue.newInstance();
-		noteUNIDStructByVal.File = noteUNIDStruct.File;
-		noteUNIDStructByVal.Note = noteUNIDStruct.Note;
+			if (!StringUtil.isEmpty(viewUnid)) {
+				NotesUniversalNoteIdStruct viewUNIDStruct = NotesUniversalNoteIdStruct.fromString(viewUnid);
+				viewUNIDStructByVal.File = viewUNIDStruct.File;
+				viewUNIDStructByVal.Note = viewUNIDStruct.Note;
 
-		int[] dbReplicaIdInnards = NotesStringUtils.replicaIdToInnards(dbReplicaId);
-		NotesTimeDateStruct.ByValue dbReplicaIdStructByVal = NotesTimeDateStruct.ByValue.newInstance();
-		dbReplicaIdStructByVal.Innards[0] = dbReplicaIdInnards[0];
-		dbReplicaIdStructByVal.Innards[1] = dbReplicaIdInnards[1];
+				if (!StringUtil.isEmpty(noteUNID)) {
+					NotesUniversalNoteIdStruct noteUNIDStruct = NotesUniversalNoteIdStruct.fromString(noteUNID);
+					noteUNIDStructByVal.File = noteUNIDStruct.File;
+					noteUNIDStructByVal.Note = noteUNIDStruct.Note;
+				}
+			}
 
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().CompoundTextAddDocLink(m_handle64, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
+			Memory commentMem = NotesStringUtils.toLMBCS(comment, true);
+
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().CompoundTextAddDocLink(m_handle64, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
+			}
+			else {
+				result = NotesNativeAPI32.get().CompoundTextAddDocLink(m_handle32, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
+			}
+			NotesErrorUtils.checkResult(result);
+			m_hasData=true;
 		}
-		else {
-			result = NotesNativeAPI32.get().CompoundTextAddDocLink(m_handle32, dbReplicaIdStructByVal, viewUNIDStructByVal, noteUNIDStructByVal, commentMem, 0);
-		}
-		NotesErrorUtils.checkResult(result);
-		m_hasData=true;
+		return this;
 	}
 
 	@Override
-	public void addRenderedNote(NotesNote note) {
+	public CompoundTextWriter addRenderedNote(NotesNote note) {
 		String formName = note.getItemValueString("Form");
 
 		addRenderedNote(note, formName);
+		return this;
 	}
 
 	@Override
-	public void addRenderedNote(NotesNote note, String form) {
+	public CompoundTextWriter addRenderedNote(NotesNote note, String form) {
 		if (note.isRecycled())
 			throw new NotesError(0, "Provided note is already recycled");
 
@@ -217,11 +264,13 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
+		return this;
 	}
 
 	@Override
-	public void addText(String txt) {
+	public CompoundTextWriter addText(String txt) {
 		addText(txt, (TextStyle) null, (FontStyle) null);
+		return this;
 	}
 
 	/**
@@ -265,12 +314,13 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
+	public CompoundTextWriter addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
 		addText(txt, textStyle, fontStyle, true);
+		return this;
 	}
 	
 	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
+	public CompoundTextWriter addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -310,10 +360,11 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
+		return this;
 	}
 
 	@Override
-	public void addRichTextItem(NotesNote otherNote, String itemName) {
+	public CompoundTextWriter addRichTextItem(NotesNote otherNote, String itemName) {
 		if (otherNote.isRecycled())
 			throw new NotesError(0, "Provided note is already recycled");
 
@@ -332,10 +383,12 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
+		return this;
 	}
 
-	public void addCDRecords(Memory cdRecordMem) {
+	public CompoundTextWriter addCDRecords(Memory cdRecordMem) {
 		addCDRecords(cdRecordMem, (int) cdRecordMem.size());
+		return this;
 	}
 	
 	/**
@@ -344,7 +397,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	 * @param cdRecordPtr pointer to CD records
 	 * @param recordLength the length of the buffer
 	 */
-	public void addCDRecords(Pointer cdRecordPtr, int recordLength) {
+	public CompoundTextWriter addCDRecords(Pointer cdRecordPtr, int recordLength) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -358,15 +411,17 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
+		return this;
 	}
 	
 	@Override
-	public void addClosedStandaloneRichText(StandaloneRichText rt) {
+	public CompoundTextWriter addClosedStandaloneRichText(StandaloneRichText rt) {
 		CompoundTextWriter ctWriter = rt.getAdapter(CompoundTextWriter.class);
 		if (ctWriter==null)
 			throw new NotesError(0, "Could not get "+CompoundTextWriter.class.getSimpleName()+" from "+StandaloneRichText.class.getSimpleName());
 		
 		addClosedStandaloneCompoundText(ctWriter);
+		return this;
 	}
 	
 	/**
@@ -375,7 +430,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	 * @param ct standalone compound text
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public void addClosedStandaloneCompoundText(CompoundTextWriter ct) {
+	public CompoundTextWriter addClosedStandaloneCompoundText(CompoundTextWriter ct) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -463,6 +518,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			NotesErrorUtils.checkResult(result);
 		}
 		m_hasData = m_hasData | ct.hasData();
+		return this;
 	}
 	
 	/**
@@ -479,7 +535,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	 * 
 	 * @param filePath path to file
 	 */
-	public void addCompoundTextFromFile(final String filePath) {
+	public CompoundTextWriter addCompoundTextFromFile(final String filePath) {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -502,7 +558,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		
 		if (fileSize==0) {
 			//nothing to do
-			return;
+			return this;
 		}
 		
 		Memory filePathMem = NotesStringUtils.toLMBCS(filePath, true);
@@ -516,18 +572,19 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 		}
 		NotesErrorUtils.checkResult(result);
 		m_hasData=true;
+		return this;
 	}
 	
 	@Override
-	public void addImage(File f) throws IOException {
-		addImage(-1, -1, f);
+	public CompoundTextWriter addImage(File f) throws IOException {
+		return addImage(-1, -1, f);
 	}
 
 	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
+	public CompoundTextWriter addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
 		FileInputStream fIn = new FileInputStream(f);
 		try {
-			addImage(resizeToWidth, resizeToHeight, (int) f.length(), fIn);
+			return addImage(resizeToWidth, resizeToHeight, (int) f.length(), fIn);
 		}
 		finally {
 			fIn.close();
@@ -535,12 +592,12 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 	
 	@Override
-	public void addImage(int fileSize, InputStream imageData) throws IOException {
-		addImage(-1, -1, fileSize, imageData);
+	public CompoundTextWriter addImage(int fileSize, InputStream imageData) throws IOException {
+		return addImage(-1, -1, fileSize, imageData);
 	}
 	
 	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
+	public CompoundTextWriter addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
@@ -907,15 +964,16 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 				NotesErrorUtils.checkResult(result);
 			}
 		}
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
-		addFileHotspot(attachment.getFileName(), filenameToDisplay);
+	public CompoundTextWriter addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
+		return addFileHotspot(attachment.getFileName(), filenameToDisplay);
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
+	public CompoundTextWriter addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
 		InputStream in = getClass().getResourceAsStream("file-icon.gif");
 		if (in==null)
 			throw new IllegalStateException("Default icon file not found");
@@ -929,7 +987,7 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 			}
 			
 			ByteArrayInputStream bIn = new ByteArrayInputStream(bOut.toByteArray());
-			addFileHotspot(attachmentProgrammaticName, filenameToDisplay, filenameToDisplay, new FontStyle(), CaptionPosition.BELOWCENTER, 0, 0, 0, -1, -1, bOut.size(), bIn);
+			return addFileHotspot(attachmentProgrammaticName, filenameToDisplay, filenameToDisplay, new FontStyle(), CaptionPosition.BELOWCENTER, 0, 0, 0, -1, -1, bOut.size(), bIn);
 		} catch (IOException e) {
 			throw new IllegalStateException("Unexpected problems reading the default icon", e);
 		}
@@ -943,15 +1001,15 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException {
-		addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, image);
+	public CompoundTextWriter addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image) throws IOException {
+		return addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, image);
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException {
+	public CompoundTextWriter addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image) throws IOException {
 		FileInputStream fIn = new FileInputStream(image);
 		try {
-			addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, new FontStyle(), CaptionPosition.BELOWCENTER,
+			return addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, new FontStyle(), CaptionPosition.BELOWCENTER,
 					0, 0, 0, -1, -1, (int) image.length(), fIn);
 		}
 		finally {
@@ -960,218 +1018,219 @@ public class CompoundTextWriter implements IRecyclableNotesObject, ICompoundText
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public CompoundTextWriter addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
 		
-		addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, captionStyle, captionPos,
+		return addFileHotspot(attachment.getFileName(), filenameToDisplay, captionText, captionStyle, captionPos,
 				captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize,
 				imageData);
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
+	public CompoundTextWriter addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, FontStyle captionStyle,
 			CaptionPosition captionPos, int captionColorRed, int captionColorGreen, int captionColorBlue,
 			int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData) throws IOException {
-		
+
 		checkHandle();
 		if (isClosed())
 			throw new NotesError(0, "CompoundText already closed");
 
-	if (captionColorRed<0 || captionColorRed>255)
-		throw new IllegalArgumentException("Red value of color can only be between 0 and 255");
-	if (captionColorGreen<0 || captionColorGreen>255)
-		throw new IllegalArgumentException("Green value of color can only be between 0 and 255");
-	if (captionColorBlue<0 || captionColorBlue>255)
-		throw new IllegalArgumentException("Blue value of color can only be between 0 and 255");
-	
-	Memory beginMem = new Memory(
-			2 + //BSIG
-			2 + //Version
-			2 //Signature
-			);
-	beginMem.clear();
-	
-//	Read record BEGIN (221) with 4 data bytes, cdrecord length: 6
-//	Data:
-//	[00 00 ad ff            ]   [....    ]
-	
-	beginMem.setShort(0, NotesConstants.SIG_CD_BEGIN);
-	beginMem.share(1).setByte(0, (byte) (beginMem.size() & 0xff));
-	beginMem.share(2).setShort(0, (short) 0);
-	beginMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTBEGIN & 0xffff));
-	
-	short result;
-	if (PlatformUtils.is64Bit()) {
-		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, beginMem, (int) beginMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	else {
-		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, beginMem, (int) beginMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	m_hasData=true;
-	
-//
-//		Read record HOTSPOTBEGIN (-87) with 24 data bytes, cdrecord length: 28
-//		Data:
-//		[04 00 08 00 00 00 10 00]   [........]
-//		[6d 61 69 6e 2e 6a 73 00]   [main.js.]
-//		[6d 61 69 6e 2e 6a 73 00]   [main.js.]
-	
-//	typedef struct {
-//		   WSIG  Header; /* Signature and length of this record */	
-//		   WORD  Type;
-//		   DWORD Flags;
-//		   WORD  DataLength;
-//		/*	Data follows... */
-//			/*  if HOTSPOTREC_RUNFLAG_SIGNED, WORD SigLen then SigData follows. */
-//		} CDHOTSPOTBEGIN;
-	
-	Memory uniqueFileNameAttachment = NotesStringUtils.toLMBCS(attachmentProgrammaticName, true);
-	Memory fileNameToDisplayMem = NotesStringUtils.toLMBCS(filenameToDisplay, true);
-	
-	Memory hotspotBeginMem = new Memory(
-			2 + 2 + //WSIG
-			2 + //Type
-			4 + //Flags
-			2 + //DataLength
-			uniqueFileNameAttachment.size() + 
-			fileNameToDisplayMem.size()
-			);
-	hotspotBeginMem.clear();
-	
-	hotspotBeginMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTBEGIN);
-	hotspotBeginMem.share(2).setShort(0, (short) (hotspotBeginMem.size() & 0xffff));
-	hotspotBeginMem.share(4).setShort(0, NotesConstants.HOTSPOTREC_TYPE_FILE);
-	
-	int flags = NotesConstants.HOTSPOTREC_RUNFLAG_NOBORDER;
-	hotspotBeginMem.share(6).setInt(0, flags);
-	hotspotBeginMem.share(10).setShort(0, (short) ((uniqueFileNameAttachment.size() + fileNameToDisplayMem.size()) & 0xffff));
-	
-	hotspotBeginMem.share(12).write(0, uniqueFileNameAttachment.getByteArray(0, (int) uniqueFileNameAttachment.size()), 0, (int) uniqueFileNameAttachment.size());
-	hotspotBeginMem.share(12 + uniqueFileNameAttachment.size()).write(0, fileNameToDisplayMem.getByteArray(0, (int) fileNameToDisplayMem.size()), 0, (int) fileNameToDisplayMem.size());
-	
-	if (PlatformUtils.is64Bit()) {
-		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotBeginMem, (int) hotspotBeginMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	else {
-		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotBeginMem, (int) hotspotBeginMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	
-	addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
-	
-//	typedef struct {
-//		   WSIG        Header;       /* Tag and length */
-//		   WORD        wLength;      /* Text length */
-//		   BYTE        Position;     /* One of the position flags above */
-//		   FONTID      FontID;       /* Font to use for the text */
-//		   COLOR_VALUE FontColor;    /* RGB font color info */
-//		   BYTE        Reserved[11]; /* Reserved for future use */
-//		/* The 8-bit text string follows... */
-//		} CDCAPTION;
-		
-	Memory captionTextMem = NotesStringUtils.toLMBCS(captionText, false);
-	
-	Memory captionMem = new Memory(
-			2 + 2 + //WSIG
-			2 + // Text Length
-			1 + // Position
-			4 + // FontID
-			6 + // FontColor
-			11 + //Reserved
-			captionTextMem.size()
-			);
-	captionMem.clear();
-	
-	captionMem.setShort(0, NotesConstants.SIG_CD_CAPTION);
-	captionMem.share(2).setShort(0, (short) (captionMem.size() & 0xffff));
-	captionMem.share(4).setShort(0, (short) (captionTextMem.size() & 0xffff));
-	
-	byte captionPosition;
-	if (captionPos==CaptionPosition.BELOWCENTER) {
-		captionPosition = NotesConstants.CAPTION_POSITION_BELOW_CENTER;
-	}
-	else if (captionPos==CaptionPosition.MIDDLECENTER) {
-		captionPosition = NotesConstants.CAPTION_POSITION_MIDDLE_CENTER;
-	}
-	else {
-		captionPosition = 0;
-	}
-	captionMem.share(6).setByte(0, captionPosition);
-	
-	FontId fontIdObj = captionStyle.getAdapter(FontId.class);
-	if (fontIdObj==null)
-		throw new NotesError(0, "Unable to get FontId from FontStyle");
-	int fontId = fontIdObj.getFontId();
-	captionMem.share(7).setInt(0, fontId);
-	
-	byte captionColorRedByte = (byte) (captionColorRed & 0xff);
-	byte captionColorGreenByte = (byte) (captionColorGreen & 0xff);
-	byte captionColorBlueByte = (byte) (captionColorBlue & 0xff);
-	
-	NotesColorValueStruct colorStruct = NotesColorValueStruct.newInstance();
-	colorStruct.Component1 = captionColorRedByte;
-	colorStruct.Component2 = captionColorGreenByte;
-	colorStruct.Component3 = captionColorBlueByte;
-	colorStruct.Flags = NotesConstants.COLOR_VALUE_FLAGS_ISRGB;
-	colorStruct.write();
-	captionMem.share(11).write(0, colorStruct.getPointer().getByteArray(0, 6), 0, 6);
-	captionMem.share(17).write(0, new byte[11], 0, 11);
-	captionMem.share(28).write(0, captionTextMem.getByteArray(0, (int) captionTextMem.size()), 0, (int) captionTextMem.size());
-	
-	if (PlatformUtils.is64Bit()) {
-		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, captionMem, (int) captionMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	else {
-		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, captionMem, (int) captionMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	
-//
-//		Read record HOTSPOTEND (170) with 0 data bytes, cdrecord length: 2
-//		Data:
-	
-	Memory hotspotEndMem = new Memory(2);
-	hotspotEndMem.clear();
-	
-	hotspotEndMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTEND);
-	hotspotEndMem.share(1).setByte(0, (byte) (hotspotEndMem.size() & 0xff));
-	
-	if (PlatformUtils.is64Bit()) {
-		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotEndMem, (int) hotspotEndMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	else {
-		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotEndMem, (int) hotspotEndMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	
-	Memory endMem = new Memory(6);
-	endMem.clear();
-	
-	endMem.setShort(0, NotesConstants.SIG_CD_END);
-	endMem.share(1).setByte(0, (byte) (endMem.size() & 0xff));
-	endMem.share(2).setShort(0, (short) 0);
-	endMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTEND & 0xffff));
+		if (captionColorRed<0 || captionColorRed>255)
+			throw new IllegalArgumentException("Red value of color can only be between 0 and 255");
+		if (captionColorGreen<0 || captionColorGreen>255)
+			throw new IllegalArgumentException("Green value of color can only be between 0 and 255");
+		if (captionColorBlue<0 || captionColorBlue>255)
+			throw new IllegalArgumentException("Blue value of color can only be between 0 and 255");
 
-	if (PlatformUtils.is64Bit()) {
-		result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, endMem, (int) endMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	else {
-		result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, endMem, (int) endMem.size());
-		NotesErrorUtils.checkResult(result);
-	}
-	
-	//
-//		Read record END (222) with 4 data bytes, cdrecord length: 6
-//		Data:
-//		[00 00 ae 00            ]   [....    ]
+		Memory beginMem = new Memory(
+				2 + //BSIG
+				2 + //Version
+				2 //Signature
+				);
+		beginMem.clear();
 
+		//	Read record BEGIN (221) with 4 data bytes, cdrecord length: 6
+		//	Data:
+		//	[00 00 ad ff            ]   [....    ]
+
+		beginMem.setShort(0, NotesConstants.SIG_CD_BEGIN);
+		beginMem.share(1).setByte(0, (byte) (beginMem.size() & 0xff));
+		beginMem.share(2).setShort(0, (short) 0);
+		beginMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTBEGIN & 0xffff));
+
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, beginMem, (int) beginMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, beginMem, (int) beginMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		m_hasData=true;
+
+		//
+		//		Read record HOTSPOTBEGIN (-87) with 24 data bytes, cdrecord length: 28
+		//		Data:
+		//		[04 00 08 00 00 00 10 00]   [........]
+		//		[6d 61 69 6e 2e 6a 73 00]   [main.js.]
+		//		[6d 61 69 6e 2e 6a 73 00]   [main.js.]
+
+		//	typedef struct {
+		//		   WSIG  Header; /* Signature and length of this record */	
+		//		   WORD  Type;
+		//		   DWORD Flags;
+		//		   WORD  DataLength;
+		//		/*	Data follows... */
+		//			/*  if HOTSPOTREC_RUNFLAG_SIGNED, WORD SigLen then SigData follows. */
+		//		} CDHOTSPOTBEGIN;
+
+		Memory uniqueFileNameAttachment = NotesStringUtils.toLMBCS(attachmentProgrammaticName, true);
+		Memory fileNameToDisplayMem = NotesStringUtils.toLMBCS(filenameToDisplay, true);
+
+		Memory hotspotBeginMem = new Memory(
+				2 + 2 + //WSIG
+				2 + //Type
+				4 + //Flags
+				2 + //DataLength
+				uniqueFileNameAttachment.size() + 
+				fileNameToDisplayMem.size()
+				);
+		hotspotBeginMem.clear();
+
+		hotspotBeginMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTBEGIN);
+		hotspotBeginMem.share(2).setShort(0, (short) (hotspotBeginMem.size() & 0xffff));
+		hotspotBeginMem.share(4).setShort(0, NotesConstants.HOTSPOTREC_TYPE_FILE);
+
+		int flags = NotesConstants.HOTSPOTREC_RUNFLAG_NOBORDER;
+		hotspotBeginMem.share(6).setInt(0, flags);
+		hotspotBeginMem.share(10).setShort(0, (short) ((uniqueFileNameAttachment.size() + fileNameToDisplayMem.size()) & 0xffff));
+
+		hotspotBeginMem.share(12).write(0, uniqueFileNameAttachment.getByteArray(0, (int) uniqueFileNameAttachment.size()), 0, (int) uniqueFileNameAttachment.size());
+		hotspotBeginMem.share(12 + uniqueFileNameAttachment.size()).write(0, fileNameToDisplayMem.getByteArray(0, (int) fileNameToDisplayMem.size()), 0, (int) fileNameToDisplayMem.size());
+
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotBeginMem, (int) hotspotBeginMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotBeginMem, (int) hotspotBeginMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+
+		addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
+
+		//	typedef struct {
+		//		   WSIG        Header;       /* Tag and length */
+		//		   WORD        wLength;      /* Text length */
+		//		   BYTE        Position;     /* One of the position flags above */
+		//		   FONTID      FontID;       /* Font to use for the text */
+		//		   COLOR_VALUE FontColor;    /* RGB font color info */
+		//		   BYTE        Reserved[11]; /* Reserved for future use */
+		//		/* The 8-bit text string follows... */
+		//		} CDCAPTION;
+
+		Memory captionTextMem = NotesStringUtils.toLMBCS(captionText, false);
+
+		Memory captionMem = new Memory(
+				2 + 2 + //WSIG
+				2 + // Text Length
+				1 + // Position
+				4 + // FontID
+				6 + // FontColor
+				11 + //Reserved
+				captionTextMem.size()
+				);
+		captionMem.clear();
+
+		captionMem.setShort(0, NotesConstants.SIG_CD_CAPTION);
+		captionMem.share(2).setShort(0, (short) (captionMem.size() & 0xffff));
+		captionMem.share(4).setShort(0, (short) (captionTextMem.size() & 0xffff));
+
+		byte captionPosition;
+		if (captionPos==CaptionPosition.BELOWCENTER) {
+			captionPosition = NotesConstants.CAPTION_POSITION_BELOW_CENTER;
+		}
+		else if (captionPos==CaptionPosition.MIDDLECENTER) {
+			captionPosition = NotesConstants.CAPTION_POSITION_MIDDLE_CENTER;
+		}
+		else {
+			captionPosition = 0;
+		}
+		captionMem.share(6).setByte(0, captionPosition);
+
+		FontId fontIdObj = captionStyle.getAdapter(FontId.class);
+		if (fontIdObj==null)
+			throw new NotesError(0, "Unable to get FontId from FontStyle");
+		int fontId = fontIdObj.getFontId();
+		captionMem.share(7).setInt(0, fontId);
+
+		byte captionColorRedByte = (byte) (captionColorRed & 0xff);
+		byte captionColorGreenByte = (byte) (captionColorGreen & 0xff);
+		byte captionColorBlueByte = (byte) (captionColorBlue & 0xff);
+
+		NotesColorValueStruct colorStruct = NotesColorValueStruct.newInstance();
+		colorStruct.Component1 = captionColorRedByte;
+		colorStruct.Component2 = captionColorGreenByte;
+		colorStruct.Component3 = captionColorBlueByte;
+		colorStruct.Flags = NotesConstants.COLOR_VALUE_FLAGS_ISRGB;
+		colorStruct.write();
+		captionMem.share(11).write(0, colorStruct.getPointer().getByteArray(0, 6), 0, 6);
+		captionMem.share(17).write(0, new byte[11], 0, 11);
+		captionMem.share(28).write(0, captionTextMem.getByteArray(0, (int) captionTextMem.size()), 0, (int) captionTextMem.size());
+
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, captionMem, (int) captionMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, captionMem, (int) captionMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+
+		//
+		//		Read record HOTSPOTEND (170) with 0 data bytes, cdrecord length: 2
+		//		Data:
+
+		Memory hotspotEndMem = new Memory(2);
+		hotspotEndMem.clear();
+
+		hotspotEndMem.setShort(0, NotesConstants.SIG_CD_HOTSPOTEND);
+		hotspotEndMem.share(1).setByte(0, (byte) (hotspotEndMem.size() & 0xff));
+
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, hotspotEndMem, (int) hotspotEndMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, hotspotEndMem, (int) hotspotEndMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+
+		Memory endMem = new Memory(6);
+		endMem.clear();
+
+		endMem.setShort(0, NotesConstants.SIG_CD_END);
+		endMem.share(1).setByte(0, (byte) (endMem.size() & 0xff));
+		endMem.share(2).setShort(0, (short) 0);
+		endMem.share(4).setShort(0, (short) (NotesConstants.SIG_CD_V4HOTSPOTEND & 0xffff));
+
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().CompoundTextAddCDRecords(m_handle64, endMem, (int) endMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		else {
+			result = NotesNativeAPI32.get().CompoundTextAddCDRecords(m_handle32, endMem, (int) endMem.size());
+			NotesErrorUtils.checkResult(result);
+		}
+
+		//
+		//		Read record END (222) with 4 data bytes, cdrecord length: 6
+		//		Data:
+		//		[00 00 ae 00            ]   [....    ]
+
+		return this;
 	}
 	
 	public boolean hasData() {

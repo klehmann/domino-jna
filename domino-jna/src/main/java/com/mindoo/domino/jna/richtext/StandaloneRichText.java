@@ -9,6 +9,8 @@ import java.util.LinkedList;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesAttachment;
+import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesNote.IItemCallback;
@@ -37,7 +39,7 @@ import com.sun.jna.ptr.LongByReference;
  * 
  * @author Karsten Lehmann
  */
-public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText, IAdaptable {
+public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText<StandaloneRichText>, IAdaptable {
 	private CompoundTextWriter m_compoundText;
 	
 	/**
@@ -76,102 +78,132 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 	}
 	
 	@Override
-	public void addDocLink(NotesNote note, String comment) {
-		m_compoundText.addDocLink(note, comment);
-	}
-
-	@Override
-	public void addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
-		m_compoundText.addDocLink(dbReplicaId, viewUnid, noteUNID, comment);
-	}
-
-	@Override
-	public void addRenderedNote(NotesNote note) {
-		m_compoundText.addRenderedNote(note);
-	}
-
-	@Override
-	public void addRenderedNote(NotesNote note, String form) {
-		m_compoundText.addRenderedNote(note, form);
-	}
-
-	@Override
-	public void addText(String txt) {
-		m_compoundText.addText(txt);
-	}
-
-	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
-		m_compoundText.addText(txt, textStyle, fontStyle);
-	}
-
-	@Override
-	public void addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
-		m_compoundText.addText(txt, textStyle, fontStyle, createParagraphOnLinebreak);
-	}
-
-	@Override
-	public void addRichTextItem(NotesNote otherNote, String itemName) {
-		m_compoundText.addRichTextItem(otherNote, itemName);
-	}
-
-	@Override
-	public void addImage(File f) throws IOException {
-		m_compoundText.addImage(f);
-	}
-
-	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
-		m_compoundText.addImage(resizeToWidth, resizeToHeight, f);
-	}
-
-	@Override
-	public void addImage(int fileSize, InputStream imageData) throws IOException {
-		m_compoundText.addImage(fileSize, imageData);
-	}
-
-	@Override
-	public void addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData)
-			throws IOException {
-		m_compoundText.addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
+	public StandaloneRichText addDatabaseLink(NotesDatabase db, String comment) {
+		m_compoundText.addDatabaseLink(db, comment);
+		return this;
 	}
 	
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
+	public StandaloneRichText addCollectionLink(NotesCollection collection, String comment) {
+		m_compoundText.addCollectionLink(collection, comment);
+		return this;
+	}
+	
+	@Override
+	public StandaloneRichText addDocLink(NotesNote note, String comment) {
+		m_compoundText.addDocLink(note, comment);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addDocLink(String dbReplicaId, String viewUnid, String noteUNID, String comment) {
+		m_compoundText.addDocLink(dbReplicaId, viewUnid, noteUNID, comment);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addRenderedNote(NotesNote note) {
+		m_compoundText.addRenderedNote(note);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addRenderedNote(NotesNote note, String form) {
+		m_compoundText.addRenderedNote(note, form);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addText(String txt) {
+		m_compoundText.addText(txt);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addText(String txt, TextStyle textStyle, FontStyle fontStyle) {
+		m_compoundText.addText(txt, textStyle, fontStyle);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addText(String txt, TextStyle textStyle, FontStyle fontStyle, boolean createParagraphOnLinebreak) {
+		m_compoundText.addText(txt, textStyle, fontStyle, createParagraphOnLinebreak);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addRichTextItem(NotesNote otherNote, String itemName) {
+		m_compoundText.addRichTextItem(otherNote, itemName);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addImage(File f) throws IOException {
+		m_compoundText.addImage(f);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addImage(int resizeToWidth, int resizeToHeight, File f) throws IOException {
+		m_compoundText.addImage(resizeToWidth, resizeToHeight, f);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addImage(int fileSize, InputStream imageData) throws IOException {
+		m_compoundText.addImage(fileSize, imageData);
+		return this;
+	}
+
+	@Override
+	public StandaloneRichText addImage(int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData)
+			throws IOException {
+		m_compoundText.addImage(resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
+	}
+	
+	@Override
+	public StandaloneRichText addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay) {
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
+	public StandaloneRichText addFileHotspot(NotesAttachment attachment, String filenameToDisplay) {
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image)
+	public StandaloneRichText addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText, File image)
 			throws IOException {
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, image);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image)
+	public StandaloneRichText addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText, File image)
 			throws IOException {
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay, captionText, image);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText,
+	public StandaloneRichText addFileHotspot(String attachmentProgrammaticName, String filenameToDisplay, String captionText,
 			FontStyle captionStyle, CaptionPosition captionPos, int captionColorRed, int captionColorGreen,
 			int captionColorBlue, int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData)
 			throws IOException {
 		m_compoundText.addFileHotspot(attachmentProgrammaticName, filenameToDisplay, captionText, captionStyle, captionPos, captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
 	}
 
 	@Override
-	public void addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText,
+	public StandaloneRichText addFileHotspot(NotesAttachment attachment, String filenameToDisplay, String captionText,
 			FontStyle captionStyle, CaptionPosition captionPos, int captionColorRed, int captionColorGreen,
 			int captionColorBlue, int resizeToWidth, int resizeToHeight, int fileSize, InputStream imageData)
 			throws IOException {
 		m_compoundText.addFileHotspot(attachment, filenameToDisplay, captionText, captionStyle, captionPos, captionColorRed, captionColorGreen, captionColorBlue, resizeToWidth, resizeToHeight, fileSize, imageData);
+		return this;
 	}
 
 	/**
@@ -181,13 +213,15 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 	 * @param rt standalone richtext
 	 */
 	@Override
-	public void addClosedStandaloneRichText(StandaloneRichText rt) {
+	public StandaloneRichText addClosedStandaloneRichText(StandaloneRichText rt) {
 		m_compoundText.addClosedStandaloneRichText(rt);
+		return this;
 	}
 	
 	@Override
-	public void addCDRecords(Memory cdRecordMem) {
+	public StandaloneRichText addCDRecords(Memory cdRecordMem) {
 		m_compoundText.addCDRecords(cdRecordMem);
+		return this;
 	}
 	
 	@Override
@@ -253,29 +287,29 @@ public class StandaloneRichText implements IRecyclableNotesObject, ICompoundText
 		});
 		
 		//build new compound text
-		RichTextBuilder rt = note.createRichTextItem(richTextItemName);
-		CompoundTextWriter ctWriter = rt.getAdapter(CompoundTextWriter.class);
-		if (ctWriter==null) {
-			throw new NotesError(0, "Could not get "+CompoundTextWriter.class.getSimpleName()+" instance");
-		}
-		
-		//and transfer the CD records from this compound text
-		if (result.getType()==CloseResultType.Buffer) {
-			final CompoundTextStandaloneBuffer buffer = result.getBuffer();
-			FileInfo fileInfo;
-			try {
-				fileInfo = buffer.asFileOnDisk();
-			} catch (FileNotFoundException e1) {
-				throw new NotesError(0, "Could not extract compound text buffer to disk: "+buffer, e1);
+		try (RichTextBuilder rt = note.createRichTextItem(richTextItemName);) {
+			CompoundTextWriter ctWriter = rt.getAdapter(CompoundTextWriter.class);
+			if (ctWriter==null) {
+				throw new NotesError(0, "Could not get "+CompoundTextWriter.class.getSimpleName()+" instance");
 			}
-			ctWriter.addCompoundTextFromFile(fileInfo.getFilePath());
+
+			//and transfer the CD records from this compound text
+			if (result.getType()==CloseResultType.Buffer) {
+				final CompoundTextStandaloneBuffer buffer = result.getBuffer();
+				FileInfo fileInfo;
+				try {
+					fileInfo = buffer.asFileOnDisk();
+				} catch (FileNotFoundException e1) {
+					throw new NotesError(0, "Could not extract compound text buffer to disk: "+buffer, e1);
+				}
+				ctWriter.addCompoundTextFromFile(fileInfo.getFilePath());
+			}
+			else {
+				//Domino created a temp file
+				String filePath = result.getFilePath();
+				ctWriter.addCompoundTextFromFile(filePath);
+			}
 		}
-		else {
-			//Domino created a temp file
-			String filePath = result.getFilePath();
-			ctWriter.addCompoundTextFromFile(filePath);
-		}
-		rt.close();
 		
 		//cleanup obsolete items read earlier
 		for (NotesItem currOldItem : items) {
