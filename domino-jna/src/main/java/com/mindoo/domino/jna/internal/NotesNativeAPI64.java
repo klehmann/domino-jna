@@ -8,6 +8,7 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.ASYNCNOTIFYPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.REGSIGNALPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.b64_DESIGNENUMPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_FPMailNoteJitEx2CallBack;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFDbNamedObjectEnumPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.b64_NSFGetAllFolderChangesCallback;
@@ -1549,5 +1550,13 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			LongByReference phConsoleText, LongByReference phTasksText, LongByReference phUsersText,
 			ShortByReference pSignals, IntByReference pConsoleBufferID, long hQueue, ASYNCNOTIFYPROC Proc,
 			Pointer Param, PointerByReference retactx);
+	
+	@Override
+	public native short DesignEnum2(long hDB, short NoteClass, Memory pszFlagsPattern, int dwFlags, b64_DESIGNENUMPROC proc,
+			Pointer parameters, DESIGN_COLL_OPENCLOSE_PROC openCloseRoutine, Pointer ctx);
+	
+	
+	@Override
+	public native short DesignGetNoteTable(long hDB, short NoteClass, LongByReference rethIDTable);
 }
 

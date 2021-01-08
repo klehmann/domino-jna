@@ -1851,4 +1851,17 @@ public interface INotesNativeAPI32 extends Library {
             ShortByReference pSignals, IntByReference pConsoleBufferID, int hQueue,
             NotesCallbacks.ASYNCNOTIFYPROC Proc, Pointer Param, PointerByReference retactx);
 
+	@UndocumentedAPI
+	public short DesignEnum2 (int hDB,
+			   short NoteClass,
+			   Memory  pszFlagsPattern,
+			   int dwFlags,
+			   NotesCallbacks.b32_DESIGNENUMPROC proc,
+			   Pointer parameters,
+			   NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC openCloseRoutine,
+			   Pointer ctx);
+
+	@UndocumentedAPI
+	public short DesignGetNoteTable(int hDB, short NoteClass, IntByReference rethIDTable);
+
 }

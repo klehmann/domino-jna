@@ -246,5 +246,16 @@ public interface NotesCallbacks {
 	interface ASYNCNOTIFYPROC extends Callback {
 		void invoke(Pointer vactx, Pointer pvReadCtx);
 	}
+
+	interface b64_DESIGNENUMPROC extends Callback {
+		short invoke(Pointer routineParameter, long hDB, int NoteID, 
+				NotesUniversalNoteIdStruct NoteUNID, short NoteClass, Pointer summary, int designType);
+		
+	}
 	
+	interface b32_DESIGNENUMPROC extends Callback {
+		short invoke(Pointer routineParameter, int hDB, int NoteID, 
+				NotesUniversalNoteIdStruct NoteUNID, short NoteClass, Pointer summary, int designType);
+	}
+
 }

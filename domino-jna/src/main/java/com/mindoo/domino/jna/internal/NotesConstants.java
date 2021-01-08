@@ -609,8 +609,201 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 
 	public static String DESIGN_FLAGS = "$Flags";
 
-	public static String DESIGN_FLAG_FOLDER_VIEW = "F";	/*	VIEW: This is a V4 folder view. */
-	
+	/*	Please keep these flags in alphabetic order (based on the flag itself) so that
+	we can easily tell which flags to use next. Note that some of these flags apply
+	to a particular NOTE_CLASS; others apply to all design elements. The comments
+	indicate which is which. In theory, flags that apply to two different NOTE_CLASSes
+	could overlap, but for now, try to make each flag unique. */
+
+	/**	FORM: Indicates that a subform is in the add subform list */
+	String DESIGN_FLAG_ADD = "A";
+	/**	VIEW: Indicates that a view is an antifolder view */
+	String  DESIGN_FLAG_ANTIFOLDER = "a";
+	/**	FILTER: Indicates FILTER_TYPE_BACKGROUND is asserted */
+	String DESIGN_FLAG_BACKGROUND_FILTER = "B";
+	/**	VIEW: Indicates view can be initially built only by designer and above */
+	String DESIGN_FLAG_INITBYDESIGNONLY = "b";
+	/**	FORM: Indicates a form that is used only for  query by form (not on compose menu). */
+	String DESIGN_FLAG_NO_COMPOSE = "C";
+	/**	VIEW: Indicates a form is a calendar style view. */
+	String DESIGN_FLAG_CALENDAR_VIEW = "c";
+	/** FORM: Indicates a form that should not be used in query by form */
+	String DESIGN_FLAG_NO_QUERY  = "D";
+	/** ALL: Indicates the default design note for it's class (used for VIEW) */
+	String DESIGN_FLAG_DEFAULT_DESIGN = "d";
+	/**	FILTER: Indicates FILTER_TYPE_MAIL is asserted */
+	String DESIGN_FLAG_MAIL_FILTER = "E";
+	/**	VIEW: Indicates that a view is a public antifolder view */
+	String DESIGN_FLAG_PUBLICANTIFOLDER = "e";
+	/**	VIEW: This is a V4 folder view. */
+	String DESIGN_FLAG_FOLDER_VIEW = "F";
+	/**	FILTER: This is a V4 agent */
+	String DESIGN_FLAG_V4AGENT = "f";
+	/**	VIEW: This is ViewMap/GraphicView/Navigator */
+	String DESIGN_FLAG_VIEWMAP  = "G";
+	/**  FORM: file design element */
+	String DESIGN_FLAG_FILE = "g";
+	/**	ALL: Indicates a form that is placed in Other... dialog */
+	String DESIGN_FLAG_OTHER_DLG = "H";
+	/**  Javascript library. */
+	String DESIGN_FLAG_JAVASCRIPT_LIBRARY = "h";
+	/**	FILTER: This is a V4 paste agent */
+	String DESIGN_FLAG_V4PASTE_AGENT = "I";
+	/**	FORM: Note is a shared image resource */
+	String DESIGN_FLAG_IMAGE_RESOURCE = "i";
+	/**  FILTER: If its Java */
+	String DESIGN_FLAG_JAVA_AGENT = "J";
+	/** FILTER: If it is a java agent with java source code. */
+	String DESIGN_FLAG_JAVA_AGENT_WITH_SOURCE = "j";
+	/** to keep mobile digests out of form lists */
+	String DESIGN_FLAG_MOBILE_DIGEST = "K";
+	/**	FORM: with "g", design element is an xpage, much like a file resource, but special! */
+	String DESIGN_FLAG_XSPPAGE = "K";
+	/** Data Connection Resource (DCR) for 3rd party database */
+	String DESIGN_FLAG_CONNECTION_RESOURCE = "k";
+	/**  FILTER: If its LOTUSSCRIPT */
+	String DESIGN_FLAG_LOTUSSCRIPT_AGENT = "L";
+	/**  VIEW: Indicates that a view is a deleted documents view */
+	String DESIGN_FLAG_DELETED_DOCS = "l";
+	/**	FILTER: Stored FT query AND macro */
+	String DESIGN_FLAG_QUERY_MACRO_FILTER = "M";
+	/**  FILTER: This is a site(m)ap. */
+	String DESIGN_FLAG_SITEMAP = "m";
+	/**  FORM: Indicates that a subform is listed when making a new form.*/
+	String DESIGN_FLAG_NEW = "N";
+	/**  ALL: notes stamped with this flag will be hidden from Notes clients
+	 * We need a separate value here because it is possible to be
+	 * hidden from V4 AND to be hidden from Notes, and clearing one should not clear the other */
+	String DESIGN_FLAG_HIDE_FROM_NOTES = "n";
+	/**	FILTER: Indicates V4 search bar query object - used in addition to 'Q' */
+	String DESIGN_FLAG_QUERY_V4_OBJECT = "O";
+	/**  VIEW: If Private_1stUse, store the private view in desktop */
+	String DESIGN_FLAG_PRIVATE_STOREDESK = "o";
+	/**	ALL: related to data dictionary */
+	String DESIGN_FLAG_PRESERVE = "P";
+	/** VIEW: This is a private copy of a private on first use view. */
+	String DESIGN_FLAG_PRIVATE_1STUSE = "p";
+	/**	FILTER: Indicates full text query ONLY, no filter macro */
+	String DESIGN_FLAG_QUERY_FILTER = "Q";
+	/**	FILTER: Search part of this agent should be shown in search bar */
+	String DESIGN_FLAG_AGENT_SHOWINSEARCH = "q";
+	/**	SPECIAL: this flag is the opposite of DESIGN_FLAG_PRESERVE, used
+	 * only for the 'About' and 'Using' notes + the icon bitmap in the icon note */
+	String DESIGN_FLAG_REPLACE_SPECIAL = "R";
+	/**  DESIGN: this flag is used to propagate the prohibition of design change */
+	String DESIGN_FLAG_PROPAGATE_NOCHANGE = "r";
+	/**	FILTER: This is a V4 background agent */
+	String DESIGN_FLAG_V4BACKGROUND_MACRO = "S";
+	/**	FILTER: A database global script library note */
+	String DESIGN_FLAG_SCRIPTLIB = "s";
+	/** VIEW: Indicates a view that is categorized on the categories field */
+	String DESIGN_FLAG_VIEW_CATEGORIZED = "T";
+	/**	FILTER: A database script note */
+	String DESIGN_FLAG_DATABASESCRIPT = "t";
+	/**	FORM: Indicates that a form is a subform.*/
+	String DESIGN_FLAG_SUBFORM = "U";
+	/**	FILTER: Indicates agent should run as effective user on web */
+	String DESIGN_FLAG_AGENT_RUNASWEBUSER = "u";
+	/**	FILTER: Indicates agent should run as invoker (generalize the web user notion, reuse the flag */
+	String DESIGN_FLAG_AGENT_RUNASINVOKER = "u";
+	/** ALL: This is a private element stored in the database */
+	String DESIGN_FLAG_PRIVATE_IN_DB = "V";
+	/**	FORM: Used with 'i' to indicate the image is an image well.
+	 * Used for images with images across, not images down. 'v' looks like a bucket */
+	String DESIGN_FLAG_IMAGE_WELL = "v";
+	/**	FORM: Note is a WEBPAGE	*/
+	String DESIGN_FLAG_WEBPAGE = "W";
+	/**  ALL: notes stamped with this flag will be hidden from WEB clients */
+	String DESIGN_FLAG_HIDE_FROM_WEB = "w";
+	/** WARNING: A formula that build Design Collection relies on the fact that Agent Data's
+	 * $Flags is the only Design Collection element whose $Flags="X"
+	 * FILTER: This is a V4 agent data note */
+	String DESIGN_FLAG_V4AGENT_DATA = "X";
+	/**	SUBFORM: indicates whether we should render a subform in the parent form = = */
+	String DESIGN_FLAG_SUBFORM_NORENDER = "x";
+	/**	ALL: Indicates that folder/view/etc. should be hidden from menu. */
+	String DESIGN_FLAG_NO_MENU  = "Y";
+	/**	Shared actions note	*/
+	String DESIGN_FLAG_SACTIONS = "y";
+	/** ALL: Used to indicate design element was hidden before the 'Notes Global Designer' modified it. (used with the "!" flag) */
+	String DESIGN_FLAG_MULTILINGUAL_PRESERVE_HIDDEN = "Z";
+	/**  FILTER: this is a servlet, not an agent! */
+	String DESIGN_FLAG_SERVLET = "z";
+	/**  FORM: reuse obsoleted servlet flag */
+	String DESIGN_FLAG_ACCESSVIEW = "z";
+	/**	FORM: Indicates that this is a frameset note */ 
+	String DESIGN_FLAG_FRAMESET = "#";
+	/**	ALL: Indicates this design element supports the 'Notes Global Designer' multilingual addin */
+	String DESIGN_FLAG_MULTILINGUAL_ELEMENT = "!";
+	/**	FORM: Note is a shared Java resource */
+	String DESIGN_FLAG_JAVA_RESOURCE = "@";
+	/** Style Sheet Resource (SSR) */
+	String DESIGN_FLAG_STYLESHEET_RESOURCE = "=";
+	/** FILTER: web service design element */
+	String DESIGN_FLAG_WEBSERVICE = "{";
+	/** VIEW: shared column design element */
+	String DESIGN_FLAG_SHARED_COL = "^";
+
+	/**	hide this element from mobile clients */
+	String DESIGN_FLAG_HIDE_FROM_MOBILE = "1";
+	/**	hide from portal */
+	String DESIGN_FLAG_HIDE_FROM_PORTAL = "2";
+	/** xpage/cc properties file */
+	String DESIGN_FLAG_PROPFILE = "2";
+	/**	ALL: notes stamped with this flag will be hidden from V3 client */
+	String DESIGN_FLAG_HIDE_FROM_V3 = "3";
+	/**	ALL: notes stamped with this flag will be hidden from V4 client */
+	String DESIGN_FLAG_HIDE_FROM_V4 = "4";
+	/** FILTER: 'Q5'= hide from V4.5 search list
+	 * ALL OTHER: notes stamped with this flag  will be hidden from V5 client */
+	String DESIGN_FLAG_HIDE_FROM_V5 = "5";
+	/**	ALL: notes stamped with this flag will be hidden from V6 client */
+	String DESIGN_FLAG_HIDE_FROM_V6 = "6";
+	/**	ALL: notes stamped with this flag will be hidden from V7 client */
+	String DESIGN_FLAG_HIDE_FROM_V7 = "7";
+	/**	ALL: notes stamped with this flag will be hidden from V8 client */
+	String DESIGN_FLAG_HIDE_FROM_V8 = "8";
+	/**	ALL: notes stamped with this flag will be hidden from V9 client */
+	String DESIGN_FLAG_HIDE_FROM_V9 = "9";
+	/**	ALL: notes stamped with this flag will be hidden from the client 
+	 * usage is for different language versions of the design list to be
+	 * hidden completely = */
+	String DESIGN_FLAG_MUTILINGUAL_HIDE = "0";
+	/**	shimmer design docs */
+	String DESIGN_FLAG_WEBHYBRIDDB = "%";
+	/**  for files, at least for starters */
+	String DESIGN_FLAG_READONLY = "&";
+	/** for files, at least for now */
+	String DESIGN_FLAG_NEEDSREFRESH = "$";
+	/**	this design element is an html file */
+	String DESIGN_FLAG_HTMLFILE = ">";
+	/** this design element is a jsp */
+	String DESIGN_FLAG_JSP = "<";
+	/** VIEW - Query View in design list */
+	String DESIGN_FLAG_QUERYVIEW = "<";
+	/**	this file element is a directory */
+	String DESIGN_FLAG_DIRECTORY = "/";
+	/**	FORM - used for printing. */
+	String DESIGN_FLAG_PRINTFORM = "?";
+	/**	keep this thing out of a design list */
+	String DESIGN_FLAG_HIDEFROMDESIGNLIST = "~";
+	/**	keep this thing out of a design list but allow users to view doc using it */
+	String DESIGN_FLAG_HIDEONLYFROMDESIGNLIST = "}";
+	/**  FORM: This is a "composite application" design element. LI 3925.04 */
+	String DESIGN_FLAG_COMPOSITE_APP = "|";
+	/**  FORM: Design element is "wiring properties". Always accompanied by hide flags for versions prior to 8.0. LI 3925.05 */
+	String DESIGN_FLAG_COMPOSITE_DEF = ":";
+	/** note class form, a custom control */
+	String DESIGN_FLAG_XSP_CC = ";";
+	/** note class filter, with 's', server side JS script library */
+	String DESIGN_FLAG_JS_SERVER = ".";
+	/** style kit design element */
+	String DESIGN_FLAG_STYLEKIT = "`";
+	/** also has a g and is a file, but a component/widget design element */
+	String DESIGN_FLAG_WIDGET = "_";
+	/** Java design element */
+	String DESIGN_FLAG_JAVAFILE = "[";
+
 	//saves the info in the idtable header in the dest
 	public static final byte IDREPLACE_SAVEDEST = 0x01;
 	
@@ -3881,8 +4074,28 @@ This allows an Editor to assume some Designer-level access */
 	public String FIELD_UPDATED_BY = "$UpdatedBy";
 	public String FIELD_FORM = "Form";
 
+
+	/* Form note item names */
+	public String FIELD_TITLE = "$TITLE";
+
 	/* form item to hold form CD */
 	public String ITEM_NAME_TEMPLATE = "$Body";
+	/* document header info */
+	public String ITEM_NAME_DOCUMENT = "$Info";
+	/* form title item */
+	public String ITEM_NAME_TEMPLATE_NAME = FIELD_TITLE;
+	/* form link table */
+	public String ITEM_NAME_FORMLINK = "$FormLinks";
+	/* field name table */
+	public String ITEM_NAME_FIELDS = "$Fields";
+	/* form privileges */
+	public String ITEM_NAME_FORMPRIVS = "$FormPrivs";
+	/* text list of users allowed to use the form */
+	public String ITEM_NAME_FORMUSERS = "$FormUsers";
+	/* form item to hold form Frameset definition */
+	public String TEM_NAME_FRAMESET = "$FrameSet";
+	/* frameset used to open form */
+	public String ITEM_NAME_FRAMEINFO = "$FrameInfo";
 
 	/* SendTo item name */
 	public String MAIL_SENDTO_ITEM = "SendTo";
@@ -3959,9 +4172,6 @@ This allows an Editor to assume some Designer-level access */
 	/* stored form and subform signature prefix - followed by either $FORM or the subform name*/
 	public String ITEM_NAME_NOTE_STOREDFORM_SIG_PREFIX = "$SIG";
 
-	public String FIELD_TITLE = "$TITLE";
-	/* document header info */
-	public String ITEM_NAME_DOCUMENT = "$Info";
 	public String SUBFORM_ITEM_NAME = "$SubForms";
 
 	/* only subforms; no version filtering */
@@ -4002,5 +4212,44 @@ This allows an Editor to assume some Designer-level access */
 	public int REMCON_CMD_ONLY = 0x000000008;
 	public int REMCON_GET_CONSOLE_META = 0x000000010;
 	public int REMCON_SYNC = 0x000000020;
+
+	/* Text list of users allowed to read note */
+	public String DESIGN_READERS = "$Readers";
+
+	/** Text list of fields to retain in a design refresh */
+	public String DESIGN_RETAIN_FIELDS = "$RetainFields";
+
+	/*	List of all types of design elements used in DesignGetAccess */
+
+	/*	About application note. */
+	public int DESIGN_TYPE_INFO = 0x00000001;
+	/*	A Notes form */
+	public int DESIGN_TYPE_FORM = 0x00000002;
+	/*	A view or folder */
+	public int DESIGN_TYPE_VIEW = 0x00000004;
+	/*	Database icon */
+	public int DESIGN_TYPE_ICON = 0x00000008;
+	/*	An agent */
+	public int DESIGN_TYPE_AGENT = 0x00000010;
+	/*	A shared field */
+	public int DESIGN_TYPE_FIELD = 0x00000020;
+	/*	A saved FT query */
+	public int DESIGN_TYPE_QUERY = 0x00000040;
+	/*	A subform */
+	public int DESIGN_TYPE_SUBFORM = 0x00000080;
+	/*	A navigator */
+	public int DESIGN_TYPE_NAVIGATOR = 0x00000100;
+	/*	A LotusScript agent */
+	public int DESIGN_TYPE_LOTUSSCRIPT = 0x00000200;
+	/*	Database level script */
+	public int DESIGN_TYPE_DATABASESCRIPT = 0x00000400;
+	/*	Script Library */
+	public int DESIGN_TYPE_SCRIPTLIB = 0x00000800;
+	/*  Outline */
+	public int DESIGN_TYPE_OUTLINE = 0x00001000;
+	/*  Frameset */
+	public int DESIGN_TYPE_FRAMESET = 0x00002000;
+	/*  web service */
+	public int DESIGN_TYPE_WEBSERVICE = 0x00004000;
 
 }
