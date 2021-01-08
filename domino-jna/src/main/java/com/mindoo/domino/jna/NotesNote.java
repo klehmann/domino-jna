@@ -33,6 +33,7 @@ import com.mindoo.domino.jna.NotesMIMEPart.PartType;
 import com.mindoo.domino.jna.NotesNote.IItemCallback.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.Compression;
+import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.MimePartOptions;
 import com.mindoo.domino.jna.constants.NoteClass;
@@ -883,7 +884,7 @@ public class NotesNote implements IRecyclableNotesObject {
 
 	 * @param updateFlags flags
 	 */
-	public void update(EnumSet<UpdateNote> updateFlags) {
+	public void update(Set<UpdateNote> updateFlags) {
 		if (checkForProfileAndUpdate()) {
 			return;
 		}
@@ -1322,19 +1323,19 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * This function writes an item of type TEXT to the note.<br>
+	 * This function writes an item of type {@link NotesItem#TYPE_TEXT} to the note.<br>
 	 * If an item of that name already exists, it deletes the existing item first,
 	 * then appends the new item.<br>
 	 * <br>
 	 * Note 1: Use \n as line break in your string. The method internally converts these line breaks
 	 * to null characters ('\0'), because that's what the Notes API expects as line break delimiter.<br>
 	 * <br>
-	 * Note 2: If the Summary parameter of is set to TRUE, the ITEM_SUMMARY flag in the item will be set.
-	 * Items with the ITEM_SUMMARY flag set are stored in the note's summary buffer. These items may
+	 * Note 2: If the Summary parameter of is set to TRUE, the {@link ItemType#SUMMARY} flag in the item will be set.
+	 * Items with the {@link ItemType#SUMMARY} flag set are stored in the note's summary buffer. These items may
 	 * be used in view columns,  selection formulas, and @-functions. The maximum size of the summary
-	 * buffer is 32K per note.<br>
-	 * If you append more than 32K bytes of data in items that have the ITEM_SUMMARY flag set,
-	 * this method call will succeed, but {@link #update(EnumSet)} will return ERR_SUMMARY_TOO_BIG (ERR 561).
+	 * buffer is 32K per note in older databases and 16 MB in databases with enabled large summary support ({@link DatabaseOption#LARGE_BUCKETS_ENABLED}).<br>
+	 * If you append more than 32K bytes/16 MB of data in items that have the {@link ItemType#SUMMARY} flag set,
+	 * this method call will succeed, but {@link #update(Set)} will return error code {@link INotesErrorConstants#ERR_SUMMARY_TOO_BIG} (ERR 561).
 	 * To avoid this, decide which fields are not used in view columns, selection formulas,
 	 * or @-functions. For these "non-computed" fields, use this method with the Summary parameter set to FALSE.<br>
 	 * <br>
@@ -3495,7 +3496,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param value item value, see method comment for allowed types; use null to just remove the old item value
 	 * @return created item or null if value was null
 	 */
-	public NotesItem replaceItemValue(String itemName, EnumSet<ItemType> flags, Object value) {
+	public NotesItem replaceItemValue(String itemName, Set<ItemType> flags, Object value) {
 		if (!hasSupportedItemObjectType(value)) {
 			throw new IllegalArgumentException("Unsupported value type: "+dumpValueType(value));
 		}
@@ -3627,7 +3628,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @param value item value, see method comment for allowed types
 	 * @return created item
 	 */
-	public NotesItem appendItemValue(String itemName, EnumSet<ItemType> flagsOrig, Object value) {
+	public NotesItem appendItemValue(String itemName, Set<ItemType> flagsOrig, Object value) {
 		checkHandle();
 
 		if (value instanceof MIMEData) {
@@ -3638,7 +3639,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		
 		//remove our own pseudo flags:
 		boolean keepLineBreaks = flagsOrig.contains(ItemType.KEEPLINEBREAKS);
-		EnumSet<ItemType> flags = flagsOrig.clone();
+		EnumSet<ItemType> flags = EnumSet.copyOf(flagsOrig);
 		flags.remove(ItemType.KEEPLINEBREAKS);
 
 		if (value instanceof FormulaExecution) {

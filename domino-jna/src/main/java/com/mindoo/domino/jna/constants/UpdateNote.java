@@ -1,6 +1,6 @@
 package com.mindoo.domino.jna.constants;
 
-import java.util.EnumSet;
+import java.util.Set;
 
 /**
  * These flags control the manner in which Domino and Notes updates or deletes the on-disk copy of a note.<br>
@@ -86,7 +86,7 @@ public enum UpdateNote {
 		return m_val;
 	}
 
-	public static short toBitMaskForUpdate(EnumSet<UpdateNote> updateFlagSet) {
+	public static short toBitMaskForUpdate(Set<UpdateNote> updateFlagSet) {
 		int result = 0;
 		if (updateFlagSet != null) {
 			for (UpdateNote currNav : values()) {
@@ -103,7 +103,7 @@ public enum UpdateNote {
 		return (short) (result & 0xffff);
 	}
 
-	public static int toBitMaskForUpdateExt(EnumSet<UpdateNote> updateFlagSet) {
+	public static int toBitMaskForUpdateExt(Set<UpdateNote> updateFlagSet) {
 		int result = 0;
 		if (updateFlagSet != null) {
 			for (UpdateNote currNav : values()) {
