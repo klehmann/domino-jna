@@ -29,9 +29,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesReplicationHistorySummary.ReplicationDirection;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CopyDatabase;
@@ -50,6 +52,7 @@ import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.ReplicateOption;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.constants.UpdateNote;
+import com.mindoo.domino.jna.design.NotesForm;
 import com.mindoo.domino.jna.directory.DirectoryScanner;
 import com.mindoo.domino.jna.directory.DirectoryScanner.DatabaseData;
 import com.mindoo.domino.jna.directory.DirectoryScanner.SearchResultData;
@@ -66,6 +69,7 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
+import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.INotesNativeAPI32;
 import com.mindoo.domino.jna.internal.INotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Mem32;
@@ -102,6 +106,7 @@ import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.mindoo.domino.jna.utils.Ref;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
@@ -2560,6 +2565,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return note id or 0 if not found
 	 */
 	public int findDesignNoteId(String name, NoteClass noteType) {
+		if (StringUtil.isEmpty(name)) {
+			return 0;
+		}
+		
 		checkHandle();
 		IntByReference retNoteID = new IntByReference();
 		retNoteID.setValue(0);
@@ -2572,7 +2581,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN, true);
 		}
 		else if (noteType == NoteClass.FILTER) {
-			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_TOOLSRUNMACRO, true);
+			flagsPatternMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_AGENTSLIST, true);
 		}
 		
 		short result;
@@ -2582,8 +2591,31 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		else {
 			result = NotesNativeAPI32.get().NIFFindDesignNoteExt(m_hDB32, nameMem, noteTypeShort, flagsPatternMem, retNoteID, 0);
 		}
-		
-		if ((result & NotesConstants.ERR_MASK)==1028) {
+
+		if (noteType==NoteClass.FORM) {
+			if (((result & NotesConstants.ERR_MASK)==INotesErrorConstants.ERR_NOT_FOUND) ||
+					((result & NotesConstants.ERR_MASK)==INotesErrorConstants.ERR_INVALID_NOTE) ||
+					retNoteID.getValue()==0) {
+				
+				IntByReference retbIsPrivate = new IntByReference();
+				
+				if (PlatformUtils.is64Bit()) {
+					result = NotesNativeAPI64.get().DesignLookupNameFE(m_hDB64, noteTypeShort,
+							null, nameMem, (short) ((nameMem.size()-1) & 0xffff),
+							NotesConstants.DGN_STRIPUNDERS | NotesConstants.DGN_SKIPSYNONYMS | NotesConstants.DGN_ONLYSHARED,
+							retNoteID, retbIsPrivate, null, null);
+				}
+				else {
+					result = NotesNativeAPI32.get().DesignLookupNameFE(m_hDB32, noteTypeShort,
+							null, nameMem, (short) ((nameMem.size()-1) & 0xffff),
+							NotesConstants.DGN_STRIPUNDERS | NotesConstants.DGN_SKIPSYNONYMS | NotesConstants.DGN_ONLYSHARED,
+							retNoteID, retbIsPrivate, null, null);
+				}
+			}
+		}
+
+		if (((result & NotesConstants.ERR_MASK)==INotesErrorConstants.ERR_NOT_FOUND) ||
+				((result & NotesConstants.ERR_MASK)==INotesErrorConstants.ERR_INVALID_NOTE)) {
 			return 0;
 		}
 		
@@ -4196,7 +4228,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	/**
 	 * This function reads a "soft deleted" note into memory.<br>
 	 * Its input is a database handle and a note ID within that database.<br>
-	 * Use {@link NotesNote#update(EnumSet)} to restore this "soft deleted" note.
+	 * Use {@link NotesNote#update(Set)} to restore this "soft deleted" note.
 
 	 * @param noteId The ID of the "soft deleted" note to open
 	 * @return note
@@ -4313,7 +4345,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @param openFlags Flags that control the manner in which the note is opened. This, in turn, controls what information about the note is available to you and how it is structured. The flags are defined in {@link OpenNote}.
 	 * @return note or null if not found
 	 */
-	public NotesNote openNoteById(int noteId, EnumSet<OpenNote> openFlags) {
+	public NotesNote openNoteById(int noteId, Set<OpenNote> openFlags) {
 		checkHandle();
 
 		int openFlagsBitmask = toNoteOpenOptions(openFlags);
@@ -7836,5 +7868,291 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 */
 	public NotesNoteCollection createNoteCollection() {
 		return new NotesNoteCollection(this);
+	}
+	
+	private NotesIDTable getAllDesignElement(NoteClass noteClass) {
+		checkHandle();
+
+		Ref<NotesIDTable> idTable = new Ref<>(new NotesIDTable());
+
+		boolean designEnumSuccess = false;
+
+		short result = 0;
+
+		NotesCallbacks.b64_DESIGNENUMPROC callback64;
+		NotesCallbacks.b32_DESIGNENUMPROC callback32;
+
+		if (PlatformUtils.is64Bit()) {
+			callback32 = null;
+			
+			callback64 = new NotesCallbacks.b64_DESIGNENUMPROC() {
+
+				@Override
+				public short invoke(Pointer routineParameter, long hDB, int noteID,
+						NotesUniversalNoteIdStruct noteUNID, short noteClass, Pointer summary, int designType) {
+
+					idTable.get().addNote(noteID);
+					return 0;
+				}
+			};
+		}
+		else {
+			callback64 = null;
+			
+			if (PlatformUtils.isWin32()) {
+				callback32 = new Win32NotesCallbacks.DESIGNENUMPROCWin32() {
+
+					@Override
+					public short invoke(Pointer routineParameter, int hDB, int noteID,
+							NotesUniversalNoteIdStruct noteUNID, short noteClass, Pointer summary, int designType) {
+
+						idTable.get().addNote(noteID);
+						return 0;
+					}
+
+				};
+			}
+			else {
+				callback32 = new NotesCallbacks.b32_DESIGNENUMPROC() {
+
+					@Override
+					public short invoke(Pointer routineParameter, int hDB, int noteID,
+							NotesUniversalNoteIdStruct noteUNID, short noteClass, Pointer summary, int designType) {
+
+						idTable.get().addNote(noteID);
+						return 0;
+					}
+				};
+			}
+		}
+
+		if (noteClass == NoteClass.VIEW || noteClass == NoteClass.FILTER ||
+				noteClass == NoteClass.FORM) {
+
+			String designFlags;
+			if (noteClass == NoteClass.VIEW) {
+				designFlags = NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS_DESIGN;
+			}
+			else if (noteClass == NoteClass.FILTER) {
+				designFlags = NotesConstants.DFLAGPAT_AGENTSLIST;
+			}
+			else {
+				designFlags = NotesConstants.DFLAGPAT_VIEWFORM_ALL_VERSIONS;
+			}
+			Memory designFlagsMem = NotesStringUtils.toLMBCS(designFlags, true);
+
+			if (PlatformUtils.is64Bit()) {
+				result = AccessController.doPrivileged((PrivilegedAction<Short>) () -> {
+					return NotesNativeAPI64.get().DesignEnum2(m_hDB64, (short) (noteClass.getValue() &0xffff),
+							designFlagsMem,
+							NotesConstants.DGN_ONLYSHARED, callback64, null, null, null);
+				});
+
+				if (result==0 && noteClass == NoteClass.FORM) {
+					//add subforms
+					Memory subformDesignFlagsMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_SUBFORM_ALL_VERSIONS, true);
+
+					result = AccessController.doPrivileged((PrivilegedAction<Short>) () -> {
+						return NotesNativeAPI64.get().DesignEnum2(m_hDB64, (short) (noteClass.getValue() &0xffff),
+								subformDesignFlagsMem,
+								NotesConstants.DGN_ONLYSHARED, callback64, null, null, null);
+					});
+				}
+
+				if (result == 0) {
+					designEnumSuccess = true;
+				}
+			}
+			else {
+				result = AccessController.doPrivileged((PrivilegedAction<Short>) () -> {
+					return NotesNativeAPI32.get().DesignEnum2(m_hDB32, (short) (noteClass.getValue() &0xffff),
+							designFlagsMem,
+							NotesConstants.DGN_ONLYSHARED, callback32, null, null, null);
+				});
+				NotesErrorUtils.checkResult(result);
+
+				if (result==0 && noteClass == NoteClass.FORM) {
+					//add subforms
+					Memory subformDesignFlagsMem = NotesStringUtils.toLMBCS(NotesConstants.DFLAGPAT_SUBFORM_ALL_VERSIONS, true);
+
+					result = AccessController.doPrivileged((PrivilegedAction<Short>) () -> {
+						return NotesNativeAPI32.get().DesignEnum2(m_hDB32, (short) (noteClass.getValue() &0xffff),
+								subformDesignFlagsMem,
+								NotesConstants.DGN_ONLYSHARED, callback32, null, null, null);
+					});
+					NotesErrorUtils.checkResult(result);
+				}
+
+				if (result == 0) {
+					designEnumSuccess = true;
+				}
+			}
+
+			if (result != INotesErrorConstants.ERR_NOACCESS) {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+		if (!designEnumSuccess) {
+			idTable.get().recycle();
+
+			// non-views, and v3 servers
+			// first get all the public design notes
+			Handle hIDTable;
+			if (PlatformUtils.is64Bit()) {
+				LongByReference rethIDTable = new LongByReference();
+				result = NotesNativeAPI64.get().DesignGetNoteTable(m_hDB64,
+						(short) (noteClass.getValue() & 0xffff), rethIDTable);
+				NotesErrorUtils.checkResult(result);
+				hIDTable = new Handle(rethIDTable.getValue());
+			}
+			else {
+				IntByReference rethIDTable = new IntByReference();
+				result = NotesNativeAPI32.get().DesignGetNoteTable(m_hDB32,
+						(short) (noteClass.getValue() & 0xffff), rethIDTable);
+				NotesErrorUtils.checkResult(result);
+				hIDTable = new Handle(rethIDTable.getValue());
+			}
+
+			idTable.set(new NotesIDTable(hIDTable, false));
+
+			// if we're getting views, remove any navigator notes;
+			// if we're doing agents, remove script libs
+
+			if (noteClass == NoteClass.VIEW || noteClass == NoteClass.FILTER ||
+					noteClass == NoteClass.FORM) {
+
+				boolean isView = noteClass == NoteClass.VIEW;
+				boolean isForm = noteClass == NoteClass.FORM;
+
+				Set<Integer> noteIdsToRemove = new HashSet<>();
+
+				for (Integer currNoteId : idTable.get()) {
+					NotesNote currNote = null;
+					try {
+						currNote = openNoteById(currNoteId, EnumSet.of(OpenNote.SUMMARY));
+					}
+					catch (NotesError e) {
+						//ignore
+					}
+
+					if (currNote!=null) {
+						String flags = currNote.getItemValueString(NotesConstants.DESIGN_FLAGS);
+
+						if (isView && flags.contains(NotesConstants.DESIGN_FLAG_VIEWMAP)) {
+							noteIdsToRemove.add(currNoteId);
+						}
+						else if (isForm && (
+								flags.contains(NotesConstants.DESIGN_FLAG_IMAGE_RESOURCE) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_WEBPAGE) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_JAVA_RESOURCE) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_FRAMESET) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_HTMLFILE) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_JSP) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_SACTIONS) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_STYLESHEET_RESOURCE)
+								)) {
+							noteIdsToRemove.add(currNoteId);
+						}
+						else if (!isView && !isForm && (
+								flags.contains(NotesConstants.DESIGN_FLAG_SCRIPTLIB) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_DATABASESCRIPT) ||
+								flags.contains(NotesConstants.DESIGN_FLAG_SITEMAP)
+								)) {
+							noteIdsToRemove.add(currNoteId);
+						}
+						currNote.recycle();
+					}
+				}
+			}
+		}
+
+		// Now use a lower level one to get private notes
+
+		String designFlags;
+
+		/* this call might fail if the db is on a V3 server. Ignore ERR_NOACCESS return code */
+		if (noteClass == NoteClass.VIEW) {
+			designFlags = NotesConstants.DFLAGPAT_VIEWS_AND_FOLDERS;
+		}
+		else if (noteClass == NoteClass.FILTER) {
+			designFlags = NotesConstants.DFLAGPAT_AGENTSLIST;
+		}
+		else {
+			designFlags = null;
+		}
+		Memory designFlagsMem = designFlags==null ? null : NotesStringUtils.toLMBCS(designFlags, true);
+
+		if (PlatformUtils.is64Bit()) {
+			result = AccessController.doPrivileged((PrivilegedAction<Short>) ()->{
+				return NotesNativeAPI64.get().DesignEnum2(m_hDB64, (short) (noteClass.getValue() & 0xffff),
+						designFlagsMem, NotesConstants.DGN_ONLYPRIVATE | NotesConstants.DGN_ALLPRIVATE,
+						callback64, null, null, null);
+			});
+		}
+		else {
+			result = AccessController.doPrivileged((PrivilegedAction<Short>) ()->{
+				return NotesNativeAPI32.get().DesignEnum2(m_hDB32, (short) (noteClass.getValue() & 0xffff),
+						designFlagsMem, NotesConstants.DGN_ONLYPRIVATE | NotesConstants.DGN_ALLPRIVATE,
+						callback32, null, null, null);
+			});
+		}
+
+		if (result==0 || result==INotesErrorConstants.ERR_NOACCESS) {
+			return idTable.get();
+		}
+		NotesErrorUtils.checkResult(result);
+		return new NotesIDTable(); //should not be reached, because checkResult throws an Exception
+	}
+
+	/**
+	 * Returns the note ids of all forms and subforms
+	 * 
+	 * @return note ids
+	 */
+	public NotesIDTable getFormNoteIds() {
+		return getAllDesignElement(NoteClass.FORM);
+	}
+	
+	/**
+	 * Returns a stream of database forms (lazily loaded)
+	 * 
+	 * @return forms
+	 */
+	public Stream<NotesForm> getForms() {
+		NotesIDTable idTable = getFormNoteIds();
+		return StreamSupport
+				.stream(idTable.spliterator(), false)
+				.map((noteId) -> {
+					return openNoteById(noteId);
+				})
+				.filter((note) -> {
+					return note!=null;
+				})
+				.map((note) -> {
+					return new NotesForm(note);
+				});
+	}
+
+	/**
+	 * Finds a form or subform in a database given the form name
+	 * 
+	 * @param formName form name
+	 * @return form or null if not found
+	 */
+	public NotesForm getForm(String formName) {
+		if (StringUtil.isEmpty(formName)) {
+			return null;
+		}
+		
+		int formNoteId = findDesignNoteId(formName, NoteClass.FORM);
+		if (formNoteId!=0) {
+			NotesNote formNote = openNoteById(formNoteId);
+			if (formNote!=null) {
+				return new NotesForm(formNote);
+			}
+		}
+		
+		return null;
 	}
 }
