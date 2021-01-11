@@ -3879,6 +3879,59 @@ This allows an Editor to assume some Designer-level access */
 	public short CDRESOURCE_CLASS_PORTFOLIO = 21;
 	public short CDRESOURCE_CLASS_OUTLINE = 22;
 
+	/** Obsolete - Use class _VIEW or _FOLDER and flag _SIMPLE */
+	public short CDRESOURCE_CLASS_SIMPLEVIEW = 23;
+	/** design link only */
+	public short CDRESOURCE_CLASS_SUBFORM = 24;
+	/** design link only */
+	public short CDRESOURCE_CLASS_SHARED_FLD = 25;
+	/** design link only */
+	public short CDRESOURCE_CLASS_SCRIPTLIB = 26;
+	/** design link only */
+	public short CDRESOURCE_CLASS_DBSCRIPT = 27;
+	/** design link only */
+	public short CDRESOURCE_CLASS_SHARED_ACTIONS = 28;
+	/** design link only */
+	public short CDRESOURCE_CLASS_WEBSERVICE = 29;
+	/** design link only */
+	public short CDRESOURCE_CLASS_DATA_CONNECTION = 30;
+	public short CDRESOURCE_CLASS_SHARED_APPLET = 31;
+	public short CDRESOURCE_CLASS_EMBEDDED_VIEW = 32;
+	public short CDRESOURCE_CLASS_STYLE_SHEET = 33;
+	/** a file with the html flag, too */
+	public short CDRESOURCE_CLASS_HTMLFILE = 34;
+	/** a file that's a JSP */
+	public short CDRESOURCE_CLASS_JSP = 35;
+	public short CDRESOURCE_CLASS_SHAREDCOL = 36;
+	public short CDRESOURCE_CLASS_DB2ACCESSVIEW = 37;
+	 /** LI 3925.04 */
+	public short CDRESOURCE_CLASS_COMPAPP = 38;
+	/** LI 3925.05 */
+	public short CDRESOURCE_CLASS_COMPDEF = 39;
+	/** LI 3261.05 */
+	public short CDRESOURCE_CLASS_MAILSETTINGS = 40;
+	/** LI 3261.05 */
+	public short CDRESOURCE_CLASS_CSSETTINGS = 41;
+	/** LI 3261.05 */
+	public short CDRESOURCE_CLASS_FORM_PREMIUM = 42;
+	public short CDRESOURCE_MAX_CLASS = CDRESOURCE_CLASS_FORM_PREMIUM;
+	/** design link only */
+	public short CDRESOURCE_CLASS_XSPPAGES = 43;
+	/** design link only */
+	public short CDRESOURCE_CLASS_XSPCCS = 44;
+	/** design link only */
+	public short CDRESOURCE_CLASS_STYLEKITS = 45;
+	/** design link only */
+	public short CDRESOURCE_CLASS_WSCONSUMERS = 46;
+	/** design link only */
+	public short CDRESOURCE_CLASS_COMPONENT = 47;
+	/** design link only */
+	public short CDRESOURCE_CLASS_JAVAFILES = 48;
+	/** design link only */
+	public short CDRESOURCE_CLASS_JAVAJARS = 49;
+	/** design link only */
+	public short CDRESOURCE_CLASS_CUSTOMELTS = 50;
+	
 	public short KFM_access_GetIDFHFlags = 51;
 
 	/** File is password protected */
