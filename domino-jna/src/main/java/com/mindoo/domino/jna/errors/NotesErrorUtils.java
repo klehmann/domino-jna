@@ -145,7 +145,9 @@ public class NotesErrorUtils {
 	 * @return error message
 	 */
 	public static String errToString(short err) {
-		if (err==0) {
+		short status = (short) (err & NotesConstants.ERR_MASK);
+		
+		if (status==0) {
 			return "";
 		}
 	
@@ -153,7 +155,7 @@ public class NotesErrorUtils {
 		try {
 			retBuffer.clear();
 			
-			short outStrLength = NotesNativeAPI.get().OSLoadString(0, err, retBuffer, (short) 255);
+			short outStrLength = NotesNativeAPI.get().OSLoadString(0, status, retBuffer, (short) 255);
 			if (outStrLength!=0) {
 				String message = NotesStringUtils.fromLMBCS(retBuffer, outStrLength);
 				return message;
@@ -166,7 +168,7 @@ public class NotesErrorUtils {
 		//there are some error codes (e.g. ERR_HTMLAPI_HTMLOPTION) for which OSLoadString did not return
 		//a string; that's why we added the available error texts from the R9 C API to the project
 		Map<Short,String> fallbackTexts = getFallbackErrorTexts();
-		String txt = fallbackTexts.get(err);
+		String txt = fallbackTexts.get(status);
 		return txt==null ? "" : txt;
 	}
 
