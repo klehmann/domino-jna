@@ -374,7 +374,7 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 			if (valueLength>=2) {
 				short formulaErrorCode = valueDataPtr.getShort(0);
 				String errMsg = NotesErrorUtils.errToString(formulaErrorCode);
-				throw new NotesError(0, "Could not evaluate formula "+m_formula+"\n"+errMsg);
+				throw new NotesError(formulaErrorCode, "Could not evaluate formula "+m_formula+"\nError: "+errMsg);
 			}
 			else {
 				throw new NotesError(0, "Could not evaluate formula "+m_formula);
