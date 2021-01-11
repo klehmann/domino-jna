@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.utils.DumpUtil;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -370,8 +371,14 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 			return Collections.emptyList();
 		}
 		else if (dataTypeAsInt == NotesItem.TYPE_ERROR) {
-			//TODO find a way to parse error details
-			throw new NotesError(0, "Could not evaluate formula: "+m_formula);
+			if (valueLength>=2) {
+				short formulaErrorCode = valueDataPtr.getShort(0);
+				String errMsg = NotesErrorUtils.errToString(formulaErrorCode);
+				throw new NotesError(0, "Could not evaluate formula "+m_formula+"\n"+errMsg);
+			}
+			else {
+				throw new NotesError(0, "Could not evaluate formula "+m_formula);
+			}
 		}
 		else {
 			throw new UnsupportedItemValueError("Data is currently unsupported: "+dataTypeAsInt);
