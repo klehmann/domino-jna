@@ -2905,19 +2905,19 @@ public class NotesNote implements IRecyclableNotesObject {
 	/** Possible validation phases for {@link NotesNote#computeWithForm(boolean, ComputeWithFormCallback)}  */
 	public static enum ValidationPhase {
 		/** Error occurred when processing the Default Value formula. */
-		CWF_DV_FORMULA,
+		DEFAULT_VALUE_FORMULA,
 		/** Error occurred when processing the Translation formula. */
-		CWF_IT_FORMULA,
+		INPUT_TRANSLATION_FORMULA,
 		/**  Error occurred when processing the Validation formula. */
-		CWF_IV_FORMULA,
+		INPUT_VALIDATION_FORMULA,
 		/** Error occurred when processing the computed field Value formula. */
-		CWF_COMPUTED_FORMULA,
+		COMPUTED_FIELD_FORMULA,
 		/** Error occurred when verifying the data type for the field. */
-		CWF_DATATYPE_CONVERSION,
+		FIELD_DATATYPE_CONVERSION,
 		/** Error occurred when processing the computed field Value formula, during the "load" pass. */
-		CWF_COMPUTED_FORMULA_LOAD,
+		COMPUTED_FIELD_FORMULA_LOAD,
 		/** Error occurred when processing the computed field Value formula, during the "save" pass. */
-		CWF_COMPUTED_FORMULA_SAVE
+		COMPUTED_FIELD_FORMULA_SAVE
 	};
 
 	/** 	Possible return values from the callback routine specified in
@@ -2925,11 +2925,11 @@ public class NotesNote implements IRecyclableNotesObject {
 	 */
 	public static enum CWF_Action {
 		/** End all processing by computeWithForm and return the error status to the caller. */
-		CWF_ABORT((short) 1),
+		ABORT((short) 1),
 		/** End validation of the current field and go on to the next. */
-		CWF_NEXT_FIELD((short) 2),
+		NEXT_FIELD((short) 2),
 		/** Begin the validation process for this field over again. */
-		CWF_RECHECK_FIELD((short) 3);
+		RECHECK_FIELD((short) 3);
 		
 		short actionVal;
 		
@@ -2946,25 +2946,25 @@ public class NotesNote implements IRecyclableNotesObject {
 	private ValidationPhase decodeValidationPhase(short phase) {
 		ValidationPhase phaseEnum = null;
 		if (phase == NotesConstants.CWF_DV_FORMULA) {
-			phaseEnum = ValidationPhase.CWF_DV_FORMULA;
+			phaseEnum = ValidationPhase.DEFAULT_VALUE_FORMULA;
 		}
 		else if (phase == NotesConstants.CWF_IT_FORMULA) {
-			phaseEnum = ValidationPhase.CWF_IT_FORMULA;
+			phaseEnum = ValidationPhase.INPUT_TRANSLATION_FORMULA;
 		}
 		else if (phase == NotesConstants.CWF_IV_FORMULA) {
-			phaseEnum = ValidationPhase.CWF_IV_FORMULA;
+			phaseEnum = ValidationPhase.INPUT_VALIDATION_FORMULA;
 		}
 		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA) {
-			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA;
+			phaseEnum = ValidationPhase.COMPUTED_FIELD_FORMULA;
 		}
 		else if (phase == NotesConstants.CWF_DATATYPE_CONVERSION) {
-			phaseEnum = ValidationPhase.CWF_DATATYPE_CONVERSION;
+			phaseEnum = ValidationPhase.FIELD_DATATYPE_CONVERSION;
 		}
 		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA_LOAD) {
-			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_LOAD;
+			phaseEnum = ValidationPhase.COMPUTED_FIELD_FORMULA_LOAD;
 		}
 		else if (phase == NotesConstants.CWF_COMPUTED_FORMULA_SAVE) {
-			phaseEnum = ValidationPhase.CWF_COMPUTED_FORMULA_SAVE;
+			phaseEnum = ValidationPhase.COMPUTED_FIELD_FORMULA_SAVE;
 		}
 
 		return phaseEnum;
@@ -3130,12 +3130,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 					CWF_Action action;
 					if (callback==null) {
-						action = CWF_Action.CWF_ABORT;
+						action = CWF_Action.ABORT;
 					}
 					else {
 						action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 					}
-					return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+					return action==null ? CWF_Action.ABORT.getShortVal() : action.getShortVal();
 				}
 				
 			};
@@ -3176,12 +3176,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 						CWF_Action action;
 						if (callback==null) {
-							action = CWF_Action.CWF_ABORT;
+							action = CWF_Action.ABORT;
 						}
 						else {
 							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 						}
-						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+						return action==null ? CWF_Action.ABORT.getShortVal() : action.getShortVal();
 					}
 
 				};
@@ -3214,12 +3214,12 @@ public class NotesNote implements IRecyclableNotesObject {
 
 						CWF_Action action;
 						if (callback==null) {
-							action = CWF_Action.CWF_ABORT;
+							action = CWF_Action.ABORT;
 						}
 						else {
 							action = callback.errorRaised(fieldInfo, phaseEnum, errorTxt, error);
 						}
-						return action==null ? CWF_Action.CWF_ABORT.getShortVal() : action.getShortVal();
+						return action==null ? CWF_Action.ABORT.getShortVal() : action.getShortVal();
 					}
 
 				};
