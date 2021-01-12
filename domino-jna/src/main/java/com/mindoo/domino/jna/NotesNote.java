@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ import com.mindoo.domino.jna.constants.MimePartOptions;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.constants.UpdateNote;
+import com.mindoo.domino.jna.design.NotesForm;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.LotusScriptCompilationError;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -61,6 +63,7 @@ import com.mindoo.domino.jna.internal.CalNoteOpenData64;
 import com.mindoo.domino.jna.internal.CollationDecoder;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.FieldPropAdaptable;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
@@ -2917,10 +2920,11 @@ public class NotesNote implements IRecyclableNotesObject {
 		CWF_COMPUTED_FORMULA_SAVE
 	};
 
-	/* 	Possible return values from the callback routine specified in
-	NSFNoteComputeWithForm() */
+	/** 	Possible return values from the callback routine specified in
+	 * {@link NotesNote#computeWithForm(NotesForm, boolean, ComputeWithFormCallback)}
+	 */
 	public static enum CWF_Action {
-		/** End all processing by NSFNoteComputeWithForm() and return the error status to the caller. */
+		/** End all processing by computeWithForm and return the error status to the caller. */
 		CWF_ABORT((short) 1),
 		/** End validation of the current field and go on to the next. */
 		CWF_NEXT_FIELD((short) 2),
@@ -3044,13 +3048,59 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesErrorUtils.checkResult(result);
 	}
 	
+	/**
+	 * This function will:<br>
+	 * <br>
+	 * 1)  Validate fields with Default Value formulas,<br>
+	 * 2)  Validate fields with Translation formulas,<br>
+	 * 3)  Validate fields with Validation formulas,<br>
+	 * 4)  Calculate values for Computed fields.<br>
+	 * <br>
+	 * If no error callback routine is supplied and the flag {@code continueOnError} is not
+	 * set, if one of the validation formulas fails, an error is returned.<br>
+	 * If the {@code continueOnError} flag is set, the error is not returned.<br>
+	 * <br>
+	 * If an error callback routine is supplied and one of the validation formulas fails, the
+	 * error callback routine is called.<br>
+	 * If the {@code continueOnError} flag is set, error processing for the field is skipped;
+	 * if an error callback function is supplied, the callback function will be ignored.
+	 * 
+	 * @param continueOnError if specified, then error processing is ignored for the fields will be skipped and the error callback function will not be called.
+	 * @param callback optional error callback routine or null
+	 */
 	public void computeWithForm(boolean continueOnError, final ComputeWithFormCallback callback) {
+		computeWithForm(null, continueOnError, callback);
+	}
+	
+	/**
+	 * Given an open form note, for each field defined in the form, this function will:<br>
+	 * <br>
+	 * 1)  Validate fields with Default Value formulas,<br>
+	 * 2)  Validate fields with Translation formulas,<br>
+	 * 3)  Validate fields with Validation formulas,<br>
+	 * 4)  Calculate values for Computed fields.<br>
+	 * <br>
+	 * If no error callback routine is supplied and the flag {@code continueOnError} is not
+	 * set, if one of the validation formulas fails, an error is returned.<br>
+	 * If the {@code continueOnError} flag is set, the error is not returned.<br>
+	 * <br>
+	 * If an error callback routine is supplied and one of the validation formulas fails, the
+	 * error callback routine is called.<br>
+	 * If the {@code continueOnError} flag is set, error processing for the field is skipped;
+	 * if an error callback function is supplied, the callback function will be ignored.
+	 * 
+	 * @param form if null is specified, then the function will use the note's embedded form; if there is no embedded form, it will use the form specified in the form field; if there is no form field, this function will use the default database form.
+	 * @param continueOnError if specified, then error processing is ignored for the fields will be skipped and the error callback function will not be called.
+	 * @param callback optional error callback routine or null
+	 */
+	public void computeWithForm(NotesForm form, boolean continueOnError, final ComputeWithFormCallback callback) {
 		checkHandle();
 
-		int dwFlags = 0;
-		if (continueOnError) {
-			dwFlags = NotesConstants.CWF_CONTINUE_ON_ERROR;
+		if (form!=null && form.isRecycled()) {
+			throw new NotesError(0, "Form note is recycled");
 		}
+		
+		int dwFlags = continueOnError ? NotesConstants.CWF_CONTINUE_ON_ERROR : 0;
 		
 		if (PlatformUtils.is64Bit()) {
 			NotesCallbacks.b64_CWFErrorProc errorProc = new NotesCallbacks.b64_CWFErrorProc() {
@@ -3074,9 +3124,8 @@ public class NotesNote implements IRecyclableNotesObject {
 						}
 					}
 
-					NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(pCDField);
-					cdFieldStruct.read();
-					FieldInfo fieldInfo = new FieldInfo(cdFieldStruct);
+					FieldPropAdaptable fieldData = new FieldPropAdaptable(pCDField, null);
+					FieldInfo fieldInfo = new FieldInfo(fieldData);
 					ValidationPhase phaseEnum = decodeValidationPhase(phase);
 
 					CWF_Action action;
@@ -3091,7 +3140,9 @@ public class NotesNote implements IRecyclableNotesObject {
 				
 			};
 		
-			short result = NotesNativeAPI64.get().NSFNoteComputeWithForm(m_hNote64, 0, dwFlags, errorProc, null);
+			short result = AccessController.doPrivileged((PrivilegedAction<Short>) ()->{
+				return NotesNativeAPI64.get().NSFNoteComputeWithForm(m_hNote64, form==null ? 0 : form.getNote().getHandle64(), dwFlags, errorProc, null);
+			});
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
@@ -3157,9 +3208,8 @@ public class NotesNote implements IRecyclableNotesObject {
 							}
 						}
 
-						NotesCDFieldStruct cdFieldStruct = NotesCDFieldStruct.newInstance(pCDField);
-						cdFieldStruct.read();
-						FieldInfo fieldInfo = new FieldInfo(cdFieldStruct);
+						FieldPropAdaptable fieldData = new FieldPropAdaptable(pCDField, null);
+						FieldInfo fieldInfo = new FieldInfo(fieldData);
 						ValidationPhase phaseEnum = decodeValidationPhase(phase);
 
 						CWF_Action action;
@@ -3174,13 +3224,29 @@ public class NotesNote implements IRecyclableNotesObject {
 
 				};
 			}
-			short result = NotesNativeAPI32.get().NSFNoteComputeWithForm(m_hNote32, 0, dwFlags, errorProc, null);
+			short result = AccessController.doPrivileged((PrivilegedAction<Short>) ()->{
+				return NotesNativeAPI32.get().NSFNoteComputeWithForm(m_hNote32, form==null ? 0 : form.getNote().getHandle32(), dwFlags, errorProc, null);
+			});
 			NotesErrorUtils.checkResult(result);
 		}
 	}
 	
+	/**
+	 * If an error is found when validating field values in
+	 * {@link NotesNote#computeWithForm(NotesForm, boolean, ComputeWithFormCallback)},
+	 * the error callback function is called with information about the problem.<br>
+	 */
 	public static interface ComputeWithFormCallback {
 		
+		/**
+		 * Function is called with information about the problem
+		 * 
+		 * @param fieldInfo information about the form field
+		 * @param phase current validation phase, see {@link ValidationPhase} for possible values
+		 * @param errorTxt text that caused the error
+		 * @param errCode Domino status code for the error that was detecte
+		 * @return action how to proceed, see {@link CWF_Action} for possible values
+		 */
 		public CWF_Action errorRaised(FieldInfo fieldInfo, ValidationPhase phase, String errorTxt, long errCode);
 	}
 	

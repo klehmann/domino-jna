@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<form name='Person' xmlns='http://www.lotus.com/dxl' version='11.0' maintenanceversion='1.0'
+ replicaid='C12585AE0079C9A4' publicaccess='false' designerversion='8.5.3'
+ renderpassthrough='true'>
+<noteinfo noteid='172' unid='72E769ED8E95D743C12585AE0079D37C' sequence='3'>
+<created><datetime dst='true'>20200724T001039,96+02</datetime></created>
+<modified><datetime dst='true'>20200724T001543,91+02</datetime></modified>
+<revised><datetime dst='true'>20200724T001254,32+02</datetime></revised>
+<lastaccessed><datetime dst='true'>20200724T001543,90+02</datetime></lastaccessed>
+<addedtofile><datetime dst='true'>20200724T001543,90+02</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Karsten Lehmann/O=Mindoo</name></updatedby>
+<wassignedby><name>CN=Karsten Lehmann/O=Mindoo</name></wassignedby>
+<body><richtext>
+<pardef id='1'/>
+<par def='1'>Firstname</par>
+<par def='1'><field type='text' kind='editable' name='Firstname'><code event='inputvalidation'><formula
+>@If(@ThisValue="";@Failure("Firstname is missing");@Success)</formula></code></field><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='1'/>
+<par def='1'>Lastname:</par>
+<par def='1'><field type='text' kind='editable' name='Lastname'><code event='inputvalidation'><formula
+>@If(@ThisValue="";@Failure("Lastname is missing");@Success)</formula></code></field><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par>
+<par def='1'/>
+<par def='1'><field type='text' kind='editable' name='DefaultTest'><code event='defaultvalue'><formula
+>@Text(@Now)</formula></code></field><compositedata type='98' prevtype='65418'
+ nexttype='222' afterparcount='6' containertype='65418' aftercontainercount='1'
+ afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$$ScriptName' summary='false' sign='true'><text>Person</text></item></form>
+

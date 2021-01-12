@@ -1,11 +1,11 @@
 package com.mindoo.domino.jna.internal.structs.compoundtext;
 
-import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 
 public interface IFieldHtmlPropsProvider {
 
-	public Memory getCDRecordWithHeaderAndFieldStruct();
+	public Pointer getCDRecordWithHeaderAndFieldStruct();
 	
-	public Memory getCDRecordWithHeaderAndIDNameStruct();
+	public Pointer getCDRecordWithHeaderAndIDNameStruct();
 	
 }

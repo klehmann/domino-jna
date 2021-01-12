@@ -8,19 +8,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -36,10 +43,14 @@ import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.dxl.DXLImporter;
+import com.mindoo.domino.jna.dxl.DXLImporter.DXLImportOption;
+import com.mindoo.domino.jna.dxl.DXLImporter.XMLValidationOption;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 
 import lotus.domino.Database;
 import lotus.domino.DateTime;
@@ -522,7 +533,118 @@ public class BaseJNATestClass {
 			NotesDatabase.deleteDatabase("", tmpFilePath);
 		}
 	}
+
+	public void withImportedDXL(NotesDatabase db, String resDirPath, DatabaseConsumer consumer) throws Exception {
+		DXLImporter dxlImporter = new DXLImporter();
+		try {
+			dxlImporter.setInputValidationOption(XMLValidationOption.NEVER);
+			dxlImporter.setDesignImportOption(DXLImportOption.REPLACE_ELSE_CREATE);
+			dxlImporter.setReplicaRequiredForReplaceOrUpdate(false);
+			getResourceFiles(resDirPath)
+			.stream()
+			.filter(Objects::nonNull)
+			.map(name -> concat("/", name, '/'))
+			.map((name) -> {
+				if (StringUtil.endsWithIgnoreCase(name, ".xml")) {
+					return (InputStream)getClass().getResourceAsStream(name);
+				}
+				else if (StringUtil.endsWithIgnoreCase(name, ".xml.gz")) {
+					try {
+						return new GZIPInputStream(getClass().getResourceAsStream(name));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				return null;
+			})
+			.filter(Objects::nonNull)
+			.forEach(is -> {
+				try {
+					dxlImporter.importDxl(is, db);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				} finally {
+					if (is!=null) {
+						try {
+							is.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			});
+
+		}
+		finally {
+			dxlImporter.free();
+		}
+		
+		consumer.accept(db);
+	}
 	
+	protected static List<String> getResourceFiles(final String path) throws IOException {
+		List<String> result = new ArrayList<>();
+		final File jarFile = new File(BaseJNATestClass.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+
+		if (jarFile.isFile()) { // Run with JAR file
+			final JarFile jar = new JarFile(jarFile);
+			final Enumeration<JarEntry> entries = jar.entries(); //gives ALL entries in jar
+			while (entries.hasMoreElements()) {
+				final String name = entries.nextElement().getName();
+				if (name.startsWith(path + "/")) { //filter according to the path
+					result.add(name);
+				}
+			}
+			jar.close();
+		} else if(jarFile.isDirectory()) {
+			File subDir = new File(jarFile, path);
+			if(subDir != null && subDir.exists()) {
+				for(String name : subDir.list()) {
+					result.add(path + "/" + name);
+				}
+			}
+		} else { // Run with IDE
+			final URL url = BaseJNATestClass.class.getResource("/" + path);
+			if (url != null) {
+				try {
+					final File apps = new File(url.toURI());
+					for (File app : apps.listFiles()) {
+						result.add(app.getPath());
+					}
+				} catch (URISyntaxException ex) {
+					// never happens
+				}
+			}
+		}
+		return result;
+	}
+	
+	  /**
+     * Add to path ensuring there is just one separator in between the 2 parts..
+     * @ibm-api
+     */
+    public static String concat(String path1, String path2, char sep) {
+    	if(StringUtil.isEmpty(path1)) {
+    		return path2;
+    	}
+    	if(StringUtil.isEmpty(path2)) {
+    		return path1;
+    	}
+    	StringBuilder b = new StringBuilder();
+    	if(path1.charAt(path1.length()-1)==sep) {
+    		b.append(path1,0,path1.length()-1);
+    	} else {
+    		b.append(path1);
+    	}
+    	b.append(sep);
+    	if(path2.charAt(0)==sep) {
+    		b.append(path2,1,path2.length());
+    	} else {
+    		b.append(path2);
+    	}
+    	return b.toString();
+    }
+    
 	public static interface IDominoCallable<T> {
 
 		public T call(Session session) throws Exception;

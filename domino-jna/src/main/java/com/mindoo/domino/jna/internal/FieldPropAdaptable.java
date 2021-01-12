@@ -3,13 +3,13 @@ package com.mindoo.domino.jna.internal;
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.internal.structs.compoundtext.IFieldHtmlPropsProvider;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
-import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 
 public class FieldPropAdaptable implements IAdaptable, IFieldHtmlPropsProvider {
-		private Memory m_fieldRecordWithHeader;
-		private Memory m_idNameCDRecord;
+		private Pointer m_fieldRecordWithHeader;
+		private Pointer m_idNameCDRecord;
 		
-		public FieldPropAdaptable(Memory fieldRecordWithHeader, Memory idNameCDRecord) {
+		public FieldPropAdaptable(Pointer fieldRecordWithHeader, Pointer idNameCDRecord) {
 			m_fieldRecordWithHeader = fieldRecordWithHeader;
 			m_idNameCDRecord = idNameCDRecord;
 		}
@@ -28,12 +28,12 @@ public class FieldPropAdaptable implements IAdaptable, IFieldHtmlPropsProvider {
 		}
 
 		@Override
-		public Memory getCDRecordWithHeaderAndIDNameStruct() {
+		public Pointer getCDRecordWithHeaderAndIDNameStruct() {
 			return m_idNameCDRecord;
 		}
 		
 		@Override
-		public Memory getCDRecordWithHeaderAndFieldStruct() {
+		public Pointer getCDRecordWithHeaderAndFieldStruct() {
 			return m_fieldRecordWithHeader;
 		}
 		

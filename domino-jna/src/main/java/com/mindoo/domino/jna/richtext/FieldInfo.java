@@ -11,7 +11,6 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.IFieldHtmlPropsProvid
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDFieldStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCDIdNameStruct;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 /**
@@ -64,7 +63,7 @@ public class FieldInfo {
 		
 		IFieldHtmlPropsProvider htmlPropsProvider = adaptable.getAdapter(IFieldHtmlPropsProvider.class);
 		if (htmlPropsProvider!=null) {
-			Memory fieldMem = htmlPropsProvider.getCDRecordWithHeaderAndFieldStruct();
+			Pointer fieldMem = htmlPropsProvider.getCDRecordWithHeaderAndFieldStruct();
 			if (fieldMem!=null) {
 				NotesCDFieldStruct cdField = NotesCDFieldStruct.newInstance(fieldMem);
 				cdField.read();
@@ -128,7 +127,7 @@ public class FieldInfo {
 				throw new IllegalArgumentException("Could not find any supported adapter to read data");
 			}
 			
-			Memory idNameMem = htmlPropsProvider.getCDRecordWithHeaderAndIDNameStruct();
+			Pointer idNameMem = htmlPropsProvider.getCDRecordWithHeaderAndIDNameStruct();
 			if (idNameMem!=null) {
 				NotesCDIdNameStruct idNameStruct = NotesCDIdNameStruct.newInstance(idNameMem);
 				idNameStruct.read();
