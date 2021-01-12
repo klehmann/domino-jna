@@ -3243,7 +3243,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		 * 
 		 * @param fieldInfo information about the form field
 		 * @param phase current validation phase, see {@link ValidationPhase} for possible values
-		 * @param errorTxt text that caused the error
+		 * @param errorTxt text from @Failure validation formula that caused the error
 		 * @param errCode Domino status code for the error that was detecte
 		 * @return action how to proceed, see {@link CWF_Action} for possible values
 		 */
