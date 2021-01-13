@@ -294,7 +294,7 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	public native short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
 			Pointer valuePtr, int valueLength);
 
-	public native void NSFNoteGetInfo(int hNote, short type, Memory retValue);
+	public native void NSFNoteGetInfo(int hNote, short type, Pointer retValue);
 	public native void NSFNoteSetInfo(int hNote, short type, Pointer value);
 	public native short NSFNoteCopy(
 			int note_handle_src,

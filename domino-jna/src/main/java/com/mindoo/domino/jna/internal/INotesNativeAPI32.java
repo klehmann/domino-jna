@@ -287,7 +287,7 @@ public interface INotesNativeAPI32 extends Library {
 	public short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
 			Pointer valuePtr, int valueLength);
 
-	public void NSFNoteGetInfo(int hNote, short type, Memory retValue);
+	public void NSFNoteGetInfo(int hNote, short type, Pointer retValue);
 	public void NSFNoteSetInfo(int hNote, short type, Pointer value);
 	public short NSFNoteCopy(
 			int note_handle_src,

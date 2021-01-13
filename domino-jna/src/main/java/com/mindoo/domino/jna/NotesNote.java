@@ -7662,4 +7662,84 @@ public class NotesNote implements IRecyclableNotesObject {
 		return totalSize[0];
 	}
 
+	/**
+	 * Get the number of immediate response notes for this note
+	 * 
+	 * @return response count
+	 */
+	public int getResponseCount() {
+		checkHandle();
+		
+		DisposableMemory retResponseCount = new DisposableMemory(4);
+		try {
+			retResponseCount.clear();
+			
+			if (PlatformUtils.is64Bit()) {
+				NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_RESPONSE_COUNT, retResponseCount);
+			}
+			else {
+				NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_RESPONSE_COUNT, retResponseCount);
+			}
+			
+			return retResponseCount.getInt(0);
+		}
+		finally {
+			retResponseCount.dispose();
+		}
+	}
+
+	/**
+	 * Get a copy of the ID Table of Note IDs of the immediate responses of this note.<br>
+	 * If a note has no responses, an empty table is returned. There is no ordering of the response
+	 * Note IDs in the table (they are just ordered by note id).<br>
+	 * <br>
+	 * The {@link OpenNote#RESPONSE_ID_TABLE} flag must be specified when
+	 * the note is opened in order to obtain a valid ID Table.
+	 * If the {@link OpenNote#RESPONSE_ID_TABLE} flag is not specified when the note is opened,
+	 * an empty table will be returned.
+	 * 
+	 * @return response table
+	 */
+	public NotesIDTable getResponses() {
+		checkHandle();
+		
+		NotesIDTable responseTable;
+		
+		if (PlatformUtils.is64Bit()) {
+			LongByReference retHandle = new LongByReference();
+			NotesNativeAPI64.get().NSFNoteGetInfo(m_hNote64, NotesConstants._NOTE_RESPONSES, retHandle.getPointer());
+			long retHandleVal = retHandle.getValue();
+			if (retHandleVal==0) {
+				return new NotesIDTable();
+			}
+			else {
+				responseTable = new NotesIDTable(retHandleVal, true);
+			}
+		}
+		else {
+			IntByReference retHandle = new IntByReference();
+			NotesNativeAPI32.get().NSFNoteGetInfo(m_hNote32, NotesConstants._NOTE_RESPONSES, retHandle.getPointer());
+			int retHandleVal = retHandle.getValue();
+			if (retHandleVal==0) {
+				return new NotesIDTable();
+			}
+			else {
+				responseTable = new NotesIDTable(retHandleVal, true);
+			}
+		}
+		
+		//create a copy of the table because the original instance will get freed via NSFNoteClose
+		//and we don't want users to store and access this id table after note disposal
+		NotesIDTable responseTableCopy = (NotesIDTable) responseTable.clone();
+		return responseTableCopy;
+	}
+
+	/**
+	 * Returns the UNID of the parent note in a response hierarchy (text value of the $REF item).
+	 * 
+	 * @return UNID or empty string
+	 */
+	public String getParentNoteUNID() {
+		return getItemValueString("$REF");
+	}
 }
