@@ -16,6 +16,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.NotesIDTable.IEnumerateCallback.Action;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
@@ -1300,6 +1302,15 @@ public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 		return new NoteIdIterator(this, true);
 	}
 
+	/**
+	 * Returns a {@link Stream} of note ids
+	 * 
+	 * @return stream
+	 */
+	public Stream<Integer> stream() {
+		return StreamSupport.stream(this.spliterator(), false);
+	}
+	
 	private static class NoteIdIterator implements Iterator<Integer> {
 		private NotesIDTable m_idTable;
 		private IntByReference m_nextIdRef;
