@@ -429,37 +429,64 @@ public class NotesACL implements IAllocatedMemory {
 	 * @throws NotesError if role could not be found
 	 */
 	public void renameRole(String oldName, String newName) {
-		String oldNameStripped = oldName;
-		if (!oldNameStripped.startsWith("[")) {
-			oldNameStripped = "[" + oldNameStripped;
+		if (oldName==null || newName==null) {
+			throw new IllegalArgumentException("Neither the former role name, nor the new can be empty");
 		}
-		if (!oldNameStripped.endsWith("]")) {
-			oldNameStripped = oldNameStripped + "]";
+		
+		checkHandle();
+		
+		String oldNameStripped = oldName;
+		if (oldNameStripped.startsWith("[")) {
+			oldNameStripped = oldNameStripped.substring(1);
+		}
+		if (oldNameStripped.endsWith("]")) {
+			oldNameStripped = oldNameStripped.substring(0, oldNameStripped.length()-1);
 		}
 
 		String newNameStripped = newName;
-		if (!newNameStripped.startsWith("[")) {
-			newNameStripped = "[" + newNameStripped;
+		if (newNameStripped.startsWith("[")) {
+			newNameStripped = newNameStripped.substring(1);
 		}
-		if (!newNameStripped.endsWith("]")) {
-			newNameStripped = newNameStripped + "]";
+		if (newNameStripped.endsWith("]")) {
+			newNameStripped = newNameStripped.substring(0, newNameStripped.length()-1);
 		}
+		
+		if (oldNameStripped.length()==0 || newNameStripped.length()==0) {
+			throw new IllegalArgumentException("Neither the former role name, nor the new can be empty");
+		}
+
+		if (newNameStripped.length() >= NotesConstants.ACL_PRIVNAMEMAX) {
+			throw new IllegalArgumentException("Role name length cannot (content within brackets) exceed "+(NotesConstants.ACL_PRIVNAMEMAX-1)+" characters");
+		}
+
+		if (oldNameStripped.equals(newNameStripped)) {
+			return; // nothing to do
+		}
+
+		String oldNameWithBrackets = "[" + oldNameStripped + "]";
+		String newNameWithBrackets = "[" + newNameStripped + "]";
 
 		Map<Integer,String> rolesByIndex = getRolesByIndex();
 		int roleIndex = -1;
+		int newRoleIndex = -1;
 		
 		for (Entry<Integer,String> currEntry : rolesByIndex.entrySet()) {
 			Integer currIndex = currEntry.getKey();
 			String currRole = currEntry.getValue();
 			
-			if (currRole.equalsIgnoreCase(oldNameStripped)) {
+			if (currRole.equalsIgnoreCase(oldNameWithBrackets)) {
 				roleIndex = currIndex.intValue();
-				break;
+			}
+			if (currRole.contentEquals(newNameWithBrackets)) {
+				newRoleIndex = currIndex;
 			}
 		}
 		
 		if (roleIndex==-1) {
 			throw new NotesError(0, "Role not found in ACL: "+oldName);
+		}
+		if (newRoleIndex!=-1) {
+			throw new NotesError(0, "Role already exists in ACL: " + newName);
 		}
 		
 		Memory newNameStrippedMem = NotesStringUtils.toLMBCS(newNameStripped, true);
@@ -740,17 +767,34 @@ public class NotesACL implements IAllocatedMemory {
 	 * @param role role to add
 	 */
 	public void addRole(String role) {
+		if (role==null) {
+			throw new IllegalArgumentException("Cannot add role with empty name");
+		}
+		
 		checkHandle();
+
+		String roleStripped = role;
 		
-		if (!role.startsWith("[")) {
-			role = "[" + role;
-		}
-		if (!role.endsWith("]")) {
-			role = role + "]";
+		if (roleStripped.startsWith("[")) {
+			roleStripped = roleStripped.substring(1);
 		}
 		
+		if (roleStripped.endsWith("]")) {
+			roleStripped = roleStripped.substring(0, roleStripped.length()-1);
+		}
+		
+		if (roleStripped.length()==0) {
+			throw new IllegalArgumentException("Cannot add role with empty name");
+		}
+		
+		if (roleStripped.length() >= NotesConstants.ACL_PRIVNAMEMAX) {
+			throw new IllegalArgumentException("Role name length (content within brackets) cannot exceed "+(NotesConstants.ACL_PRIVNAMEMAX-1)+" characters");
+		}
+
+		String roleWithBrackets = "[" + role + "]";
+
 		List<String> roles = getRoles();
-		if (roles.contains(role)) {
+		if (roles.contains(roleWithBrackets)) {
 			return;
 		}
 		
@@ -768,14 +812,14 @@ public class NotesACL implements IAllocatedMemory {
 			throw new NotesError("No more space available to add role");
 		}
 		
-		Memory roleMem = NotesStringUtils.toLMBCS(role, true);
+		Memory roleStrippedMem = NotesStringUtils.toLMBCS(roleStripped, true);
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (freeIndex & 0xffff), roleMem);
+			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (freeIndex & 0xffff), roleStrippedMem);
 		}
 		else {
-			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (freeIndex & 0xffff), roleMem);			
+			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (freeIndex & 0xffff), roleStrippedMem);			
 		}
 		NotesErrorUtils.checkResult(result);
 	}
