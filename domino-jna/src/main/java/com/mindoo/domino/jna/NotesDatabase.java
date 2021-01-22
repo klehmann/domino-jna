@@ -7870,7 +7870,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return new NotesNoteCollection(this);
 	}
 	
-	private NotesIDTable getAllDesignElement(NoteClass noteClass) {
+	private NotesIDTable getAllDesignElements(NoteClass noteClass) {
 		checkHandle();
 
 		Ref<NotesIDTable> idTable = new Ref<>(new NotesIDTable());
@@ -8111,7 +8111,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return note ids
 	 */
 	public NotesIDTable getFormNoteIds() {
-		return getAllDesignElement(NoteClass.FORM);
+		return getAllDesignElements(NoteClass.FORM);
 	}
 	
 	/**
