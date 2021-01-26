@@ -92,7 +92,7 @@ public class ImageHtmlEmail extends HtmlEmail
      /**
       * Does the work of actually building the MimeMessage.
       *
-      * @see com.mindoo.domino.jna.mime.internal.jakartamail.org.apache.commons.mail.commons.mail.HtmlEmail#buildMimeMessage()
+      * @see HtmlEmail#buildMimeMessage()
       * @throws EmailException building the MimeMessage failed
       */
     @Override
