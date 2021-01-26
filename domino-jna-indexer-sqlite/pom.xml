@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-indexer-sqlite</artifactId>
-	<version>0.9.41-SNAPSHOT</version>
+	<version>0.9.42-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>Domino JNA Add-on for data indexing with SQLite</name>
@@ -17,6 +17,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
 		<domino.version>11.0.0</domino.version>
+		<dominojna.version>0.9.42-SNAPSHOT</dominojna.version>
 	</properties>
 
 	<licenses>
@@ -145,12 +146,12 @@
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
-			<version>0.9.41-SNAPSHOT</version>
+			<version>${dominojna.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna-indexer-sql</artifactId>
-			<version>0.9.41-SNAPSHOT</version>
+			<version>${dominojna.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
