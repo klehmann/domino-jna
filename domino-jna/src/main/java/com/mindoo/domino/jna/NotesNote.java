@@ -7742,4 +7742,22 @@ public class NotesNote implements IRecyclableNotesObject {
 	public String getParentNoteUNID() {
 		return getItemValueString("$REF");
 	}
+	
+	/**
+	 * Returns the names of all note attachments
+	 * 
+	 * @return names
+	 */
+	public List<String> getAttachmentNames() {
+		return FormulaExecution
+				.evaluate("@AttachmentNames", this)
+				.stream()
+				.map((val) -> {
+					return val instanceof String ? (String) val : "";
+				})
+				.filter((val) -> {
+					return !StringUtil.isEmpty(val);
+				})
+				.collect(Collectors.toList());
+	}
 }
