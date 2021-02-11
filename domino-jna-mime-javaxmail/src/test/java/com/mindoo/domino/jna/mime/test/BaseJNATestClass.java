@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -496,5 +498,41 @@ public class BaseJNATestClass {
 
 		public T call(Session session) throws Exception;
 
+	}
+	
+	protected byte[] produceTestData(int size) {
+		byte[] data = new byte[size];
+
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				data[offset++] = (byte) (c & 0xff);
+			}
+		}
+
+		return data;
+	}
+
+	protected void produceTestData(int size, OutputStream out) throws IOException {
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				out.write((byte) (c & 0xff));
+				offset++;
+			}
+		}
+	}
+
+	protected void produceTestData(int size, Writer writer) throws IOException {
+		int offset = 0;
+
+		while (offset < size) {
+			for (char c='A'; c<='Z' && offset<size; c++) {
+				writer.write(c);
+				offset++;
+			}
+		}
 	}
 }

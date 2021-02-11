@@ -27,20 +27,6 @@ import lotus.domino.Session;
 public class TestJavaxMailMimeDataReadWrite extends BaseJNATestClass {
 	private static final String TEST_IMAGE_PATH = "/images/test-png-large.png";;
 
-	private byte[] produceTestData(int size) {
-		byte[] data = new byte[size];
-
-		int offset = 0;
-
-		while (offset < size) {
-			for (char c='A'; c<='Z' && offset<size; c++) {
-				data[offset++] = (byte) (c & 0xff);
-			}
-		}
-
-		return data;
-	}
-
 	/**
 	 * We check how the API behaves when reading {@link MIMEData} from
 	 * non MIME_PART items
