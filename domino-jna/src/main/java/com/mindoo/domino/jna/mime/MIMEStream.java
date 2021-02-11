@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.mime;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -492,19 +493,20 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	public MIMEStream write(Reader reader) throws IOException {
 		checkRecycled();
 		
-		char[] buffer = new char[60000];
-		int len;
+		BufferedReader bufReader = new BufferedReader(reader);
 		
-		while ((len=reader.read(buffer))>0) {
-			String txt = new String(buffer, 0, len);
-			Memory txtMem = NotesStringUtils.toLMBCS(txt, false, false);
+		String line;
+
+		//read line by line, because MIMEStreamWrite does not like to receive partial data
+		while ((line = bufReader.readLine())!=null) {
+			line = line + "\n";
+			Memory lineMem = NotesStringUtils.toLMBCS(line, false, false);
 			
-			int resultAsInt = NotesNativeAPI.get().MIMEStreamWrite(txtMem, (short) (txtMem.size() & 0xffff), m_hMIMEStream);
+			int resultAsInt = NotesNativeAPI.get().MIMEStreamWrite(lineMem, (short) (lineMem.size() & 0xffff), m_hMIMEStream);
 			
 			if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
 				throw new IOException("I/O error received during MIME stream operation");
 			}
-
 		}
 		return this;
 	}
