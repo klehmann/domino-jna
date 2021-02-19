@@ -88,7 +88,7 @@ Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/co
 Snapshot releases may be provided on [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) for bug analysis purpose, e.g. via a Github issue.
 
 ## Standalone applications
-There is a [sample database](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use Domino JNA in standalone Java applications.
+There is a [sample application](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use Domino JNA in standalone Java applications.
 
 ## Usage
 Here is a code snippet for the API usage. It opens a database and filters view entries.
