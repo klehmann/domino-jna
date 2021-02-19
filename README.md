@@ -85,15 +85,7 @@ Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/co
 </dependency>
 ```
 
-Snapshots may be provided on [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) for bug analysis purpose, e.g. via a Github issue.
-
-```xml
-<dependency>
-    <groupId>com.mindoo.domino</groupId>
-    <artifactId>domino-jna</artifactId>
-    <version>insert version here</version>
-</dependency>
-```
+Snapshot releases may be provided on [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) for bug analysis purpose, e.g. via a Github issue.
 
 ## Standalone applications
 There is a [sample database](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use Domino JNA in standalone Java applications.
