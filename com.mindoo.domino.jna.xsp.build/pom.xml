@@ -1,11 +1,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-xsp-build</artifactId>
-	<version>0.9.42-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
+	<parent>
+		<groupId>com.mindoo.domino</groupId>
+		<artifactId>domino-jna-base</artifactId>
+		<version>0.9.43-SNAPSHOT</version>
+	</parent>
+	
 	<properties>
 		<tycho-version>0.22.0</tycho-version>
 		<tycho-extras-version>0.22.0</tycho-extras-version>
@@ -13,7 +17,6 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<domino.version>11.0.0</domino.version>
 	</properties>
 
 	<repositories>
@@ -32,7 +35,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>2.7</version>
+				<version>${maven-javadoc-plugin.version}</version>
 			</plugin>
 			<plugin>
 				<!-- enable tycho build extension -->
@@ -54,7 +57,7 @@
 						<extraClasspathElement>
 							<groupId>com.ibm</groupId>
 							<artifactId>domino-api-binaries</artifactId>
-							<version>9.0.1</version>
+							<version>${domino.version}</version>
 						</extraClasspathElement>
 						<extraClasspathElement>
 							<groupId>com.sun.mail</groupId>
@@ -107,7 +110,7 @@
 		<module>../com.mindoo.domino.jna.xsp-feature</module>
 		<module>../com.mindoo.domino.jna.xsp-updatesite</module>
 		<module>../com.sun.jna</module>
-		<module>../domino-jna</module>
+		<!--  <module>../domino-jna</module> -->
 	</modules>
 
 </project>

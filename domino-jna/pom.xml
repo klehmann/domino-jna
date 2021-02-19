@@ -1,41 +1,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna</artifactId>
-	<version>0.9.42-SNAPSHOT</version>
 	<packaging>jar</packaging>
+
+	<parent>
+		<groupId>com.mindoo.domino</groupId>
+		<artifactId>domino-jna-base</artifactId>
+		<version>0.9.43-SNAPSHOT</version>
+	</parent>
 
 	<name>Domino JNA</name>
 	<description>Java project to access the HCL Domino C API using Java Native Access (JNA)</description>
 	<url>https://github.com/klehmann/domino-jna</url>
 
 	<properties>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		
-		<!-- disable tests by default, we have execution issues on macOS and they're not ready yet
-		to run without setting up the right environment -->
-		<maven.test.skip>true</maven.test.skip>
-		
-		<domino.version>11.0.0</domino.version>
-		<jna.version>4.5.1</jna.version>
-		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-		<nexus-staging-maven-plugin.version>1.5.1</nexus-staging-maven-plugin.version>
-		<maven-source-plugin.version>2.2.1</maven-source-plugin.version>
-		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
-		<maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>
-		<maven-javadoc-plugin.version>2.10.4</maven-javadoc-plugin.version>
-		
-		<metadataextractor.version>2.15.0</metadataextractor.version>
-		<cglib.version>3.2.6</cglib.version>
-		<concurrentlinkedhashmap.version>1.4.2</concurrentlinkedhashmap.version>
-		<junit.version>4.13.1</junit.version>
-		<joda.version>2.9.9</joda.version>
-		<orgjson.version>20170516</orgjson.version>
-		<jfairy.version>0.6.4</jfairy.version>
 	</properties>
 
 	<licenses>

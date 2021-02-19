@@ -3,10 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>com.mindoo.domino.jna.xsp-updatesite</artifactId>
 	<packaging>eclipse-update-site</packaging>
+	
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-xsp-build</artifactId>
-		<version>0.9.42-SNAPSHOT</version>
+		<version>0.9.43-SNAPSHOT</version>
 		<relativePath>../com.mindoo.domino.jna.xsp.build</relativePath>
 	</parent>
 
