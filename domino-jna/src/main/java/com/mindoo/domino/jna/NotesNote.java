@@ -5323,8 +5323,8 @@ public class NotesNote implements IRecyclableNotesObject {
 								String indexStr = fieldOffset.substring(0, iPos);
 								String offsetStr = fieldOffset.substring(iPos+1);
 								
-								int itemIndex = Integer.parseInt(indexStr, 16);
-								int itemOffset = Integer.parseInt(offsetStr, 16);
+								int itemIndex = Integer.parseInt(indexStr, 10); // this one is in decimal format...
+								int itemOffset = Integer.parseInt(offsetStr, 16); // this one is in hex format...
 								
 								IHtmlApiUrlTargetComponent<?> fieldTarget = currRef.getTargetByType(TargetType.FIELD);
 								if (fieldTarget!=null) {
