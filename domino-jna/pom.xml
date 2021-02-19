@@ -165,17 +165,31 @@
 	</profiles>
 
 	<dependencies>
-		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
-		<dependency>
-			<groupId>org.elasticsearch</groupId>
-			<artifactId>jna</artifactId>
-			<version>${jna.version}</version>
-		</dependency>
+		<!-- JAR files from local Notes Client installation, see README.md for setup instructions -->
 		<dependency>
 			<groupId>com.ibm</groupId>
 			<artifactId>domino-api-binaries</artifactId>
 			<version>${domino.version}</version>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+		    <groupId>com.ibm</groupId>
+		    <artifactId>ibm-commons</artifactId>
+		    <version>${domino.version}</version>
+		    <scope>provided</scope>
+		</dependency>
+		<dependency>
+		    <groupId>com.ibm</groupId>
+		    <artifactId>napi</artifactId>
+		    <version>${domino.version}</version>
+		    <scope>provided</scope>
+		</dependency>
+		
+		<!-- using org.elasticsearch version of JNA to not have to require GLIBC 2.14 -->
+		<dependency>
+			<groupId>org.elasticsearch</groupId>
+			<artifactId>jna</artifactId>
+			<version>${jna.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.drewnoakes</groupId>

@@ -81,17 +81,17 @@ Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/co
 <dependency>
     <groupId>com.mindoo.domino</groupId>
     <artifactId>domino-jna</artifactId>
-    <version>0.9.24</version>
+    <version>see Maven Central for latest version number</version>
 </dependency>
 ```
 
-Use repository [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) to get snapshots.
+Snapshots may be provided on [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) for bug analysis purpose, e.g. via a Github issue.
 
 ```xml
 <dependency>
     <groupId>com.mindoo.domino</groupId>
     <artifactId>domino-jna</artifactId>
-    <version>0.9.25-SNAPSHOT</version>
+    <version>insert version here</version>
 </dependency>
 ```
 
@@ -187,10 +187,10 @@ time to read and skip data slowly in your own code.
 
 As you can see, all calls have to be wrapped in `NotesGC.runWithAutoGC` code blocks (which can also be nested).
 
-We do this to automatically collect allocated C handles and automatically free them when the code block is done.
+We do this to automatically collect allocated C handles and free them when the code block is done.
 
 In many cases, this should avoid manual recycling of API objects, but for some edge cases, objects like `NotesCollection` (which is the term for Notes View in
-the C API) or `NotesIDTable` do have a `recycle()` method.
+the C API), `NotesNote` (a document) or `NotesIDTable` do have a `recycle()` method.
 
 When running in an XPages environment, `NotesGC.runWithAutoGC` can be omitted when the code processes a HTTP request (e.g. an XAgent). It is only required if you run code in separate threads, e.g. using the `SessionCloner` class.
 
@@ -208,7 +208,7 @@ This project is not done yet, this is just the beginning.
 Here are some of the things that we plan to do:
 
 * write [blog entries](http://blog.mindoo.com) explaining the API internals
-* add more API methods, e.g. an API to write MIME items
+* add more API methods, e.g. for new DQL features of Domino 11 and 12
 * write more testcases
 * add more syntactical sugar, hide complexity
 
@@ -220,54 +220,68 @@ Copyright by [Mindoo GmbH](http://www.mindoo.com)
 ## Creating your own build
 The following instructions are only relevant when you want to create your own Domino JNA release version.
 
-### Registration of local Notes.jar
-Before running the test cases or building the project, your local Notes.jar file needs to be added to Maven's local repository, because
-it's platform and Domino version dependent.
+### Registration of local Notes.jar, lwpd.commons.jar and lwpd.domino.napi.jar
+There are three JAR files that are part of every Notes Client installation and that are required to compile the Domino JNA code.
 
-**For Windows, use this syntax (with the right path to Notes.jar on your machine):**
+On macOS, you can find the files in these locations:
+* /Applications/HCL Notes.app/Contents/Resources/jvm/lib/ext/Notes.jar
+* /Applications/HCL Notes.app/Contents/Eclipse/shared/eclipse/plugins/com.ibm.commons_-version-/lwpd.commons.jar
+* /Applications/HCL Notes.app/Contents/Eclipse/shared/eclipse/plugins/com.ibm.domino.napi_-version-/lwpd.domino.napi.jar
+
+On Windows you fine them here:
+
+* C:\Program Files (x86)\HCL\Notes\jvm\lib\ext\Notes.jar
+* C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.commons_-version-\lwpd.commons.jar
+* C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.domino.napi_-version-\lwpd.domino.napi.jar
+
+These files need to be registered as Maven artifacts with the right groupId / artifactId on the local machine, because they are not available on Maven Central (com.ibm.commons is there, but outdated).
+
+**For the Mac, use this syntax (replace "-version-" with the right version on your machine):**
 
 ```
-mvn install:install-file -Dfile="C:\Program Files (x86)\IBM\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar
+mvn install:install-file -Dfile="/Applications/HCL Notes.app/Contents/Resources/jvm/lib/ext/Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=11.0.0 -Dpackaging=jar
+
+mvn install:install-file -Dfile="/Applications/HCL Notes.app/Contents/Eclipse/shared/eclipse/plugins/com.ibm.commons_-version-/lwpd.commons.jar" -DgroupId=com.ibm -DartifactId=ibm-commons -Dversion=11.0.0 -Dpackaging=jar
+
+mvn install:install-file -Dfile="/Applications/HCL Notes.app/Contents/Eclipse/shared/eclipse/plugins/com.ibm.domino.napi_-version-/lwpd.domino.napi.jar" -DgroupId=com.ibm -DartifactId=napi -Dversion=11.0.0 -Dpackaging=jar
 ```
 
-**For the Mac, use this syntax:**
+**For Windows, use this syntax (replace "-version-" with the right version on your machine):**
 
 ```
-mvn install:install-file -Dfile="/Applications/IBM Notes.app/Contents/MacOS/jvm/lib/ext/Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=9.0.1 -Dpackaging=jar
+mvn install:install-file -Dfile="C:\Program Files (x86)\IBM\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=11.0.0 -Dpackaging=jar
+
+mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.commons_-version-\lwpd.commons.jar" -DgroupId=com.ibm -DartifactId=ibm-commons -Dversion=11.0.0 -Dpackaging=jar
+
+mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.domino.napi_-version-\lwpd.domino.napi.jar" -DgroupId=com.ibm -DartifactId=napi -Dversion=11.0.0 -Dpackaging=jar
 ```
 
 ### Maven build
 
-**Windows:**
-To build against the HCL Notes Client on Windows, make sure you use a 32 bit JDK (e.g. 1.8) and use this command in the "domino-jna" directory:
-
-```
-mvn -DJVMPARAMS= -DDOMINOOSGIDIR="C:\Program Files (x86)\IBM\Notes\osgi" -DDOMINODIR="C:\Program Files (x86)\IBM\Notes" -DNOTESINI="C:\Program Files (x86)\IBM\Notes\Notes.ini" clean install
-```
-
 **Mac:**
-On Mac, we have only had full build success including tests with the 32 bit HCL Notes Client so far, using a 32 bit JDK 1.6.
-We had to downgrade Maven to version 3.2.5 for the build, because that was the last version compatible with JDK 1.6.
-
-This command should work for 32 bit:
-```
-mvn -DJVMPARAMS=-d32 -DDOMINOOSGIDIR=/Applications/IBM\ Notes.app/Contents/MacOS -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install
-```
-
-For 64 bit, running the test cases currently fails with a libxml.dylib loading error and we still need to figure out how to fix this.
-
-With skipped testcases, this command should run fine:
+On Mac, use this syntax to build Domino JNA against the Notes Client:
 
 ```
-mvn -DJVMPARAMS=-d64 -DDOMINOOSGIDIR=/Applications/IBM\ Notes.app/Contents/MacOS -DDOMINODIR=/Applications/IBM\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
+mvn -DJVMPARAMS=-d64 -DDOMINOOSGIDIR=/Applications/HCL\ Notes.app/Contents/MacOS -DDOMINODIR=/Applications/HCL\ Notes.app/Contents/MacOS -DNOTESINI=~/Library/Preferences/Notes\ Preferences clean install -Dmaven.test.skip=true
 ```
 
-The directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA and Apache tool libraries.
-The "domino-api-binaries.jar" generated there is just the Notes.jar that you previously have added to Maven.
+**Windows:**
+To build against the HCL Notes Client on Windows use this syntax:
+
+```
+mvn -DJVMPARAMS= -DDOMINOOSGIDIR="C:\Program Files (x86)\HCL\Notes\osgi" -DDOMINODIR="C:\Program Files (x86)\HCL\Notes" -DNOTESINI="C:\Program Files (x86)\HCL\Notes\Notes.ini" clean install -Dmaven.test.skip=true
+```
+
+After the build is done, the directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA and Apache tool libraries.
 
 ### Running the test cases
-The project contains a number of test cases that demonstrate how the API is used.
-These test cases use sample databases that we provide for download and will update from time to time depending on the requirements of newer testcases.
+The project contains a number of test cases that demonstrate how the API is used. The project is not ready to run the tests automatically as part of the build. That's why they are disabled by default and should only be run manually for now.
+
+We are still working on the tests to make the more robust and let them set up their required test environment.
+In addition there are issues in macOS when running the tests via Surefire plugin, because DYLD_LIBRARY_PATH is not allowed to be set via bash scripts anymore, causing load errors for libnotes.dylib, libxml.dylib and others.
+
+#### Sample databases
+The test cases use sample databases that we provide for download and will update from time to time depending on the requirements of newer testcases.
 
 You can download the two sample databases fakenames.nsf and fakenames-views.nsf from this URL:
 
@@ -292,15 +306,15 @@ PATH = C:\Program Files (x86)\IBM\Notes
 **Mac:**
 
 ```
-DYLD_LIBRARY_PATH = /Applications/IBM Notes.app/Contents/MacOS
-Notes_ExecDirectory = /Applications/IBM Notes.app/Contents/MacOS
-NOTESBIN = /Applications/IBM Notes.app/Contents/MacOS
-PATH = /Applications/IBM Notes.app/Contents/MacOS
-NotesINI = ~/Library/Preferences/Notes Preferences
+DYLD_LIBRARY_PATH=/Applications/HCL Notes.app/Contents/MacOS
+Notes_ExecDirectory=/Applications/HCL Notes.app/Contents/MacOS
+NOTESBIN=/Applications/HCL Notes.app/Contents/MacOS
+NotesINI=/Users/klehmann/Library/Preferences/Notes Preferences
+PATH=/Applications/HCL Notes.app/Contents/MacOS
 ```
 
 ### Creating XPages plugin build
-The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain experimental build scripts to use Domino JNA in XPages applications, similar to HCL's XPages Extension Library.
+The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain build scripts to use Domino JNA in XPages applications, similar to HCL's XPages Extension Library.
 
 Please use the following steps to create a build or just download a binary build from the "releases" section.
  
