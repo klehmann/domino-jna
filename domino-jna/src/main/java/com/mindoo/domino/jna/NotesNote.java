@@ -1452,6 +1452,12 @@ public class NotesNote implements IRecyclableNotesObject {
 	public List<String> getItemValueStringList(String itemName) {
 		List<?> docValues = getItemValue(itemName);
 		if (docValues != null) {
+			if (!docValues.isEmpty() && docValues.get(0) instanceof IRichTextNavigator) {
+				//return the text only content of richtext items
+				IRichTextNavigator rtNav = (IRichTextNavigator) docValues.get(0);
+				return Arrays.asList(rtNav.getText());
+			}
+			
 			List<String> strList = new ArrayList<String>(docValues.size());
 			for (int i = 0; i < docValues.size(); i++) {
 				String currStr = docValues.get(i).toString();
@@ -1732,6 +1738,12 @@ public class NotesNote implements IRecyclableNotesObject {
 		short dataType = valuePtr.getShort(0);
 		int dataTypeAsInt = (int) (dataType & 0xffff);
 		
+		if (dataTypeAsInt == NotesItem.TYPE_COMPOSITE) {
+			//special case for richtext items; return a navigator for the whole richtext
+			//content instead of the data stored in the specified item value blockid
+			return Arrays.asList(getRichtextNavigator(itemName));
+		}
+		
 		boolean supportedType = false;
 		if (dataTypeAsInt == NotesItem.TYPE_TEXT) {
 			supportedType = true;
@@ -1774,12 +1786,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		
 		if (!supportedType) {
-			if (dataTypeAsInt == NotesItem.TYPE_COMPOSITE) {
-				throw new UnsupportedItemValueError("Use NotesNote.getRichtextNavigator() to read richtext item data");
-			}
-			else {
-				throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
-			}
+			throw new UnsupportedItemValueError("Data type for value of item "+itemName+" is currently unsupported: "+dataTypeAsInt);
 		}
 
 		int checkDataType = valuePtr.getShort(0) & 0xffff;
@@ -2548,6 +2555,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		NotesItem item = getFirstItem(itemName);
 		if (item==null) {
 			return Collections.emptyList();
+		}
+		
+		if (item.getType() == NotesItem.TYPE_COMPOSITE) {
+			//return an IRichTextNavigator for richtext items; that navigator
+			//spans multiple items of TYPE_COMPOSITE in a row in case the
+			//richtext content exceeds the max segment size of one item
+			return Arrays.asList(getRichtextNavigator(itemName));
 		}
 		
 		int valueLength = item.getValueLength();
@@ -6106,6 +6120,22 @@ public class NotesNote implements IRecyclableNotesObject {
 					return Action.Continue;
 				}
 			});
+		}
+		
+		@Override
+		public String toString() {
+			return "MultiItemRichTextNavigator [itemName="+m_richTextItemName+", itemcount="+m_items.size()+"]";
+		}
+		
+		@Override
+		public String getText() {
+			final StringWriter sWriter = new StringWriter();
+			
+			for (NotesItem currItem : m_items) {
+				currItem.getAllCompositeTextContent(sWriter);
+			}
+			
+			return sWriter.toString();
 		}
 		
 		@Override

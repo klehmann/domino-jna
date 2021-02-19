@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.internal;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
@@ -13,7 +14,9 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.richtext.RichTextBuilder;
+import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.sun.jna.Memory;
+import com.sun.jna.Pointer;
 
 /**
  * Implementation of {@link IRichTextNavigator} that works with an on-disk CD record file
@@ -41,6 +44,32 @@ public class CDFileRichTextNavigator implements IRichTextNavigator {
 		m_cdRecordSizeAtIndex = new TreeMap<Integer, Integer>();
 		m_cdRecordIndexAtFilePos = new TreeMap<Long, Integer>();
 		gotoFirst();
+	}
+	
+	@Override
+	public String getText() {
+		StringWriter sWriter = new StringWriter();
+		RichTextNavPosition oldPos = getCurrentRecordPosition();
+		try {
+			if (gotoFirst()) {
+				do {
+					if (getCurrentRecordTypeAsShort() == CDRecordType.TEXT.getConstant()) {
+						int txtMemLength = getCurrentRecordDataLength();
+						if (txtMemLength > 0) {
+							Memory txtPtr = getCurrentRecordData();
+							String txt = NotesStringUtils.fromLMBCS(txtPtr, txtMemLength);
+							sWriter.append(txt);
+						}
+					}
+				}
+				while (gotoNext());
+			}
+		}
+		finally {
+			restoreCurrentRecordPosition(oldPos);
+		}
+
+		return sWriter.toString();
 	}
 	
 	@Override

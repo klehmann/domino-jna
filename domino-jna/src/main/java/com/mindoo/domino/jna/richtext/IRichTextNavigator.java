@@ -153,4 +153,12 @@ public interface IRichTextNavigator {
 		@Override
 		public int hashCode();
 	}
+
+	/**
+	 * Extracts the text content stored in this richtext item, ignoring any formatting
+	 * or other elements like images.
+	 * 
+	 * @return extracted text
+	 */
+	public String getText();
 }

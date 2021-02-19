@@ -3,6 +3,7 @@ package com.mindoo.domino.jna;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -266,6 +267,14 @@ public class NotesItem {
 	public List<Object> getValues() {
 		loadItemNameAndFlags();
 
+		if (getType()==TYPE_COMPOSITE) {
+			//Calling getValues() on a single item of TYPE_COMPOSITE does not make much sense,
+			//because it may contain just a part of the whole richtext content (in
+			//case the data exceeds the max segment size of a single item).
+			//So here we return a Navigator for the whole richtext item instead.
+			return Arrays.asList(m_parentNote.getRichtextNavigator(m_itemName));
+		}
+		
 		int valueLength = getValueLength();
 		List<Object> values = m_parentNote.getItemValue(m_itemName, m_itemBlockId, m_valueBlockId, valueLength);
 		return values;
