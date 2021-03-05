@@ -47,6 +47,7 @@ The project provides functionality that is not available in the classic Java API
 * **extended folder operations**, e.g. create/delete/move/copy with content/rename, creation of new folder with specifying where to get the design
 * **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
 * creation of **ghost notes** (documents that do not appear in any views)
+* API to **read the remote server console** and send commands.
 
 **Please note:**
 
