@@ -29,7 +29,7 @@ public interface HANDLE extends IAdaptable, IHANDLEBase<HANDLE,HANDLE.ByValue> {
 	void clear();
 
 	/**
-	 * Throws a {@link DominoException} if the handle is marked as disposed
+	 * Throws a {@link NotesError} if the handle is marked as disposed
 	 */
 	@Override
 	default void checkDisposed() {
