@@ -5,15 +5,25 @@ import java.util.List;
 
 import com.mindoo.domino.jna.constants.ClusterLookup;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.ConsoleLine;
 import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesCallbacks;
+import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.structs.NotesConsoleEntryStruct;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
+import com.sun.jna.ptr.ShortByReference;
 
 public class ServerUtils {
 
@@ -179,5 +189,145 @@ public class ServerUtils {
 				Mem32.OSMemFree(hResponseTextValue);
 			}
 		}
+	}
+
+	/**
+	 * Handler to receive a server console line with text and meta data
+	 */
+	public interface ConsoleHandler {
+
+		/**
+		 * Method is called by {@link ServerUtils#openServerConsole(String, ConsoleHandler)}
+		 * to check if we should stop listening for console messages.
+		 * 
+		 * @return true to stop
+		 */
+		public boolean shouldStop();
+
+		/**
+		 * Method to receive the console line with text and meta data like the pid/tid/executable
+		 * name
+		 * 
+		 * @param line console line
+		 */
+		void messageReceived(IConsoleLine line);
+		
+	}
+	
+	/**
+	 * Opens a remote console for the specified server
+	 * 
+	 * @param serverName server name (abbreviated or canonical format) or empty string for local server
+	 * @param handler handler to receive the console messages
+	 */
+	public static void openServerConsole(String serverName, ConsoleHandler handler) {
+		String serverNameCanonical = StringUtil.isEmpty(serverName) ? IDUtils.getIdUsername() : NotesNamingUtils.toCanonicalName(serverName);
+		Memory serverNameCanonicalMem = NotesStringUtils.toLMBCS(serverNameCanonical, true);
+		
+		{
+			//for simplicity we send an empty synchronous remote console command
+			//to check for the error "You are not authorized to use the remote console on this server"
+			//otherwise that error status is just returned asynchronously via ASYNC_CONTEXT and the required
+			//data structure is quite complex
+			DHANDLE.ByReference hResponseText = DHANDLE.newInstanceByReference();
+
+			short result = NotesNativeAPI.get().NSFRemoteConsole(serverNameCanonicalMem, null, hResponseText);
+			NotesErrorUtils.checkResult(result);
+
+			if (!hResponseText.isNull()) {
+				Mem.OSMemFree(hResponseText);
+			}
+		}
+		
+		String cmd = null; //"sh ta";
+		Memory cmdMem = StringUtil.isEmpty(cmd) ? null : NotesStringUtils.toLMBCS(cmd, true);
+		
+		PointerByReference pAsyncCtx = new PointerByReference();
+		DHANDLE.ByReference hAsyncQueue = DHANDLE.newInstanceByReference();
+		DHANDLE.ByReference hAsyncBuffer = DHANDLE.newInstanceByReference();
+
+		ShortByReference wSignals = new ShortByReference();
+		IntByReference dwConsoleBuffID = new IntByReference();
+
+		short result = NotesNativeAPI.get().QueueCreate(hAsyncQueue);
+		NotesErrorUtils.checkResult(result);
+		
+		boolean asyncIOInitDone = false;
+
+		try {
+			NotesCallbacks.ASYNCNOTIFYPROC callback;
+			if (PlatformUtils.isWin32()) {
+				callback = new Win32NotesCallbacks.ASYNCNOTIFYPROCWin32() {
+					
+					@Override
+					public void invoke(Pointer p1, Pointer p2) {
+					}
+				};
+			}
+			else {
+				callback = new NotesCallbacks.ASYNCNOTIFYPROC() {
+					
+					@Override
+					public void invoke(Pointer p1, Pointer p2) {
+					}
+				};
+			}
+
+			result = NotesNativeAPI.get().NSFRemoteConsoleAsync(serverNameCanonicalMem, cmdMem,
+					NotesConstants.REMCON_GET_CONSOLE | NotesConstants.REMCON_GET_CONSOLE_META,
+					hAsyncBuffer,
+					null, null, wSignals, dwConsoleBuffID, hAsyncQueue.getByValue(), callback, null, pAsyncCtx);
+					
+			NotesErrorUtils.checkResult(result);
+			
+			while (true) {
+				if (handler.shouldStop()) {
+					break;
+				}
+
+				NotesNativeAPI.get().NSFAsyncNotifyPoll(new Pointer(0), null, null);
+				NotesNativeAPI.get().NSFUpdateAsyncIOStatus(pAsyncCtx.getValue());
+				asyncIOInitDone = true;
+
+				short hasData = NotesNativeAPI.get().QueueGet(hAsyncQueue.getByValue(), hAsyncBuffer);
+				
+				if (hasData==0) {
+					Pointer ptr = Mem.OSLockObject(hAsyncBuffer);
+					try {
+						NotesConsoleEntryStruct consoleEntry = NotesConsoleEntryStruct.newInstance(ptr);
+						consoleEntry.read();
+
+						int len = consoleEntry.length;
+						if (consoleEntry.type == 1) {
+							String lineEncoded = NotesStringUtils.fromLMBCS(ptr.share(consoleEntry.size()),
+									len);
+							IConsoleLine consoleLine = ConsoleLine.parseConsoleLine(lineEncoded, 0);
+							handler.messageReceived(consoleLine);
+						}
+					}
+					finally {
+						Mem.OSUnlockObject(hAsyncBuffer);
+						Mem.OSMemFree(hAsyncBuffer);
+					}
+				}
+				else {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						break;
+					}
+				}
+			}
+		}
+		finally {
+			if (asyncIOInitDone) {
+				if (pAsyncCtx.getValue()!=null) {
+					NotesNativeAPI.get().NSFCancelAsyncIO(pAsyncCtx.getValue());
+				}
+			}
+		
+			NotesNativeAPI.get().QueueDelete(hAsyncQueue.getByValue());
+		}
+		
 	}
 }

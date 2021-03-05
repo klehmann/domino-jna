@@ -6,11 +6,9 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.INotesNativeAPI.Mode;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.NativeLibrary;
 import com.sun.jna.ptr.IntByReference;
 
 public class NotesNativeAPI32V1000 implements INotesNativeAPI32V1000 {
@@ -60,34 +58,17 @@ public class NotesNativeAPI32V1000 implements INotesNativeAPI32V1000 {
 
 				@Override
 				public INotesNativeAPI32V1000 run() {
-					Mode jnaMode = NotesNativeAPI.getActiveJNAMode();
 					Map<String,Object> libraryOptions = NotesNativeAPI.getLibraryOptions();
 					
-					if (jnaMode==Mode.Direct) {
-						NativeLibrary library;
-						if (PlatformUtils.isWindows()) {
-					        library = NativeLibrary.getInstance("nnotes", libraryOptions);
-						}
-						else {
-					        library = NativeLibrary.getInstance("notes", libraryOptions);
-						}
-						
-						Native.register(NotesNativeAPI32V1000.class, library);
-
-						NotesNativeAPI32V1000 instance = new NotesNativeAPI32V1000();
-						return instance;
+					INotesNativeAPI32V1000 api;
+					if (PlatformUtils.isWindows()) {
+						api = Native.loadLibrary("nnotes", INotesNativeAPI32V1000.class, libraryOptions);
 					}
 					else {
-						INotesNativeAPI32V1000 api;
-						if (PlatformUtils.isWindows()) {
-							api = Native.loadLibrary("nnotes", INotesNativeAPI32V1000.class, libraryOptions);
-						}
-						else {
-							api = Native.loadLibrary("notes", INotesNativeAPI32V1000.class, libraryOptions);
-						}
-
-						return api;
+						api = Native.loadLibrary("notes", INotesNativeAPI32V1000.class, libraryOptions);
 					}
+
+					return api;
 				}
 			});
 		}

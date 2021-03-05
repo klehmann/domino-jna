@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -18,8 +19,6 @@ import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI extends Library {
-	public static enum Mode {Classic, Direct}
-	
 	public short NotesInitExtended(int argc, Memory argvPtr);
 	public void NotesTerm();
 
@@ -485,5 +484,30 @@ public interface INotesNativeAPI extends Library {
 	
 	@UndocumentedAPI
 	public boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
+
+	@UndocumentedAPI
+	public short QueueCreate(DHANDLE.ByReference qhandle);
+	
+	@UndocumentedAPI
+	public short QueueGet(DHANDLE.ByValue qhandle, DHANDLE.ByReference sehandle);
+
+	@UndocumentedAPI
+	public short QueueDelete(DHANDLE.ByValue qhandle);
+
+	@UndocumentedAPI
+	public short NSFRemoteConsoleAsync (
+			Memory serverName, Memory ConsoleCommand, int Flags,
+			DHANDLE.ByReference phConsoleText, DHANDLE.ByReference phTasksText, DHANDLE.ByReference phUsersText,
+			ShortByReference pSignals, IntByReference pConsoleBufferID, DHANDLE.ByValue hQueue,
+			NotesCallbacks.ASYNCNOTIFYPROC Proc,Pointer param, PointerByReference retactx);
+
+	short NSFRemoteConsole(
+			Memory ServerName,
+			Memory ConsoleCommand,
+			DHANDLE.ByReference hResponseText);
+
+	public void NSFAsyncNotifyPoll(Pointer actx, IntByReference retMySessions, ShortByReference retFirstError);
+	public void NSFUpdateAsyncIOStatus(Pointer actx);
+	public void NSFCancelAsyncIO (Pointer actx);
 
 }

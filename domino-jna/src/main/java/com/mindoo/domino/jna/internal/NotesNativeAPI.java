@@ -20,7 +20,9 @@ import java.util.Map;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.ASYNCNOTIFYPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.STATTRAVERSEPROC;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct.ByReference;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -38,7 +40,6 @@ import com.sun.jna.Function;
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.ptr.IntByReference;
@@ -63,18 +64,8 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	private static int m_platformAlignment;
 	static Throwable m_initError;
 
-	private static Mode m_activeMode;
 	private static Map<String, Object> m_libraryOptions;
 	
-	/**
-	 * Returns the mode that JNA uses to call native code
-	 * 
-	 * @return mode
-	 */
-	public static Mode getActiveJNAMode() {
-		return m_activeMode;
-	}
-
 	/**
 	 * Returns the JNA initialization options (only public for technical reasons)
 	 * 
@@ -83,33 +74,11 @@ public class NotesNativeAPI implements INotesNativeAPI {
 	public static Map<String, Object> getLibraryOptions() {
 		return m_libraryOptions==null ? null : Collections.unmodifiableMap(m_libraryOptions);
 	}
-	
+
 	/**
 	 * Initializes the Domino API
 	 */
 	public static synchronized void initialize() {
-		String modeStr = System.getProperty("dominojna.jnamode");
-		Mode mode = null;
-		if ("direct".equalsIgnoreCase(modeStr)) {
-			mode = Mode.Direct;
-		}
-		else if ("classic".equalsIgnoreCase(modeStr)) {
-			mode = Mode.Classic;
-		}
-		
-		if (mode==null) {
-			//classic by default, because we experienced crashes on R11 Beta 2 using direct mode
-			mode = Mode.Classic;
-		}
-		initialize(mode);
-	}
-
-	/**
-	 * Initializes the Domino API
-	 * 
-	 * @param mode JNA mode, either {@link Mode#Direct} or {@link Mode#Classic}
-	 */
-	public static synchronized void initialize(final Mode mode) {
 		if (m_instanceWithoutCrashLogging==null && m_initError==null) {
 			m_instanceWithoutCrashLogging = AccessController.doPrivileged(new PrivilegedAction<INotesNativeAPI>() {
 
@@ -147,7 +116,7 @@ public class NotesNativeAPI implements INotesNativeAPI {
 							return null;
 						}
 
-						System.out.println("Initializing Domino JNA with mode "+mode);
+						System.out.println("Initializing Domino JNA");
 						if (!"true".equals(System.getProperty("dominojna.keepprotectedmode"))) {
 							//since this crashes in multithreaded and Linux environments, we
 							//prefer not to use protected mode
@@ -164,68 +133,39 @@ public class NotesNativeAPI implements INotesNativeAPI {
 						if (PlatformUtils.isWin32()) {
 							m_libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
 						}
-						
-						if (mode==Mode.Direct) {
-							NativeLibrary library;
-							if (PlatformUtils.isWindows()) {
-						        library = NativeLibrary.getInstance("nnotes", m_libraryOptions);
-							}
-							else {
-						        library = NativeLibrary.getInstance("notes", m_libraryOptions);
-							}
 
-							Native.register(NotesNativeAPI.class, library);
+						INotesNativeAPI api;
+						if (PlatformUtils.isWindows()) {
+							api = Native.loadLibrary("nnotes", INotesNativeAPI.class, m_libraryOptions);
 
 							if (PlatformUtils.is64Bit()) {
-								NotesNativeAPI64 instance64 = new NotesNativeAPI64();
-								Native.register(NotesNativeAPI64.class, library);
-								NotesNativeAPI64.set(instance64);
+								INotesNativeAPI64 api64 = Native.loadLibrary("nnotes", INotesNativeAPI64.class, m_libraryOptions);
+								NotesNativeAPI64.set(api64);
 							}
 							else {
-								NotesNativeAPI32 instance32 = new NotesNativeAPI32();
-								Native.register(NotesNativeAPI32.class, library);
-								NotesNativeAPI32.set(instance32);
+								INotesNativeAPI32 api32 = Native.loadLibrary("nnotes", INotesNativeAPI32.class, m_libraryOptions);
+								NotesNativeAPI32.set(api32);
 							}
-
-							NotesNativeAPI instance = new NotesNativeAPI();
-							return instance;
 						}
 						else {
-							INotesNativeAPI api;
-							if (PlatformUtils.isWindows()) {
-								api = Native.loadLibrary("nnotes", INotesNativeAPI.class, m_libraryOptions);
-
-								if (PlatformUtils.is64Bit()) {
-									INotesNativeAPI64 api64 = Native.loadLibrary("nnotes", INotesNativeAPI64.class, m_libraryOptions);
-									NotesNativeAPI64.set(api64);
-								}
-								else {
-									INotesNativeAPI32 api32 = Native.loadLibrary("nnotes", INotesNativeAPI32.class, m_libraryOptions);
-									NotesNativeAPI32.set(api32);
-								}
+							api = Native.loadLibrary("notes", INotesNativeAPI.class, m_libraryOptions);
+							
+							if (PlatformUtils.is64Bit()) {
+								INotesNativeAPI64 api64 = Native.loadLibrary("notes", INotesNativeAPI64.class, m_libraryOptions);
+								NotesNativeAPI64.set(api64);
 							}
 							else {
-								api = Native.loadLibrary("notes", INotesNativeAPI.class, m_libraryOptions);
-								
-								if (PlatformUtils.is64Bit()) {
-									INotesNativeAPI64 api64 = Native.loadLibrary("notes", INotesNativeAPI64.class, m_libraryOptions);
-									NotesNativeAPI64.set(api64);
-								}
-								else {
-									INotesNativeAPI32 api32 = Native.loadLibrary("notes", INotesNativeAPI32.class, m_libraryOptions);
-									NotesNativeAPI32.set(api32);
-								}
+								INotesNativeAPI32 api32 = Native.loadLibrary("notes", INotesNativeAPI32.class, m_libraryOptions);
+								NotesNativeAPI32.set(api32);
 							}
-
-							return api;
 						}
+
+						return api;
+					
 					}
 					catch (Throwable t) {
 						m_initError = t;
 						return null;
-					}
-					finally {
-						m_activeMode = mode;
 					}
 				}
 			});
@@ -813,5 +753,27 @@ public class NotesNativeAPI implements INotesNativeAPI {
 
 	@Override
 	public native boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
+
+	@Override public native short QueueCreate(com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference qhandle);
+
+	@Override public native short QueueGet(com.mindoo.domino.jna.internal.handles.DHANDLE.ByValue qhandle, DHANDLE.ByReference sehandle);
+
+	@Override public native short QueueDelete(DHANDLE.ByValue qhandle);
+
+	@Override public native short NSFRemoteConsoleAsync(Memory serverName, Memory ConsoleCommand, int Flags,
+			com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference phConsoleText,
+			com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference phTasksText,
+			com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference phUsersText, ShortByReference pSignals,
+			IntByReference pConsoleBufferID, com.mindoo.domino.jna.internal.handles.DHANDLE.ByValue hQueue,
+			ASYNCNOTIFYPROC Proc, Pointer param, PointerByReference retactx);
+
+	@Override public native short NSFRemoteConsole(Memory ServerName, Memory ConsoleCommand,
+			DHANDLE.ByReference hResponseText);
+
+	@Override public native void NSFAsyncNotifyPoll(Pointer actx, IntByReference retMySessions, ShortByReference retFirstError);
+
+	@Override public native void NSFUpdateAsyncIOStatus(Pointer actx);
+
+	@Override public native void NSFCancelAsyncIO(Pointer actx);
 
 }

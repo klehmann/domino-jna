@@ -1143,10 +1143,6 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 			short noteClass, short auxclass, short granularity, 
 			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
 			LongByReference rtnhandle);
-
-	public native short QueueCreate(LongByReference qhandle);
-
-	public native short QueueGet(long qhandle, LongByReference sehandle);
 	
 	public native short NSFSearchStop(long shandle);
 
@@ -1545,12 +1541,6 @@ public class NotesNativeAPI64 implements INotesNativeAPI64 {
 	public native short AssistantGetLSDataNote(long hDB, int NoteID,
 			NotesUniversalNoteIdStruct.ByReference retUNID);
 
-	@Override
-	public native short NSFRemoteConsoleAsync(Memory ServerName, Memory ConsoleCommand, int Flags,
-			LongByReference phConsoleText, LongByReference phTasksText, LongByReference phUsersText,
-			ShortByReference pSignals, IntByReference pConsoleBufferID, long hQueue, ASYNCNOTIFYPROC Proc,
-			Pointer Param, PointerByReference retactx);
-	
 	@Override
 	public native short DesignEnum2(long hDB, short NoteClass, Memory pszFlagsPattern, int dwFlags, b64_DESIGNENUMPROC proc,
 			Pointer parameters, DESIGN_COLL_OPENCLOSE_PROC openCloseRoutine, Pointer ctx);

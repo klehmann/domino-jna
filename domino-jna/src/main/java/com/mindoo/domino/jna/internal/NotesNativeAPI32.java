@@ -1150,10 +1150,6 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 			NotesTimeDateStruct.ByValue since, NotesTimeDateStruct rtnuntil, 
 			IntByReference rtnhandle);
 
-	public native short QueueCreate(IntByReference qhandle);
-	
-	public native short QueueGet(int qhandle, IntByReference sehandle);
-
 	public native short NSFSearchStop(int shandle);
 	
 	public native short QueueDelete(int qhandle);
@@ -1531,12 +1527,6 @@ public class NotesNativeAPI32 implements INotesNativeAPI32 {
 	@Override
 	public native short AssistantGetLSDataNote(int hDB, int NoteID,
 			NotesUniversalNoteIdStruct.ByReference retUNID);
-
-	@Override
-	public native short NSFRemoteConsoleAsync(Memory ServerName, Memory ConsoleCommand, int Flags,
-			IntByReference phConsoleText, IntByReference phTasksText, IntByReference phUsersText,
-			ShortByReference pSignals, IntByReference pConsoleBufferID, int hQueue, ASYNCNOTIFYPROC Proc, Pointer Param,
-			PointerByReference retactx);
 
 	@Override
 	public native short DesignEnum2(int hDB, short NoteClass, Memory pszFlagsPattern, int dwFlags, b32_DESIGNENUMPROC proc,

@@ -1336,16 +1336,7 @@ public interface INotesNativeAPI64 extends Library {
 			LongByReference rtnhandle);
 
 	@UndocumentedAPI
-	public short QueueCreate(LongByReference qhandle);
-
-	@UndocumentedAPI
-	public short QueueGet(long qhandle, LongByReference sehandle);
-	
-	@UndocumentedAPI
 	public short NSFSearchStop(long shandle);
-
-	@UndocumentedAPI
-	public short QueueDelete(long qhandle);
 	
 	public short CalCreateEntry(
 			long hDB,
@@ -1851,12 +1842,6 @@ public interface INotesNativeAPI64 extends Library {
 
 	@UndocumentedAPI
 	public short AssistantGetLSDataNote (long hDB, int NoteID, NotesUniversalNoteIdStruct.ByReference retUNID);
-
-	@UndocumentedAPI
-	public short NSFRemoteConsoleAsync(Memory ServerName, Memory ConsoleCommand, int Flags,
-            LongByReference phConsoleText, LongByReference phTasksText, LongByReference phUsersText,
-            ShortByReference pSignals, IntByReference pConsoleBufferID, long hQueue,
-            NotesCallbacks.ASYNCNOTIFYPROC Proc, Pointer Param, PointerByReference retactx);
 
 	@UndocumentedAPI
 	public short DesignEnum2 (long hDB,
