@@ -215,7 +215,8 @@ public class ServerUtils {
 	}
 	
 	/**
-	 * Opens a remote console for the specified server
+	 * Opens a remote console for the specified server. Please not that this command currently
+	 * only works locally in the client. We are trying to get server side support for Domino R12 from HCL.
 	 * 
 	 * @param serverName server name (abbreviated or canonical format) or empty string for local server
 	 * @param handler handler to receive the console messages
