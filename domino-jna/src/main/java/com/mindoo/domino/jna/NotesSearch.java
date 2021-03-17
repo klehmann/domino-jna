@@ -388,8 +388,8 @@ public class NotesSearch {
 
 		final NotesTimeDateStruct sinceStruct = since==null ? null : NotesTimeDateStruct.newInstance(since.getInnards());
 
-		LinkedHashMap<String,String> columnFormulasFixedOrder = columnFormulas==null ? null : new LinkedHashMap<>(columnFormulas);
-		
+		LinkedHashMap<String,String> columnFormulasFixedOrder = (columnFormulas==null || columnFormulas.isEmpty()) ? null : new LinkedHashMap<>(columnFormulas);
+
 		final EnumSet<Search> useSearchFlags = EnumSet.copyOf(searchFlags);
 		if (columnFormulasFixedOrder!=null) {
 			useSearchFlags.add(Search.SUMMARY);
