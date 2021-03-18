@@ -12,6 +12,7 @@ import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
+import java.util.Set;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.constants.CDRecordType.Area;
@@ -270,7 +271,7 @@ public class DumpUtil {
 	 * @param flags data to dump
 	 * @param blkType dump blocks of this type, 0 for all 
 	 */
-	public static void dumpHandleTable(EnumSet<MemDump> flags, int blkType) {
+	public static void dumpHandleTable(Set<MemDump> flags, int blkType) {
 		int typeAsInt = 0;
 		
 		for (MemDump currType : flags) {
