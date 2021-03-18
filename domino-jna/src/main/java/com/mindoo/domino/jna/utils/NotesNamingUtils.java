@@ -637,23 +637,31 @@ public class NotesNamingUtils {
 		userName = toCanonicalName(userName);
 		
 		Memory userNameLMBCS = NotesStringUtils.toLMBCS(userName, true);
-		
+
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethNamesList = new LongByReference();
-			short result = NotesNativeAPI64.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
-			NotesErrorUtils.checkResult(result);
+			//synchronizing the NSFBuildNamesList call because we had reproducible multithreading issues
+			//under heavy application load
+			synchronized (NotesNamingUtils.class) {
+				short result = NotesNativeAPI64.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+				NotesErrorUtils.checkResult(result);
+			}
 			long hUserNamesList64 = rethNamesList.getValue();
-			
+
 			NotesNamesList newList =  new NotesNamesList(new Handle(hUserNamesList64));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
 		else {
 			IntByReference rethNamesList = new IntByReference();
-			short result = NotesNativeAPI32.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
-			NotesErrorUtils.checkResult(result);
+			//synchronizing the NSFBuildNamesList call because we had reproducible multithreading issues
+			//under heavy application load
+			synchronized (NotesNamingUtils.class) {
+				short result = NotesNativeAPI32.get().NSFBuildNamesList(userNameLMBCS, 0, rethNamesList);
+				NotesErrorUtils.checkResult(result);
+			}
 			int hUserNamesList32 = rethNamesList.getValue();
-			
+
 			NotesNamesList newList = new NotesNamesList(new Handle(hUserNamesList32));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
