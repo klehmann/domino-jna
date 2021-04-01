@@ -215,8 +215,10 @@ public class ServerUtils {
 	}
 	
 	/**
-	 * Opens a remote console for the specified server. Please not that this command currently
-	 * only works locally in the client. We are trying to get server side support for Domino R12 from HCL.
+	 * Opens a remote console for the specified server. Please note that for Domino versions until
+	 * R11 this command only works locally in the client. Domino R12.0.0 will provide console access
+	 * on server side after the following Notes.ini variable has been set:
+	 * <code>DEBUG_ALLOW_REMOTE_CON_SERVER=1</code>.
 	 * 
 	 * @param serverName server name (abbreviated or canonical format) or empty string for local server
 	 * @param handler handler to receive the console messages
