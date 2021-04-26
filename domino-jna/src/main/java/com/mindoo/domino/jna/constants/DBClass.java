@@ -90,7 +90,10 @@ public enum DBClass {
 	V9NOTEFILE(NotesConstants.DBCLASS_V9NOTEFILE),
 
 	/** Database was created specifically for Domino and Notes Release Notes/Domino 10. */
-	V10NOTEFILE(NotesConstants.DBCLASS_V10NOTEFILE);
+	V10NOTEFILE(NotesConstants.DBCLASS_V10NOTEFILE),
+
+	/** Database was created specifically for Domino and Notes Release Notes/Domino 12. */
+	V12NOTEFILE(NotesConstants.DBCLASS_V12NOTEFILE);
 
 	private short m_val;
 	

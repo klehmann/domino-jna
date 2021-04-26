@@ -952,7 +952,8 @@ public short DBCLASS_V85NOTEFILE = (short) (0xff12 & 0xffff);
 public short DBCLASS_V9NOTEFILE = (short) (0xff13 & 0xffff);
 /** Database was created specifically for Domino and Notes Release Notes/Domino 10. */
 public short DBCLASS_V10NOTEFILE = (short) (0xff14 & 0xffff);
-
+/** Database was created specifically for Domino and Notes Release Notes/Domino 12 */
+public short DBCLASS_V12NOTEFILE = (short) (0xff15 & 0xffff);
 
 public short DBCLASS_MASK	= (0x00ff & 0xffff);
 public short DBCLASS_VALID_MASK = (short) (0xff00 & 0xffff);
@@ -4305,4 +4306,8 @@ This allows an Editor to assume some Designer-level access */
 	/*  web service */
 	public int DESIGN_TYPE_WEBSERVICE = 0x00004000;
 
+	int SECTOKENFORMAT_UNKNOWN = 0;
+	int SECTOKENFORMAT_LTPATOKEN = 1;
+	int SECTOKENFORMAT_LTPATOKEN2 = 2;
+	
 }
