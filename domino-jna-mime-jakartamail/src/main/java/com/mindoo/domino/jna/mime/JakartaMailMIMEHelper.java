@@ -109,7 +109,7 @@ public class JakartaMailMIMEHelper {
 		
 		final byte[] buffer = new byte[BUFFERSIZE];
 		
-		message.writeTo(new OutputStream() {
+		OutputStream out = new OutputStream() {
 			int bytesInBuffer = 0;
 
 			@Override
@@ -133,9 +133,16 @@ public class JakartaMailMIMEHelper {
 					bytesInBuffer = 0;
 				}
 			}
-		});
+		};
+
+		try {
+			message.writeTo(out);
+		}
+		finally {
+			out.close();
+		}
 	}
-	
+
 	/**
 	 * Reads the MIME content of a {@link NotesNote} and parses it as {@link MimeMessage}.<br>
 	 * Please make sure to have sufficient memory so that the MIME data can fit into the Java heap.

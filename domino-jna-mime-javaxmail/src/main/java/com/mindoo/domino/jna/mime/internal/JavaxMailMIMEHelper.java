@@ -110,7 +110,7 @@ public class JavaxMailMIMEHelper {
 		
 		final byte[] buffer = new byte[BUFFERSIZE];
 		
-		message.writeTo(new OutputStream() {
+		OutputStream out = new OutputStream() {
 			int bytesInBuffer = 0;
 
 			@Override
@@ -134,7 +134,14 @@ public class JavaxMailMIMEHelper {
 					bytesInBuffer = 0;
 				}
 			}
-		});
+		};
+		
+		try {
+			message.writeTo(out);
+		}
+		finally {
+			out.close();
+		}
 	}
 	
 	/**
