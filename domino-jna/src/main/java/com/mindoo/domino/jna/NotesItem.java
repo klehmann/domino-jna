@@ -6,6 +6,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect.Action;
 import com.mindoo.domino.jna.constants.CDRecordType;
@@ -972,6 +973,8 @@ public class NotesItem {
 	void getAllCompositeTextContent(final Writer writer) {
 		final boolean useOSLineBreaks = NotesStringUtils.isUseOSLineDelimiter();
 
+		AtomicBoolean skippedFirstParagraph = new AtomicBoolean();
+		
 		enumerateCDRecords(new ICompositeCallbackDirect() {
 
 			@Override
@@ -984,7 +987,6 @@ public class NotesItem {
 						if (txt.length()>0) {
 							try {
 								writer.write(txt);
-								writer.flush();
 							} catch (IOException e) {
 								throw new RuntimeException("Error writing composite text", e);
 							}
@@ -993,11 +995,16 @@ public class NotesItem {
 				}
 				else if (CDRecordType.PARAGRAPH.getConstant() == signature) {
 					try {
-						if (PlatformUtils.isWindows() && useOSLineBreaks) {
-							writer.write("\r\n");
+						if (skippedFirstParagraph.get()) {
+							if (PlatformUtils.isWindows() && useOSLineBreaks) {
+								writer.write("\r\n");
+							}
+							else {
+								writer.write("\n");
+							}
 						}
 						else {
-							writer.write("\n");
+							skippedFirstParagraph.set(true);
 						}
 					} catch (IOException e) {
 						throw new RuntimeException("Error writing composite text", e);
@@ -1006,6 +1013,12 @@ public class NotesItem {
 				return Action.Continue;
 			}
 		});
+		
+		try {
+			writer.flush();
+		} catch (IOException e) {
+			throw new RuntimeException("Error writing composite text", e);
+		}
 	}
 
 	/**
