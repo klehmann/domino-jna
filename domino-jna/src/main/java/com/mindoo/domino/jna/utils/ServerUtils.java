@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.utils;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.List;
 
@@ -276,11 +278,13 @@ public class ServerUtils {
 				};
 			}
 
-			result = NotesNativeAPI.get().NSFRemoteConsoleAsync(serverNameCanonicalMem, cmdMem,
-					NotesConstants.REMCON_GET_CONSOLE | NotesConstants.REMCON_GET_CONSOLE_META,
-					hAsyncBuffer,
-					null, null, wSignals, dwConsoleBuffID, hAsyncQueue.getByValue(), callback, null, pAsyncCtx);
-					
+			result = AccessController.doPrivileged((PrivilegedAction<Short>) ()->{
+				return NotesNativeAPI.get().NSFRemoteConsoleAsync(serverNameCanonicalMem, cmdMem,
+						NotesConstants.REMCON_GET_CONSOLE | NotesConstants.REMCON_GET_CONSOLE_META,
+						hAsyncBuffer,
+						null, null, wSignals, dwConsoleBuffID, hAsyncQueue.getByValue(), callback, null, pAsyncCtx);
+			});
+			
 			NotesErrorUtils.checkResult(result);
 			
 			while (true) {
