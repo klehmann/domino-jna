@@ -15,7 +15,6 @@ import com.mindoo.domino.jna.constants.OSDirectory;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.mime.IMimeDataAccessService;
 import com.sun.jna.Memory;
 
 /**
