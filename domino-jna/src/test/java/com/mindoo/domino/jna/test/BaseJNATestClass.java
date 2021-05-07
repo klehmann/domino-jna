@@ -490,6 +490,13 @@ public class BaseJNATestClass {
 				public T call() throws Exception {
 					NotesGC.setDebugLoggingEnabled(true);
 
+					//prevent ID password prompt
+					String idFilePath = System.getenv("Notes_IDPath");
+					String idPassword = System.getenv("Notes_IDPassword");
+					if (!StringUtil.isEmpty(idPassword)) {
+						IDUtils.switchToId(idFilePath, idPassword, true);
+					}
+
 					T result = callable.call(session[0]);
 					return result;
 				}
