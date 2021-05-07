@@ -1393,13 +1393,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			Memory retCanonicalPathName = new Memory(NotesConstants.MAXPATH);
 			Memory retExpandedPathName = new Memory(NotesConstants.MAXPATH);
 			
+			short result;
 			if (PlatformUtils.is64Bit()) {
-				NotesNativeAPI64.get().NSFDbPathGet(m_hDB64, retCanonicalPathName, retExpandedPathName);
+				result = NotesNativeAPI64.get().NSFDbPathGet(m_hDB64, retCanonicalPathName, retExpandedPathName);
 			}
 			else {
-				NotesNativeAPI32.get().NSFDbPathGet(m_hDB32, retCanonicalPathName, retExpandedPathName);
+				result = NotesNativeAPI32.get().NSFDbPathGet(m_hDB32, retCanonicalPathName, retExpandedPathName);
 			}
-
+			NotesErrorUtils.checkResult(result);
+			
 			String canonicalPathName = NotesStringUtils.fromLMBCS(retCanonicalPathName, NotesStringUtils.getNullTerminatedLength(retCanonicalPathName));
 			String expandedPathName = NotesStringUtils.fromLMBCS(retExpandedPathName, NotesStringUtils.getNullTerminatedLength(retExpandedPathName));
 			String relDbPath;
@@ -3274,7 +3276,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		retVersion.read();
 		return new NotesBuildVersion(retVersion.MajorVersion,
 				retVersion.MinorVersion, retVersion.QMRNumber, retVersion.QMUNumber,
-				retVersion.HotfixNumber, retVersion.Flags, retVersion.FixpackNumber, retVersion.Spare);
+				retVersion.HotfixNumber, retVersion.Flags, retVersion.FixpackNumber);
 	}
 
 	public static abstract class SearchCallback extends NotesSearch.SearchCallback {

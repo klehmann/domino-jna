@@ -4,6 +4,7 @@ import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesSSOTokenInfoDescStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeStruct;
@@ -19,57 +20,57 @@ import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI extends Library {
-	public short NotesInitExtended(int argc, Memory argvPtr);
-	public void NotesTerm();
+	short NotesInitExtended(int argc, Memory argvPtr);
+	void NotesTerm();
 
-	public short NotesInitThread();
-	public void NotesTermThread();
+	short NotesInitThread();
+	void NotesTermThread();
 
-	public short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
-	public short OSTranslate(short translateMode, Pointer in, short inLength, Memory out, short outLength);
-	public int OSTranslate32(short translateMode, Memory in, int inLength, Memory out, int outLength);
-	public int OSTranslate32(short translateMode, Pointer in, int inLength, Memory out, int outLength);
+	short OSTranslate(short translateMode, Memory in, short inLength, Memory out, short outLength);
+	short OSTranslate(short translateMode, Pointer in, short inLength, Memory out, short outLength);
+	int OSTranslate32(short translateMode, Memory in, int inLength, Memory out, int outLength);
+	int OSTranslate32(short translateMode, Pointer in, int inLength, Memory out, int outLength);
 
-	public short OSLoadString(int hModule, short StringCode, Memory retBuffer, short BufferLength);
-	public short OSLoadString(long hModule, short StringCode, Memory retBuffer, short BufferLength);
-	public short OSPathNetConstruct(Memory PortName,
+	short OSLoadString(int hModule, short StringCode, Memory retBuffer, short BufferLength);
+	short OSLoadString(long hModule, short StringCode, Memory retBuffer, short BufferLength);
+	short OSPathNetConstruct(Memory PortName,
 			Memory ServerName,
 			Memory FileName,
 			Memory retPathName);
-	public short OSPathNetParse(Memory PathName,
+	short OSPathNetParse(Memory PathName,
 			Memory retPortName,
 			Memory retServerName,
 			Memory retFileName);
-	public void OSGetExecutableDirectory(Memory retPathName);
-	public void OSGetDataDirectory(Memory retPathName);
-	public short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
+	void OSGetExecutableDirectory(Memory retPathName);
+	void OSGetDataDirectory(Memory retPathName);
+	short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
 	@UndocumentedAPI
-	public void OSPathAddTrailingPathSep(Memory retPathName);
-	public short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
-	public long OSGetEnvironmentLong(Memory variableName);
+	void OSPathAddTrailingPathSep(Memory retPathName);
+	short OSGetEnvironmentString(Memory variableName, Memory rethValueBuffer, short bufferLength);
+	long OSGetEnvironmentLong(Memory variableName);
 	@UndocumentedAPI
-	public short OSGetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct retTd); 
-	public void OSSetEnvironmentVariable(Memory variableName, Memory Value);
+	short OSGetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct retTd); 
+	void OSSetEnvironmentVariable(Memory variableName, Memory Value);
 	@UndocumentedAPI
-	public void OSSetEnvironmentVariableExt (Memory variableName, Memory Value, short isSoft);
-	public void OSSetEnvironmentInt(Memory variableName, int Value);
+	void OSSetEnvironmentVariableExt (Memory variableName, Memory Value, short isSoft);
+	void OSSetEnvironmentInt(Memory variableName, int Value);
 	@UndocumentedAPI
-	public void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
+	void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
 	@UndocumentedAPI
-	public short OSGetEnvironmentSeqNo();
+	short OSGetEnvironmentSeqNo();
 	
-	public short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
+	short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
 
-	public boolean TimeLocalToGM(Memory timePtr);
-	public boolean TimeLocalToGM(NotesTimeStruct timePtr);
-	public boolean TimeGMToLocalZone (NotesTimeStruct timePtr);
-	public boolean TimeGMToLocal (NotesTimeStruct timePtr);
-	public void TimeConstant(short timeConstantType, NotesTimeDateStruct tdptr);
-	public int TimeExtractTicks(Memory time);
-	public int TimeExtractJulianDate(Memory time);
-	public int TimeExtractDate(Memory time);
+	boolean TimeLocalToGM(Memory timePtr);
+	boolean TimeLocalToGM(NotesTimeStruct timePtr);
+	boolean TimeGMToLocalZone (NotesTimeStruct timePtr);
+	boolean TimeGMToLocal (NotesTimeStruct timePtr);
+	void TimeConstant(short timeConstantType, NotesTimeDateStruct tdptr);
+	int TimeExtractTicks(Memory time);
+	int TimeExtractJulianDate(Memory time);
+	int TimeExtractDate(Memory time);
 
-	public short ConvertTIMEDATEToText(
+	short ConvertTIMEDATEToText(
 			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			NotesTimeDateStruct inputTime,
@@ -77,54 +78,54 @@ public interface INotesNativeAPI extends Library {
 			short textBufferLength,
 			ShortByReference retTextLength);
 
-	public short ConvertTextToTIMEDATE(
+	short ConvertTextToTIMEDATE(
 			IntlFormatStruct intlFormat,
 			Pointer textFormat,
 			Memory text,
 			short maxLength,
 			NotesTimeDateStruct retTIMEDATE);
 
-	public short ListGetNumEntries(Pointer vList, int noteItem);
+	short ListGetNumEntries(Pointer vList, int noteItem);
 
-	public short ListGetText (Pointer pList,
+	short ListGetText (Pointer pList,
 			boolean fPrefixDataType,
 			short entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 
-	public short ListGetSize(
+	short ListGetSize(
 			Pointer pList,
 			int fPrefixDataType);
 
-	public short IDTableFlags (Pointer pIDTable);
-	public void IDTableSetFlags (Pointer pIDTable, short Flags);
-	public void IDTableSetTime(Pointer pIDTable, NotesTimeDateStruct Time);
-	public NotesTimeDateStruct IDTableTime(Pointer pIDTable);
+	short IDTableFlags (Pointer pIDTable);
+	void IDTableSetFlags (Pointer pIDTable, short Flags);
+	void IDTableSetTime(Pointer pIDTable, NotesTimeDateStruct Time);
+	NotesTimeDateStruct IDTableTime(Pointer pIDTable);
 
-	public short DNCanonicalize(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);
-	public short DNAbbreviate(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);	
+	short DNCanonicalize(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);
+	short DNAbbreviate(int Flags, Memory TemplateName, Memory InName, Memory OutName, short OutSize, ShortByReference OutLength);	
 
-	public short NSFGetTransLogStyle(ShortByReference LogType);
-	public short NSFBeginArchivingLogs();
-	public short NSFGetFirstLogToArchive(NotesUniversalNoteIdStruct LogID, IntByReference LogNumber, Memory LogPath);
-	public short NSFGetNextLogToArchive(
+	short NSFGetTransLogStyle(ShortByReference LogType);
+	short NSFBeginArchivingLogs();
+	short NSFGetFirstLogToArchive(NotesUniversalNoteIdStruct LogID, IntByReference LogNumber, Memory LogPath);
+	short NSFGetNextLogToArchive(
 			NotesUniversalNoteIdStruct LogID, IntByReference LogNumber, Memory LogPath);
-	public short NSFDoneArchivingLog(NotesUniversalNoteIdStruct LogID, IntByReference LogSequenceNumber);
-	public short NSFEndArchivingLogs();
-	public short NSFTakeDatabaseOffline(Memory dbPath, int WaitTime, int options);
-	public short NSFRecoverDatabases(Memory dbNames,
+	short NSFDoneArchivingLog(NotesUniversalNoteIdStruct LogID, IntByReference LogSequenceNumber);
+	short NSFEndArchivingLogs();
+	short NSFTakeDatabaseOffline(Memory dbPath, int WaitTime, int options);
+	short NSFRecoverDatabases(Memory dbNames,
 			NotesCallbacks.LogRestoreCallbackFunction restoreCB,
 			int Flags,
 			ShortByReference errDbIndex,
 			NotesTimeDatePairStruct recoveryTime);
-	public short NSFBringDatabaseOnline(Memory dbPath, int options);
+	short NSFBringDatabaseOnline(Memory dbPath, int options);
 
-	public short NSFItemRealloc(
+	short NSFItemRealloc(
 			NotesBlockIdStruct.ByValue item_blockid,
 			NotesBlockIdStruct value_blockid_ptr,
 			int value_len);
 
-	public short NSFDbCreateExtended(
+	short NSFDbCreateExtended(
 			Memory pathName,
 			short  DbClass,
 			boolean  ForceCreation,
@@ -132,68 +133,68 @@ public interface INotesNativeAPI extends Library {
 			byte  EncryptStrength,
 			long  MaxFileSize);
 	
-	public short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
-	public short NSFDbMarkInService(Memory dbPath);
-	public short NSFDbMarkOutOfService(Memory dbPath);
-	public short NSFDbFTSizeGet(Memory dbPath, IntByReference retFTSize);
+	short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
+	short NSFDbMarkInService(Memory dbPath);
+	short NSFDbMarkOutOfService(Memory dbPath);
+	short NSFDbFTSizeGet(Memory dbPath, IntByReference retFTSize);
 	
 	@UndocumentedAPI
-	public short ECLGetListCapabilities(Pointer pNamesList, short ECLType, ShortByReference retwCapabilities,
+	short ECLGetListCapabilities(Pointer pNamesList, short ECLType, ShortByReference retwCapabilities,
 			ShortByReference retwCapabilities2, IntByReference retfUserCanModifyECL);
 
-	public short SECKFMChangePassword(Memory pIDFile, Memory pOldPassword, Memory pNewPassword);
-	public short SECKFMGetUserName(Memory retUserName);
-	public short SECKFMSwitchToIDFile(Memory pIDFileName, Memory pPassword, Memory pUserName,
+	short SECKFMChangePassword(Memory pIDFile, Memory pOldPassword, Memory pNewPassword);
+	short SECKFMGetUserName(Memory retUserName);
+	short SECKFMSwitchToIDFile(Memory pIDFileName, Memory pPassword, Memory pUserName,
 			short  MaxUserNameLength, int Flags, Pointer pReserved);
-	public short SECidvResetUserPassword(Memory pServer, Memory pUserName, Memory pPassword,
+	short SECidvResetUserPassword(Memory pServer, Memory pUserName, Memory pPassword,
 			short wDownloadCount, int ReservedFlags, Pointer pReserved);
-	public short SECKFMGetPublicKey(
+	short SECKFMGetPublicKey(
 			Memory pName,
 			short Function,
 			short Flags,
 			IntByReference rethPubKey);
-	public short SECTokenValidate(
+	short SECTokenValidate(
 			Memory ServerName,
 			Memory OrgName,
 			Memory ConfigName,
 			Memory TokenData,
 			Memory retUsername,
-			NotesTimeDateStruct retCreation,
-			NotesTimeDateStruct retExpiration,
-			int  dwReserved,
+			NotesTimeDateStruct.ByReference retCreation,
+			NotesTimeDateStruct.ByReference retExpiration,
+			int dwReserved,
 			Pointer vpReserved);
 
-	public short SECidvIsIDInVault(Memory pServer, Memory pUserName);
+	short SECidvIsIDInVault(Memory pServer, Memory pUserName);
 	
-	public short ODSLength(short type);
-	public void ODSWriteMemory(
+	short ODSLength(short type);
+	void ODSWriteMemory(
 			Pointer ppDest,
 			short  type,
 			Pointer pSrc,
 			short  iterations);
 	
-	public void ODSReadMemory(
+	void ODSReadMemory(
 			Pointer ppSrc,
 			short  type,
 			Pointer pDest,
 			short iterations);
 
-	public short MQCreate(Memory queueName, short quota, int options);
-	public short MQOpen(Memory queueName, int options, IntByReference retQueue);
-	public short MQClose(int queue, int options);
-	public short MQPut(int queue, short priority, Pointer buffer, short length, 
+	short MQCreate(Memory queueName, short quota, int options);
+	short MQOpen(Memory queueName, int options, IntByReference retQueue);
+	short MQClose(int queue, int options);
+	short MQPut(int queue, short priority, Pointer buffer, short length, 
 			int options);
-	public short MQGet(int queue, Pointer buffer, short bufLength,
+	short MQGet(int queue, Pointer buffer, short bufLength,
 			int options, int timeout, ShortByReference retMsgLength);
-	public short MQScan(int queue, Pointer buffer, short bufLength, 
+	short MQScan(int queue, Pointer buffer, short bufLength, 
 			int options, NotesCallbacks.MQScanCallback actionRoutine,
 			Pointer ctx, ShortByReference retMsgLength);
 
-	public void MQPutQuitMsg(int queue);
-	public boolean MQIsQuitPending(int queue);
-	public short MQGetCount(int queue);
+	void MQPutQuitMsg(int queue);
+	boolean MQIsQuitPending(int queue);
+	short MQGetCount(int queue);
 
-	public short ReplicateWithServerExt(
+	short ReplicateWithServerExt(
 			Memory PortName,
 			Memory ServerName,
 			int Options,
@@ -202,160 +203,160 @@ public interface INotesNativeAPI extends Library {
 			ReplExtensionsStruct ExtendedOptions,
 			ReplServStatsStruct retStats);
 
-	public NotesCallbacks.OSSIGPROC OSGetSignalHandler(short signalHandlerID);
-	public NotesCallbacks.OSSIGPROC OSSetSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGPROC routine);
+	NotesCallbacks.OSSIGPROC OSGetSignalHandler(short signalHandlerID);
+	NotesCallbacks.OSSIGPROC OSSetSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGPROC routine);
 
-	public Pointer OSGetLMBCSCLS();
+	Pointer OSGetLMBCSCLS();
 
-	public short HTMLConvertImage(
+	short HTMLConvertImage(
 			int hHTML,
 			Memory pszImageName);
-	public short REGGetIDInfo(
+	short REGGetIDInfo(
 			Memory IDFileName,
 			short InfoType,
 			Memory OutBufr,
 			short OutBufrLen,
 			ShortByReference ActualLen);
 
-	public void CompoundTextInitStyle(NotesCompoundStyleStruct style);
-	public short EnumCompositeBuffer(
+	void CompoundTextInitStyle(NotesCompoundStyleStruct style);
+	short EnumCompositeBuffer(
 			NotesBlockIdStruct.ByValue ItemValue,
 			int ItemValueLength,
 			NotesCallbacks.ActionRoutinePtr  ActionRoutine,
 			Pointer vContext);
 
 	@UndocumentedAPI
-	public void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
+	void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
 //  commented out, not compatible with later Notes version
 //	@UndocumentedAPI
-//	public void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
+//	void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
-	public void NSFDbInfoParse(
+	void NSFDbInfoParse(
 			Pointer Info,
 			short What,
 			Pointer Buffer,
 			short Length);
-	public void NSFDbInfoModify(
+	void NSFDbInfoModify(
 			Pointer Info,
 			short What,
 			Pointer Buffer);
 
-	public short CalGetRecurrenceID(
+	short CalGetRecurrenceID(
 			NotesTimeDateStruct.ByValue tdInput,
 			Memory pszRecurID,
 			short wLenRecurId);
 	
-	public short OOOInit();
+	short OOOInit();
 	
-	public short OOOTerm();
+	short OOOTerm();
 
-	public short OOOEnable(
+	short OOOEnable(
 			Pointer pOOOContext,
 			int bState);
 	
-	public short OOOGetAwayPeriod(
+	short OOOGetAwayPeriod(
 			Pointer pOOOContext,
 			NotesTimeDateStruct tdStartAway,
 			NotesTimeDateStruct tdEndAway);
 	
-	public short OOOGetExcludeInternet(
+	short OOOGetExcludeInternet(
 			Pointer pOOOContext,
 			IntByReference bExcludeInternet);
 	
-	public short OOOGetGeneralMessage(
+	short OOOGetGeneralMessage(
 			Pointer pOOOContext,
 			Memory pGeneralMessage,
 			ShortByReference pGeneralMessageLen);
 	
-	public short OOOGetGeneralSubject(
+	short OOOGetGeneralSubject(
 			Pointer pOOOContext,
 			Memory pGeneralSubject);
 	
-	public short OOOGetState(
+	short OOOGetState(
 			Pointer pOOOContext,
 			ShortByReference retVersion,
 			ShortByReference retState);
 
-	public short OOOSetAwayPeriod(
+	short OOOSetAwayPeriod(
 			Pointer pOOOContext,
 			NotesTimeDateStruct.ByValue tdStartAway,
 			NotesTimeDateStruct.ByValue tdEndAway);
 	
-	public short OOOSetExcludeInternet(
+	short OOOSetExcludeInternet(
 			Pointer pOOOContext,
 			int bExcludeInternet);
 
-	public short OOOSetGeneralMessage(
+	short OOOSetGeneralMessage(
 			Pointer pOOOContext,
 			Memory pGeneralMessage,
 			short wGeneralMessageLen);
 	
-	public short OOOSetGeneralSubject(
+	short OOOSetGeneralSubject(
 			Pointer pOOOContext,
 			Memory pGeneralSubject,
 			int bDisplayReturnDate);
 
-	public short OSGetExtIntlFormat(
+	short OSGetExtIntlFormat(
 			byte item,
 			byte index,
 			Memory buff,
 			short bufSize);
 	
 	@UndocumentedAPI
-	public void DEBUGDumpHandleTable(int flags, short blkType);
+	void DEBUGDumpHandleTable(int flags, short blkType);
 
 	@UndocumentedAPI
-	public short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
+	short DesignFindTemplate(Pointer designTemplateName, Pointer excludeDbPath, Pointer foundDbPath);
 
 	@UndocumentedAPI
-	public short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
+	short MIMEEMLExport(Memory dbName, int noteID, Memory pFileName);
 
-	public void StatTraverse(
+	void StatTraverse(
 			Memory Facility,
 			Memory StatName,
 			NotesCallbacks.STATTRAVERSEPROC  Routine,
 			Pointer Context);
 	
-	public void OSGetIntlSettings(
+	void OSGetIntlSettings(
 			IntlFormatStruct retIntlFormat,
 			short bufferSize);
 	
 	@UndocumentedAPI
-	public short OSRunNSDExt (Memory szServerName, short flags);
+	short OSRunNSDExt (Memory szServerName, short flags);
 	
-	public short DXLCreateExporter(IntByReference prethDXLExport);
+	short DXLCreateExporter(IntByReference prethDXLExport);
 	
-	public void DXLDeleteExporter(int hDXLExport);
+	void DXLDeleteExporter(int hDXLExport);
 	
-	public short DXLExportWasErrorLogged(int hDXLExport);
+	short DXLExportWasErrorLogged(int hDXLExport);
 	
-	public short DXLGetExporterProperty(
+	short DXLGetExporterProperty(
 			int hDXLExport,
 			int prop,
 			Memory retPropValue);
 
-	public short DXLSetExporterProperty(
+	short DXLSetExporterProperty(
 			int hDXLExport,
 			int prop,
 			Memory propValue);
 	
-	public short DXLCreateImporter(IntByReference prethDXLImport);
+	short DXLCreateImporter(IntByReference prethDXLImport);
 	
-	public void DXLDeleteImporter(int hDXLImport);
+	void DXLDeleteImporter(int hDXLImport);
 	
-	public short DXLImportWasErrorLogged(int hDXLImport);
+	short DXLImportWasErrorLogged(int hDXLImport);
 	
-	public short DXLGetImporterProperty(
+	short DXLGetImporterProperty(
 			int hDXLImporter,
 			int prop,
 			Memory retPropValue);
 	
-	public short DXLSetImporterProperty(
+	short DXLSetImporterProperty(
 			int hDXLImport,
 			int prop,
 			Memory propValue);
 
-	public short XSLTTransform(
+	short XSLTTransform(
 			int hXSLTransform,
 			NotesCallbacks.XML_READ_FUNCTION pXSL_XMLInputFunc,
 			Pointer pXSL_XMLInputAction,
@@ -364,138 +365,138 @@ public interface INotesNativeAPI extends Library {
 			NotesCallbacks.XML_WRITE_FUNCTION  pXSL_TransformOutputFunc,
 			Pointer pXSL_TransformOutputAction);
 	
-	public short XSLTCreateTransform(
+	short XSLTCreateTransform(
 			IntByReference prethXSLTransform);
 	
-	public short MMCreateConvControls(
+	short MMCreateConvControls(
 			PointerByReference phCC);
 
-	public short MMDestroyConvControls(
+	short MMDestroyConvControls(
 			Pointer hCC);
 	
-	public void MMConvDefaults(
+	void MMConvDefaults(
 			Pointer hCC);
 
-	public short MMGetAttachEncoding(
+	short MMGetAttachEncoding(
 			Pointer hCC);
 	
-	public void MMSetAttachEncoding(
+	void MMSetAttachEncoding(
 			Pointer hCC,
 			short wAttachEncoding);
 	
-	public void MMSetDropItems(
+	void MMSetDropItems(
 			Pointer hCC,
 			Memory pszDropItems);
 	
-	public Pointer MMGetDropItems(
+	Pointer MMGetDropItems(
 			Pointer hCC);
 	
-	public void MMSetKeepTabs(
+	void MMSetKeepTabs(
 			Pointer hCC,
 			boolean bKeepTabs);
 	
-	public boolean MMGetKeepTabs(
+	boolean MMGetKeepTabs(
 			Pointer hCC);
 	
-	public void MMSetPointSize(
+	void MMSetPointSize(
 			Pointer hCC,
 			short wPointSize);
 
-	public short MMGetPointSize(
+	short MMGetPointSize(
 			Pointer hCC);
 	
-	public short MMGetTypeFace(
+	short MMGetTypeFace(
 			Pointer hCC);
 	
-	public void MMSetTypeFace(
+	void MMSetTypeFace(
 			Pointer hCC,
 			short wTypeFace);
 
-	public void MMSetAddItems(
+	void MMSetAddItems(
 			Pointer hCC,
 			Memory pszAddItems);
 
-	public Pointer MMGetAddItems(
+	Pointer MMGetAddItems(
 			Pointer hCC);
 	
-	public void MMSetMessageContentEncoding(
+	void MMSetMessageContentEncoding(
 			Pointer hCC,
 			short wMessageContentEncoding);
 
-	public short MMGetMessageContentEncoding(
+	short MMGetMessageContentEncoding(
 			Pointer hCC);
 	
-	public void MMSetReadReceipt(
+	void MMSetReadReceipt(
 			Pointer hCC,
 			short wReadReceipt);
 
-	public short MMGetReadReceipt(
+	short MMGetReadReceipt(
 			Pointer hCC);
 	
-	public void MMSetSkipX(
+	void MMSetSkipX(
 			Pointer hCC,
 			boolean bSkipX);
 	
-	public boolean MMGetSkipX(
+	boolean MMGetSkipX(
 			Pointer hCC);
 	
-	public int MIMEStreamPutLine(
+	int MIMEStreamPutLine(
 			Memory pszLine,
 			Pointer hMIMEStream);
 
-	public int MIMEStreamRead(
+	int MIMEStreamRead(
 			Memory pchData,
 			IntByReference puiDataLen,
 			int uiMaxDataLen,
 			Pointer hMIMEStream);	
 	
-	public int MIMEStreamRewind(
+	int MIMEStreamRewind(
 			Pointer hMIMEStream);
 
-	public int MIMEStreamWrite(
+	int MIMEStreamWrite(
 			Memory pchData,
 			int  uiDataLen,
 			Pointer hMIMEStream);
 
-	public void MIMEStreamClose(
+	void MIMEStreamClose(
 			Pointer hMIMEStream);
 
 	@UndocumentedAPI
-	public short NSFProfileNameToProfileNoteName(
+	short NSFProfileNameToProfileNoteName(
             Memory ProfileName, short ProfileNameLength,
             Memory UserName, short UserNameLength, boolean bLeaveCase, Memory ProfileNoteName);
 
-	public short NSFDbModifiedTimeByName(
+	short NSFDbModifiedTimeByName(
 			Memory DbName,
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
 	
-	public short NSFDbDelete(
+	short NSFDbDelete(
 			Memory PathName
 			);
 
-	public void DesignGetNameAndAlias(Memory pString, PointerByReference ppName, ShortByReference pNameLen, PointerByReference ppAlias, ShortByReference pAliasLen);
+	void DesignGetNameAndAlias(Memory pString, PointerByReference ppName, ShortByReference pNameLen, PointerByReference ppAlias, ShortByReference pAliasLen);
 
-	public boolean StoredFormHasSubformToken(Memory pString);
+	boolean StoredFormHasSubformToken(Memory pString);
 
-	public void SECKFMCreatePassword(
+	void SECKFMCreatePassword(
 			Memory pPassword,
 			KFM_PASSWORDStruct.ByReference retHashedPassword);
 	
 	@UndocumentedAPI
-	public boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
+	boolean CmemflagTestMultiple (Pointer s, short length, Pointer pattern);
 
 	@UndocumentedAPI
-	public short QueueCreate(DHANDLE.ByReference qhandle);
+	short QueueCreate(DHANDLE.ByReference qhandle);
 	
 	@UndocumentedAPI
-	public short QueueGet(DHANDLE.ByValue qhandle, DHANDLE.ByReference sehandle);
+	short QueueGet(DHANDLE.ByValue qhandle, DHANDLE.ByReference sehandle);
 
 	@UndocumentedAPI
-	public short QueueDelete(DHANDLE.ByValue qhandle);
+	short QueueDelete(DHANDLE.ByValue qhandle);
 
 	@UndocumentedAPI
-	public short NSFRemoteConsoleAsync (
+	short NSFRemoteConsoleAsync (
 			Memory serverName, Memory ConsoleCommand, int Flags,
 			DHANDLE.ByReference phConsoleText, DHANDLE.ByReference phTasksText, DHANDLE.ByReference phUsersText,
 			ShortByReference pSignals, IntByReference pConsoleBufferID, DHANDLE.ByValue hQueue,
@@ -506,8 +507,23 @@ public interface INotesNativeAPI extends Library {
 			Memory ConsoleCommand,
 			DHANDLE.ByReference hResponseText);
 
-	public void NSFAsyncNotifyPoll(Pointer actx, IntByReference retMySessions, ShortByReference retFirstError);
-	public void NSFUpdateAsyncIOStatus(Pointer actx);
-	public void NSFCancelAsyncIO (Pointer actx);
+	void NSFAsyncNotifyPoll(Pointer actx, IntByReference retMySessions, ShortByReference retFirstError);
+	void NSFUpdateAsyncIOStatus(Pointer actx);
+	void NSFCancelAsyncIO (Pointer actx);
 
+	void SECTokenValidate2(
+			Memory ServerName,
+			Memory OrgName,
+			Memory ConfigName,
+			Memory TokenData,
+			int AssumedType,
+			int dwRequestedInfoFlags,
+			NotesSSOTokenInfoDescStruct.ByReference retpInfo,
+			int dwReserved,
+			Pointer vpReserved);
+	
+	void SECTokenFreeInfo(
+			NotesSSOTokenInfoDescStruct.ByReference pInfo,
+			boolean bFreeAll,
+			int dwRequestedInfoFlags);
 }

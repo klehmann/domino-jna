@@ -32,7 +32,7 @@ import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI32 extends Library {
 
-	public short NSFSearch(
+	short NSFSearch(
 			int hDB,
 			int hFormula,
 			Memory viewTitle,
@@ -44,7 +44,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct retUntil);
 
 	@UndocumentedAPI
-	public short NSFSearchExtended3 (int hDB, 
+	short NSFSearchExtended3 (int hDB, 
 			int hFormula, 
 			int hFilter, 
 			int FilterFlags, 
@@ -62,77 +62,77 @@ public interface INotesNativeAPI32 extends Library {
 			int namelist);
 
 	@UndocumentedAPI
-	public short NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, IntByReference Filter);
+	short NSFGetFolderSearchFilter(int hViewDB, int hDataDB, int ViewNoteID, NotesTimeDateStruct Since, int Flags, IntByReference Filter);
 
 	/**
 	 * @deprecated use {@link Mem32#OSLockObject(int)} instead
 	 */
 	@Deprecated
-	public Pointer OSLockObject(int handle);
+	Pointer OSLockObject(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSUnlockObject(int)} instead
 	 */
 	@Deprecated
-	public boolean OSUnlockObject(int handle);
+	boolean OSUnlockObject(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemFree(int)} instead
 	 */
 	@Deprecated
-	public short OSMemFree(int handle);
+	short OSMemFree(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemGetSize(int, IntByReference)} instead
 	 */
 	@Deprecated
-	public short OSMemGetSize(int handle, IntByReference retSize);
+	short OSMemGetSize(int handle, IntByReference retSize);
 	/**
 	 * @deprecated use {@link Mem32#OSMemGetSize(int, IntByReference)} instead
 	 */
 	@Deprecated
-	public int OSMemoryGetSize(int handle);
+	int OSMemoryGetSize(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemoryFree(int)} instead
 	 */
 	@Deprecated
-	public void OSMemoryFree(int handle);
+	void OSMemoryFree(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemoryAllocate(int, int, IntByReference)} instead
 	 */
 	@Deprecated
-	public short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle);
+	short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemoryReallocate(int, int)} instead
 	 */
 	@Deprecated
-	public short OSMemoryReallocate(int handle, int size);
+	short OSMemoryReallocate(int handle, int size);
 	/**
 	 * @deprecated use {@link Mem32#OSMemoryLock(int)} instead
 	 */
 	@Deprecated
-	public Pointer OSMemoryLock(int handle);
+	Pointer OSMemoryLock(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemoryUnlock(int)} instead
 	 */
 	@Deprecated
-	public boolean OSMemoryUnlock(int handle);
+	boolean OSMemoryUnlock(int handle);
 	/**
 	 * @deprecated use {@link Mem32#OSMemAlloc(short, int, IntByReference)} instead
 	 */
 	@Deprecated
-	public short OSMemAlloc(
+	short OSMemAlloc(
 			short  BlkType,
 			int  dwSize,
 			IntByReference retHandle);
 	
 	@Deprecated
-	public short OSMemGetType(int handle);
+	short OSMemGetType(int handle);
 
-	public short NSFItemGetText(
+	short NSFItemGetText(
 			int  note_handle,
 			Memory item_name,
 			Memory item_text,
 			short text_len);
 
-	public short ListAllocate(
+	short ListAllocate(
 			short ListEntries,
 			short TextSize,
 			int fPrefixDataType,
@@ -140,7 +140,7 @@ public interface INotesNativeAPI32 extends Library {
 			Memory retpList,
 			ShortByReference retListSize);
 	
-	public short ListAddEntry(
+	short ListAddEntry(
 			int hList,
 			int fPrefixDataType,
 			ShortByReference pListSize,
@@ -148,12 +148,12 @@ public interface INotesNativeAPI32 extends Library {
 			Memory Text,
 			short TextSize);
 
-	public short ListRemoveAllEntries(
+	short ListRemoveAllEntries(
 			int hList,
 			int fPrefixDataType,
 			ShortByReference pListSize);
 
-	public short NSFItemInfo(
+	short NSFItemInfo(
 			int  note_handle,
 			Memory item_name,
 			short name_len,
@@ -162,7 +162,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 
-	public short NSFItemInfoNext(
+	short NSFItemInfoNext(
 			int  note_handle,
 			NotesBlockIdStruct.ByValue NextItem,
 			Memory item_name,
@@ -172,7 +172,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct retbhValue,
 			IntByReference retValueLength);
 	
-	public short NSFItemInfoPrev(
+	short NSFItemInfoPrev(
 			int  note_handle,
 			NotesBlockIdStruct.ByValue  CurrItem,
 			Memory item_name,
@@ -182,7 +182,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct value_blockid_ptr,
 			IntByReference value_len_ptr);
 	
-	public void NSFItemQueryEx(
+	void NSFItemQueryEx(
 			int  note_handle,
 			NotesBlockIdStruct.ByValue item_bid,
 			Memory item_name,
@@ -195,78 +195,78 @@ public interface INotesNativeAPI32 extends Library {
 			ByteByReference retSeqByte,
 			ByteByReference retDupItemID);
 
-	public short NSFItemGetModifiedTimeByBLOCKID(
+	short NSFItemGetModifiedTimeByBLOCKID(
 			int  hNote,
 			NotesBlockIdStruct.ByValue bhItem,
 			int  Flags,
 			NotesTimeDateStruct retTime);
 
-	public short NSFItemGetTextListEntries(
+	short NSFItemGetTextListEntries(
 			int note_handle,
 			Memory item_name);
 
-	public short NSFItemGetTextListEntry(
+	short NSFItemGetTextListEntry(
 			int note_handle,
 			Memory item_name,
 			short entry_position,
 			Memory retEntry_text,
 			short  text_len);
-	public short NSFItemGetModifiedTime(
+	short NSFItemGetModifiedTime(
 			int hNote,
 			Memory ItemName,
 			short  ItemNameLength,
 			int  Flags,
 			NotesTimeDateStruct retTime);
-	public short NSFItemSetText(
+	short NSFItemSetText(
 			int hNote,
 			Memory ItemName,
 			Memory ItemText,
 			short TextLength);
-	public short NSFItemSetTextSummary(
+	short NSFItemSetTextSummary(
 			int hNote,
 			Memory ItemName,
 			Memory ItemText,
 			short TextLength,
 			boolean summary);
-	public boolean NSFItemGetTime(
+	boolean NSFItemGetTime(
 			int  note_handle,
 			Memory td_item_name,
 			NotesTimeDateStruct td_item_value);
-	public short NSFItemSetTime(
+	short NSFItemSetTime(
 			int  note_handle,
 			Memory td_item_name,
 			NotesTimeDateStruct td_item_ptr);
-	public boolean NSFItemGetNumber(
+	boolean NSFItemGetNumber(
 			int hNote,
 			Memory ItemName,
 			DoubleByReference retNumber);
-	public int NSFItemGetLong(
+	int NSFItemGetLong(
 			int note_handle,
 			Memory number_item_name,
 			int number_item_default);
-	public short NSFItemSetNumber(
+	short NSFItemSetNumber(
 			int  hNote,
 			Memory ItemName,
 			Memory Number);
-	public short NSFItemConvertToText(
+	short NSFItemConvertToText(
 			int note_handle,
 			Memory item_name_ptr,
 			Memory retText_buf_ptr,
 			short  text_buf_len,
 			char separator);
-	public short NSFItemConvertValueToText(
+	short NSFItemConvertValueToText(
 			short value_type,
 			NotesBlockIdStruct.ByValue value_bid,
 			int  value_len,
 			Memory text_buf_ptr,
 			short  text_buf_len,
 			char separator);
-	public short NSFItemDelete(
+	short NSFItemDelete(
 			int note_handle,
 			Memory item_name,
 			short name_len);
-	public short NSFItemDeleteByBLOCKID(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
-	public short NSFItemAppend(
+	short NSFItemDeleteByBLOCKID(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	short NSFItemAppend(
 			int note_handle,
 			short item_flags,
 			Memory item_name,
@@ -274,7 +274,7 @@ public interface INotesNativeAPI32 extends Library {
 			short  item_type,
 			Pointer item_value,
 			int value_len);
-	public short NSFItemAppendByBLOCKID(
+	short NSFItemAppendByBLOCKID(
 			int note_handle,
 			short item_flags,
 			Memory item_name,
@@ -284,63 +284,63 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct item_bid_ptr);
 
 	@UndocumentedAPI
-	public short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
+	short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
 			Pointer valuePtr, int valueLength);
 
-	public void NSFNoteGetInfo(int hNote, short type, Pointer retValue);
-	public void NSFNoteSetInfo(int hNote, short type, Pointer value);
-	public short NSFNoteCopy(
+	void NSFNoteGetInfo(int hNote, short type, Pointer retValue);
+	void NSFNoteSetInfo(int hNote, short type, Pointer value);
+	short NSFNoteCopy(
 			int note_handle_src,
 			IntByReference note_handle_dst_ptr);
 
-	public short NSFNoteUpdateExtended(int hNote, int updateFlags);
-	public short NSFNoteCreate(int db_handle, IntByReference note_handle);
-	public short NSFNoteOpen(int hDB, int noteId, short openFlags, IntByReference rethNote);
-	public short NSFNoteOpenExt(int hDB, int noteId, int flags, IntByReference rethNote);
-	public short NSFNoteOpenByUNID(
+	short NSFNoteUpdateExtended(int hNote, int updateFlags);
+	short NSFNoteCreate(int db_handle, IntByReference note_handle);
+	short NSFNoteOpen(int hDB, int noteId, short openFlags, IntByReference rethNote);
+	short NSFNoteOpenExt(int hDB, int noteId, int flags, IntByReference rethNote);
+	short NSFNoteOpenByUNID(
 			int hDB,
 			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			IntByReference rethNote);
 	@UndocumentedAPI
-	public short NSFNoteOpenByUNIDExtended(int hDB, NotesUniversalNoteIdStruct pUNID, int flags, IntByReference rtn);
-	public short NSFNoteClose(int hNote);
-	public short NSFNoteVerifySignature(
+	short NSFNoteOpenByUNIDExtended(int hDB, NotesUniversalNoteIdStruct pUNID, int flags, IntByReference rtn);
+	short NSFNoteClose(int hNote);
+	short NSFNoteVerifySignature(
 			int  hNote,
 			Memory SignatureItemName,
 			NotesTimeDateStruct retWhenSigned,
 			Memory retSigner,
 			Memory retCertifier);
-	public short NSFNoteContract(int hNote);
-	public short NSFNoteExpand(int hNote);
-	public short NSFNoteSign(int hNote);
-	public short NSFNoteSignExt3(int hNote, 
+	short NSFNoteContract(int hNote);
+	short NSFNoteExpand(int hNote);
+	short NSFNoteSign(int hNote);
+	short NSFNoteSignExt3(int hNote, 
 			int hKFC,
 			Memory SignatureItemName,
 			short ItemCount, int hItemIDs, 
 			int Flags, int Reserved,
 			Pointer pReserved);
-	public short NSFNoteOpenSoftDelete(int hDB, int NoteID, int Reserved, IntByReference rethNote);
-	public short NSFNoteHardDelete(int hDB, int NoteID, int Reserved);
-	public short NSFNoteDeleteExtended(int hDB, int NoteID, int UpdateFlags);
-	public short NSFNoteDetachFile(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
-	public boolean NSFNoteIsSignedOrSealed(int note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
-	public short NSFNoteUnsign(int hNote);
-	public short NSFNoteComputeWithForm(
+	short NSFNoteOpenSoftDelete(int hDB, int NoteID, int Reserved, IntByReference rethNote);
+	short NSFNoteHardDelete(int hDB, int NoteID, int Reserved);
+	short NSFNoteDeleteExtended(int hDB, int NoteID, int UpdateFlags);
+	short NSFNoteDetachFile(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	boolean NSFNoteIsSignedOrSealed(int note_handle, ByteByReference signed_flag_ptr, ByteByReference sealed_flag_ptr);
+	short NSFNoteUnsign(int hNote);
+	short NSFNoteComputeWithForm(
 			int  hNote,
 			int  hFormNote,
 			int  dwFlags,
 			NotesCallbacks.b32_CWFErrorProc ErrorRoutine,
 			Pointer CallersContext);
-	public short NSFNoteHasComposite(int hNote);
-	public short NSFNoteHasMIME(int hNote);
-	public short NSFNoteHasMIMEPart(int hNote);
+	short NSFNoteHasComposite(int hNote);
+	short NSFNoteHasMIME(int hNote);
+	short NSFNoteHasMIMEPart(int hNote);
 	@UndocumentedAPI
-	public short NSFIsFileItemMimePart(int hNote, NotesBlockIdStruct.ByValue bhFileItem);
+	short NSFIsFileItemMimePart(int hNote, NotesBlockIdStruct.ByValue bhFileItem);
 	@UndocumentedAPI
-	public short NSFIsMimePartInFile(int hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
+	short NSFIsMimePartInFile(int hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 	
-	public short NSFMimePartCreateStream(
+	short NSFMimePartCreateStream(
 			int hNote,
 			Memory pchItemName,
 			short wItemNameLen,
@@ -348,96 +348,96 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			IntByReference phCtx);
 	
-	public short NSFMimePartAppendStream(
+	short NSFMimePartAppendStream(
 			int hCtx,
 			Memory pchData,
 			short wDataLen);
 	
-	public short NSFMimePartAppendFileToStream(
+	short NSFMimePartAppendFileToStream(
 			int hCtx,
 			Memory pszFilename);
-	public short NSFMimePartAppendObjectToStream(
+	short NSFMimePartAppendObjectToStream(
 			int hCtx,
 			Memory pszAttachmentName);
-	public short NSFMimePartCloseStream(
+	short NSFMimePartCloseStream(
 			int hCtx,
 			short  bUpdate);
-//	public short MIMEStreamOpen(
+//	short MIMEStreamOpen(
 //			int hNote,
 //			Memory pchItemName,
 //			short wItemNameLen,
 //			int dwOpenFlags,
 //			IntByReference rethMIMEStream);
-//	public int MIMEStreamPutLine(
+//	int MIMEStreamPutLine(
 //			Memory pszLine,
 //			int hMIMEStream);
-//	public short MIMEStreamItemize(
+//	short MIMEStreamItemize(
 //			int hNote,
 //			Memory pchItemName,
 //			short wItemNameLen,
 //			int dwFlags,
 //			int hMIMEStream);
-//	public int MIMEStreamWrite(
+//	int MIMEStreamWrite(
 //			Pointer pchData,
 //			int uiDataLen,
 //			int hMIMEStream);
-//	public void MIMEStreamClose(
+//	void MIMEStreamClose(
 //			Pointer hMIMEStream);
-	public short MIMEConvertRFC822TextItemByBLOCKID(
+	short MIMEConvertRFC822TextItemByBLOCKID(
 			int hNote,
 			NotesBlockIdStruct.ByValue bhItem,
 			NotesBlockIdStruct.ByValue bhValue);
 	
 	@UndocumentedAPI
-	public short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
-	public short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
+	short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
+	short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
 			NotesCallbacks.NoteExtractCallback pNoteExtractCallback, Pointer pParam,
 			int Reserved, Pointer pReserved);
-	public short NSFNoteCopyAndEncryptExt2(
+	short NSFNoteCopyAndEncryptExt2(
 			int hSrcNote,
 			int hKFC,
 			short EncryptFlags,
 			IntByReference rethDstNote,
 			int  Reserved,
 			Pointer pReserved);
-	public short NSFNoteCopyAndEncrypt(
+	short NSFNoteCopyAndEncrypt(
 			int hSrcNote,
 			short EncryptFlags,
 			IntByReference rethDstNote);
-	public short NSFNoteCipherDecrypt(
+	short NSFNoteCipherDecrypt(
 			int  hNote,
 			int hKFC,
 			int  DecryptFlags,
 			LongByReference rethCipherForAttachments,
 			int  Reserved,
 			Pointer pReserved);
-	public short NSFNoteAttachFile(
+	short NSFNoteAttachFile(
 			int note_handle,
 			Memory item_name,
 			short item_name_length,
 			Memory file_name,
 			Memory orig_path_name,
 			short encoding_type);
-	public short NSFNoteSignHotspots(
+	short NSFNoteSignHotspots(
 			int hNote,
 			int dwFlags,
 			IntByReference retfSigned);
-	public short NSFNoteLSCompile(
+	short NSFNoteLSCompile(
 			int hDb,
 			int hNote,
 			int dwFlags);
-	public short NSFNoteLSCompileExt(
+	short NSFNoteLSCompileExt(
 			int hDb,
 			int hNote,
 			int dwFlags,
 			NotesCallbacks.LSCompilerErrorProc pfnErrProc,
 			Pointer pCtx);
-	public short NSFNoteCheck(
+	short NSFNoteCheck(
 			int hNote
 			);
 
-	public short NSFDbNoteLock(
+	short NSFDbNoteLock(
 			int hDB,
 			int NoteID,
 			int Flags,
@@ -445,12 +445,12 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethLockers,
 			IntByReference retLength);
 
-	public short NSFDbNoteUnlock(
+	short NSFDbNoteUnlock(
 			int hDB,
 			int NoteID,
 			int Flags);
 	
-	public short NSFNoteOpenWithLock(
+	short NSFNoteOpenWithLock(
 			int hDB,
 			int NoteID,
 			int LockFlags,
@@ -460,60 +460,60 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retLength,
 			IntByReference rethNote);
 	
-	public short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
+	short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
 	@UndocumentedAPI
-	public short NSFItemCopyAndRename (int hNote, NotesBlockIdStruct.ByValue bhItem, Memory pszNewItemName);
+	short NSFItemCopyAndRename (int hNote, NotesBlockIdStruct.ByValue bhItem, Memory pszNewItemName);
 	
-	public short IDCreateTable (int alignment, IntByReference rethTable);
-	public short IDDestroyTable(int hTable);
-	public short IDInsert (int hTable, int id, IntByReference retfInserted);
-	public short IDDelete (int hTable, int id, IntByReference retfDeleted);
-	public boolean IDScan (int hTable, boolean fFirst, IntByReference retID);
+	short IDCreateTable (int alignment, IntByReference rethTable);
+	short IDDestroyTable(int hTable);
+	short IDInsert (int hTable, int id, IntByReference retfInserted);
+	short IDDelete (int hTable, int id, IntByReference retfDeleted);
+	boolean IDScan (int hTable, boolean fFirst, IntByReference retID);
 	@UndocumentedAPI
-	public boolean IDScanBack (int hTable, boolean fLast, IntByReference retID);
-	public int IDEntries (int hTable);
-	public boolean IDIsPresent (int hTable, int id);
-	public int IDTableSize (int hTable);
-	public int IDTableSizeP(Pointer pIDTable);
-	public short IDTableCopy (int hTable, IntByReference rethTable);
-	public short IDTableIntersect(int hSrc1Table, int hSrc2Table, IntByReference rethDstTable);
-	public short IDDeleteAll (int hTable);
-	public boolean IDAreTablesEqual	(int hSrc1Table, int hSrc2Table);
-	public short IDDeleteTable(int hTable, int hIDsToDelete);
-	public short IDInsertTable  (int hTable, int hIDsToAdd);
-	public short IDEnumerate(int hTable, NotesCallbacks.IdEnumerateProc Routine, Pointer Parameter);
+	boolean IDScanBack (int hTable, boolean fLast, IntByReference retID);
+	int IDEntries (int hTable);
+	boolean IDIsPresent (int hTable, int id);
+	int IDTableSize (int hTable);
+	int IDTableSizeP(Pointer pIDTable);
+	short IDTableCopy (int hTable, IntByReference rethTable);
+	short IDTableIntersect(int hSrc1Table, int hSrc2Table, IntByReference rethDstTable);
+	short IDDeleteAll (int hTable);
+	boolean IDAreTablesEqual	(int hSrc1Table, int hSrc2Table);
+	short IDDeleteTable(int hTable, int hIDsToDelete);
+	short IDInsertTable  (int hTable, int hIDsToAdd);
+	short IDEnumerate(int hTable, NotesCallbacks.IdEnumerateProc Routine, Pointer Parameter);
 	@UndocumentedAPI
-	public short IDInsertRange(int hTable, int IDFrom, int IDTo, boolean AddToEnd);
+	short IDInsertRange(int hTable, int IDFrom, int IDTo, boolean AddToEnd);
 	@UndocumentedAPI
-	public short IDTableDifferences(int idtable1, int idtable2, IntByReference outputidtableAdds, IntByReference outputidtableDeletes, IntByReference outputidtableSame);
+	short IDTableDifferences(int idtable1, int idtable2, IntByReference outputidtableAdds, IntByReference outputidtableDeletes, IntByReference outputidtableSame);
 	@UndocumentedAPI
-	public short IDTableReplaceExtended(int idtableSrc, int idtableDest, byte flags);
+	short IDTableReplaceExtended(int idtableSrc, int idtableDest, byte flags);
 
-	public short NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
-	public short NSFDbOpen(Memory dbName, IntByReference dbHandle);
-	public short NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime, IntByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
-	public short NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
-	public short NSFDbClose(int dbHandle);
-	public int NSFDbGetOpenDatabaseID(int hDBU);
-	public short NSFDbReopen(int hDB, IntByReference rethDB);
-	public short NSFDbLocateByReplicaID(
+	short NSFDbStampNotesMultiItem(int hDB, int hTable, int hInNote);
+	short NSFDbOpen(Memory dbName, IntByReference dbHandle);
+	short NSFDbOpenExtended (Memory PathName, short Options, int hNames, NotesTimeDateStruct ModifiedTime, IntByReference rethDB, NotesTimeDateStruct retDataModified, NotesTimeDateStruct retNonDataModified);
+	short NSFDbGenerateOID(int hDB, NotesOriginatorIdStruct retOID);
+	short NSFDbClose(int dbHandle);
+	int NSFDbGetOpenDatabaseID(int hDBU);
+	short NSFDbReopen(int hDB, IntByReference rethDB);
+	short NSFDbLocateByReplicaID(
 			int  hDB,
 			NotesTimeDateStruct ReplicaID,
 			Memory retPathName,
 			short PathMaxLen);
-	public short NSFDbModifiedTime(
+	short NSFDbModifiedTime(
 			int hDB,
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
-	public short NSFDbIDGet(int hDB, NotesTimeDateStruct retDbID);
-	public short NSFDbReplicaInfoGet(
+	short NSFDbIDGet(int hDB, NotesTimeDateStruct retDbID);
+	short NSFDbReplicaInfoGet(
 			int  hDB,
 			NotesDbReplicaInfoStruct retReplicationInfo);
-	public short NSFDbReplicaInfoSet(
+	short NSFDbReplicaInfoSet(
 			int  hDB,
 			NotesDbReplicaInfoStruct ReplicationInfo);
-	public short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
-	public short NSFDbGetNotes(
+	short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
+	short NSFDbGetNotes(
 			int hDB,
 			int NumNotes,
 			Memory NoteID, //NOTEID array
@@ -528,14 +528,14 @@ public interface INotesNativeAPI32 extends Library {
 			NotesCallbacks.b32_NSFObjectWriteCallback  ObjectWriteCallback,
 			NotesTimeDateStruct FolderSinceTime,
 			NotesCallbacks.NSFFolderAddCallback  FolderAddCallback);
-	public short NSFDbGetMultNoteInfo(
+	short NSFDbGetMultNoteInfo(
 			int  hDb,
 			short  Count,
 			short  Options,
 			int  hInBuf,
 			IntByReference retSize,
 			IntByReference rethOutBuf);
-	public short NSFDbGetNoteInfoExt(
+	short NSFDbGetNoteInfoExt(
 			int  hDB,
 			int  NoteID,
 			NotesOriginatorIdStruct retNoteOID,
@@ -544,55 +544,55 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct retAddedToFile,
 			ShortByReference retResponseCount,
 			IntByReference retParentNoteID);
-	public short NSFDbGetMultNoteInfoByUNID(
+	short NSFDbGetMultNoteInfoByUNID(
 			int hDB,
 			short Count,
 			short Options,
 			int hInBuf,
 			IntByReference retSize,
 			IntByReference rethOutBuf);
-	public short NSFDbSign(int hDb, short noteclass);
+	short NSFDbSign(int hDb, short noteclass);
 	@UndocumentedAPI
-	public short NSFDbGetOptionsExt(int hDB, Memory retDbOptions);
+	short NSFDbGetOptionsExt(int hDB, Memory retDbOptions);
 	@UndocumentedAPI
-	public short NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
-	public void NSFDbAccessGet(int hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
-	public short NSFDbGetBuildVersion(int hDB, ShortByReference retVersion);
-	public short NSFDbGetMajMinVersion(int hDb, NotesBuildVersionStruct retBuildVersion);
-	public short NSFDbReadObject(
+	short NSFDbSetOptionsExt(int hDB, Memory dbOptions, Memory mask);
+	void NSFDbAccessGet(int hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
+	short NSFDbGetBuildVersion(int hDB, ShortByReference retVersion);
+	short NSFDbGetMajMinVersion(int hDb, NotesBuildVersionStruct retBuildVersion);
+	short NSFDbReadObject(
 			int hDB,
 			int ObjectID,
 			int Offset,
 			int Length,
 			IntByReference rethBuffer);
 	
-	public short NSFDbAllocObject(
+	short NSFDbAllocObject(
 			int hDB,
 			int dwSize,
 			short Class,
 			short Privileges,
 			IntByReference retObjectID);
 	
-	public short NSFDbAllocObjectExtended2(int cDB,
+	short NSFDbAllocObjectExtended2(int cDB,
 			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
 	
-	public short NSFDbWriteObject(
+	short NSFDbWriteObject(
 			int hDB,
 			int ObjectID,
 			int hBuffer,
 			int Offset,
 			int Length);
 	
-	public short NSFDbFreeObject(
+	short NSFDbFreeObject(
 			int hDB,
 			int ObjectID);
 	
-	public short NSFDbReallocObject(
+	short NSFDbReallocObject(
 			int hDB,
 			int ObjectID,
 			int NewSize);
 
-	public short NSFDbGetObjectSize(
+	short NSFDbGetObjectSize(
 			int hDB,
 			int ObjectID,
 			short ObjectType,
@@ -600,7 +600,7 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
 
-	public short NSFItemAppendObject(
+	short NSFItemAppendObject(
 			int hNote,
 			short ItemFlags,
 			Memory Name,
@@ -609,60 +609,60 @@ public interface INotesNativeAPI32 extends Library {
 			int ValueLength,
 			int fDealloc);
 	
-	public short NSFDbGetSpecialNoteID(
+	short NSFDbGetSpecialNoteID(
 			int hDB,
 			short Index,
 			IntByReference retNoteID);
-	public short NSFDbClearReplHistory(int hDb, int dwFlags);
-	public void NSFDbPathGet(
+	short NSFDbClearReplHistory(int hDb, int dwFlags);
+	short NSFDbPathGet(
 			int hDB,
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
 	@UndocumentedAPI
-	public short NSFDbIsRemote(int hDb);
+	short NSFDbIsRemote(int hDb);
 	@UndocumentedAPI
-	public short NSFDbHasFullAccess(int hDb);
-	public short NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
-	public short NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
-	public short NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
-	public short NSFDbIsLocallyEncrypted(int hDB, IntByReference retVal);
-	public short NSFDbInfoGet(
+	short NSFDbHasFullAccess(int hDb);
+	short NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
+	short NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
+	short NSFDbDeleteNotes(int  hDB, int  hTable, Memory retUNIDArray);
+	short NSFDbIsLocallyEncrypted(int hDB, IntByReference retVal);
+	short NSFDbInfoGet(
 			int hDB,
 			Pointer retBuffer);
-	public short NSFDbInfoSet(
+	short NSFDbInfoSet(
 			int hDB,
 			Pointer Buffer);
-	public short NSFDbModeGet(
+	short NSFDbModeGet(
 			int hDB,
 			ShortByReference retMode);
 	@UndocumentedAPI
-	public short NSFDbLock(int hDb);
+	short NSFDbLock(int hDb);
 	@UndocumentedAPI
-	public void NSFDbUnlock(int hDb, ShortByReference statusInOut);
+	void NSFDbUnlock(int hDb, ShortByReference statusInOut);
 	
 	@UndocumentedAPI
-	public short NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
+	short NSFHideDesign(int hdb1, int hdb2, int param3, int param4);
 
-	public short NSFBuildNamesList(Memory UserName, int dwFlags, IntByReference rethNamesList);
+	short NSFBuildNamesList(Memory UserName, int dwFlags, IntByReference rethNamesList);
 	@UndocumentedAPI
-	public short CreateNamesListFromGroupNameExtend(Memory pszServerName, Memory pTarget, IntByReference rethNames);
+	short CreateNamesListFromGroupNameExtend(Memory pszServerName, Memory pTarget, IntByReference rethNames);
 	@UndocumentedAPI
-	public short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
+	short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
 	@UndocumentedAPI
-	public short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
+	short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
 //	@UndocumentedAPI
-//	public short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, IntByReference rtnhNames);
+//	short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, IntByReference rtnhNames);
 	@UndocumentedAPI
-	public short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
+	short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
 			Pointer pLookupFlags, Memory pTarget, IntByReference rethNames);
 	@UndocumentedAPI
-	public short CreateNamesListUsingLookupName(Memory pszServerName,Pointer pLookupFlags, Memory pTarget,
+	short CreateNamesListUsingLookupName(Memory pszServerName,Pointer pLookupFlags, Memory pTarget,
 			IntByReference rethNames);
 	
-	public short NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
+	short NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
 	@UndocumentedAPI
-	public short NIFReadEntriesExt(int hCollection,
+	short NIFReadEntriesExt(int hCollection,
 			NotesCollectionPositionStruct CollectionPos,
 			short SkipNavigator, int SkipCount,
 			short ReturnNavigator, int ReturnCount, int ReturnMask,
@@ -671,10 +671,10 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned,
 			ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
 			NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
-	public void NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
-	public void NIFGetLastAccessedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
-	public void NIFGetNextDiscardTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
-	public short NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
+	void NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	void NIFGetLastAccessedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	void NIFGetNextDiscardTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	short NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
 			int findFlags,
 			int returnFlags,
 			NotesCollectionPositionStruct retIndexPos,
@@ -683,40 +683,40 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethBuffer,
 			IntByReference retSequence);
 	@UndocumentedAPI
-	public short NIFFindByKeyExtended3 (int hCollection,
+	short NIFFindByKeyExtended3 (int hCollection,
 			Memory keyBuffer, int findFlags,
 			int returnFlags,
 			NotesCollectionPositionStruct retIndexPos,
 			IntByReference retNumMatches, ShortByReference retSignalFlags,
 			IntByReference rethBuffer, IntByReference retSequence,
 			NotesCallbacks.NIFFindByKeyProc NIFFindByKeyCallback, NIFFindByKeyContextStruct Ctx);
-	public short NIFFindByKey(int hCollection, Memory keyBuffer, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
-	public short NIFFindByName(int hCollection, Memory name, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
-	public short NIFGetCollation(int hCollection, ShortByReference retCollationNum);
-	public short NIFSetCollation(int hCollection, short CollationNum);
-	public short NIFUpdateCollection(int hCollection);
+	short NIFFindByKey(int hCollection, Memory keyBuffer, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
+	short NIFFindByName(int hCollection, Memory name, short findFlags, NotesCollectionPositionStruct retIndexPos, IntByReference retNumMatches);
+	short NIFGetCollation(int hCollection, ShortByReference retCollationNum);
+	short NIFSetCollation(int hCollection, short CollationNum);
+	short NIFUpdateCollection(int hCollection);
 	@UndocumentedAPI
-	public short NIFIsNoteInView(int hCollection, int noteID, IntByReference retIsInView);
+	short NIFIsNoteInView(int hCollection, int noteID, IntByReference retIsInView);
 	@UndocumentedAPI
-	public boolean NIFIsUpdateInProgress(int hCollection);
+	boolean NIFIsUpdateInProgress(int hCollection);
 	@UndocumentedAPI
-	public short NIFGetIDTableExtended(int hCollection, short navigator, short Flags, int hIDTable);
+	short NIFGetIDTableExtended(int hCollection, short navigator, short Flags, int hIDTable);
 	@UndocumentedAPI
-	public boolean NIFCollectionUpToDate(int hCollection);
+	boolean NIFCollectionUpToDate(int hCollection);
 	@UndocumentedAPI
-    public boolean NIFSetCollectionInfo (int hCollection, Pointer SessionID,
+    boolean NIFSetCollectionInfo (int hCollection, Pointer SessionID,
             int hUnreadList, int hCollapsedList, int hSelectedList);
 	@UndocumentedAPI
-    public short NIFUpdateFilters (int hCollection, short ModifyFlags);
+    short NIFUpdateFilters (int hCollection, short ModifyFlags);
 	@UndocumentedAPI
-    public boolean NIFIsTimeVariantView(int hCollection);
-	public short NIFCloseCollection(int hCollection);
-	public short NIFLocateNote (int hCollection, NotesCollectionPositionStruct indexPos, int noteID);
+    boolean NIFIsTimeVariantView(int hCollection);
+	short NIFCloseCollection(int hCollection);
+	short NIFLocateNote (int hCollection, NotesCollectionPositionStruct indexPos, int noteID);
 	@UndocumentedAPI
-	public short NIFFindDesignNoteExt(int hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntByReference retNoteID, int Options);
-	public short NIFOpenCollection(int hViewDB, int hDataDB, int ViewNoteID, short OpenFlags, int hUnreadList, IntByReference rethCollection, IntByReference rethViewNote, Memory retViewUNID,
+	short NIFFindDesignNoteExt(int hFile, Memory name, short noteClass, Memory pszFlagsPattern, IntByReference retNoteID, int Options);
+	short NIFOpenCollection(int hViewDB, int hDataDB, int ViewNoteID, short OpenFlags, int hUnreadList, IntByReference rethCollection, IntByReference rethViewNote, Memory retViewUNID,
 			IntByReference rethCollapsedList, IntByReference rethSelectedList);
-	public short NIFOpenCollectionWithUserNameList (int hViewDB, int hDataDB,
+	short NIFOpenCollectionWithUserNameList (int hViewDB, int hDataDB,
 			int ViewNoteID, short OpenFlags,
 			int hUnreadList,
 			IntByReference rethCollection,
@@ -724,73 +724,73 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethCollapsedList,
 			IntByReference rethSelectedList,
 			int nameList);
-	public short NIFGetCollectionData(
+	short NIFGetCollectionData(
 			int hCollection,
 			IntByReference rethCollData);
-	public short NIFGetCollectionDocCountLW(int hCol, IntByReference pDocct);
+	short NIFGetCollectionDocCountLW(int hCol, IntByReference pDocct);
 
 	@UndocumentedAPI
-	public short NSFTransactionBegin(int hDB, int flags);
+	short NSFTransactionBegin(int hDB, int flags);
 	@UndocumentedAPI
-	public short NSFTransactionCommit(int hDB, int flags);
+	short NSFTransactionCommit(int hDB, int flags);
 	@UndocumentedAPI
-	public short NSFTransactionRollback(int hDB);
+	short NSFTransactionRollback(int hDB);
 
 	//backup APIs
-	public short NSFDbGetLogInfo(int hDb, int Flags, ShortByReference LOGGED, NotesUniversalNoteIdStruct LogID,
+	short NSFDbGetLogInfo(int hDb, int Flags, ShortByReference LOGGED, NotesUniversalNoteIdStruct LogID,
 			NotesUniversalNoteIdStruct DbIID, IntByReference LogExtent);
-	public short NSFBackupStart(int hDB, int Flags, IntByReference BackupContext, IntByReference FileSizeLow,
+	short NSFBackupStart(int hDB, int Flags, IntByReference BackupContext, IntByReference FileSizeLow,
 			IntByReference FileSizeHigh);
-	public short NSFBackupStop(int hDB, int BackupContext);
-	public short NSFBackupEnd(int hDB, int BackupContext, int Options);
-	public short NSFBackupGetChangeInfoSize(int hDB, int hBackupContext, int Flags, IntByReference InfoSizeLow,
+	short NSFBackupStop(int hDB, int BackupContext);
+	short NSFBackupEnd(int hDB, int BackupContext, int Options);
+	short NSFBackupGetChangeInfoSize(int hDB, int hBackupContext, int Flags, IntByReference InfoSizeLow,
 			IntByReference InfoSizeHigh);
-	public short NSFBackupStartApplyChangeInfo(IntByReference ApplyInfoContext, Memory CopyFilePath, int Flags,
+	short NSFBackupStartApplyChangeInfo(IntByReference ApplyInfoContext, Memory CopyFilePath, int Flags,
 			int InfoSizeLow, int InfoSizeHigh);
-	public short NSFBackupGetNextChangeInfo(int hDB, int hBackupContext, int Flags, Memory Buffer, int BufferSize,
+	short NSFBackupGetNextChangeInfo(int hDB, int hBackupContext, int Flags, Memory Buffer, int BufferSize,
 			IntByReference FilledSize);
-	public short NSFBackupApplyNextChangeInfo(int ApplyInfoContext, int Flags, Memory Buffer, int BufferSize);
-	public short NSFBackupEndApplyChangeInfo(int ApplyInfoContext, int Flags);
+	short NSFBackupApplyNextChangeInfo(int ApplyInfoContext, int Flags, Memory Buffer, int BufferSize);
+	short NSFBackupEndApplyChangeInfo(int ApplyInfoContext, int Flags);
 
-	public short AgentDelete (int hAgent); /* delete agent */
+	short AgentDelete (int hAgent); /* delete agent */
 	@UndocumentedAPI
-	public boolean IsRunAsWebUser(int hAgent);
-	public short AgentOpen (int hDB, int AgentNoteID, IntByReference rethAgent);
-	public void AgentClose (int hAgent);
-	public short AgentCreateRunContext (int hAgent,
+	boolean IsRunAsWebUser(int hAgent);
+	short AgentOpen (int hDB, int AgentNoteID, IntByReference rethAgent);
+	void AgentClose (int hAgent);
+	short AgentCreateRunContext (int hAgent,
 			 Pointer pReserved,
 			 int dwFlags,
 			 IntByReference rethContext);
 	@UndocumentedAPI
-	public short AgentCreateRunContextExt (int hAgent, Pointer pReserved, int pOldContext, int dwFlags, IntByReference rethContext);
-	public short AgentSetDocumentContext(int hAgentCtx, int hNote);
-	public short AgentSetTimeExecutionLimit(int hAgentCtx, int timeLimit);
-	public boolean AgentIsEnabled(int hAgent);
+	short AgentCreateRunContextExt (int hAgent, Pointer pReserved, int pOldContext, int dwFlags, IntByReference rethContext);
+	short AgentSetDocumentContext(int hAgentCtx, int hNote);
+	short AgentSetTimeExecutionLimit(int hAgentCtx, int timeLimit);
+	boolean AgentIsEnabled(int hAgent);
 	@UndocumentedAPI
-	public void SetParamNoteID(int hAgentCtx, int noteId);
+	void SetParamNoteID(int hAgentCtx, int noteId);
 	@UndocumentedAPI
-	public short AgentSetUserName(int hAgentCtx, int hNameList);
-	public short AgentRedirectStdout(int hAgentCtx, short redirType);
-	public void AgentQueryStdoutBuffer(int hAgentCtx, IntByReference retHdl, IntByReference retSize);
-	public void AgentDestroyRunContext (int hAgentCtx);
-	public short AgentRun (int hAgent,
+	short AgentSetUserName(int hAgentCtx, int hNameList);
+	short AgentRedirectStdout(int hAgentCtx, short redirType);
+	void AgentQueryStdoutBuffer(int hAgentCtx, IntByReference retHdl, IntByReference retSize);
+	void AgentDestroyRunContext (int hAgentCtx);
+	short AgentRun (int hAgent,
 			int hAgentCtx,
 		    int hSelection,
 			int dwFlags);
 	@UndocumentedAPI
-	public short AgentSetHttpStatusCode(int hAgentCtx, int httpStatus);
+	short AgentSetHttpStatusCode(int hAgentCtx, int httpStatus);
 	@UndocumentedAPI
-	public short ClientRunServerAgent(int hdb, int nidAgent, int nidParamDoc,
+	short ClientRunServerAgent(int hdb, int nidAgent, int nidParamDoc,
 			int bForeignServer, int bSuppressPrintToConsole);
 	
-	public short FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
+	short FTIndex(int hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
 	@UndocumentedAPI
-	public short ClientFTIndexRequest(int hDB);
-	public short FTDeleteIndex(int hDB);
-	public short FTGetLastIndexTime(int hDB, NotesTimeDateStruct retTime);
-	public short FTOpenSearch(IntByReference rethSearch);
-	public short FTCloseSearch(int hSearch);
-	public short FTSearch(
+	short ClientFTIndexRequest(int hDB);
+	short FTDeleteIndex(int hDB);
+	short FTGetLastIndexTime(int hDB, NotesTimeDateStruct retTime);
+	short FTOpenSearch(IntByReference rethSearch);
+	short FTCloseSearch(int hSearch);
+	short FTSearch(
 			int hDB,
 			IntByReference phSearch,
 			int hColl,
@@ -803,7 +803,7 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethResults);
 
 	@UndocumentedAPI
-	public short FTSearchExt(
+	short FTSearchExt(
 			int hDB,
 			IntByReference phSearch,
 			int hColl,
@@ -821,7 +821,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hNames
 			);
 	
-	public short NSFFormulaCompile(
+	short NSFFormulaCompile(
 			Memory FormulaName,
 			short FormulaNameLength,
 			Memory FormulaText,
@@ -833,22 +833,22 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retCompileErrorColumn,
 			ShortByReference retCompileErrorOffset,
 			ShortByReference retCompileErrorLength);
-	public short NSFFormulaDecompile(
+	short NSFFormulaDecompile(
 			Pointer pFormulaBuffer,
 			boolean fSelectionFormula,
 			IntByReference rethFormulaText,
 			ShortByReference retFormulaTextLength);
-	public short NSFFormulaSummaryItem(int hFormula, Memory ItemName, short ItemNameLength);
-	public short NSFFormulaMerge(
+	short NSFFormulaSummaryItem(int hFormula, Memory ItemName, short ItemNameLength);
+	short NSFFormulaMerge(
 			int hSrcFormula,
 			int hDestFormula);
 
-	public short NSFComputeStart(
+	short NSFComputeStart(
 			short Flags,
 			Pointer lpCompiledFormula,
 			IntByReference rethCompute);
-	public short NSFComputeStop(int hCompute);
-	public short NSFComputeEvaluate(
+	short NSFComputeStop(int hCompute);
+	short NSFComputeEvaluate(
 			int  hCompute,
 			int hNote,
 			IntByReference rethResult,
@@ -858,13 +858,13 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retNoteModified);
 
 	@UndocumentedAPI
-	public short CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
+	short CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
 	@UndocumentedAPI
-	public short CESGetNoSigCTX(IntByReference rethCESCTX);
+	short CESGetNoSigCTX(IntByReference rethCESCTX);
 	@UndocumentedAPI
-	public short CESFreeCTX(int hCESCTX);
+	short CESFreeCTX(int hCESCTX);
 	@UndocumentedAPI
-	public short ECLUserTrustSigner ( int hCESCtx, 
+	short ECLUserTrustSigner ( int hCESCtx, 
 			short ECLType,
 			short bSessionOnly,
 			short wCapabilities,
@@ -872,14 +872,14 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retwCurrentCapabilities,
 			ShortByReference retwCurrentCapabilities2);
 
-	public short NSFFolderGetIDTable(
+	short NSFFolderGetIDTable(
 			int  hViewDB,
 			int hDataDB,
 			int  viewNoteID,
 			int  flags,
 			IntByReference hTable);
 	
-	public short NSFGetAllFolderChanges(
+	short NSFGetAllFolderChanges(
 			int hViewDB,
 			int hDataDB,
 			NotesTimeDateStruct since,
@@ -888,7 +888,7 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer Param,
 			NotesTimeDateStruct until);
 
-	public short NSFGetFolderChanges(
+	short NSFGetFolderChanges(
 			int hViewDB,
 			int hDataDB,
 			int viewNoteID,
@@ -897,31 +897,31 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference addedNoteTable,
 			IntByReference removedNoteTable);
 
-	public short FolderDocAdd(
+	short FolderDocAdd(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
 			int  hTable,
 			int  dwFlags);
-	public short FolderDocCount(
+	short FolderDocCount(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
 			int dwFlags,
 			IntByReference pdwNumDocs);
-	public short FolderDocRemove(
+	short FolderDocRemove(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
 			int  hTable,
 			int dwFlags);
-	public short FolderDocRemoveAll(
+	short FolderDocRemoveAll(
 			int  hDataDB,
 			int  hFolderDB,
 			int  FolderNoteID,
 			int dwFlags);
 
-	public short FolderCreate(
+	short FolderCreate(
 			int hDataDB,
 			int hFolderDB,
 			int FormatNoteID,
@@ -932,7 +932,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			IntByReference pNoteID);
 	
-	public short FolderRename(
+	short FolderRename(
 			int hDataDB,
 			int hFolderDB,
 			int FolderNoteID,
@@ -940,13 +940,13 @@ public interface INotesNativeAPI32 extends Library {
 			short wNameLen,
 			int dwFlags);
 
-	public short FolderDelete(
+	short FolderDelete(
 			int hDataDB,
 			int hFolderDB,
 			int FolderNoteID,
 			int dwFlags);
 	
-	public short FolderCopy(
+	short FolderCopy(
 			int hDataDB,
 			int hFolderDB,
 			int FolderNoteID,
@@ -955,7 +955,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			IntByReference pNewNoteID);
 
-	public short FolderMove(
+	short FolderMove(
 			int hDataDB,
 			int hFolderDB,
 			int FolderNoteID,
@@ -963,7 +963,7 @@ public interface INotesNativeAPI32 extends Library {
 			int ParentNoteID,
 			int dwFlags);
 
-	public short NSFProfileOpen(
+	short NSFProfileOpen(
 			int hDB,
 			Memory ProfileName,
 			short ProfileNameLength,
@@ -971,13 +971,13 @@ public interface INotesNativeAPI32 extends Library {
 			short UserNameLength,
 			short CopyProfile,
 			IntByReference rethProfileNote);
-	public short NSFProfileUpdate(
+	short NSFProfileUpdate(
 			int hProfile,
 			Memory ProfileName,
 			short ProfileNameLength,
 			Memory UserName,
 			short UserNameLength);
-	public short NSFProfileSetField(
+	short NSFProfileSetField(
 			int hDB,
 			Memory ProfileName,
 			short ProfileNameLength,
@@ -988,14 +988,14 @@ public interface INotesNativeAPI32 extends Library {
 			short Datatype,
 			Pointer Value,
 			int ValueLength);
-	public short NSFProfileDelete(
+	short NSFProfileDelete(
 			int hDB,
 			Memory ProfileName,
 			short ProfileNameLength,
 			Memory UserName,
 			short UserNameLength);
 
-	public short NSFProfileEnum(
+	short NSFProfileEnum(
 			int hDB,
 			Memory ProfileName,
 			short ProfileNameLength,
@@ -1003,22 +1003,22 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer CallbackCtx,
 			int Flags);
 
-	public short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
+	short SECKFMOpen(IntByReference phKFC, Memory pIDFileName, Memory pPassword,
 			int Flags, int Reserved, Pointer pReserved);
-	public short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
+	short SECKFMClose(IntByReference phKFC, int Flags, int Reserved, Pointer pReserved);
 	@UndocumentedAPI
-	public short SECKFMAccess(short param1, int hKFC, Pointer retUsername, Pointer param4);
+	short SECKFMAccess(short param1, int hKFC, Pointer retUsername, Pointer param4);
 
-	public short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
+	short SECidfGet(Memory pUserName, Memory pPassword, Memory pPutIDFileHere,
 			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
-	public short SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
+	short SECidfPut(Memory pUserName, Memory pPassword, Memory pIDFilePath,
 			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved);
-	public short SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
+	short SECidfSync( Memory pUserName, Memory pPassword, Memory pIDFilePath,
 			IntByReference phKFC, Memory pServerName, int dwReservedFlags, short wReservedType,
 			Pointer pReserved, IntByReference retdwFlags);
-	public short SECTokenGenerate(
+	short SECTokenGenerate(
 			Memory ServerName,
 			Memory OrgName,
 			Memory ConfigName,
@@ -1028,9 +1028,9 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retmhToken,
 			int dwReserved,
 			Pointer vpReserved);
-	public void SECTokenFree(IntByReference mhToken);
+	void SECTokenFree(IntByReference mhToken);
 
-	public short SchFreeTimeSearch(
+	short SchFreeTimeSearch(
 			NotesUniversalNoteIdStruct pApptUnid,
 			NotesTimeDateStruct pApptOrigDate,
 			short fFindFirstFit,
@@ -1040,7 +1040,7 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer pNames,
 			IntByReference rethRange);
 
-	public short SchRetrieve(
+	short SchRetrieve(
 			NotesUniversalNoteIdStruct pApptUnid,
 			NotesTimeDateStruct pApptOrigDate,
 			int dwOptions,
@@ -1051,7 +1051,7 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer mustBeNull2,
 			Pointer mustBeNull3);
 
-	public short SchSrvRetrieveExt(
+	short SchSrvRetrieveExt(
 			Pointer pClientNames,
 			NotesUniversalNoteIdStruct pApptUnid,
 			NotesTimeDateStruct pApptOrigDate,
@@ -1064,18 +1064,18 @@ public interface INotesNativeAPI32 extends Library {
 			Memory pszProxyPassword,
 			IntByReference rethCntnr);
 
-	public void SchContainer_Free(int hCntnr);
-	public short SchContainer_GetFirstSchedule(
+	void SchContainer_Free(int hCntnr);
+	short SchContainer_GetFirstSchedule(
 			int hCntnr,
 			IntByReference rethObj,
 			Memory retpSchedule);
-	public short Schedule_Free(int hCntnr, int hSched);
-	public short SchContainer_GetNextSchedule(
+	short Schedule_Free(int hCntnr, int hSched);
+	short SchContainer_GetNextSchedule(
 			int hCntnr,
 			int hCurSchedule,
 			IntByReference rethNextSchedule,
 			Memory retpNextSchedule);
-	public short Schedule_ExtractFreeTimeRange(
+	short Schedule_ExtractFreeTimeRange(
 			int hCntnr,
 			int hSchedObj,
 			NotesUniversalNoteIdStruct punidIgnore,
@@ -1084,7 +1084,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDatePairStruct pInterval,
 			IntByReference retdwSize,
 			IntByReference rethRange);
-	public short Schedule_ExtractBusyTimeRange(
+	short Schedule_ExtractBusyTimeRange(
 			int hCntnr,
 			int hSchedObj,
 			NotesUniversalNoteIdStruct punidIgnore,
@@ -1092,7 +1092,7 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retdwSize,
 			IntByReference rethRange,
 			IntByReference rethMoreCtx);
-	public short Schedule_ExtractMoreBusyTimeRange(
+	short Schedule_ExtractMoreBusyTimeRange(
 			int hCntnr,
 			int hMoreCtx,
 			NotesUniversalNoteIdStruct punidIgnore,
@@ -1100,86 +1100,86 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retdwSize,
 			IntByReference rethRange,
 			IntByReference rethMore);
-	public short Schedule_ExtractSchedList(
+	short Schedule_ExtractSchedList(
 			int hCntnr,
 			int hSchedObj,
 			NotesTimeDatePairStruct pInterval,
 			IntByReference retdwSize,
 			IntByReference rethSchedList,
 			IntByReference rethMore);
-	public short Schedule_ExtractMoreSchedList(
+	short Schedule_ExtractMoreSchedList(
 			int hCntnr,
 			int hMoreCtx,
 			NotesTimeDatePairStruct pInterval,
 			IntByReference retdwSize,
 			IntByReference rethSchedList,
 			IntByReference rethMore);
-	public short Schedule_Access(
+	short Schedule_Access(
 			int hCntnr,
 			int hSched,
 			PointerByReference pretSched);
 	
-	public short Schedule_GetFirstDetails(
+	short Schedule_GetFirstDetails(
 			int hCntnr,
 			int hSchedObj,
 			IntByReference rethDetailObj,
 			PointerByReference retpDetail);
 	
-	public short Schedule_GetNextDetails(
+	short Schedule_GetNextDetails(
 			int hCntnr,
 			int hDetailObj,
 			IntByReference rethNextDetailObj,
 			PointerByReference retpNextDetail);
 	
-	public short NSGetServerClusterMates(
+	short NSGetServerClusterMates(
 			Memory pServerName,
 			int dwFlags,
 			IntByReference phList);
-	public short NSPingServer(
+	short NSPingServer(
 			Memory pServerName,
 			IntByReference pdwIndex,
 			IntByReference phList);
 
-	public short HTMLCreateConverter(IntByReference phHTML);
-	public short HTMLDestroyConverter(int hHTML);
-	public short HTMLSetHTMLOptions(int hHTML, StringArray optionList);
-	public short HTMLConvertItem(
+	short HTMLCreateConverter(IntByReference phHTML);
+	short HTMLDestroyConverter(int hHTML);
+	short HTMLSetHTMLOptions(int hHTML, StringArray optionList);
+	short HTMLConvertItem(
 			int hHTML,
 			int hDB,
 			int hNote,
 			Memory pszItemName);
-	public short HTMLConvertNote(
+	short HTMLConvertNote(
 			int hHTML,
 			int hDB,
 			int hNote,
 			int NumArgs,
 			HtmlApi_UrlComponentStruct pArgs);
-	public short HTMLGetProperty(
+	short HTMLGetProperty(
 			int hHTML,
 			int PropertyType,
 			Pointer pProperty);
 	
 	@UndocumentedAPI
-	public short HTMLGetPropertyV (int hHTML,
+	short HTMLGetPropertyV (int hHTML,
 			 int PropertyType, Pointer pProperty, int count);
 
-	public short HTMLSetProperty(
+	short HTMLSetProperty(
 			int hHTML,
 			int PropertyType,
 			Pointer pProperty);
-	public short HTMLGetText(
+	short HTMLGetText(
 			int hHTML,
 			int StartingOffset,
 			IntByReference pTextLength,
 			Memory pText);
-	public short HTMLGetReference(
+	short HTMLGetReference(
 			int hHTML,
 			int Index,
 			IntByReference phRef);
-	public short HTMLLockAndFixupReference(
+	short HTMLLockAndFixupReference(
 			int hRef,
 			Memory ppRef);
-	public short HTMLConvertElement(
+	short HTMLConvertElement(
 			int hHTML,
 			int hDB,
 			int hNote,
@@ -1187,18 +1187,18 @@ public interface INotesNativeAPI32 extends Library {
 			int ItemIndex,
 			int Offset);
 	
-	public short CompoundTextAddCDRecords(
+	short CompoundTextAddCDRecords(
 			int hCompound,
 			Pointer pvRecord,
 			int dwRecordLength);
-	public short CompoundTextAddDocLink(
+	short CompoundTextAddDocLink(
 			int hCompound,
 			NotesTimeDateStruct.ByValue DBReplicaID,
 			NotesUniversalNoteIdStruct.ByValue ViewUNID,
 			NotesUniversalNoteIdStruct.ByValue NoteUNID,
 			Memory pszComment,
 			int dwFlags);
-	public short CompoundTextAddParagraphExt(
+	short CompoundTextAddParagraphExt(
 			int hCompound,
 			int dwStyleID,
 			int FontID,
@@ -1206,12 +1206,12 @@ public interface INotesNativeAPI32 extends Library {
 			int dwTextLen,
 			Pointer pInfo);
 
-	public short CompoundTextAddRenderedNote(
+	short CompoundTextAddRenderedNote(
 			int hCompound,
 			int hNote,
 			int hFormNote,
 			int dwFlags);
-	public short CompoundTextAddTextExt(
+	short CompoundTextAddTextExt(
 			int hCompound,
 			int dwStyleID,
 			int FontID,
@@ -1220,63 +1220,63 @@ public interface INotesNativeAPI32 extends Library {
 			Memory pszLineDelim,
 			int dwFlags,
 			Pointer pInfo);
-	public short CompoundTextAssimilateFile(
+	short CompoundTextAssimilateFile(
 			int hCompound,
 			Memory pszFileName,
 			int dwFlags);
-	public short CompoundTextAssimilateItem(
+	short CompoundTextAssimilateItem(
 			int hCompound,
 			int hNote,
 			Memory pszItemName,
 			int dwFlags);
 	@UndocumentedAPI
-	public short CompoundTextAssimilateBuffer(int hBuffer, int bufferLength, int flags);
-	public short CompoundTextClose(
+	short CompoundTextAssimilateBuffer(int hBuffer, int bufferLength, int flags);
+	short CompoundTextClose(
 			int hCompound,
 			IntByReference phReturnBuffer,
 			IntByReference pdwReturnBufferSize,
 			Memory pchReturnFile,
 			short wReturnFileNameSize);
-	public short CompoundTextCreate(
+	short CompoundTextCreate(
 			int hNote,
 			Memory pszItemName,
 			IntByReference phCompound);
-	public short CompoundTextDefineStyle(
+	short CompoundTextDefineStyle(
 			int hCompound,
 			Memory pszStyleName,
 			NotesCompoundStyleStruct pDefinition,
 			IntByReference pdwStyleID);
-	public void CompoundTextDiscard(
+	void CompoundTextDiscard(
 			int hCompound);
 
-	public short DesignRefresh(
+	short DesignRefresh(
 			Memory Server,
 			int hDB,
 			int dwFlags,
 			ABORTCHECKPROC AbortCheck,
 			OSSIGMSGPROC MessageProc);
 	
-	public short NSFDbReadACL(
+	short NSFDbReadACL(
 			int hDB,
 			IntByReference rethACL);
 	
-	public short ACLEnumEntries(
+	short ACLEnumEntries(
 			int hACL,
 			ACLENTRYENUMFUNC EnumFunc,
 			Pointer EnumFuncParam);
 	
-	public short ACLGetPrivName(
+	short ACLGetPrivName(
 			int hACL,
 			short PrivNum,
 			Memory retPrivName);
 	
-	public short NSFDbStoreACL(
+	short NSFDbStoreACL(
 			int hDB,
 			int hACL,
 			int ObjectID,
 			short Method);
 	
-	public short ACLLookupAccess(
+	short ACLLookupAccess(
 			int hACL,
 			Pointer pNamesList,
 			ShortByReference retAccessLevel,
@@ -1284,35 +1284,35 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retAccessFlags,
 			IntByReference rethPrivNames);
 	
-	public short ACLSetAdminServer(
+	short ACLSetAdminServer(
 			int hList,
 			Memory ServerName);
 
-	public short ACLAddEntry(
+	short ACLAddEntry(
 			int hACL,
 			Memory name,
 			short AccessLevel,
 			Memory privileges,
 			short AccessFlags);
 	
-	public short ACLDeleteEntry(
+	short ACLDeleteEntry(
 			int hACL,
 			Memory name);
 
-	public short ACLSetFlags(
+	short ACLSetFlags(
 			int hACL,
 			int Flags);
 	
-	public short ACLGetFlags(
+	short ACLGetFlags(
 			int hACL,
 			IntByReference retFlags);
 	
-	public short ACLSetPrivName(
+	short ACLSetPrivName(
 			int hACL,
 			short PrivNum,
 			Memory privName);
 
-	public short ACLUpdateEntry(
+	short ACLUpdateEntry(
 			int hACL,
 			Memory name,
 			short updateFlags,
@@ -1322,7 +1322,7 @@ public interface INotesNativeAPI32 extends Library {
 			short newAccessFlags);
 	
 	@UndocumentedAPI
-	public short NSFSearchStartExtended(int hDB, int formula, int filter,
+	short NSFSearchStartExtended(int hDB, int formula, int filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
 			int queue, int flags, int flags1, int flags2, int flags3, int flags4, 
 			short noteClass, short auxclass, short granularity, 
@@ -1330,16 +1330,16 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rtnhandle);
 
 	@UndocumentedAPI
-	public short NSFSearchStop(int shandle);
+	short NSFSearchStop(int shandle);
 	
-	public short CalCreateEntry(
+	short CalCreateEntry(
 			int hDB,
 			Memory pszCalEntry,
 			int dwFlags,
 			IntByReference hRetUID,
 			Pointer pCtx);
 
-	public short CalUpdateEntry(
+	short CalUpdateEntry(
 			int hDB,
 			Memory pszCalEntry,
 			Memory pszUID,
@@ -1348,7 +1348,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalGetUIDfromNOTEID(
+	short CalGetUIDfromNOTEID(
 			int hDB,
 			int noteid,
 			Memory pszUID,
@@ -1357,7 +1357,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalGetUIDfromUNID(
+	short CalGetUIDfromUNID(
 			int hDB,
 			NotesUniversalNoteIdStruct unid,
 			Memory pszUID,
@@ -1366,7 +1366,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 
-	public short CalOpenNoteHandle(
+	short CalOpenNoteHandle(
 			int hDB,
 			Memory pszUID,
 			Memory pszRecurID,
@@ -1374,7 +1374,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 
-	public short CalReadEntry(
+	short CalReadEntry(
 			int hDB,
 			Memory pszUID,
 			Memory pszRecurID,
@@ -1383,7 +1383,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalReadRange(
+	short CalReadRange(
 			int hDB,
 			NotesTimeDateStruct.ByValue tdStart,
 			NotesTimeDateStruct.ByValue  tdEnd,
@@ -1400,7 +1400,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalGetUnappliedNotices(
+	short CalGetUnappliedNotices(
 			int hDB,
 			Memory pszUID,
 			ShortByReference pwNumNotices,
@@ -1410,7 +1410,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 
-	public short CalGetNewInvitations(
+	short CalGetNewInvitations(
 			int hDB,
 			NotesTimeDateStruct ptdStart,
 			Memory pszUID,
@@ -1423,7 +1423,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalReadNotice(
+	short CalReadNotice(
 			int hDB,
 			int noteID,
 			IntByReference hRetCalData,
@@ -1431,7 +1431,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalReadNoticeUNID(
+	short CalReadNoticeUNID(
 			int hDB,
 			NotesUniversalNoteIdStruct unid,
 			IntByReference hRetCalData,
@@ -1439,7 +1439,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalNoticeAction(
+	short CalNoticeAction(
 			int hDB,
 			int noteID,
 			int dwAction,
@@ -1448,7 +1448,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalNoticeActionUNID(
+	short CalNoticeActionUNID(
 			int hDB,
 			NotesUniversalNoteIdStruct unid,
 			int dwAction,
@@ -1457,7 +1457,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			Pointer pCtx);
 	
-	public short CalEntryAction(
+	short CalEntryAction(
 			int hDB,
 			Memory pszUID,
 			Memory pszRecurID,
@@ -1469,7 +1469,7 @@ public interface INotesNativeAPI32 extends Library {
 			Pointer pCtx);
 
 	@UndocumentedAPI
-	public short LZ1Compress(
+	short LZ1Compress(
 	        Pointer sin,
 	        Pointer sout,
 	        int insize,
@@ -1478,23 +1478,23 @@ public interface INotesNativeAPI32 extends Library {
 	        );
 
 	@UndocumentedAPI
-	public short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
+	short LZ1Decompress(Pointer sin, Pointer SoutUncompressed, int outsize);
 	
-	public short OOOStartOperation(
+	short OOOStartOperation(
 			Pointer pMailOwnerName,
 			Pointer pHomeMailServer,
 			int bHomeMailServer,
 			int hMailFile,
 			IntByReference hOOOContext,
 			PointerByReference pOOOOContext);
-	public short OOOEndOperation(int hOOContext, Pointer pOOOContext);
+	short OOOEndOperation(int hOOContext, Pointer pOOOContext);
 	
-	public short NSFDbItemDefTableExt(
+	short NSFDbItemDefTableExt(
 			int hDB,
 			IntByReference retItemNameTable);
 	
 	@UndocumentedAPI
-	public short NSFDbGetTcpHostName(
+	short NSFDbGetTcpHostName(
 	        int hDB,                                                        /* Database Handle           */ 
 	        Memory pszHostName,                                        /* Return TCP Host Name      */ 
 	        short wMaxHostNameLen,                                /* Size of Host Name Buffer  */ 
@@ -1503,114 +1503,114 @@ public interface INotesNativeAPI32 extends Library {
 	        Memory pszFullName,                                        /* Return Full TCP Name      */ 
 	        short wMaxFullNameLen);                            /* Size of Full Name Buffer  */
 	
-	public short NSFItemDefExtLock(
+	short NSFItemDefExtLock(
 			Pointer pItemDefTable,
 			NotesItemDefinitionTableLock ItemDefTableLock);
 
-	public short NSFItemDefExtEntries(
+	short NSFItemDefExtEntries(
 			NotesItemDefinitionTableLock ItemDefTableLock,
 			IntByReference NumEntries);
 	
-	public short NSFItemDefExtGetEntry(
+	short NSFItemDefExtGetEntry(
 			NotesItemDefinitionTableLock ItemDefTableLock,
 			int ItemNum,
 			ShortByReference ItemType,
 			ShortByReference ItemLength,
 			Pointer ItemName);
 	
-	public short NSFItemDefExtUnlock(
+	short NSFItemDefExtUnlock(
 			NotesItemDefinitionTableExt ItemDefTable,
 			NotesItemDefinitionTableLock ItemDefTableLock);
 	
-	public short NSFItemDefExtFree(
+	short NSFItemDefExtFree(
 			NotesItemDefinitionTableExt ItemDeftable);
 	
-	public short NSFRemoteConsole(
+	short NSFRemoteConsole(
 			Memory ServerName,
 			Memory ConsoleCommand,
 			IntByReference hResponseText);
 	
-	public short NSFGetServerStats(
+	short NSFGetServerStats(
 			Memory serverName,
 			Memory facility,
 			Memory statName,
 			IntByReference rethTable,
 			IntByReference retTableSize);
 
-	public short DXLImport(
+	short DXLImport(
 			int hDXLImport,
 			NotesCallbacks.XML_READ_FUNCTION pDXLReaderFunc,
 			int hDB,
 			Pointer pImAction);
 	
-	public short DXLExportACL(
+	short DXLExportACL(
 			int hDXLExport,
 			NotesCallbacks.XML_WRITE_FUNCTION pDXLWriteFunc,
 			int hDB,
 			Pointer pExAction);
 	
-	public short DXLExportDatabase(
+	short DXLExportDatabase(
 			int hDXLExport,
 			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
 			int hDB,
 			Pointer pExAction);
 	
-	public short DXLExportIDTable(
+	short DXLExportIDTable(
 			int hDXLExport,
 			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
 			int hDB,
 			int hIDTable,
 			Pointer pExAction);
 	
-	public short DXLExportNote(
+	short DXLExportNote(
 			int  hDXLExport,
 			NotesCallbacks.XML_WRITE_FUNCTION  pDXLWriteFunc,
 			int hNote,
 			Pointer pExAction);
 	
-	public short MIMEOpenDirectory(
+	short MIMEOpenDirectory(
 			int hNote,
 			IntByReference phMIMEDir);
 
-	public short MIMEFreeDirectory(
+	short MIMEFreeDirectory(
 			int hMIMEDir);
 	
-	public Pointer MIMEEntityContentID(
+	Pointer MIMEEntityContentID(
 			Pointer pMIMEEntity);
 	
-	public Pointer MIMEEntityContentLocation(
+	Pointer MIMEEntityContentLocation(
 			Pointer pMIMEEntity);
 
-	public int MIMEEntityContentSubtype(
+	int MIMEEntityContentSubtype(
 			Pointer pMIMEEntity);
 	
-	public int MIMEEntityContentType(
+	int MIMEEntityContentType(
 			Pointer pMIMEEntity);
 
-	public Pointer MIMEEntityGetHeader(
+	Pointer MIMEEntityGetHeader(
 			Pointer pMIMEEntity,
 			int symKey);
 
-	public short MIMEEntityGetTypeParam(
+	short MIMEEntityGetTypeParam(
 			Pointer pMIMEEntity,
 			int symParam,
 			IntByReference phValue,
 			IntByReference pdwValueLen);
 
-	public boolean MIMEEntityIsDiscretePart(
+	boolean MIMEEntityIsDiscretePart(
 			Pointer pMimeEntity);
 
-	public boolean MIMEEntityIsMessagePart(
+	boolean MIMEEntityIsMessagePart(
 			Pointer pMIMEEntity);
 
-	public boolean MIMEEntityIsMultiPart(
+	boolean MIMEEntityIsMultiPart(
 			Pointer pMimeEntity);
 
-	public short MIMEFreeEntityDataObject(
+	short MIMEFreeEntityDataObject(
 			int hNote,
 			Pointer pEntity);
 
-	public short MIMEGetDecodedEntityData(
+	short MIMEGetDecodedEntityData(
 			int hNote,
 			Pointer pMimeEntity,
 			int dwEncodedOffset,
@@ -1619,7 +1619,7 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference pdwDecodedDataLen,
 			IntByReference pdwEncodedDataLen);
 
-	public short MIMEGetEntityData(
+	short MIMEGetEntityData(
 			int hNote,
 			Pointer pME,
 			short wDataType,
@@ -1628,12 +1628,12 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference phData,
 			IntByReference pdwDataLen);
 	
-	public short MIMEGetEntityPartFlags(
+	short MIMEGetEntityPartFlags(
 			int hNote,
 			Pointer pEntity,
 			IntByReference pdwFlags);
 
-	public void  MimeGetExtFromTypeInfo(
+	void  MimeGetExtFromTypeInfo(
 			Memory pszType,
 			Memory pszSubtype,
 			Memory pszExtBuf,
@@ -1641,31 +1641,31 @@ public interface INotesNativeAPI32 extends Library {
 			Memory pszDescrBuf,
 			short wDescrBufLen);
 	
-	public void MIMEGetFirstSubpart(
+	void MIMEGetFirstSubpart(
 			int  hMIMEDir,
 			Pointer  pMIMEEntity,
 			PointerByReference retpMIMEEntity);
 
-	public short MIMEGetNextSibling(
+	short MIMEGetNextSibling(
 			int hMIMEDir,
 			Pointer pMIMEEntity,
 			PointerByReference retpMIMEEntity);
 	
-	public short MIMEGetParent(
+	short MIMEGetParent(
 			int  hMIMEDir,
 			Pointer  pMIMEEntity,
 			PointerByReference retpMIMEEntity);
 
-	public short MIMEGetPrevSibling(
+	short MIMEGetPrevSibling(
 			int  hMIMEDir,
 			Pointer  pMIMEEntity,
 			PointerByReference retpMIMEEntity);
 	
-	public short MIMEGetRootEntity(
+	short MIMEGetRootEntity(
 			int  hMIMEDir,
 			PointerByReference retpMIMEEntity);	
 
-	public short MIMEGetText(
+	short MIMEGetText(
 			int hNote,
 			Memory pchItemName,
 			short wItemNameLen,
@@ -1674,7 +1674,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwMaxBufLen,
 			IntByReference pdwBufLen);
 	
-	public void MimeGetTypeInfoFromExt(
+	void MimeGetTypeInfoFromExt(
 			Memory pszExt,
 			Memory pszTypeBuf,
 			short wTypeBufLen,
@@ -1683,7 +1683,7 @@ public interface INotesNativeAPI32 extends Library {
 			Memory pszDescrBuf,
 			short wDescrBufLen);
 
-	public short MIMEHeaderNameToItemName(
+	short MIMEHeaderNameToItemName(
 			short wMessageType,
 			Memory pszHeaderName,
 			Memory pszHeaderBody,
@@ -1693,53 +1693,53 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retwItemFlags,
 			ShortByReference retwDataType);
 	
-	public short MIMEItemNameToHeaderName(
+	short MIMEItemNameToHeaderName(
 			short wMessageType,
 			Memory pszItemName,
 			Memory retszHeaderName,
 			short wHeaderNameSize,
 			ShortByReference retwHeaderType);
 
-	public short MIMEIterateNext(
+	short MIMEIterateNext(
 			int  hMIMEDir,
 			Pointer pTopMIMEEntity,
 			Pointer pPrevMIMEEntity,
 			PointerByReference retpMIMEEntity);
 
-	public int MIMEStreamGetLine(
+	int MIMEStreamGetLine(
 			Memory pszLine,
 			int uiMaxLineSize,
 			Pointer hMIMEStream);
 	
-	public short MIMEStreamItemize(
+	short MIMEStreamItemize(
 			int hNote,
 			Memory pchItemName,
 			short wItemNameLen,
 			int dwFlags,
 			Pointer hMIMEStream);
 
-	public short MIMEStreamOpen(
+	short MIMEStreamOpen(
 			int hNote,
 			Memory pchItemName,
 			short wItemNameLen,
 			int dwOpenFlags,
 			PointerByReference rethMIMEStream);
 
-	public short MIMEConvertCDParts(
+	short MIMEConvertCDParts(
 			int hNote,
 			boolean bCanonical,
 			boolean bIsMIME,
 			Pointer hCC);
 
 	@UndocumentedAPI
-	public short NSFDbNamedObjectEnum(int hDB, NotesCallbacks.b32_NSFDbNamedObjectEnumPROC callback, Pointer param);
+	short NSFDbNamedObjectEnum(int hDB, NotesCallbacks.b32_NSFDbNamedObjectEnumPROC callback, Pointer param);
 
 	@UndocumentedAPI
-	public short NSFDbGetNamedObjectID(int hDB, short NameSpace,
+	short NSFDbGetNamedObjectID(int hDB, short NameSpace,
             Memory Name, short NameLength,
             IntByReference rtnObjectID);
 
-	public short NSFDbCreateAndCopyExtended(
+	short NSFDbCreateAndCopyExtended(
 			Memory srcDb,
 			Memory dstDb,
 			short NoteClass,
@@ -1748,22 +1748,22 @@ public interface INotesNativeAPI32 extends Library {
 			int hNames,
 			IntByReference hNewDb);
 	
-	public short NSFDbCreateACLFromTemplate(
+	short NSFDbCreateACLFromTemplate(
 			long hNTF,
 			long hNSF,
 			Memory Manager,
 			short DefaultAccess,
 			IntByReference rethACL);
 	
-	public short ACLCreate(IntByReference rethACL);
+	short ACLCreate(IntByReference rethACL);
 
-	public short NSFDbCopy(
+	short NSFDbCopy(
 			int hSrcDB,
 			int hDstDB,
 			NotesTimeDateStruct.ByValue Since,
 			short NoteClassMask);
 
-	public short NSFDbOpenTemplateExtended(
+	short NSFDbOpenTemplateExtended(
 			Memory PathName,
 			short Options,
 			int hNames,
@@ -1772,20 +1772,20 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct retDataModified,
 			NotesTimeDateStruct retNonDataModified);
 
-	public short NSFNoteCreateClone (int hSrcNote, IntByReference rethDstNote);
+	short NSFNoteCreateClone (int hSrcNote, IntByReference rethDstNote);
 
-	public short NSFNoteReplaceItems (int hSrcNote, int hDstNote, ShortByReference pwRetItemReplaceCount, boolean fAllowDuplicates);
+	short NSFNoteReplaceItems (int hSrcNote, int hDstNote, ShortByReference pwRetItemReplaceCount, boolean fAllowDuplicates);
 
-	public short StoredFormAddItems (int hSrcDbHandle, int hSrcNote, int hDstNote, boolean bDoSubforms, int dwFlags);
+	short StoredFormAddItems (int hSrcDbHandle, int hSrcNote, int hDstNote, boolean bDoSubforms, int dwFlags);
 
-	public short StoredFormRemoveItems(int hNote, int dwFlags);
+	short StoredFormRemoveItems(int hNote, int dwFlags);
 
-	public short MailNoteJitEx2(Pointer vpRunCtx, int hNote, short wMailFlags, IntByReference retdwRecipients,
+	short MailNoteJitEx2(Pointer vpRunCtx, int hNote, short wMailFlags, IntByReference retdwRecipients,
 			short jitflag, short wMailNoteFlags, NotesCallbacks.b32_FPMailNoteJitEx2CallBack vCallBack, Pointer vCallBackCtx);
 
-	public short MailSetSMTPMessageID(int hNote, Memory domain, Memory string, short stringLength);
+	short MailSetSMTPMessageID(int hNote, Memory domain, Memory string, short stringLength);
 
-	public short NSFDbReopenWithFullAccess(int hDb, IntByReference hReopenedDb);
+	short NSFDbReopenWithFullAccess(int hDb, IntByReference hReopenedDb);
 
 	/*	This is exactly the same as lookup name BE, except it will use the
 	cache of the design collection as known to the client.  This is safe
@@ -1794,18 +1794,18 @@ public interface INotesNativeAPI32 extends Library {
 	fetched for the client.  This was added explicitly to avoid cases of
 	backend code executing in their world where backend changes to design
 	things was not seen immediately. */
-	public short DesignLookupNameFE (int hDB, short wClass, Pointer szFlagsPattern, Pointer szName,
+	short DesignLookupNameFE (int hDB, short wClass, Pointer szFlagsPattern, Pointer szName,
 									  	short wNameLen, int flags,
 										IntByReference retNoteID, IntByReference retbIsPrivate,
 										NotesCallbacks.DESIGN_COLL_OPENCLOSE_PROC OpenCloseRoutine, Pointer Ctx);
 
-	public short NSFDbGetReplHistorySummary(
+	short NSFDbGetReplHistorySummary(
 			int hDb,
 			int Flags,
 			IntByReference rethSummary,
 			IntByReference retNumEntries);
 
-	public short REGCrossCertifyID(
+	short REGCrossCertifyID(
 			int hCertCtx,
 			short spare1,
 			Memory regServer,
@@ -1817,7 +1817,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesCallbacks.REGSIGNALPROC  pStatusFunc,
 			Memory errorPathName);
 	
-	public short SECKFMGetCertifierCtx(
+	short SECKFMGetCertifierCtx(
 			Memory pCertFile,
 			KFM_PASSWORDStruct.ByReference pKfmPW,
 			Memory pLogFile,
@@ -1827,17 +1827,17 @@ public interface INotesNativeAPI32 extends Library {
 			ShortByReference retfIsHierarchical,
 			ShortByReference retwFileVersion);
 	
-	public void SECKFMFreeCertifierCtx(
+	void SECKFMFreeCertifierCtx(
 			int hKfmCertCtx);
 
 	@UndocumentedAPI
-	public short SECKFMMakeSafeCopy(int hKFC, short Type, short Version, Memory pFileName);
+	short SECKFMMakeSafeCopy(int hKFC, short Type, short Version, Memory pFileName);
 
 	@UndocumentedAPI
-	public short AssistantGetLSDataNote (int hDB, int NoteID, NotesUniversalNoteIdStruct.ByReference retUNID);
+	short AssistantGetLSDataNote (int hDB, int NoteID, NotesUniversalNoteIdStruct.ByReference retUNID);
 
 	@UndocumentedAPI
-	public short DesignEnum2 (int hDB,
+	short DesignEnum2 (int hDB,
 			   short NoteClass,
 			   Memory  pszFlagsPattern,
 			   int dwFlags,
@@ -1847,6 +1847,6 @@ public interface INotesNativeAPI32 extends Library {
 			   Pointer ctx);
 
 	@UndocumentedAPI
-	public short DesignGetNoteTable(int hDB, short NoteClass, IntByReference rethIDTable);
+	short DesignGetNoteTable(int hDB, short NoteClass, IntByReference rethIDTable);
 
 }

@@ -1863,6 +1863,19 @@ public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
 	public static final int DBOPTBIT_IMAP_FOLDERSYNC = 103;
 	/** Large Summary Support (LSS) */
 	public static final int DBOPTBIT_LARGE_BUCKETS_ENABLED = 104;
+	/** Pair1 primary db mathced tds filled */
+	public static final int DBOPTBIT_SOLR_PAIR1PRIMARY = 105;
+	/** Pair2 init solr index done */
+	public static final int DBOPTBIT_SOLR_SEARCH_INIT_DONE2 = 106;
+	/** Pair1 secondary db mathced tds filled */
+	public static final int DBOPTBIT_SOLR_PAIR1SECONDARY = 107;
+	/** Pair2 primary db mathced tds filled */
+	public static final int DBOPTBIT_SOLR_PAIR2PRIMARY = 108;
+	/** Pair2 secondary db mathced tds filled */
+	public static final int DBOPTBIT_SOLR_PAIR2SECONDARY = 109;
+	/** ODS 54 + large buckets + compact -c */
+	public static final int DBOPTBIT_LARGE_ITEMS_ENABLED	 = 110;
+	public static final int DBOPTBIT_DELETE_LOGGING = 111;
 
 	/** Open with scan lock to prevent other opens with scan lock (used by replicator) */
 	public static final short DBOPEN_WITH_SCAN_LOCK = 0x0001;
@@ -4309,5 +4322,200 @@ This allows an Editor to assume some Designer-level access */
 	int SECTOKENFORMAT_UNKNOWN = 0;
 	int SECTOKENFORMAT_LTPATOKEN = 1;
 	int SECTOKENFORMAT_LTPATOKEN2 = 2;
+
+	/*	Define options for DB compact. */
 	
+	/* SDK BEGIN */
+	
+	/** Don't preserve view indexes */
+	int DBCOMPACT_NO_INDEXES = 0x00000001;
+	/** Don't lock out database users */
+	int DBCOMPACT_NO_LOCKOUT = 0x00000002;
+	/** Revert current ODS to the previous ODS version */
+	int DBCOMPACT_REVERT_ODS = 0x00000004;
+	
+	/* SDK END */
+	
+	/** Indicate we are encrypting database */
+	int DBCOMPACT_FOR_ENCRYPT = 0x00000008;
+	/** Indicate we are decrypting database */
+	int DBCOMPACT_FOR_DECRYPT = 0x00000010;
+	
+	/* SDK BEGIN */
+	
+	/** Create new file with 4GB file size limit */
+	int DBCOMPACT_MAX_4GB = 0x00000020;
+	
+	/* SDK END */
+	
+	/** This note should be updated as a ghost note */
+	int DBCOMPACT_GHOST_NOTE = 0x00000040;
+	
+	/* SDK BEGIN */
+	
+	/** Compact XXXX.BOX for mail router and other MTAs */
+	int DBCOMPACT_MAILBOX = 0x00000080;
+	/** Don't do in-place compaction */
+	int DBCOMPACT_NO_INPLACE = 0x00000100;
+	
+	/* SDK END */
+	
+	int DBCOMPACT_ENCRYPT_DEFAULT = 0x00000200;
+	
+	/* SDK BEGIN */
+	
+	/** Disable unread marks in destination database */
+	int DBCOMPACT_DISABLE_UNREAD = 0x00002000;
+	/** Reenable unread marks in destination database (default) */
+	int DBCOMPACT_ENABLE_UNREAD = 0x00004000;
+	/** Disable response info in resulting database */
+	int DBCOMPACT_DISABLE_RESPONSE_INFO = 0x00008000;
+	/** Disable response info in resulting database (default) */
+	int DBCOMPACT_ENABLE_RESPONSE_INFO = 0x00010000;
+	/** Enable form/bucket bitmap optimization */
+	int DBCOMPACT_ENABLE_FORM_BKT_OPT = 0x00020000;
+	/** Diable form/bucket bitmap optimization (default) */
+	int DBCOMPACT_DISABLE_FORM_BKT_OPT = 0x00040000;
+	/** Ignore errors encountered during compaction.
+	 * That is, make best effort to get something at the end */
+	int DBCOMPACT_IGNORE_ERRORS = 0x00080000;
+	
+	/* SDK END */
+	
+	/** If set, disable transaction logging for new database */
+	int DBCOMPACT_DISABLE_TXN_LOGGING = 0x00100000;
+	/** If set, enable transaction logging for new database */
+	int DBCOMPACT_ENABLE_TXN_LOGGING = 0x00200000;
+	
+	/* SDK BEGIN */
+	
+	/** If set, do only bitmap correction if in-place can be done */
+	int DBCOMPACT_RECOVER_SPACE_ONLY = 0x00400000;
+	/** Archive/delete, then compact the database */
+	int DBCOMPACT_ARCHIVE = 0x00800000;
+	/** Just archive/delete, no need to compact */
+	int DBCOMPACT_ARCHIVE_ONLY = 0x01000000;
+	
+	/* SDK END */
+	
+	/** Just check object size and position fidelity - looking for overlap */
+	int DBCOMPACT_VERIFY_NOOVERLAP = 0x02000000;
+	
+	/* SDK BEGIN */
+	
+	/** If set, always do full space recovery compaction */
+	int DBCOMPACT_RECOVER_ALL_SPACE = 0x04000000;
+	
+	/* SDK END */
+	
+	/** If set and inplace is possible, just dump space map - don't compact */
+	int DBCOMPACT_DUMP_SPACE_MAP_ONLY = 0x08000000;
+	/** Disable large UNK table in destination database (default) */
+	int DBCOMPACT_DISABLE_LARGE_UNKTBL = 0x10000000;
+	/** Enable large UNK table in destination database */
+	int DBCOMPACT_ENABLE_LARGE_UNKTBL = 0x20000000;
+	/** Only do compaction if it can be done inplace - error return otherwise */
+	int DBCOMPACT_ONLY_IF_INPLACE = 0x40000000;
+	/** Recursively explore subdirectores during NSFSearchExtended */
+	int DBCOMPACT_RECURSE_SUBDIRECTORIES = 0x80000000;
+
+	/** Retain bodyheader values for imap enabled databases. */
+	int DBCOMPACT2_KEEP_IMAP_ITEMS = 0x00000001;
+	/** Upgrade to LZ1 attachments for entire db. */
+	int DBCOMPACT2_LZ1_UPGRADE = 0x00000002;
+	/**
+	 * Do not change without checking ARCHIVE_DELETE_ONLY<br>
+	 * Archive delete only! Must specify DBCOMPACT_ARCHIVE or DBCOMPACT_ARCHIVE_COMPACT
+	 */
+	int DBCOMPACT2_ARCHIVE_JUST_DELETE = 0x00000004;
+	/** Force the compact to open the DB with the O_SYNC flag on
+	 * this is for large db's on systems with huge amounts of memory
+	 * DBCOMPACT_ARCHIVE_COMPACT  */
+	int DBCOMPACT2_SYNC_OPEN = 0x00000008;
+	/** Convert the source database to an NSFDB2 database. */
+	int DBCOMPACT2_CONVERT_TO_NSFDB2 = 0x00000010;
+	/** Fixup busted LZ1 attachments (really huffman) for entire db. */
+	int DBCOMPACT2_LZ1_FIXUP = 0x00000020;
+	/** Check busted LZ1 attachments (really huffman) for entire db. */
+	int DBCOMPACT2_LZ1_CHECK = 0x00000040;
+	/** Downgrade attachments to huffman for entire db. */
+	int DBCOMPACT2_LZ1_DOWNGRADE = 0x00000080;
+	/** skip NSFDB2 databases found while traversing files index */
+	int DBCOMPACT2_SKIP_NSFDB2 = 0x00000100;
+	/** skip NSF databases while processing NSFDB2 databases */
+	int DBCOMPACT2_SKIP_NSF = 0x00000200;
+	
+	/* SDK BEGIN */
+	
+	/** TRUE if design note non-summary should be compressed */
+	int DBCOMPACT2_COMPRESS_DESIGN_NS = 0x00000400;
+	/** TRUE if design note non-summary should be uncompressed */
+	int DBCOMPACT2_UNCOMPRESS_DESIGN_NS = 0x00000800;
+	
+	/* SDK END */
+	
+	/** if TRUE, do db2 group compression for group associated with this nsf */
+	int DBCOMPACT2_DB2_ASSOCGRP_COMPACT = 0x00001000;
+	/** if TRUE, do db2 group compression directly on group*/
+	int DBCOMPACT2_DB2_GROUP_COMPACT = 0x00002000;
+
+	/* SDK BEGIN */
+	
+	/** TRUE if all data note non-summary should be compressed */
+	int DBCOMPACT2_COMPRESS_DATA_DOCS = 0x00004000;
+	/** TRUE if all data note non-summary should be uncompressed */
+	int DBCOMPACT2_UNCOMPRESS_DATA_DOCS = 0x00008000;
+	
+	/* SDK END */
+	
+	/** TRUE if return file sizes should be in granules to handle large file sizes */
+	int DBCOMPACT2_STATS_IN_GRANULES = 0x00010000;
+	
+	/* SDK BEGIN */
+	
+	/** enable compact TO DAOS */
+	int DBCOMPACT2_FORCE_DAOS_ON = 0x00020000;
+	/** enable compact FROM DAOS */
+	int DBCOMPACT2_FORCE_DAOS_OFF = 0x00040000;
+	
+	/* SDK END */
+	
+	/** revert one ods based on current ods of the database */
+	int DBCOMPACT2_REVERT_ONE_ODS = 0x00080000;
+	/** Process attachments inplace for entire db. */
+	int DBCOMPACT2_LZ1_INPLACE = 0x00100000;
+	/** If ODS is lower than desired ODS based on INI settings, compact it to upgrade ODS */
+	int DBCOMPACT2_ODS_DEFAULT_UPGRADE = 0x00200000;
+	/** split NIF containers out to their own database */
+	int DBCOMPACT2_SPLIT_NIF_DATA = 0x01000000;
+	/** see above, but off */
+	int DBCOMPACT2_UNSPLIT_NIF_DATA = 0x02000000;
+	
+	/* SDK BEGIN */
+	
+	/** enable compact with PIRC */
+	int DBCOMPACT2_FORCE_PIRC_ON = 0x00400000;
+	/** enable compact without PIRC */
+	int DBCOMPACT2_FORCE_PIRC_OFF = 0x00800000;
+
+	/* SDK END */
+	
+	/** SaaS option, enable advanced property override */
+	int DBCOMPACT2_ADV_OPT_OVERRIDE_ON = 0x01000000;
+	/** SaaS option, disable advanced property override */
+	int DBCOMPACT2_ADV_OPT_OVERRIDE_OFF = 0x02000000;
+
+	/** compact is running as DataBaseMaintenanceTool */
+	int DBCOMPACT2_DBMT = 0x04000000;
+	/** Take database offline for compact */
+	int DBCOMPACT2_FORCE = 0x08000000;
+	/** for copy style compaction, force "new" target to be encrypted even if source db is not */
+	int DBCOMPACT2_ENABLE_ENCRYPTION = 0x10000000;
+	/** a saas-only option to collect information when compacting for import */
+	int DBCOMPACT2_SAAS_IMPORT = 0x20000000;
+	/** Upgrade previous DBCLASS_V*NOTEFILE classes to DBCLASS_NOTEFILE */
+	int DBCOMPACT2_DBCLASS_UPGRADE = 0x40000000;
+	/** Create a new replica in the copy style compact */
+	int DBCOMPACT2_COPY_REPLICA = 0x80000000;
+
 }
