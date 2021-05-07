@@ -462,12 +462,16 @@ public class IDUtils {
 	 * <br>
 	 * NOTE: This function should only be used in a C API stand alone application.
 	 * 
-	 * @param idPath path to the ID file that is to be switched to
+	 * @param idPath path to the ID file that is to be switched to; if null/empty, we read the ID file path from the Notes.ini (KeyFileName)
 	 * @param password password of the ID file that is to be switched to
 	 * @param dontSetEnvVar  If specified, the notes.ini file (either ServerKeyFileName or KeyFileName) is modified to reflect the ID change.
 	 * @return user name, in the ID file that is to be switched to
 	 */
 	public static String switchToId(String idPath, String password, boolean dontSetEnvVar) {
+		if (StringUtil.isEmpty(idPath)) {
+			idPath = NotesIniUtils.getEnvironmentString("KeyFileName");
+		}
+
 		Memory idPathMem = NotesStringUtils.toLMBCS(idPath, true);
 		Memory passwordMem = NotesStringUtils.toLMBCS(password, true);
 		Memory retUserNameMem = new Memory(NotesConstants.MAXUSERNAME+1);
