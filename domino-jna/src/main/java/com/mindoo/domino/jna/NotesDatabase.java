@@ -321,17 +321,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		boolean isOnServer = IDUtils.isOnServer();
 		
-		if (!"".equals(server)) {
-			if (isOnServer) {
-				String serverCN = NotesNamingUtils.toCommonName(server);
-				String currServerCN = NotesNamingUtils.toCommonName(idUserName);
-				if (serverCN.equalsIgnoreCase(currServerCN)) {
-					//switch to "" as servername if server points to the server the API is running on
-					server = "";
-				}
-			}
-		}
-		
 		if (namesForNamesList==null && (StringUtil.isEmpty(m_asUserCanonical) || (m_asUserCanonical!=null && NotesNamingUtils.equalNames(m_asUserCanonical, idUserName)))) {
 			m_loginAsIdOwner = true;
 		}
@@ -5473,20 +5462,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			throw new NullPointerException("filePath is null");
 
 		server = NotesNamingUtils.toCanonicalName(server);
-		
-		String idUserName = IDUtils.getIdUsername();
-		boolean isOnServer = IDUtils.isOnServer();
-		
-		if (!"".equals(server)) {
-			if (isOnServer) {
-				String serverCN = NotesNamingUtils.toCommonName(server);
-				String currServerCN = NotesNamingUtils.toCommonName(idUserName);
-				if (serverCN.equalsIgnoreCase(currServerCN)) {
-					//switch to "" as servername if server points to the server the API is running on
-					server = "";
-				}
-			}
-		}
 		
 		Memory dbServerLMBCS = NotesStringUtils.toLMBCS(server, true);
 		Memory dbFilePathLMBCS = NotesStringUtils.toLMBCS(filePath, true);
