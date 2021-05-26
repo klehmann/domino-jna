@@ -7826,15 +7826,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			LongByReference hTable = new LongByReference();
 			short result = NotesNativeAPI64.get().NSFFolderGetIDTable(m_hDB64, m_hDB64, folderNoteId, validateIds ? NotesConstants.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
-			return new NotesIDTable(hTable.getValue(), true);
+			return new NotesIDTable(hTable.getValue(), false);
 		}
 		else {
 			IntByReference hTable = new IntByReference();
 			short result = NotesNativeAPI32.get().NSFFolderGetIDTable(m_hDB32, m_hDB32, folderNoteId, validateIds ? NotesConstants.DB_GETIDTABLE_VALIDATE : 0, hTable);
 			NotesErrorUtils.checkResult(result);
-			//don't auto-gc the ID table, since there is no remark in the C API that we are responsible
-			return new NotesIDTable(hTable.getValue(), true);
+			return new NotesIDTable(hTable.getValue(), false);
 		}
 	}
 
