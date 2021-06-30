@@ -242,7 +242,7 @@ mvn install:install-file -Dfile="/Applications/HCL Notes.app/Contents/Eclipse/sh
 **For Windows, use this syntax (replace "-version-" with the right version on your machine):**
 
 ```
-mvn install:install-file -Dfile="C:\Program Files (x86)\IBM\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=11.0.0 -Dpackaging=jar
+mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\jvm\lib\ext\Notes.jar" -DgroupId=com.ibm -DartifactId=domino-api-binaries -Dversion=11.0.0 -Dpackaging=jar
 
 mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.commons_-version-\lwpd.commons.jar" -DgroupId=com.ibm -DartifactId=ibm-commons -Dversion=11.0.0 -Dpackaging=jar
 
