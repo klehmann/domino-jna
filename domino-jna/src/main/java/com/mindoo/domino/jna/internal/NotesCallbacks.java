@@ -72,29 +72,23 @@ public interface NotesCallbacks {
 	}
 
 	/**
-	 * Base callback used by OSGetSignalHandler / OSSetSignalHandler
-	 */
-	interface OSSIGPROC extends Callback {
-	}
-
-	/**
 	 * Callback used by message signal handlers
 	 */
-	interface OSSIGMSGPROC extends OSSIGPROC {
+	interface OSSIGMSGPROC extends Callback {
 		public short invoke(Pointer message, short type);
 	}
 
 	/**
 	 * Callback used by busy signal handlers
 	 */
-	interface OSSIGBUSYPROC extends OSSIGPROC {
+	interface OSSIGBUSYPROC extends Callback {
 		public short invoke(short busytype);
 	}
 
 	/**
 	 * Callback used by break signal handlers
 	 */
-	interface OSSIGBREAKPROC extends OSSIGPROC {
+	interface OSSIGBREAKPROC extends Callback {
 		short invoke();
 	}
 
@@ -108,14 +102,14 @@ public interface NotesCallbacks {
 	/**
 	 * Callback used by progress signal handlers
 	 */
-	interface OSSIGPROGRESSPROC extends OSSIGPROC {
+	interface OSSIGPROGRESSPROC extends Callback {
 		public short invoke(short option, Pointer data1, Pointer data2);
 	}
 
 	/**
 	 * Callback used by replication signal handlers
 	 */
-	interface OSSIGREPLPROC extends OSSIGPROC {
+	interface OSSIGREPLPROC extends Callback {
 		public void invoke(short state, Pointer pText1, Pointer pText2);
 	}
 

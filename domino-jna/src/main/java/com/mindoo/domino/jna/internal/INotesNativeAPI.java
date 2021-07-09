@@ -1,5 +1,10 @@
 package com.mindoo.domino.jna.internal;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
@@ -20,6 +25,12 @@ import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 public interface INotesNativeAPI extends Library {
+	@Target(value = ElementType.METHOD)
+	@Retention(value = RetentionPolicy.RUNTIME)
+	@interface NativeFunctionName {
+	    String name() default "";
+	}
+
 	short NotesInitExtended(int argc, Memory argvPtr);
 	void NotesTerm();
 
@@ -203,8 +214,20 @@ public interface INotesNativeAPI extends Library {
 			ReplExtensionsStruct ExtendedOptions,
 			ReplServStatsStruct retStats);
 
-	NotesCallbacks.OSSIGPROC OSGetSignalHandler(short signalHandlerID);
-	NotesCallbacks.OSSIGPROC OSSetSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGPROC routine);
+	@NativeFunctionName(name="OSGetSignalHandler")
+	public NotesCallbacks.OSSIGBREAKPROC OSGetBreakSignalHandler(short signalHandlerID);
+	@NativeFunctionName(name="OSSetSignalHandler")
+	public NotesCallbacks.OSSIGBREAKPROC OSSetBreakSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGBREAKPROC routine);
+
+	@NativeFunctionName(name="OSGetSignalHandler")
+	public NotesCallbacks.OSSIGPROGRESSPROC OSGetProgressSignalHandler(short signalHandlerID);
+	@NativeFunctionName(name="OSSetSignalHandler")
+	public NotesCallbacks.OSSIGPROGRESSPROC OSSetProgressSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGPROGRESSPROC routine);
+
+	@NativeFunctionName(name="OSGetSignalHandler")
+	public NotesCallbacks.OSSIGREPLPROC OSGetReplicationSignalHandler(short signalHandlerID);
+	@NativeFunctionName(name="OSSetSignalHandler")
+	public NotesCallbacks.OSSIGREPLPROC OSSetReplicationSignalHandler(short signalHandlerID, NotesCallbacks.OSSIGREPLPROC routine);
 
 	Pointer OSGetLMBCSCLS();
 

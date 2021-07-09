@@ -74,7 +74,7 @@ public class SignalHandlerUtil {
 	 * @return true if there is an active break handler
 	 */
 	public static boolean hasActiveBreakHandler() {
-		NotesCallbacks.OSSIGBREAKPROC breakProc = (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK);
+		NotesCallbacks.OSSIGBREAKPROC breakProc = (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSGetBreakSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK);
 		return breakProc != null;
 	}
 	
@@ -87,10 +87,10 @@ public class SignalHandlerUtil {
 					@Override
 					public NotesCallbacks.OSSIGBREAKPROC run() throws Exception {
 						if (PlatformUtils.isWin32()) {
-							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProcWin);
+							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetBreakSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProcWin);
 						}
 						else {
-							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProc);
+							return (NotesCallbacks.OSSIGBREAKPROC) NotesNativeAPI.get().OSSetBreakSignalHandler(NotesConstants.OS_SIGNAL_CHECK_BREAK, breakProc);
 						}
 					}
 				});
@@ -279,7 +279,7 @@ public class SignalHandlerUtil {
 
 				@Override
 				public NotesCallbacks.OSSIGPROGRESSPROC run() throws Exception {
-					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, progressProc);
+					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSSetProgressSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, progressProc);
 				}
 			});
 			
@@ -295,11 +295,11 @@ public class SignalHandlerUtil {
 
 				@Override
 				public NotesCallbacks.OSSIGPROGRESSPROC run() throws Exception {
-					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS);
+					return (NotesCallbacks.OSSIGPROGRESSPROC) NotesNativeAPI.get().OSGetProgressSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS);
 				}
 			});
 			if (progressProc.equals(currProc)) {
-				NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, prevProc[0]);
+				NotesNativeAPI.get().OSSetProgressSignalHandler(NotesConstants.OS_SIGNAL_PROGRESS, prevProc[0]);
 			}
 		}
 	}
@@ -497,7 +497,7 @@ public class SignalHandlerUtil {
 
 				@Override
 				public NotesCallbacks.OSSIGREPLPROC run() throws Exception {
-					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_REPL, replProc);
+					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSSetReplicationSignalHandler(NotesConstants.OS_SIGNAL_REPL, replProc);
 				}
 			});
 			T result = callable.call();
@@ -512,11 +512,11 @@ public class SignalHandlerUtil {
 
 				@Override
 				public NotesCallbacks.OSSIGREPLPROC run() throws Exception {
-					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSGetSignalHandler(NotesConstants.OS_SIGNAL_REPL);
+					return (NotesCallbacks.OSSIGREPLPROC) NotesNativeAPI.get().OSGetReplicationSignalHandler(NotesConstants.OS_SIGNAL_REPL);
 				}
 			});
 			if (replProc.equals(currProc)) {
-				NotesNativeAPI.get().OSSetSignalHandler(NotesConstants.OS_SIGNAL_REPL, prevProc[0]);
+				NotesNativeAPI.get().OSSetReplicationSignalHandler(NotesConstants.OS_SIGNAL_REPL, prevProc[0]);
 			}
 		}
 		

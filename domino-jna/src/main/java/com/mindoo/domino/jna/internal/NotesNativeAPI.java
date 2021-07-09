@@ -20,11 +20,14 @@ import java.util.Map;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.UnsupportedPlatformError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.INotesNativeAPI.NativeFunctionName;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Function;
+import com.sun.jna.FunctionMapper;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
+import com.sun.jna.NativeLibrary;
 import com.sun.jna.Structure;
 
 import net.sf.cglib.proxy.Enhancer;
@@ -54,6 +57,20 @@ public class NotesNativeAPI {
 	 */
 	public static Map<String, Object> getLibraryOptions() {
 		return m_libraryOptions==null ? null : Collections.unmodifiableMap(m_libraryOptions);
+	}
+
+	private static class FunctionNameAnnotationMapper implements FunctionMapper {
+	    @Override
+	    public String getFunctionName(NativeLibrary nativeLibrary, Method method) {
+	        NativeFunctionName annotation = method.getAnnotation(NativeFunctionName.class);
+	        // just return the function's name if the annotation is not applied
+	        if (annotation == null) {
+	        	return method.getName();
+	        }
+	        else {
+	        	return annotation.name();
+	        }
+	    }
 	}
 
 	/**
@@ -110,7 +127,8 @@ public class NotesNativeAPI {
 						
 						m_libraryOptions = new HashMap<String, Object>();
 						m_libraryOptions.put(Library.OPTION_CLASSLOADER, NotesNativeAPI.class.getClassLoader());
-						
+						m_libraryOptions.put(Library.OPTION_FUNCTION_MAPPER, new FunctionNameAnnotationMapper());
+
 						if (PlatformUtils.isWin32()) {
 							m_libraryOptions.put(Library.OPTION_CALLING_CONVENTION, Function.ALT_CONVENTION); // set w32 stdcall convention
 						}
