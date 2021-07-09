@@ -869,7 +869,7 @@ public interface INotesNativeAPI64 extends Library {
 	@UndocumentedAPI
 	short CESGetNoSigCTX(LongByReference rethCESCTX);
 	@UndocumentedAPI
-	short CESFreeCTX(long hCESCTX);
+	void CESFreeCTX(long hCESCTX);
 	@UndocumentedAPI
 	short ECLUserTrustSigner ( long hCESCtx, 
 			short ECLType,

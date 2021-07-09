@@ -862,7 +862,7 @@ public interface INotesNativeAPI32 extends Library {
 	@UndocumentedAPI
 	short CESGetNoSigCTX(IntByReference rethCESCTX);
 	@UndocumentedAPI
-	short CESFreeCTX(int hCESCTX);
+	void CESFreeCTX(int hCESCTX);
 	@UndocumentedAPI
 	short ECLUserTrustSigner ( int hCESCtx, 
 			short ECLType,

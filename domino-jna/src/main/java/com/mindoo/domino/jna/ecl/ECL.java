@@ -263,36 +263,56 @@ public class ECL {
 
 		short wCapabilities = ECLCapability.toBitMaskNotExtendedFlags(capabilities);
 		short wCapabilities2 = ECLCapability.toBitMaskExtendedFlags(capabilities);
-		
+
 		short result;
-		
+
 		if (PlatformUtils.is64Bit()) {
+			boolean freeCtx;
 			LongByReference rethCESCTX = new LongByReference();
 			if (note!=null) {
 				result = NotesNativeAPI64.get().CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);
+				freeCtx = true;
 			}
 			else {
 				result = NotesNativeAPI64.get().CESGetNoSigCTX(rethCESCTX);
+				freeCtx = false;
 			}
 			NotesErrorUtils.checkResult(result);				
 
-			result = NotesNativeAPI64.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
-					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
-			NotesErrorUtils.checkResult(result);
+			try {
+				result = NotesNativeAPI64.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+						(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
+				NotesErrorUtils.checkResult(result);
+			}
+			finally {
+				if (freeCtx) {
+					NotesNativeAPI64.get().CESFreeCTX(rethCESCTX.getValue());
+				}
+			}
 		}
 		else {
+			boolean freeCtx;
 			IntByReference rethCESCTX = new IntByReference();
 			if (note!=null) {
 				result = NotesNativeAPI32.get().CESCreateCTXFromNote((int) note.getHandle64(), rethCESCTX);				
+				freeCtx = true;
 			}
 			else {
 				result = NotesNativeAPI32.get().CESGetNoSigCTX(rethCESCTX);
+				freeCtx = false;
 			}
 			NotesErrorUtils.checkResult(result);
 
-			result = NotesNativeAPI32.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
-					(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
-			NotesErrorUtils.checkResult(result);
+			try {
+				result = NotesNativeAPI32.get().ECLUserTrustSigner(rethCESCTX.getValue(), type.getTypeAsShort(),
+						(short) (sessionOnly ? 1 : 0), wCapabilities, wCapabilities2, retwCapabilities, retwCapabilities2);
+				NotesErrorUtils.checkResult(result);
+			}
+			finally {
+				if (freeCtx) {
+					NotesNativeAPI32.get().CESFreeCTX(rethCESCTX.getValue());
+				}
+			}
 		}
 		
 		int retwCapabilitiesAsInt = (int) (retwCapabilities.getValue() & 0xffff);
