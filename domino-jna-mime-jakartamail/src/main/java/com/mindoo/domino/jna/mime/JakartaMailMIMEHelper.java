@@ -3,7 +3,7 @@ package com.mindoo.domino.jna.mime;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -128,7 +128,7 @@ public class JakartaMailMIMEHelper {
 
 			private void flushBuffer() throws IOException {
 				if (bytesInBuffer > 0) {
-					stream.write(buffer, 0, bytesInBuffer);
+					stream.writeFrom(buffer, 0, bytesInBuffer);
 
 					bytesInBuffer = 0;
 				}
@@ -170,8 +170,8 @@ public class JakartaMailMIMEHelper {
 					//use a temp file to not store the MIME content twice in memory (raw + parsed)
 					tmpFile = File.createTempFile("dominojna_mime_", ".tmp");
 					
-					try (FileWriter writer = new FileWriter(tmpFile)) {
-						stream.read(writer);
+					try (FileOutputStream out = new FileOutputStream(tmpFile)) {
+						stream.readInto(out);
 					}
 					
 					try (FileInputStream fIn = new FileInputStream(tmpFile);

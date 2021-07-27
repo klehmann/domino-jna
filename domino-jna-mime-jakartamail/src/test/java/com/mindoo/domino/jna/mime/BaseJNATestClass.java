@@ -27,11 +27,16 @@ import org.junit.BeforeClass;
 
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesDatabase.Encryption;
 import com.mindoo.domino.jna.NotesViewEntryData;
+import com.mindoo.domino.jna.constants.AclLevel;
+import com.mindoo.domino.jna.constants.CreateDatabase;
+import com.mindoo.domino.jna.constants.DBClass;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
 
 import lotus.domino.Database;
@@ -497,4 +502,30 @@ public class BaseJNATestClass {
 		public T call(Session session) throws Exception;
 
 	}
+	
+
+	@FunctionalInterface
+	public interface DatabaseConsumer {
+		public void accept(NotesDatabase db) throws Exception;
+	}
+	
+	public void withTempDb(DatabaseConsumer consumer) throws Exception {
+		File tmpFile = File.createTempFile("jnatmp_", ".nsf");
+		String tmpFilePath = tmpFile.getAbsolutePath();
+		tmpFile.delete();
+		
+		NotesDatabase.createDatabase("", tmpFilePath, DBClass.V10NOTEFILE, true,
+				EnumSet.of(CreateDatabase.LARGE_UNKTABLE), Encryption.None, 0, "Temp Db", 
+				AclLevel.MANAGER, IDUtils.getIdUsername(), true);
+		
+		NotesDatabase db = new NotesDatabase("", tmpFilePath, "");
+		try {
+			consumer.accept(db);
+		}
+		finally {
+			db.recycle();
+			NotesDatabase.deleteDatabase("", tmpFilePath);
+		}
+	}
+
 }

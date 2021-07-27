@@ -11,4 +11,6 @@ public interface IMimeAttachment {
 	
 	public InputStream getInputStream() throws IOException;
 	
+	public long getFileSize() throws IOException;
+	
 }

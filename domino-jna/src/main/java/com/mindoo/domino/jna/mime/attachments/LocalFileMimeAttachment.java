@@ -45,4 +45,9 @@ public class LocalFileMimeAttachment implements IMimeAttachment {
 		return Files.newInputStream(m_filePathOnDisk);
 	}
 
+	@Override
+	public long getFileSize() throws IOException {
+		return Files.size(m_filePathOnDisk);
+	}
+
 }

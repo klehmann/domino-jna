@@ -49,4 +49,14 @@ public class JavaxMailMimeBodyPartAttachment implements IMimeAttachment {
 		}
 	}
 
+
+	@Override
+	public long getFileSize() throws IOException {
+		try {
+			return m_bodyPart.getSize();
+		} catch (MessagingException e) {
+			throw new IOException("Error accessing MIME body part", e);
+		}
+	}
+	
 }

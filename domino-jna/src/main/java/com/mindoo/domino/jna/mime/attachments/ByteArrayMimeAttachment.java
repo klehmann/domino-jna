@@ -40,4 +40,9 @@ public class ByteArrayMimeAttachment implements IMimeAttachment {
 		return new ByteArrayInputStream(m_data);
 	}
 
+	@Override
+	public long getFileSize() throws IOException {
+		return m_data.length;
+	}
+
 }

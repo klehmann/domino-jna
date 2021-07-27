@@ -15,7 +15,8 @@ public class UrlMimeAttachment implements IMimeAttachment {
 	private URL m_url;
 	private String m_fileName;
 	private String m_contentType;
-
+	private Long m_fileSize;
+	
 	/**
 	 * Creates a new instance
 	 * 
@@ -104,4 +105,13 @@ public class UrlMimeAttachment implements IMimeAttachment {
 		return m_url.openStream();
 	}
 
+	@Override
+	public long getFileSize() throws IOException {
+		if (m_fileSize==null) {
+			URLConnection conn = m_url.openConnection();
+			m_fileSize = Long.parseLong(conn.getHeaderField("content-length"));
+		}
+		return m_fileSize;
+	}
+	
 }

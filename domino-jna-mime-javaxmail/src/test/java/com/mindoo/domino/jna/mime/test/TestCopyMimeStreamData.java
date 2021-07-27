@@ -1,7 +1,10 @@
 package com.mindoo.domino.jna.mime.test;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.net.URL;
 import java.util.EnumSet;
@@ -88,15 +91,17 @@ public class TestCopyMimeStreamData extends BaseJNATestClass {
 				
 				
 				//now compare the RAW MIME content of both documents
-				String mimeContentOrig = getMimeDataAsString(mailNoteOrig, "body");
-				String mimeContentCopy = getMimeDataAsString(mailNoteCopy, "body");
+				ByteArrayOutputStream outOrig = new ByteArrayOutputStream();
+				readMimeData(mailNoteOrig, "body", outOrig);
+				ByteArrayOutputStream outCopy = new ByteArrayOutputStream();
+				readMimeData(mailNoteCopy, "body", outCopy);
 
+				byte[] origArr = outOrig.toByteArray();
+				byte[] copyArr = outCopy.toByteArray();
+				
 				//and test if both MIME structures are equal
 
-				// small tweak: replacing \r here to string comparison, because the javax mail API uses
-				// CRLF as line delimiter which somehow seems to gets lost during our
-				// LMBCS-Java text conversion on non-Windows platforms
-				Assert.assertEquals(mimeContentOrig.replace("\r", ""), mimeContentCopy.replace("\r", ""));
+				Assert.assertArrayEquals(origArr, copyArr);
 
 //				mailNoteOrig.update();
 //				mailNoteCopy.update();
@@ -113,23 +118,19 @@ public class TestCopyMimeStreamData extends BaseJNATestClass {
 	 * 
 	 * @param note note
 	 * @param itemName mime item name
-	 * @return mime data as string
+	 * @param out stream to receive binary MIME stream data
 	 * @throws IOException
 	 */
-	private String getMimeDataAsString(NotesNote note, String itemName) throws IOException {
-		StringBuilder mimeContentSB = new StringBuilder();
-
-		try (Reader reader = MIMEStream.getMIMEReader(note, itemName, 
+	private void readMimeData(NotesNote note, String itemName, OutputStream out) throws IOException {
+		try (InputStream in = MIMEStream.getMIMEAsInputStream(note, itemName, 
 				EnumSet.of(MimeStreamOpenOptions.MIME_INCLUDE_HEADERS))) {
-			char[] buffer = new char[16384];
+			byte[] buffer = new byte[16384];
 			int len;
 
-			while ((len = reader.read(buffer)) > 0) {
-				mimeContentSB.append(buffer, 0, len);
+			while ((len = in.read(buffer)) > 0) {
+				out.write(buffer, 0, len);
 			}
 		}
-
-		return mimeContentSB.toString();
 	}
 	
 	/**
@@ -156,18 +157,15 @@ public class TestCopyMimeStreamData extends BaseJNATestClass {
 //		}
 		
 		//our alternative approach for Domino JNA < 0.9.42 using raw byte arrays
-		try (BufferedReader reader = new BufferedReader(MIMEStream.getMIMEReader(sourceNote, sourceItemName,
-						EnumSet.of(MimeStreamOpenOptions.MIME_INCLUDE_HEADERS)))) {
+		try (InputStream in = MIMEStream.getMIMEAsInputStream(sourceNote, sourceItemName,
+						EnumSet.of(MimeStreamOpenOptions.MIME_INCLUDE_HEADERS))) {
 			
 			MIMEStream mimeStream = MIMEStream.newStreamForWrite(targetNote, targetItemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 			
-			String line;
-			while ((line = reader.readLine()) != null) {
-				line += "\r\n";
-				
-				Memory lineLMBCS = NotesStringUtils.toLMBCS(line, false, false);
-				byte[] lineLMBCSArr = lineLMBCS.getByteArray(0, (int) lineLMBCS.size());
-				mimeStream.write(lineLMBCSArr, 0, lineLMBCSArr.length);
+			byte[] buf = new byte[16384];
+			int len;
+			while ((len = in.read(buf)) >0) {
+				mimeStream.writeFrom(buf, 0, len);
 			}
 			
 			mimeStream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY));
