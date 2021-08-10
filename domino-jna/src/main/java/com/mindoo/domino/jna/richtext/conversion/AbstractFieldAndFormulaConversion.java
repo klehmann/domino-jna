@@ -326,7 +326,7 @@ public abstract class AbstractFieldAndFormulaConversion implements IRichTextConv
 						fieldDesc = replaceAllMatchesInFieldDescription(origFieldName, fieldDesc);
 					}
 
-					if (!StringUtil.isEmpty(itFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.DEFAULTVALUE, defaultValueFormula)) {
+					if (!StringUtil.isEmpty(defaultValueFormula) && fieldFormulaContainsMatch(origFieldName, FormulaType.DEFAULTVALUE, defaultValueFormula)) {
 						hasMatch = true;
 						defaultValueFormula = replaceAllMatchesInFieldFormula(origFieldName, FormulaType.DEFAULTVALUE, defaultValueFormula);
 					}
