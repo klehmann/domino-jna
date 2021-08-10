@@ -1,7 +1,8 @@
 package com.mindoo.domino.jna.mime;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.EnumSet;
@@ -44,8 +45,8 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * @param itemName item name
 	 * @return reader
 	 */
-	public static Reader getMIMEReader(NotesNote note, String itemName) {
-		return getMIMEReader(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
+	public static InputStream getMIMEAsInputStream(NotesNote note, String itemName) {
+		return getMIMEAsInputStream(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 	}
 
 	/**
@@ -56,9 +57,10 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * @param flags open flags (e.g. whether to include RFC822 and headers)
 	 * @return reader
 	 */
-	public static Reader getMIMEReader(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
+	public static InputStream getMIMEAsInputStream(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
 		MIMEStream stream = newStreamForRead(note, itemName, flags);
-		return new MIMEStreamReader(stream, 2000);
+//		return new MIMEStreamAsInputStream(stream, 2000);
+		return new MIMEStreamAsInputStream(stream, 3000000);
 	}
 
 	/**
@@ -136,7 +138,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * @param itemizeFlags used to select which data should be written (MIME headers, body or both)
 	 * @throws IOException in case of I/O errors writing MIME
 	 */
-	public static void writeRawMIME(NotesNote note, String itemName, Reader reader,
+	public static void writeRawMIME(NotesNote note, String itemName, InputStream in,
 			EnumSet<MimeStreamItemizeOptions> itemizeFlags) throws IOException {
 		
 		if ("$file".equalsIgnoreCase(itemName)) {
@@ -154,7 +156,12 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 			NotesNote tmpNote = note.getParent().createNote();
 			MIMEStream stream = newStreamForWrite(tmpNote, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 			try {
-				stream.write(reader);
+				byte[] buf = new byte[16384];
+				int len;
+				while ((len = in.read(buf))>0) {
+					stream.writeFrom(buf, 0, len);
+				}
+				
 				//use both ITEMIZE_BODY and ITEMIZE_HEADERS,
 				//otherwise we end up having To: , Subject: etc. in the first Body item
 				stream.itemize(EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY, MimeStreamItemizeOptions.ITEMIZE_HEADERS));
@@ -182,7 +189,12 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 		else {
 			MIMEStream stream = newStreamForWrite(note, itemName, EnumSet.noneOf(MimeStreamOpenOptions.class));
 			try {
-				stream.write(reader);
+				byte[] buf = new byte[16384];
+				int len;
+				
+				while ((len = stream.readInto(buf)) > 0) {
+					stream.writeFrom(buf, 0, len);
+				}
 				stream.itemize(itemizeFlags);
 			}
 			finally {
@@ -197,14 +209,14 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * 
 	 * @param note note
 	 * @param itemName item that contains the MIME data
-	 * @param writer writer to receive the MIME data
+	 * @param out strea, to receive the MIME data
 	 * @param openFlags specifies whether MIME headers or RFC822 items should be exported or just the content of <code>itemName</code>
 	 * @throws IOException in case of I/O errors
 	 */
-	public static void readRawMIME(NotesNote note, String itemName, Writer writer, EnumSet<MimeStreamOpenOptions> openFlags) throws IOException {
+	public static void readRawMIME(NotesNote note, String itemName, OutputStream out, EnumSet<MimeStreamOpenOptions> openFlags) throws IOException {
 		MIMEStream stream = newStreamForRead(note, itemName, openFlags);
 		try {
-			stream.read(writer);
+			stream.readInto(out);
 		}
 		finally {
 			stream.recycle();
@@ -333,95 +345,47 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	}
 
 	/**
-	 * Reads a single line from the input MIME stream.
+	 * This function copies the MIME stream content into a {@link OutputStream}.
 	 * 
-	 * @param target {@link Appendable} to receive the line
-	 * @return true if End Of Stream, false otherwise
+	 * @param out stream to receive the MIME stream data
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public MimeStreamResult readLine(Appendable target) throws IOException {
-		checkRecycled();
-
-		DisposableMemory retLine = new DisposableMemory(400);
-		try {
-			if (PlatformUtils.is64Bit()) {
-				int resultAsInt = NotesNativeAPI64.get().MIMEStreamGetLine(retLine, (int) retLine.size(), m_hMIMEStream);
-				MimeStreamResult result = toStreamResult(resultAsInt);
-				
-				String line = NotesStringUtils.fromLMBCS(retLine, -1);
-				target.append(line);
-				
-				return result;
-			}
-			else {
-				int resultAsInt = NotesNativeAPI32.get().MIMEStreamGetLine(retLine, (int) retLine.size(), m_hMIMEStream);
-				MimeStreamResult result = toStreamResult(resultAsInt);
-				
-				String line = NotesStringUtils.fromLMBCS(retLine, -1);
-				target.append(line);
-				
-				return result;
-			}
-		}
-		finally {
-			retLine.dispose();
-		}
-	}
-
-	/**
-	 * This function copies the MIME stream content into a {@link Writer}.
-	 * 
-	 * @param writer writer to receive the MIME stream data
-	 * @throws IOException in case of MIME stream I/O errors
-	 */
-	public void read(Writer writer) throws IOException {
+	public void readInto(OutputStream out) throws IOException {
 		checkRecycled();
 		
 		int MAX_BUFFER_SIZE = 60000;
-		DisposableMemory pchData = new DisposableMemory(MAX_BUFFER_SIZE);
-		try {
-			IntByReference puiDataLen = new IntByReference();
-
-			MimeStreamResult result = null;
-			while (result != MimeStreamResult.EOS) {
-				result = toStreamResult(NotesNativeAPI.get().MIMEStreamRead(pchData,
-						puiDataLen, MAX_BUFFER_SIZE, m_hMIMEStream));
-				int len = puiDataLen.getValue();
-				if (len > 0) {
-					String txt = NotesStringUtils.fromLMBCS(pchData, len);
-					writer.write(txt);
-				}
-				else {
-					return;
-				}
-			}
+		byte[] buf = new byte[MAX_BUFFER_SIZE];
+		int len;
+		
+		while ((len = readInto(buf))> 0) {
+			out.write(buf, 0, len);
 		}
-		finally {
-			pchData.dispose();
-		}
+		
+		out.flush();
 	}
-
+	
 	/**
 	 * This function copies the MIME stream content into a {@link Writer}.
 	 * 
-	 * @param appendable appendable to receive the MIME stream data
+	 * @param buffer buffer to receive the MIME stream data
 	 * @param maxBufferSize max characters to read from the stream into the appendable
 	 * @return number of bytes read or -1 for EOF
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public int read(Appendable appendable, int maxBufferSize) throws IOException {
+	public int readInto(byte[] buffer) throws IOException {
 		checkRecycled();
 		
+		int maxBufferSize = buffer.length;
 		DisposableMemory pchData = new DisposableMemory(maxBufferSize);
 		try {
 			IntByReference puiDataLen = new IntByReference();
-
+			puiDataLen.setValue(0);
 			MimeStreamResult result = toStreamResult(NotesNativeAPI.get().MIMEStreamRead(pchData,
 					puiDataLen, maxBufferSize, m_hMIMEStream));
+
 			int len = puiDataLen.getValue();
 			if (len > 0) {
-				String txt = NotesStringUtils.fromLMBCS(pchData, len);
-				appendable.append(txt);
+				pchData.read(0, buffer, 0, len);
 				return len;
 			}
 			else {
@@ -432,7 +396,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 			pchData.dispose();
 		}
 	}
-	
+
 	/**
 	 * This function parses the MIME stream content to create a Notes/Domino MIME format document.<br>
 	 * <br>
@@ -482,37 +446,26 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 		}
 		return this;
 	}
-
+	
 	/**
-	 * This function writes a buffer to the input MIME stream.
+	 * Writes all content of an {@link InputStream} to the stream
 	 * 
-	 * @param reader reader to get the MIME stream data
+	 * @param in stream
 	 * @return this instance
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public MIMEStream write(Reader reader) throws IOException {
-		checkRecycled();
-		
-		BufferedReader bufReader = new BufferedReader(reader);
-		
-		String line;
-
-		//read line by line, because MIMEStreamWrite does not like to receive partial data
-		while ((line = bufReader.readLine())!=null) {
-			line = line + "\n";
-			Memory lineMem = NotesStringUtils.toLMBCS(line, false, false);
-			
-			int resultAsInt = NotesNativeAPI.get().MIMEStreamWrite(lineMem, (short) (lineMem.size() & 0xffff), m_hMIMEStream);
-			
-			if (resultAsInt == NotesConstants.MIME_STREAM_IO) {
-				throw new IOException("I/O error received during MIME stream operation");
-			}
+	public MIMEStream writeFrom(InputStream in) throws IOException {
+		byte[] buf = new byte[16384];
+		int len;
+		while ((len = in.read(buf))>0) {
+			writeFrom(buf, 0, len);
 		}
+		
 		return this;
 	}
 	
 	/**
-	 * Writes a byte buffer to the stream
+	 * Writes a byte buffer to the MIME stream
 	 * 
 	 * @param buffer byte buffer to write
 	 * @param offset start offset of data to write
@@ -520,7 +473,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * @return this instance
 	 * @throws IOException in case of MIME stream I/O errors
 	 */
-	public MIMEStream write(byte[] buffer, int offset, int length) throws IOException {
+	public MIMEStream writeFrom(byte[] buffer, int offset, int length) throws IOException {
 		checkRecycled();
 		
 		if (length>0) {
@@ -556,14 +509,15 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	}
 
 	/**
-	 * Adapter between {@link MIMEStream} and {@link Reader}
+	 * Adapter between {@link MIMEStream} and {@link InputStream}
 
 	 * @author Karsten Lehmann
 	 */
-	private static class MIMEStreamReader extends Reader {
+	private static class MIMEStreamAsInputStream extends InputStream {
 		private MIMEStream m_mimeStream;
-		private int m_bufSize;
-		private StringBuilder m_buffer;
+		private byte[] m_buffer;
+		private int m_bufferPos;
+		private int m_leftInBuffer;
 		
 		/**
 		 * Creates a new instance
@@ -571,52 +525,66 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 		 * @param mimeStream MIME stream to read from
 		 * @param bufSize size of internal load buffer
 		 */
-		public MIMEStreamReader(MIMEStream mimeStream, int bufSize) {
+		public MIMEStreamAsInputStream(MIMEStream mimeStream, int bufSize) {
 			m_mimeStream = mimeStream;
-			m_bufSize = bufSize;
-			m_buffer = new StringBuilder();
+			if (bufSize <=0) {
+				throw new IllegalArgumentException("Invalid buffer size: "+bufSize);
+			}
+			m_buffer = new byte[bufSize];
 		}
 
-		/**
-		 * Reads one character from the buffer
-		 * 
-		 * @return character or -1 for end of stream
-		 * @throws IOException
-		 */
-		public int readFromBuffer() throws IOException {
-			if (m_buffer.length() == 0) {
-				int read = m_mimeStream.read(m_buffer, m_bufSize);
-				if (read==-1 || m_buffer.length()==0) {
-					return -1;
-				}
-			}
-			
-			char c = m_buffer.charAt(0);
-			m_buffer.deleteCharAt(0);
-			return c;
+		@Override
+		public int read(byte[] b) throws IOException {
+			 return read(b, 0, b.length);
 		}
 		
 		@Override
-		public int read(char[] cbuf, int off, int len) throws IOException {
-			for (int i=0; i<len; i++) {
-				int c = readFromBuffer();
-				
-				if (c==-1) {
-					if (i==0) {
-						return -1;
-					}
-					else {
-						return i;
-					}
+		public int read(byte[] b, int off, int len) throws IOException {
+			if (b == null) {
+	            throw new NullPointerException();
+	        } else if (off < 0 || len < 0 || len > b.length - off) {
+	            throw new IndexOutOfBoundsException();
+	        } else if (len == 0) {
+	            return 0;
+	        }
+
+	        int c = read();
+	        if (c == -1) {
+	            return -1;
+	        }
+	        b[off] = (byte)c;
+
+	        int i = 1;
+	        try {
+	            for (; i < len ; i++) {
+	                c = read();
+	                if (c == -1) {
+	                    break;
+	                }
+	                b[off + i] = (byte)c;
+	            }
+	        } catch (IOException ee) {
+	        }
+	        return i;
+		}
+		
+		@Override
+		public int read() throws IOException {
+			if (m_leftInBuffer == 0) {
+				//end reached, read more data
+				int read = m_mimeStream.readInto(m_buffer);
+				if (read==-1 || read==0) {
+					return -1;
 				}
-				else {
-					cbuf[off + i] = (char) c;
-				}
+				m_leftInBuffer = read;
+				m_bufferPos = 0;
 			}
 			
-			return len;
+			byte b = m_buffer[m_bufferPos++];
+			m_leftInBuffer--;
+			return (int) (b & 0xff);
 		}
-
+		
 		@Override
 		public void close() throws IOException {
 			m_mimeStream.close();
