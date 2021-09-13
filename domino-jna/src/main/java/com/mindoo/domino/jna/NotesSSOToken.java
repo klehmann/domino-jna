@@ -59,20 +59,42 @@ public class NotesSSOToken {
 	 * @return cookie strings
 	 */
 	public List<String> toHTTPCookieStrings() {
+		return toHTTPCookieStrings(m_secureOnly, false);
+	}
+	
+	/**
+	 * Produces a string to be used for the "LtpaToken" cookie for
+	 * every domain
+	 * 
+	 * @param secureOnly true for secure cookie
+	 * @param httpOnly true for http only cookie
+	 * @return cookie strings
+	 */
+	public List<String> toHTTPCookieStrings(boolean secureOnly, boolean httpOnly) {
 		final String DOMAIN_STRING = ";Domain=";
 		final String PATH_STRING = ";Path=/";
+		final String HTTP_ONLY = ";HttpOnly";
 		final String SECURE_ONLY = ";Secure";
 		
 		List<String> cookieStrings = new ArrayList<String>();
 		
 		StringBuilder sb = new StringBuilder();
 		
+		//Set-Cookie: CookieName=Value; path=/; HttpOnly; Secure
+		
 		for (String currDomain : m_domains) {
 			sb.append(m_data);
+			
 			sb.append(DOMAIN_STRING);
 			sb.append(currDomain);
+			
 			sb.append(PATH_STRING);
-			if (m_secureOnly) {
+			
+			if (httpOnly) {
+				sb.append(HTTP_ONLY);
+			}
+			
+			if (secureOnly) {
 				sb.append(SECURE_ONLY);
 			}
 			
