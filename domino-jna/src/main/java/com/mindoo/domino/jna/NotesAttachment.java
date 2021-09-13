@@ -10,13 +10,17 @@ import com.mindoo.domino.jna.constants.Compression;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
@@ -157,78 +161,41 @@ public class NotesAttachment {
 		
 		int currOffset = offset;
 		
-		if (PlatformUtils.is64Bit()) {
-			while (true) {
-				int bytesToRead;
-				if ((currOffset+bufferSize) < m_fileSize) {
-					bytesToRead = bufferSize;
-				}
-				else {
-					bytesToRead = m_fileSize - currOffset;
-				}
-				if (bytesToRead<=0) {
-					//we're done
+
+		while (true) {
+			int bytesToRead;
+			if ((currOffset+bufferSize) < m_fileSize) {
+				bytesToRead = bufferSize;
+			}
+			else {
+				bytesToRead = m_fileSize - currOffset;
+			}
+			if (bytesToRead<=0) {
+				//we're done
+				break;
+			}
+			
+			DHANDLE.ByReference rethBuffer = DHANDLE.newInstanceByReference();
+			HANDLE.ByValue hDbByVal = m_parentNote.getParent().getHandle().getByValue();
+			
+			short result = NotesNativeAPI.get().NSFDbReadObject(hDbByVal, m_rrv, currOffset, bytesToRead, rethBuffer);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer ptr = Mem.OSLockObject(rethBuffer.getByValue());
+			try {
+				byte[] buffer = ptr.getByteArray(0, bytesToRead);
+				Action action = callback.read(buffer);
+				if (action==Action.Stop) {
 					break;
 				}
-				
-				LongByReference rethBuffer = new LongByReference();
-				
-				short result = NotesNativeAPI64.get().NSFDbReadObject(m_parentNote.getParent().getHandle64(), m_rrv, currOffset, bytesToRead, rethBuffer);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer ptr = Mem64.OSLockObject(rethBuffer.getValue());
-				try {
-					byte[] buffer = ptr.getByteArray(0, bytesToRead);
-					Action action = callback.read(buffer);
-					if (action==Action.Stop) {
-						break;
-					}
-				}
-				finally {
-					Mem64.OSUnlockObject(rethBuffer.getValue());
-					result = Mem64.OSMemFree(rethBuffer.getValue());
-					NotesErrorUtils.checkResult(result);
-				}
-				
-				currOffset += bytesToRead;
 			}
-		}
-		else {
-			while (true) {
-				int bytesToRead;
-				if ((offset+bufferSize) < m_fileSize) {
-					bytesToRead = bufferSize;
-				}
-				else {
-					bytesToRead = m_fileSize - currOffset;
-				}
-				
-				if (bytesToRead<=0) {
-					//we're done
-					break;
-				}
-				
-				IntByReference rethBuffer = new IntByReference();
-				
-				short result = NotesNativeAPI32.get().NSFDbReadObject(m_parentNote.getParent().getHandle32(), m_rrv, currOffset, bytesToRead, rethBuffer);
+			finally {
+				Mem.OSUnlockObject(rethBuffer.getByValue());
+				result = Mem.OSMemFree(rethBuffer.getByValue());
 				NotesErrorUtils.checkResult(result);
-				
-				Pointer ptr = Mem32.OSLockObject(rethBuffer.getValue());
-				try {
-					byte[] buffer = ptr.getByteArray(0, bytesToRead);
-					Action action = callback.read(buffer);
-					if (action==Action.Stop) {
-						break;
-					}
-				}
-				finally {
-					Mem32.OSUnlockObject(rethBuffer.getValue());
-					result = Mem32.OSMemFree(rethBuffer.getValue());
-					NotesErrorUtils.checkResult(result);
-				}
-				
-				currOffset += bytesToRead;
 			}
+			
+			currOffset += bytesToRead;
 		}
 	}
 	

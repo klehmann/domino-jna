@@ -560,39 +560,7 @@ public interface INotesNativeAPI64 extends Library {
 	void NSFDbAccessGet(long hDB, ShortByReference retAccessLevel, ShortByReference retAccessFlag);
 	short NSFDbGetBuildVersion(long hDB, ShortByReference retVersion);
 	short NSFDbGetMajMinVersion(long hDb, NotesBuildVersionStruct retBuildVersion);
-	short NSFDbReadObject(
-			long hDB,
-			int ObjectID,
-			int Offset,
-			int Length,
-			LongByReference rethBuffer);
-
-	short NSFDbAllocObject(
-			long hDB,
-			int dwSize,
-			short Class,
-			short Privileges,
-			IntByReference retObjectID);
 	
-	short NSFDbAllocObjectExtended2(long cDB,
-			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
-
-	short NSFDbWriteObject(
-			long hDB,
-			int ObjectID,
-			long hBuffer,
-			int Offset,
-			int Length);
-	
-	short NSFDbFreeObject(
-			long hDB,
-			int ObjectID);
-	
-	short NSFDbReallocObject(
-			long hDB,
-			int ObjectID,
-			int NewSize);
-
 	short NSFItemAppendObject(
 			long hNote,
 			short ItemFlags,
