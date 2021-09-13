@@ -3,6 +3,8 @@ package com.mindoo.domino.jna.mime.internal;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -66,53 +68,58 @@ public class JakartaMailMimeDataAccessService implements IMimeDataAccessService 
 
 	@Override
 	public void setMimeData(NotesNote note, String itemName, MIMEData mimeData) {
-		String html = mimeData.getHtml();
-		String text = mimeData.getPlainText();
+		//run in AccessController block to fix error
+		//java.util.MissingResourceException: Can't find resource for bundle java.util.PropertyResourceBundle, key access_properties_not_allowed
+		//caused by javax.mail.internet.InternetAddress reading system properties internally
+		AccessController.doPrivileged((PrivilegedAction<Object>) ()->{
+			String html = mimeData.getHtml();
+			String text = mimeData.getPlainText();
 
-		try {
-			HtmlEmail mail = new HtmlEmail();
+			try {
+				HtmlEmail mail = new HtmlEmail();
 
-			//add some required fields required by Apache Commons Email (will not be written to the doc)
-			mail.setFrom("mr.sender@acme.com", "Mr. Sender");
-			mail.addTo("mr.receiver@acme.com", "Mr. Receiver");
-			mail.setHostName("acme.com");
+				//add some required fields required by Apache Commons Email (will not be written to the doc)
+				mail.setFrom("mr.sender@acme.com", "Mr. Sender");
+				mail.addTo("mr.receiver@acme.com", "Mr. Receiver");
+				mail.setHostName("acme.com");
 
-			mail.setCharset("UTF-8");
+				mail.setCharset("UTF-8");
 
-			//add embeds
-			for (String currCID : mimeData.getContentIds()) {
-				IMimeAttachment currAtt = mimeData.getEmbed(currCID);
+				//add embeds
+				for (String currCID : mimeData.getContentIds()) {
+					IMimeAttachment currAtt = mimeData.getEmbed(currCID);
+					
+					MimeAttachmentDataSource dataSource = new MimeAttachmentDataSource(currAtt);
+					mail.embed(dataSource, currAtt.getFileName(), currCID);
+				}
 				
-				MimeAttachmentDataSource dataSource = new MimeAttachmentDataSource(currAtt);
-				mail.embed(dataSource, currAtt.getFileName(), currCID);
+				//add attachments
+				for (IMimeAttachment currAtt : mimeData.getAttachments()) {
+					MimeAttachmentDataSource dataSource = new MimeAttachmentDataSource(currAtt);
+
+					mail.attach(dataSource, currAtt.getFileName(), null, EmailAttachment.ATTACHMENT);
+				}
+
+				if (!StringUtil.isEmpty(text)) {
+					mail.setTextMsg(text);
+				}
+				mail.setHtmlMsg(html);
+
+				mail.buildMimeMessage();
+				MimeMessage mimeMsg = mail.getMimeMessage();
+
+				while (note.hasItem(itemName)) {
+					note.removeItem(itemName);
+				}
+
+				JakartaMailMIMEHelper.writeMIMEMessage(note, itemName, mimeMsg, EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY));
+				return null;
+			} catch (EmailException | IOException | MessagingException e) {
+				NotesDatabase db = note.getParent();
+				throw new NotesError(0, "Error writing MIME content to item "+itemName+" of document with UNID "+
+						note.getUNID()+" of database "+db.getServer()+"!!"+db.getRelativeFilePath(), e);
 			}
-			
-			//add attachments
-			for (IMimeAttachment currAtt : mimeData.getAttachments()) {
-				MimeAttachmentDataSource dataSource = new MimeAttachmentDataSource(currAtt);
-
-				mail.attach(dataSource, currAtt.getFileName(), null, EmailAttachment.ATTACHMENT);
-			}
-
-			if (!StringUtil.isEmpty(text)) {
-				mail.setTextMsg(text);
-			}
-			mail.setHtmlMsg(html);
-
-			mail.buildMimeMessage();
-			MimeMessage mimeMsg = mail.getMimeMessage();
-
-			while (note.hasItem(itemName)) {
-				note.removeItem(itemName);
-			}
-
-			JakartaMailMIMEHelper.writeMIMEMessage(note, itemName, mimeMsg, EnumSet.of(MimeStreamItemizeOptions.ITEMIZE_BODY));
-
-		} catch (EmailException | IOException | MessagingException e) {
-			NotesDatabase db = note.getParent();
-			throw new NotesError(0, "Error writing MIME content to item "+itemName+" of document with UNID "+
-					note.getUNID()+" of database "+db.getServer()+"!!"+db.getRelativeFilePath(), e);
-		}
+		});
 	}
 
 	/**
