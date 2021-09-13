@@ -100,7 +100,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 
 	/**
 	 * Creates a MIME stream. Use {@link #putLine(String)}
-	 * or {@link #write(Reader)} to specify the MIME data to be written, then
+	 * or {@link #writeFrom(InputStream)} to specify the MIME data to be written, then
 	 * call {@link #itemize(EnumSet)} to write the data to the document.
 	 * 
 	 * @param note note
@@ -113,7 +113,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 
 	/**
 	 * Creates a MIME stream. Use {@link #putLine(String)}
-	 * or {@link #write(Reader)} to specify the MIME data to be written, then
+	 * or {@link #writeFrom(InputStream)} to specify the MIME data to be written, then
 	 * call {@link #itemize(EnumSet)} to write the data to the document.
 	 * 
 	 * @param note note
@@ -134,7 +134,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * 
 	 * @param note note to write MIME
 	 * @param itemName name of item to write MIME content (e.g. "body")
-	 * @param reader reader used to read MIME content
+	 * @param in stream used to read MIME content
 	 * @param itemizeFlags used to select which data should be written (MIME headers, body or both)
 	 * @throws IOException in case of I/O errors writing MIME
 	 */
@@ -368,7 +368,6 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 * This function copies the MIME stream content into a {@link Writer}.
 	 * 
 	 * @param buffer buffer to receive the MIME stream data
-	 * @param maxBufferSize max characters to read from the stream into the appendable
 	 * @return number of bytes read or -1 for EOF
 	 * @throws IOException in case of MIME stream I/O errors
 	 */

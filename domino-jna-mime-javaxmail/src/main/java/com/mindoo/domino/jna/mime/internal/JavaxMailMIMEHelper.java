@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.Writer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
@@ -147,7 +146,7 @@ public class JavaxMailMIMEHelper {
 	/**
 	 * Reads the MIME content of a {@link NotesNote} and parses it as {@link MimeMessage}.<br>
 	 * Please make sure to have sufficient memory so that the MIME data can fit into the Java heap.
-	 * Otherwise use {@link MIMEStream#readRawMIME(NotesNote, String, Writer, EnumSet)} instead which
+	 * Otherwise use {@link MIMEStream#readRawMIME(NotesNote, String, OutputStream, EnumSet)} instead which
 	 * allows streaming of the data.
 	 * 
 	 * @param note note with MIME data
