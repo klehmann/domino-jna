@@ -6,6 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -549,4 +550,46 @@ public interface INotesNativeAPI extends Library {
 			NotesSSOTokenInfoDescStruct.ByReference pInfo,
 			boolean bFreeAll,
 			int dwRequestedInfoFlags);
+	
+	short NSFDbAllocObject(
+			HANDLE.ByValue hDB,
+			int dwSize,
+			short Class,
+			short Privileges,
+			IntByReference retObjectID);
+
+	short NSFDbAllocObjectExtended2(HANDLE.ByValue cDB,
+			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
+
+	short NSFDbReadObject(
+			HANDLE.ByValue hDB,
+			int ObjectID,
+			int Offset,
+			int Length,
+			DHANDLE.ByReference rethBuffer);
+
+	short NSFDbWriteObject(
+			HANDLE.ByValue hDB,
+			int ObjectID,
+			DHANDLE.ByValue hBuffer,
+			int Offset,
+			int Length);
+	
+	short NSFDbFreeObject(
+			HANDLE.ByValue hDB,
+			int ObjectID);
+
+	short NSFDbReallocObject(
+			HANDLE.ByValue hDB,
+			int objectID,
+			int newSize);
+	
+	short NSFDbGetObjectSize(
+			HANDLE.ByValue hDB,
+			int ObjectID,
+			short ObjectType,
+			IntByReference retSize,
+			ShortByReference retClass,
+			ShortByReference retPrivileges);
+
 }
