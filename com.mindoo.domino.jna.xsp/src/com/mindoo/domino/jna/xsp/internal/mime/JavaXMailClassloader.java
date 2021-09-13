@@ -4,7 +4,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 public class JavaXMailClassloader extends URLClassLoader {
-	private static final String LIBS_DOMINOJNA_MIMESERVICE_JAR = "/lib-customloaded/domino-jna-mime-javaxmail-0.9.41.jar";
+	private static final String LIBS_DOMINOJNA_MIMESERVICE_JAR = "/lib-customloaded/domino-jna-mime-javaxmail-0.9.43.jar";
 	private static final String LIBS_JAVAX_MAIL_JAR = "/lib-customloaded/dependencies/javax.mail-1.5.2.jar";
 	private static final String LIBS_COMMONS_EMAILJAR = "/lib-customloaded/dependencies/commons-email-1.5.jar";
 	private static final String LIBS_ACTIVATION_JAR = "/lib-customloaded/dependencies/activation-1.1.jar";
