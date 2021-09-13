@@ -154,4 +154,11 @@ public class HANDLE32 extends BaseStructure implements HANDLE {
 		return MessageFormat.format("HANDLE32 [handle={0}]", hdl); //$NON-NLS-1$
 	}
 
+	@Override
+	public HANDLE.ByValue getByValue() {
+		HANDLE32.ByValue newHdl = new HANDLE32.ByValue();
+		newHdl.hdl = this.hdl;
+		return newHdl;
+	}
+
 }

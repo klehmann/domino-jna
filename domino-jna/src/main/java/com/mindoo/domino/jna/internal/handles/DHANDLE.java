@@ -148,5 +148,7 @@ public interface DHANDLE extends IAdaptable, IHANDLEBase<DHANDLE,DHANDLE.ByValue
 	}
 
 	@Override boolean isNull();
-	
+
+	public ByValue getByValue();
+
 }

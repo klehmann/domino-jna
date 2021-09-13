@@ -151,4 +151,6 @@ public interface HANDLE extends IAdaptable, IHANDLEBase<HANDLE,HANDLE.ByValue> {
 
 	@Override boolean isNull();
 	
+	public ByValue getByValue();
+
 }
