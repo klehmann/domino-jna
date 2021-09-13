@@ -84,6 +84,9 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE32;
+import com.mindoo.domino.jna.internal.handles.HANDLE64;
 import com.mindoo.domino.jna.internal.structs.NotesBuildVersionStruct;
 import com.mindoo.domino.jna.internal.structs.NotesDbReplicaInfoStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
@@ -1427,6 +1430,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return m_hDB64;
 	}
 
+	public HANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return HANDLE64.newInstance(m_hDB64);
+		}
+		else {
+			return HANDLE32.newInstance(m_hDB32);
+		}
+	}
+	
 	/**
 	 * Returns the username for this we opened the database
 	 * 
