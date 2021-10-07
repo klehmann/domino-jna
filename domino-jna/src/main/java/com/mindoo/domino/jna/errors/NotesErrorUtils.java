@@ -5,15 +5,16 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.ServiceLoader;
 
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
  * Utility class to work with errors coming out of C API method calls
@@ -29,12 +30,12 @@ public class NotesErrorUtils {
 
 				@Override
 				public Map<Short,String> run() {
-					ServiceLoader<IErrorTextProvider> loader =  ServiceLoader.load(IErrorTextProvider.class);
-					
+					Iterator<IErrorTextProvider> providersIt =  PlatformUtils.getService(IErrorTextProvider.class);
 					List<IErrorTextProvider> providersSorted = new ArrayList<>();
-					loader.forEach((currProvider) -> {
-						providersSorted.add(currProvider);
-					});
+					while (providersIt.hasNext()) {
+						providersSorted.add(providersIt.next());
+					}
+
 					providersSorted.sort(new Comparator<IErrorTextProvider>() {
 
 						@Override
