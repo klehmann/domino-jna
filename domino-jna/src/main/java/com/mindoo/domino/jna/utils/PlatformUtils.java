@@ -263,7 +263,8 @@ public class PlatformUtils {
 
 			@Override
 			public Iterator<T> run() {
-				Iterator<T> wrappedIt = ServiceLoader.load(clazz).iterator();
+				ClassLoader cl = PlatformUtils.class.getClassLoader();
+				Iterator<T> wrappedIt = ServiceLoader.load(clazz, cl).iterator();
 				return new Iterator<T>() {
 
 					@Override
