@@ -150,6 +150,7 @@
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
 			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm</groupId>
