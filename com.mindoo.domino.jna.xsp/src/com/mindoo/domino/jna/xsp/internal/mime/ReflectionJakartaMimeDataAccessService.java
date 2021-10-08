@@ -16,7 +16,7 @@ import com.mindoo.domino.jna.mime.MIMEData;
  * @author Karsten Lehmann
  */
 public class ReflectionJakartaMimeDataAccessService implements IMimeDataAccessService {
-	private static final String LIBS_DOMINOJNA_MIMESERVICE_JAR = "/lib-customloaded/domino-jna-mime-jakartamail-0.9.43-SNAPSHOT.jar";
+	private static final String LIBS_DOMINOJNA_MIMESERVICE_JAR = "/lib-customloaded/domino-jna-mime-jakartamail-0.9.44-SNAPSHOT.jar";
 	private static final String LIBS_JAVAX_MAIL_JAR = "/lib-customloaded/dependencies/jakarta.mail-2.0.0-RC6.jar";
 	private static final String LIBS_ACTIVATION_JAR = "/lib-customloaded/dependencies/jakarta.activation-2.0.0-RC3.jar";
 
