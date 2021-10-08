@@ -203,7 +203,6 @@ public class NoteSummaryIterator implements Iterator<NoteSummaryIterator.NoteDat
 			LinkedHashMap<Integer,NoteData> dataByNoteId = new LinkedHashMap<>();
 			
 			//read summary data for note ids to produce next page
-//			System.out.println("Fetching summary data for "+idTable.getCount()+" ids: "+noteIdsInPage);
 			
 			NotesSearch.search(m_db, idTable, "@true", m_columnFormulas, "-", EnumSet.of(Search.SUMMARY,
 					Search.SESSION_USERNAME),

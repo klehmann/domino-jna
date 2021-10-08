@@ -1190,10 +1190,6 @@ public class NotesCalendarUtils {
 			CalendarRangeRepeat scope, String comment, NotesCalendarActionData data, EnumSet<CalendarActionOptions> flags) {
 
 		NotesCalendarActionDataStruct dataStruct = data==null ? null : data.getAdapter(NotesCalendarActionDataStruct.class);
-		if (dataStruct!=null) {
-			System.out.println("Size 1: "+dataStruct.size());
-			System.out.println("Size 2: "+dataStruct.wLen);
-		}
 		
 		short result;
 		
