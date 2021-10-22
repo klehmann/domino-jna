@@ -84,6 +84,7 @@
 						<configuration>
 							<serverId>nexus-releases</serverId>
 							<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+							<autoReleaseAfterClose>true</autoReleaseAfterClose>
 							<!-- explicit matching using the staging profile id -->
 							<!-- <stagingProfileId>49650ad66a37c6</stagingProfileId> -->
 						</configuration>
