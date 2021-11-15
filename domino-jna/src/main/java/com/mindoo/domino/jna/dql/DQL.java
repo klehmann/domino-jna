@@ -1,12 +1,12 @@
 package com.mindoo.domino.jna.dql;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.TimeZone;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDbQueryResult;
@@ -912,43 +912,18 @@ public class DQL {
 		return Double.toString(dblValue);
 	}
 	
-    private static DateFormat RFC3339_PATTERN_DATETIME = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-    private static DateFormat RFC3339_PATTERN_DATE = new SimpleDateFormat("yyyy-MM-dd");
-    private static DateFormat RFC3339_PATTERN_TIME = new SimpleDateFormat("HH:mm:ss");
+	private static ThreadLocal<DateTimeFormatter> RFC3339_PATTERN_DATETIME = ThreadLocal.withInitial(() -> DateTimeFormatter.ISO_DATE_TIME);
+	private static ThreadLocal<DateTimeFormatter> RFC3339_PATTERN_DATE = ThreadLocal.withInitial(() -> DateTimeFormatter.ISO_LOCAL_DATE);
+	private static ThreadLocal<DateTimeFormatter> RFC3339_PATTERN_TIME = ThreadLocal.withInitial(() ->DateTimeFormatter.ISO_LOCAL_TIME);
     
-    private static String toRFC3339(Date dt) {
-    	StringBuilder sb = new StringBuilder();
-    	sb.append(RFC3339_PATTERN_DATETIME.format(dt));
-    	
-        Calendar cal = new GregorianCalendar();
-        cal.setTime(dt);
-        cal.setTimeZone(TimeZone.getDefault());
-        
-        int offsetMillis = cal.get(Calendar.ZONE_OFFSET)+cal.get(Calendar.DST_OFFSET);
-        int offsetHours = Math.abs(offsetMillis/(1000*60*60));
-        int offsetMinutes = Math.abs((offsetMillis/(1000*60))%60);
+	private static String formatDateValue(final Date dateValue) {
+		//Domino can only store hundredth of a second
+		long dateValueMS = dateValue.getTime();
+		long millis = dateValue.getTime() % 1000;
+		long millisRounded = 10 * (millis / 10);
+		dateValueMS -= (millis-millisRounded);
 
-        if (offsetMillis==0) {
-            sb.append("Z");
-        }
-        else {
-            sb.append((offsetMillis>0) ? "+" : "-");
-            if (offsetHours<10) {
-            	sb.append("0");
-            }
-            sb.append(offsetHours);
-            sb.append(":");
-            if (offsetMinutes<10) {
-            	sb.append("0");
-            }
-            sb.append(offsetMinutes);
-        } 
- 
-        return sb.toString(); 
-    }
-    
-	private static String formatDateValue(Date dateValue) {
-		return "@dt('" + toRFC3339(dateValue) + "')";
+		return MessageFormat.format("@dt(''{0}'')", DQL.RFC3339_PATTERN_DATETIME.get().format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dateValueMS), ZoneId.of("UTC")))); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 	
 	private static String formatNotesTimeDateValue(NotesTimeDate tdValue) {
@@ -957,12 +932,12 @@ public class DQL {
 				return formatDateValue(tdValue.toDate());
 			}
 			else {
-				return RFC3339_PATTERN_DATE.format(tdValue.toDate());
+				return RFC3339_PATTERN_DATE.get().format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(tdValue.toDate().getTime()), ZoneId.of("UTC")));
 			}
 		}
 		else {
 			if (tdValue.hasTime()) {
-				return RFC3339_PATTERN_TIME.format(tdValue.toDate());
+				return RFC3339_PATTERN_TIME.get().format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(tdValue.toDate().getTime()), ZoneId.of("UTC")));
 			}
 			else {
 				throw new IllegalArgumentException("NotesTimeDate has no date and no time");
