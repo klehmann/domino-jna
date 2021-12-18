@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.test;
 
+import java.time.temporal.Temporal;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -11,6 +12,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -18,6 +20,7 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.InnardsConverter;
+import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 
 import junit.framework.Assert;
 import junit.framework.AssertionFailedError;
@@ -28,6 +31,9 @@ import lotus.domino.NotesException;
 import lotus.domino.Session;
 
 public class TestDateTimeConversion extends BaseJNATestClass {
+
+	private String m_timeFormatStr;
+	private String m_dateFormatStr;
 
 	@Test
 	public void testInvalidInnards() {
@@ -43,7 +49,7 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 				Calendar calCAPI = InnardsConverter.decodeInnardsWithCAPI(invalidInnards);
 				Assert.assertNull("Domino returns an error converting the innards", calCAPI);
 				
-				Calendar calManual = InnardsConverter.decodeInnards(invalidInnards);
+				Calendar calManual = InnardsConverter.decodeInnardsToCalendar(invalidInnards);
 				Assert.assertNotNull("Manual code is able to convert the innards", calManual); // conversion returns Mon Jan 08 17:01:11 CET 4713
 
 				NotesNote note = db.createNote();
@@ -84,9 +90,6 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 //	@Test
 	public void testManualInnardEncodingAndDecoding() {
 		runWithSession(new IDominoCallable<Object>() {
-
-			private String m_timeFormatStr;
-			private String m_dateFormatStr;
 
 			@Override
 			public Object call(Session session) throws Exception {
@@ -184,7 +187,7 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 											//encode date with the current encoding timezone
 											Calendar calExpected = Calendar.getInstance(currEncodingTZ);
 											calExpected.setTimeInMillis(expectedDateInMillis);
-											int[] innardsManual = InnardsConverter.encodeInnards(calExpected, hasDate, hasTime);
+											int[] innardsManual = NotesDateTimeUtils.calendarToInnards(calExpected, hasDate, hasTime);
 
 											for (int tzIdxDec=0; tzIdxDec<tzIds.length; tzIdxDec++) {
 												String currDecodeTimeZoneId = tzIds[tzIdxDec];
@@ -222,7 +225,7 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 															throw e;
 														}
 														//try to decode innards; should produce the original datetime
-														Calendar checkDtManual = InnardsConverter.decodeInnards(innardsManual);
+														Calendar checkDtManual = InnardsConverter.decodeInnardsToCalendar(innardsManual);
 														Assert.assertEquals("Manual Date-Innard-Date roundtrip is ok for innards "+Arrays.toString(innardsManual)+", original date "+expectedDateAsString+
 																" === "+checkDtManual.getTime()+", Encoding TZ: "+currEncodingTimeZoneId+", decoding TZ: "+currDecodeTimeZoneId, expectedDateInMillis, checkDtManual.getTimeInMillis());
 
@@ -253,6 +256,7 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 														}
 														catch (AssertionFailedError e) {
 															e.printStackTrace();
+															LocalDate localDateLegacy = getDateViaLegacyAPI(db, dbLegacy, innardsManual);
 															throw e;
 														}
 													}
@@ -276,56 +280,6 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 				return null;
 			}
 
-			private LocalDate parseDateOnly(Session session, String dateOnly) {
-				String formatStr = getDateFormatString(session);
-				DateTimeFormatter formatter = DateTimeFormat.forPattern(formatStr);
-				LocalDate localDate = formatter.parseLocalDate(dateOnly);
-				return localDate;
-			}
-
-			private LocalTime parseTimeOnly(Session session, String timeOnly) {
-				String formatStr = getTimeFormatString(session);
-				DateTimeFormatter formatter = DateTimeFormat.forPattern(formatStr);
-				LocalTime localTime = formatter.parseLocalTime(timeOnly);
-				return localTime;
-			}
-
-			private String getTimeFormatString(Session session) {
-				if (m_timeFormatStr==null) {
-					try {
-						Vector<?> tmp = session.evaluate("@Text(@Time(11;22;33))");
-						String timeFormatted = tmp.get(0).toString();
-						if (timeFormatted.contains("AM") || timeFormatted.contains("PM")) {
-							m_timeFormatStr = timeFormatted.replace("AM", "a").replace("PM", "a").replace("11", "hh"); // 1-12 AM/PM
-						}
-						else {
-							m_timeFormatStr = timeFormatted.replace("11", "HH"); // 24 hours
-						}
-						m_timeFormatStr = m_timeFormatStr.replace("22", "mm").replace("33", "ss");
-					} catch (NotesException e) {
-						throw new NotesError(e.id, e.getLocalizedMessage());
-					}
-				}
-				return m_timeFormatStr;
-			}
-
-			private String getDateFormatString(Session session) {
-				if (m_dateFormatStr==null) {
-					try {
-						Vector<?> tmp = session.evaluate("@Text(@Date(2006;4;5))");
-						m_dateFormatStr = tmp.get(0).toString()
-								.replace("2006", "YYYY")
-								.replace("06", "YY")
-								.replace("04", "MM")
-								.replace("4", "M")
-								.replace("05", "dd")
-								.replace("5", "d");
-					} catch (NotesException e) {
-						throw new NotesError(e.id, e.getLocalizedMessage());
-					}
-				}
-				return m_dateFormatStr;
-			}
 
 			private int[] getInnardsViaLegacyAPI(NotesDatabase db, Database dbLegacy, Calendar cal, boolean hasDate, boolean hasTime) {
 				try {
@@ -453,34 +407,177 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 				}
 			}
 
-			private LocalTime getTimeViaLegacyAPI(NotesDatabase db, Database dbLegacy, int[] innards) {
-				NotesNote note = db.createNote();
-				note.replaceItemValue("Form", "Person");
-				note.replaceItemValue("Type", "Person");
-				note.replaceItemValue("Firstname", "1. Datetime conversion");
-				note.replaceItemValue("Lastname", "1. Datetime conversion");
-				note.replaceItemValue("Date", new NotesTimeDate(innards));
-				note.update();
-				String unid = note.getUNID();
-				note.recycle();
-
-				try {
-					Document doc = dbLegacy.getDocumentByUNID(unid);
-					Vector<?> values = doc.getItemValue("Date");
-					doc.remove(true);
-					doc.recycle();
-
-					lotus.domino.DateTime dtLegacy = (DateTime) values.get(0);
-					Date jdtLegacy = dtLegacy.toJavaDate();
-					String timeOnly = dtLegacy.getTimeOnly();
-					int millis = (int) (jdtLegacy.getTime() - 1000*(jdtLegacy.getTime() / 1000));
-
-					LocalTime localTime = parseTimeOnly(dbLegacy.getParent(), timeOnly).withMillisOfSecond(millis);
-					return localTime;
-				} catch (NotesException e) {
-					throw new NotesError(e.id, e.getLocalizedMessage(), e);
-				}
-			}
+			
 		});
 	}
+	
+
+//	@Test
+	public void testConv() {
+
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				TimeZone currEncodingTZ = TimeZone.getTimeZone("Pacific/Tongatapu");
+				DateTimeZone currEncodingDTZ = DateTimeZone.forTimeZone(currEncodingTZ);
+
+				//try decoding the timezones with all
+				TimeZone.setDefault(currEncodingTZ);
+				DateTimeZone.setDefault(currEncodingDTZ);
+
+				int currHour = 8;
+				int currMinute = 10;
+				int currSecond = 0;
+				int currDay = 1;
+				int currMonth = 1;
+				int currYear = 2018;
+				
+				org.joda.time.DateTime jdtExpectedDateTime = new org.joda.time.DateTime(currYear,
+						currMonth, currDay, currHour, currMinute, currSecond, currEncodingDTZ);
+				long expectedDateInMillis = jdtExpectedDateTime.getMillis();
+				Date dt = new Date(expectedDateInMillis);
+				
+				String expectedDateAsString = jdtExpectedDateTime.toString();
+				
+				LocalDate expectedLocalDate = jdtExpectedDateTime.toLocalDate();
+				String expectedLocalDateAsString = expectedLocalDate.toString();
+				LocalTime expectedLocalTime = jdtExpectedDateTime.toLocalTime();
+				String expectedLocalTimeAsString = expectedLocalTime.toString();
+				
+
+				//encode date with the current encoding timezone
+				Calendar calExpected = Calendar.getInstance(currEncodingTZ);
+				calExpected.setTimeInMillis(expectedDateInMillis);
+				int[] innardsManual = NotesDateTimeUtils.calendarToInnards(calExpected, false, true);
+
+				Calendar calExpected2 = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+				calExpected2.setTimeInMillis(expectedDateInMillis);
+				int[] innardsManual2 = NotesDateTimeUtils.calendarToInnards(calExpected2, false, true);
+
+				
+				TimeZone currDecodingTZ = TimeZone.getTimeZone("Africa/Abidjan");
+				DateTimeZone currDecodingDTZ = DateTimeZone.forTimeZone(currDecodingTZ);
+
+				TimeZone.setDefault(currDecodingTZ);
+				DateTimeZone.setDefault(currDecodingDTZ);
+
+				Temporal t = InnardsConverter.decodeInnards(innardsManual);
+
+				Calendar checkCal = NotesDateTimeUtils.innardsToCalendar(innardsManual);
+				
+				NotesDatabase db = getFakeNamesDb();
+				Database dbLegacy = getFakeNamesDbLegacy();
+				
+				LocalTime time = getTimeViaLegacyAPI(db, dbLegacy, innardsManual);
+				System.out.println(time);
+//				
+//				
+////				int[] innards = [143000, -1]
+//				NotesDatabase dbData = new NotesDatabase("", "fakenames2018.nsf", "");
+////				NotesCollection view = dbData.openCollectionByName("Contacts");
+//				NotesNote note = dbData.openNoteByUnid("3E525A7962A51887C12582E800711758");
+//				NotesTimeDate td = note.getItemValueAsTimeDate("Birthday");
+//				int[] innards = td.getInnards();
+//				System.out.println("Innards: "+Arrays.toString(innards));
+//				
+//				System.out.println("Formatted value:" + td.toString());
+//				
+//				Calendar cal = td.toCalendar();
+//				System.out.println("Calendar.toString(): "+cal);
+//				
+//				int month = cal.get(Calendar.MONTH);
+//				int day = cal.get(Calendar.DAY_OF_MONTH);
+//				int year = cal.get(Calendar.YEAR);
+//				System.out.println("day: "+day+", month: "+month+", year: "+year);
+//				
+//				Date date = td.toDate();
+//				System.out.println(date);
+				
+				return null;
+			}
+		});
+	
+	}
+	
+	private LocalTime getTimeViaLegacyAPI(NotesDatabase db, Database dbLegacy, int[] innards) {
+		NotesNote note = db.createNote();
+		note.replaceItemValue("Form", "Person");
+		note.replaceItemValue("Type", "Person");
+		note.replaceItemValue("Firstname", "1. Datetime conversion");
+		note.replaceItemValue("Lastname", "1. Datetime conversion");
+		note.replaceItemValue("Date", new NotesTimeDate(innards));
+		note.update();
+		String unid = note.getUNID();
+		note.recycle();
+
+		try {
+			Document doc = dbLegacy.getDocumentByUNID(unid);
+			Vector<?> values = doc.getItemValue("Date");
+			doc.remove(true);
+			doc.recycle();
+
+			lotus.domino.DateTime dtLegacy = (DateTime) values.get(0);
+			Date jdtLegacy = dtLegacy.toJavaDate();
+			String timeOnly = dtLegacy.getTimeOnly();
+			int millis = (int) (jdtLegacy.getTime() - 1000*(jdtLegacy.getTime() / 1000));
+
+			LocalTime localTime = parseTimeOnly(dbLegacy.getParent(), timeOnly).withMillisOfSecond(millis);
+			return localTime;
+		} catch (NotesException e) {
+			throw new NotesError(e.id, e.getLocalizedMessage(), e);
+		}
+	}
+	
+	private LocalDate parseDateOnly(Session session, String dateOnly) {
+		String formatStr = getDateFormatString(session);
+		DateTimeFormatter formatter = DateTimeFormat.forPattern(formatStr);
+		LocalDate localDate = formatter.parseLocalDate(dateOnly);
+		return localDate;
+	}
+
+	private LocalTime parseTimeOnly(Session session, String timeOnly) {
+		String formatStr = getTimeFormatString(session);
+		DateTimeFormatter formatter = DateTimeFormat.forPattern(formatStr);
+		LocalTime localTime = formatter.parseLocalTime(timeOnly);
+		return localTime;
+	}
+
+	private String getTimeFormatString(Session session) {
+		if (m_timeFormatStr==null) {
+			try {
+				Vector<?> tmp = session.evaluate("@Text(@Time(11;22;33))");
+				String timeFormatted = tmp.get(0).toString();
+				if (timeFormatted.contains("AM") || timeFormatted.contains("PM")) {
+					m_timeFormatStr = timeFormatted.replace("AM", "a").replace("PM", "a").replace("11", "hh"); // 1-12 AM/PM
+				}
+				else {
+					m_timeFormatStr = timeFormatted.replace("11", "HH"); // 24 hours
+				}
+				m_timeFormatStr = m_timeFormatStr.replace("22", "mm").replace("33", "ss");
+			} catch (NotesException e) {
+				throw new NotesError(e.id, e.getLocalizedMessage());
+			}
+		}
+		return m_timeFormatStr;
+	}
+
+	private String getDateFormatString(Session session) {
+		if (m_dateFormatStr==null) {
+			try {
+				Vector<?> tmp = session.evaluate("@Text(@Date(2006;4;5))");
+				m_dateFormatStr = tmp.get(0).toString()
+						.replace("2006", "YYYY")
+						.replace("06", "YY")
+						.replace("04", "MM")
+						.replace("4", "M")
+						.replace("05", "dd")
+						.replace("5", "d");
+			} catch (NotesException e) {
+				throw new NotesError(e.id, e.getLocalizedMessage());
+			}
+		}
+		return m_dateFormatStr;
+	}
+
 }

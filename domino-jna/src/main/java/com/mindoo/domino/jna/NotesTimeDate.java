@@ -1,9 +1,16 @@
 package com.mindoo.domino.jna;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.Temporal;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.TimeZone;
 
 import com.mindoo.domino.jna.constants.DateFormat;
@@ -54,6 +61,43 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		m_innards = innards.clone();
 	}
 	
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link LocalDate}
+	 * 
+	 * @param date date
+	 */
+	public NotesTimeDate(LocalDate date) {
+		m_innards = InnardsConverter.encodeInnards(date);
+	}
+	
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link LocalTime}
+	 * 
+	 * @param time time
+	 */
+	public NotesTimeDate(LocalTime time) {
+		m_innards = InnardsConverter.encodeInnards(time);
+	}
+	
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link LocalTime}
+	 * 
+	 * @param dateTime date/time
+	 */
+	public NotesTimeDate(ZonedDateTime dateTime) {
+		m_innards = InnardsConverter.encodeInnards(dateTime);
+	}
+
+	/**
+	 * Creates a new date/time object and sets it to the specified {@link OffsetDateTime}
+	 * 
+	 * @param time date/time
+	 * @param zone timezone
+	 */
+	public NotesTimeDate(OffsetDateTime time, ZoneId zone) {
+		m_innards = InnardsConverter.encodeInnards(time, zone);
+	}
+
 	/**
 	 * Creates a new date/time object and sets it to the specified {@link Date}
 	 * 
@@ -262,28 +306,23 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	}
 	
 	/**
+	 * Converts the {@link NotesTimeDate} to a {@link Temporal} value.
+	 * 
+	 * @return {@link OffsetDateTime}, {@link LocalDate}, {@link LocalTime}, or null if invalid innards
+	 */
+	public Optional<Temporal> toTemporal() {
+		int[] innards = getInnardsNoClone();
+	    return Optional.ofNullable(InnardsConverter.decodeInnards(innards));
+	}
+	
+	/**
 	 * Converts the time date to a calendar
 	 * 
 	 * @return calendar or null if data is invalid
 	 */
 	public Calendar toCalendar() {
 		int[] innards = getInnardsNoClone();
-		Calendar cal = InnardsConverter.decodeInnards(innards);
-		
-		if (cal==null) {
-			//invalid innards
-			Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-			nullCal.set(Calendar.DAY_OF_MONTH, 1);
-			nullCal.set(Calendar.MONTH, 1);
-			nullCal.set(Calendar.YEAR, 0);
-			nullCal.set(Calendar.HOUR, 0);
-			nullCal.set(Calendar.MINUTE, 0);
-			nullCal.set(Calendar.SECOND, 0);
-			nullCal.set(Calendar.MILLISECOND, 0);
-			return nullCal;
-		}
-		else
-			return cal;
+		return InnardsConverter.decodeInnardsToCalendar(innards);
 	}
 	
 	/**
