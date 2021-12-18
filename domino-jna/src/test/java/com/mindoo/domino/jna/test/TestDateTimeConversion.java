@@ -1,18 +1,23 @@
 package com.mindoo.domino.jna.test;
 
-import java.time.temporal.Temporal;
+import static org.junit.Assert.*;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.UnsupportedTemporalTypeException;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.Vector;
+import java.util.stream.Collectors;
 
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
@@ -100,8 +105,17 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 
 				TimeZone defaultTimeZone = TimeZone.getDefault();
 				DateTimeZone defaultDateTimeZone = DateTimeZone.getDefault();
-				
-				String[] tzIds = TimeZone.getAvailableIDs(); //these are a lot, 617 in my test
+
+				String[] tzIds = Arrays
+						.asList(TimeZone.getAvailableIDs()) // 628 timezones
+						.stream()
+						.filter((tz) -> {
+							//filter method to run the test on selected timezones only
+							return true;
+						})
+						.collect(Collectors.toList())
+						.toArray(new String[0]);
+
 				try {
 					for (int currYear=2018; currYear<=2018; currYear++) {
 						for (int currMonth=1; currMonth < 2; currMonth++) {
@@ -256,7 +270,6 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 														}
 														catch (AssertionFailedError e) {
 															e.printStackTrace();
-															LocalDate localDateLegacy = getDateViaLegacyAPI(db, dbLegacy, innardsManual);
 															throw e;
 														}
 													}
@@ -412,87 +425,75 @@ public class TestDateTimeConversion extends BaseJNATestClass {
 	}
 	
 
-//	@Test
-	public void testConv() {
+	@Test
+	public void testJava8DateTime() {
 
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				TimeZone currEncodingTZ = TimeZone.getTimeZone("Pacific/Tongatapu");
-				DateTimeZone currEncodingDTZ = DateTimeZone.forTimeZone(currEncodingTZ);
+				int hour1 = 8;
+				int minute1 = 10;
+				int second1 = 0;
+				int day1 = 1;
+				int month1 = 1;
+				int year1 = 2018;
 
-				//try decoding the timezones with all
-				TimeZone.setDefault(currEncodingTZ);
-				DateTimeZone.setDefault(currEncodingDTZ);
-
-				int currHour = 8;
-				int currMinute = 10;
-				int currSecond = 0;
-				int currDay = 1;
-				int currMonth = 1;
-				int currYear = 2018;
+				java.time.LocalDate date1 = java.time.LocalDate.of(year1, month1, day1);
+				java.time.LocalTime time1 = java.time.LocalTime.of(hour1, minute1, second1);
+				ZonedDateTime zdt1 = ZonedDateTime.of(
+						date1,
+						time1,
+						ZoneId.of("Pacific/Tongatapu")
+						);
+				NotesTimeDate tdDate1 = new NotesTimeDate(date1);
+				assertEquals(day1, tdDate1.getLong(ChronoField.DAY_OF_MONTH));
+				assertEquals(month1, tdDate1.getLong(ChronoField.MONTH_OF_YEAR));
+				assertEquals(year1, tdDate1.getLong(ChronoField.YEAR));
+				assertThrows(UnsupportedTemporalTypeException.class, () -> { tdDate1.getLong(ChronoField.HOUR_OF_DAY); });
 				
-				org.joda.time.DateTime jdtExpectedDateTime = new org.joda.time.DateTime(currYear,
-						currMonth, currDay, currHour, currMinute, currSecond, currEncodingDTZ);
-				long expectedDateInMillis = jdtExpectedDateTime.getMillis();
-				Date dt = new Date(expectedDateInMillis);
-				
-				String expectedDateAsString = jdtExpectedDateTime.toString();
-				
-				LocalDate expectedLocalDate = jdtExpectedDateTime.toLocalDate();
-				String expectedLocalDateAsString = expectedLocalDate.toString();
-				LocalTime expectedLocalTime = jdtExpectedDateTime.toLocalTime();
-				String expectedLocalTimeAsString = expectedLocalTime.toString();
-				
+				NotesTimeDate tdTime1 = new NotesTimeDate(time1);
+				assertEquals(hour1, tdTime1.getLong(ChronoField.HOUR_OF_DAY));
+				assertEquals(minute1, tdTime1.getLong(ChronoField.MINUTE_OF_HOUR));
+				assertEquals(second1, tdTime1.getLong(ChronoField.SECOND_OF_MINUTE));
+				assertThrows(UnsupportedTemporalTypeException.class, () -> { tdTime1.getLong(ChronoField.DAY_OF_MONTH); });
+				assertThrows(UnsupportedTemporalTypeException.class, () -> { tdTime1.getLong(ChronoField.MONTH_OF_YEAR); });
+				assertThrows(UnsupportedTemporalTypeException.class, () -> { tdTime1.getLong(ChronoField.YEAR); });
 
-				//encode date with the current encoding timezone
-				Calendar calExpected = Calendar.getInstance(currEncodingTZ);
-				calExpected.setTimeInMillis(expectedDateInMillis);
-				int[] innardsManual = NotesDateTimeUtils.calendarToInnards(calExpected, false, true);
-
-				Calendar calExpected2 = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-				calExpected2.setTimeInMillis(expectedDateInMillis);
-				int[] innardsManual2 = NotesDateTimeUtils.calendarToInnards(calExpected2, false, true);
-
+				NotesTimeDate tdDateTime1 = new NotesTimeDate(zdt1);
+				assertEquals(day1, tdDateTime1.getLong(ChronoField.DAY_OF_MONTH));
+				assertEquals(month1, tdDateTime1.getLong(ChronoField.MONTH_OF_YEAR));
+				assertEquals(year1, tdDateTime1.getLong(ChronoField.YEAR));
+				assertEquals(hour1, tdDateTime1.getLong(ChronoField.HOUR_OF_DAY));
+				assertEquals(minute1, tdDateTime1.getLong(ChronoField.MINUTE_OF_HOUR));
+				assertEquals(second1, tdDateTime1.getLong(ChronoField.SECOND_OF_MINUTE));
 				
-				TimeZone currDecodingTZ = TimeZone.getTimeZone("Africa/Abidjan");
-				DateTimeZone currDecodingDTZ = DateTimeZone.forTimeZone(currDecodingTZ);
+				int hour2 = 9;
+				int minute2 = 10;
+				int second2 = 0;
+				int day2 = 2;
+				int month2 = 1;
+				int year2 = 2018;
 
-				TimeZone.setDefault(currDecodingTZ);
-				DateTimeZone.setDefault(currDecodingDTZ);
+				java.time.LocalDate date2 = java.time.LocalDate.of(year2, month2, day2);
+				java.time.LocalTime time2 = java.time.LocalTime.of(hour2, minute2, second2);
+				ZonedDateTime zdt2 = ZonedDateTime.of(
+						date2,
+						time2,
+						ZoneId.of("Pacific/Tongatapu")
+						);
+				NotesTimeDate tdDate2 = new NotesTimeDate(date2);
+				NotesTimeDate tdTime2 = new NotesTimeDate(time2);
+				NotesTimeDate tdDateTime2 = new NotesTimeDate(zdt2);
 
-				Temporal t = InnardsConverter.decodeInnards(innardsManual);
-
-				Calendar checkCal = NotesDateTimeUtils.innardsToCalendar(innardsManual);
+				assertTrue(tdDate1.isBefore(tdDate2));
+				assertFalse(tdDate1.isAfter(tdDate2));
 				
-				NotesDatabase db = getFakeNamesDb();
-				Database dbLegacy = getFakeNamesDbLegacy();
+				assertTrue(tdTime1.isBefore(tdTime2));
+				assertFalse(tdTime1.isAfter(tdTime2));
 				
-				LocalTime time = getTimeViaLegacyAPI(db, dbLegacy, innardsManual);
-				System.out.println(time);
-//				
-//				
-////				int[] innards = [143000, -1]
-//				NotesDatabase dbData = new NotesDatabase("", "fakenames2018.nsf", "");
-////				NotesCollection view = dbData.openCollectionByName("Contacts");
-//				NotesNote note = dbData.openNoteByUnid("3E525A7962A51887C12582E800711758");
-//				NotesTimeDate td = note.getItemValueAsTimeDate("Birthday");
-//				int[] innards = td.getInnards();
-//				System.out.println("Innards: "+Arrays.toString(innards));
-//				
-//				System.out.println("Formatted value:" + td.toString());
-//				
-//				Calendar cal = td.toCalendar();
-//				System.out.println("Calendar.toString(): "+cal);
-//				
-//				int month = cal.get(Calendar.MONTH);
-//				int day = cal.get(Calendar.DAY_OF_MONTH);
-//				int year = cal.get(Calendar.YEAR);
-//				System.out.println("day: "+day+", month: "+month+", year: "+year);
-//				
-//				Date date = td.toDate();
-//				System.out.println(date);
+				assertTrue(tdDateTime1.isBefore(tdDateTime2));
+				assertFalse(tdDateTime1.isAfter(tdDateTime2));
 				
 				return null;
 			}
