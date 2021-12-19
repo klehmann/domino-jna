@@ -1,15 +1,31 @@
 package com.mindoo.domino.jna;
 
+import java.text.MessageFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalField;
+import java.time.temporal.TemporalQuery;
+import java.time.temporal.TemporalUnit;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.TimeZone;
 
 import com.mindoo.domino.jna.constants.DateFormat;
 import com.mindoo.domino.jna.constants.DateTimeStructure;
 import com.mindoo.domino.jna.constants.TimeFormat;
 import com.mindoo.domino.jna.constants.ZoneFormat;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.InnardsConverter;
@@ -31,7 +47,7 @@ import com.sun.jna.ptr.ShortByReference;
  * 
  * @author Karsten Lehmann
  */
-public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
+public class NotesTimeDate implements Comparable<NotesTimeDate>, Temporal, IAdaptable {
 	private int[] m_innards = new int[2];
 	private NotesTimeDateStruct m_structReused;
 	
@@ -41,7 +57,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	 * Creates a new date/time object and sets it to the current date/time
 	 */
 	public NotesTimeDate() {
-		this(NotesDateTimeUtils.calendarToInnards(Calendar.getInstance()));
+	    this(OffsetDateTime.now());
 	}
 	
 	/**
@@ -53,12 +69,41 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	public NotesTimeDate(int innards[]) {
 		m_innards = innards.clone();
 	}
-	
+
+	/**
+	 * Creates a new date/time object and sets it to the specified
+	 * {@link ZonedDateTime}
+	 * 
+	 * @param dt zoned date/time value
+	 */
+	public NotesTimeDate(TemporalAccessor dt) {
+	    int[] innards;
+	    if (dt instanceof ZonedDateTime) {
+	      innards = InnardsConverter.encodeInnards((ZonedDateTime) dt);
+	    } else if (dt instanceof OffsetDateTime) {
+	      innards = InnardsConverter.encodeInnards((OffsetDateTime) dt, null);
+	    } else if (dt instanceof LocalDate) {
+	      innards = InnardsConverter.encodeInnards((LocalDate) dt);
+	    } else if (dt instanceof LocalTime) {
+	      innards = InnardsConverter.encodeInnards((LocalTime) dt);
+	    } else if (dt instanceof Instant) {
+	      innards = InnardsConverter.encodeInnards(OffsetDateTime.ofInstant((Instant) dt, ZoneId.of("UTC")), null); //$NON-NLS-1$
+	    } else if (dt instanceof NotesTimeDate) {
+	      innards = ((NotesTimeDate) dt).getInnards();
+	    } else {
+	      final Instant instant = Instant.from(dt);
+	      innards = InnardsConverter.encodeInnards(OffsetDateTime.ofInstant(instant, ZoneId.of("UTC")), null); //$NON-NLS-1$
+	    }
+	    this.m_innards = innards;
+	}
+
 	/**
 	 * Creates a new date/time object and sets it to the specified {@link Date}
 	 * 
+	 * @deprecated use constructor for Java 8 Date/Time API
 	 * @param dt date object
 	 */
+	@Deprecated
 	public NotesTimeDate(Date dt) {
 		this(NotesDateTimeUtils.dateToInnards(dt));
 	}
@@ -66,22 +111,25 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	/**
 	 * Creates a new date/time object and sets it to the specified {@link Calendar}
 	 * 
+	 * @deprecated use constructor for Java 8 Date/Time API
 	 * @param cal calendar object
 	 */
+	@Deprecated
 	public NotesTimeDate(Calendar cal) {
 		this(NotesDateTimeUtils.calendarToInnards(cal));
 	}
 
+
 	/**
-	 * Creates a new date/time object and sets it to the specified time in milliseconds since
-	 * GMT 1/1/70
+	 * Creates a new date/time object and sets it to the specified time in
+	 * milliseconds since GMT 1/1/70
 	 * 
 	 * @param timeMs the milliseconds since January 1, 1970, 00:00:00 GMT
 	 */
 	public NotesTimeDate(long timeMs) {
-		this(new Date(timeMs));
+		this(InnardsConverter.encodeInnards(ZonedDateTime.ofInstant(Instant.ofEpochMilli(timeMs), ZoneId.of("UTC")))); //$NON-NLS-1$
 	}
-	
+
 	/**
 	 * Constructs a new date/time object
 	 * 
@@ -199,6 +247,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		throw new IllegalArgumentException("Constructor argument cannot provide a supported datatype");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
 		if (NotesTimeDateStruct.class.equals(clazz)) {
@@ -262,35 +311,34 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	}
 	
 	/**
+	 * Converts the {@link NotesTimeDate} to a {@link Temporal} value.
+	 * 
+	 * @return {@link OffsetDateTime}, {@link LocalDate}, {@link LocalTime}, or null if invalid innards
+	 */
+	public Optional<Temporal> toTemporal() {
+		int[] innards = getInnardsNoClone();
+	    return Optional.ofNullable(InnardsConverter.decodeInnards(innards));
+	}
+	
+	/**
 	 * Converts the time date to a calendar
 	 * 
+	 * @deprecated use {@link #toTemporal()} for Java 8 Date/Time API
 	 * @return calendar or null if data is invalid
 	 */
+	@Deprecated
 	public Calendar toCalendar() {
 		int[] innards = getInnardsNoClone();
-		Calendar cal = InnardsConverter.decodeInnards(innards);
-		
-		if (cal==null) {
-			//invalid innards
-			Calendar nullCal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-			nullCal.set(Calendar.DAY_OF_MONTH, 1);
-			nullCal.set(Calendar.MONTH, 1);
-			nullCal.set(Calendar.YEAR, 0);
-			nullCal.set(Calendar.HOUR, 0);
-			nullCal.set(Calendar.MINUTE, 0);
-			nullCal.set(Calendar.SECOND, 0);
-			nullCal.set(Calendar.MILLISECOND, 0);
-			return nullCal;
-		}
-		else
-			return cal;
+		return InnardsConverter.decodeInnardsToCalendar(innards);
 	}
 	
 	/**
 	 * Converts the time date to a Java {@link Date}
 	 * 
+	 * @deprecated use {@link #toTemporal()} for Java 8 Date/Time API
 	 * @return date or null if data is invalid
 	 */
+	@Deprecated
 	public Date toDate() {
 		Calendar cal = toCalendar();
 		return cal==null ? null : cal.getTime();
@@ -309,7 +357,7 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		}
 		return false;
 	}
-	
+
 	/**
 	 * Returns a new {@link NotesTimeDate} with date and time info set to "now"
 	 * 
@@ -651,36 +699,37 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 	/**
 	 * Converts the time date to the number of milliseconds since 1/1/70.
 	 * 
+	 * @deprecated use {@link #toTemporal()} for Java 8 Date/Time API
 	 * @return milliseconds since January 1, 1970, 00:00:00 GMT
 	 */
+	@Deprecated
 	public long toDateInMillis() {
 		return toCalendar().getTimeInMillis();
 	}
 
 	public boolean isBefore(NotesTimeDate o) {
-		return toDateInMillis() < o.toDateInMillis();
+		return compareTo(o) < 0;
 	}
 	
 	public boolean isAfter(NotesTimeDate o) {
-		return toDateInMillis() > o.toDateInMillis();
+		return compareTo(o) > 0;
 	}
-	
-	@Override
-	public int compareTo(NotesTimeDate o) {
-		long thisTimeInMillis = toDateInMillis();
-		long otherTimeInMillis = o.toDateInMillis();
-		
-		if (thisTimeInMillis < otherTimeInMillis) {
-			return -1;
-		}
-		else if (thisTimeInMillis > otherTimeInMillis) {
-			return 1;
-		}
-		else {
+
+	public int compareTo(final NotesTimeDate o) {
+		if (this.hasDate() && o.hasDate()) {
+			if (this.hasTime() && o.hasTime()) {
+				return this.toOffsetDateTime().compareTo(o.toOffsetDateTime());
+			} else {
+				return this.toLocalDate().compareTo(o.toLocalDate());
+			}
+		} else if (this.hasTime() && o.hasTime()) {
+			return this.toLocalTime().compareTo(o.toLocalTime());
+		} else {
+			// Incompatible operands
 			return 0;
 		}
 	}
-	
+
 	/**
 	 * Method to clear the {@link NotesTimeDate} value
 	 */
@@ -831,4 +880,112 @@ public class NotesTimeDate implements Comparable<NotesTimeDate>, IAdaptable {
 		retTimeDateMem.dispose();
 		return td;
 	}
+
+	public LocalDate toLocalDate() {
+		final Temporal temporal = this.toTemporal().orElse(null);
+		if (temporal instanceof OffsetDateTime) {
+			return ((OffsetDateTime) temporal).toLocalDate();
+		} else if (temporal instanceof ZonedDateTime) {
+			return ((ZonedDateTime) temporal).toLocalDate();
+		} else if (temporal instanceof LocalDate) {
+			return (LocalDate) temporal;
+		} else {
+			throw new NotesError(MessageFormat.format("Cannot create an LocalDate from a {0}", temporal.getClass().getName()));
+		}
+	}
+
+	public LocalTime toLocalTime() {
+		final Temporal temporal = this.toTemporal().orElse(null);
+		if (temporal instanceof OffsetDateTime) {
+			return ((OffsetDateTime) temporal).toLocalTime();
+		} else if (temporal instanceof ZonedDateTime) {
+			return ((ZonedDateTime) temporal).toLocalTime();
+		} else if (temporal instanceof LocalTime) {
+			return (LocalTime) temporal;
+		} else {
+			throw new NotesError(MessageFormat.format("Cannot create an LocalTime from a {0}", temporal.getClass().getName()));
+		}
+	}
+
+	public OffsetDateTime toOffsetDateTime() {
+		final Temporal temporal = this.toTemporal().orElse(null);
+		if (temporal instanceof OffsetDateTime) {
+			return (OffsetDateTime) temporal;
+		} else if (temporal instanceof ZonedDateTime) {
+			return ((ZonedDateTime) temporal).toOffsetDateTime();
+		} else if (temporal != null) {
+			throw new NotesError(
+					MessageFormat.format("Cannot create an OffsetDateTime from a {0}", temporal.getClass().getName()));
+		} else {
+			throw new NotesError("Cannot create an OffsetDateTime: Date object is invalid");
+		}
+	}
+
+	public boolean isValid() {
+		return this.toTemporal().isPresent();
+	}
+
+	@Override
+	public long until(final Temporal endExclusive, final TemporalUnit unit) {
+		final Temporal temporal = this.toTemporal().get();
+		return temporal.until(endExclusive, unit);
+	}
+
+	@Override
+	public Temporal with(final TemporalField field, final long newValue) {
+		Temporal temporal = this.toTemporal().get();
+		temporal = temporal.with(field, newValue);
+		return new NotesTimeDate(temporal);
+	}
+
+
+	@Override
+	public boolean isSupported(final TemporalField field) {
+		if (ChronoField.YEAR.equals(field) ||
+				ChronoField.MONTH_OF_YEAR.equals(field) ||
+				ChronoField.DAY_OF_MONTH.equals(field) ||
+				ChronoField.HOUR_OF_DAY.equals(field) ||
+				ChronoField.MINUTE_OF_HOUR.equals(field) ||
+				ChronoField.SECOND_OF_MINUTE.equals(field) ||
+				ChronoField.MILLI_OF_SECOND.equals(field) ||
+				ChronoField.NANO_OF_SECOND.equals(field)) {
+
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean isSupported(final TemporalUnit unit) {
+		if (ChronoUnit.YEARS.equals(unit) ||
+				ChronoUnit.MONTHS.equals(unit) ||
+				ChronoUnit.DAYS.equals(unit) ||
+				ChronoUnit.HOURS.equals(unit) ||
+				ChronoUnit.MINUTES.equals(unit) ||
+				ChronoUnit.SECONDS.equals(unit) ||
+				ChronoUnit.MILLIS.equals(unit)) {
+
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public long getLong(final TemporalField field) {
+		// TODO modify to check without conversion for compatible types
+		return this.toTemporal().get().getLong(field);
+	}
+
+	@Override
+	public Temporal plus(final long amountToAdd, final TemporalUnit unit) {
+		Temporal temporal = this.toTemporal().get();
+		temporal = temporal.plus(amountToAdd, unit);
+		return new NotesTimeDate(temporal);
+	}
+
+	@Override
+	public <R> R query(final TemporalQuery<R> query) {
+		return this.toTemporal().get().query(query);
+	}
+
 }

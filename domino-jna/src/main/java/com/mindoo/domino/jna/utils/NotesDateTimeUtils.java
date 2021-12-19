@@ -1,5 +1,11 @@
 package com.mindoo.domino.jna.utils;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -213,7 +219,35 @@ public class NotesDateTimeUtils {
 	 * @return innard array
 	 */
 	public static int[] calendarToInnards(Calendar cal, boolean hasDate, boolean hasTime) {
-		return InnardsConverter.encodeInnards(cal, hasDate, hasTime);
+		if (hasDate) {
+			if (hasTime) {
+				Instant instant = Instant.ofEpochMilli(cal.getTimeInMillis());
+				OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
+				return InnardsConverter.encodeInnards(offsetDateTime, ZoneId.of("UTC"));
+			}
+			else {
+				int year = cal.get(Calendar.YEAR);
+				int month = cal.get(Calendar.MONTH);
+				int day = cal.get(Calendar.DATE);
+				return InnardsConverter.encodeInnards(LocalDate.of(year, month+1, day));
+			}
+		}
+		else {
+			if (hasTime) {
+				int hour = cal.get(Calendar.HOUR_OF_DAY);
+				int minute = cal.get(Calendar.MINUTE);
+				int second = cal.get(Calendar.SECOND);
+				int millis = cal.get(Calendar.MILLISECOND);
+				int nanos = millis * 1000000;
+				return InnardsConverter.encodeInnards(LocalTime.of(hour, minute, second, nanos));
+			}
+			else {
+				return new int[] {
+						NotesConstants.ALLDAY,
+						NotesConstants.ANYDAY
+				};
+			}
+		}
 	}
 	
 	/**
@@ -326,7 +360,7 @@ public class NotesDateTimeUtils {
 	 * @return calendar or null if invalid innards
 	 */
 	public static Calendar innardsToCalendar(int[] innards) {
-		return InnardsConverter.decodeInnards(innards);
+		return InnardsConverter.decodeInnardsToCalendar(innards);
 	}
 
 }
