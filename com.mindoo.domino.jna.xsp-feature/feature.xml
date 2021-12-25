@@ -5,9 +5,9 @@
       version="0.9.45.qualifier"
       provider-name="Mindoo GmbH">
 
-   <description url="https://github.com/klehmann/domino-jna">Java project to access the IBM Domino C API using Java Native Access (JNA)</description>
+   <description url="https://github.com/klehmann/domino-jna">Java project to access the HCL Domino C API using Java Native Access (JNA)</description>
 
-   <copyright url="http://www.mindoo.com">Copyright 2017 by Mindoo GmbH</copyright>
+   <copyright url="http://www.mindoo.com">Copyright 2021 by Mindoo GmbH</copyright>
 
    <license url="https://www.apache.org/licenses/LICENSE-2.0">Apache License
 Version 2.0, January 2004
