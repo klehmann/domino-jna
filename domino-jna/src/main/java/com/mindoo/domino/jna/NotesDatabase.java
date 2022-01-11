@@ -9,6 +9,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -39,6 +40,8 @@ import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CopyDatabase;
 import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
+import com.mindoo.domino.jna.constants.DBCompact;
+import com.mindoo.domino.jna.constants.DBCompact2;
 import com.mindoo.domino.jna.constants.DBQuery;
 import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.FTIndex;
@@ -108,6 +111,7 @@ import com.mindoo.domino.jna.utils.NotesIniUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils.Privileges;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
+import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.Ref;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
@@ -118,6 +122,7 @@ import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
@@ -754,9 +759,66 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			dir.recycle();
 		}
 	}
-	
-	/** Available encryption strengths for database creation */
-	public static enum Encryption {None, Simple, Medium, Strong};
+
+	/**
+	 * Available encryption strengths for database creation
+	 */
+	public enum Encryption {
+		None(NotesConstants.DBCREATE_ENCRYPT_NONE),
+		Simple(NotesConstants.DBCREATE_ENCRYPT_SIMPLE),
+		Medium(NotesConstants.DBCREATE_ENCRYPT_MEDIUM),
+		Strong(NotesConstants.DBCREATE_ENCRYPT_STRONG),
+		AES128(NotesConstants.DBCREATE_ENCRYPT_AES128);
+
+		private final int value;
+
+		Encryption(final int value) {
+			this.value = value;
+		}
+
+		Encryption(final byte value) {
+			this.value = Byte.toUnsignedInt(value);
+		}
+
+		public int getValue() {
+			return value;
+		}
+		
+		public static Encryption valueOf(int val) {
+			for (Encryption currEnc : values()) {
+				if (val == currEnc.getValue()) {
+					return currEnc;
+				}
+			}
+			throw new IllegalArgumentException(MessageFormat.format("Unknown encryption value: {0}", val));
+		}
+	};
+
+	/**
+	 * Encryption states
+	 */
+	public enum EncryptionState {
+		UNENCRYPTED(0), ENCRYPTED(1), PENDING_ENCRYPTION(2), PENDING_DECRYPTION(3);
+
+		private final int value;
+
+		EncryptionState(final int value) {
+			this.value = value;
+		}
+
+		public int getValue() {
+			return this.value;
+		}
+		
+		public static EncryptionState valueOf(int val) {
+			for (EncryptionState currState : values()) {
+				if (val == currState.getValue()) {
+					return currState;
+				}
+			}
+			throw new IllegalArgumentException(MessageFormat.format("Unknown state value: {0}", val));
+		}
+	}
 
 	/**
 	 * Convenience method that calls {@link #createDatabase(String, String, DBClass, boolean, EnumSet, Encryption, long, String, AclLevel, String, boolean)}
@@ -808,25 +870,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		String fullPathTarget = NotesStringUtils.osPathNetConstruct(null, serverName, filePath);
 		Memory fullPathTargetMem = NotesStringUtils.toLMBCS(fullPathTarget, true);
 
-		byte encryptStrengthByte;
-		switch (encryption) {
-		case None:
-			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_NONE;
-			break;
-		case Simple:
-			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_SIMPLE;
-			break;
-		case Medium:
-			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_MEDIUM;
-			break;
-		case Strong:
-			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_STRONG;
-			break;
-		default:
-			encryptStrengthByte = NotesConstants.DBCREATE_ENCRYPT_NONE;
-		}
-
-		short result;			
+		byte encryptStrengthByte = (byte) (encryption.getValue() & 0xff);
 
 		short dbClassShort = dbClass.getValue();
 		short optionsShort = CreateDatabase.toBitMask(options);
@@ -834,7 +878,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			optionsShort |= NotesConstants.DBCREATE_LOCALSECURITY;
 		}
 		
-		result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathTargetMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
+		short result = NotesNativeAPI.get().NSFDbCreateExtended(fullPathTargetMem, dbClassShort, forceCreation, optionsShort, encryptStrengthByte, maxFileSize);
 		NotesErrorUtils.checkResult(result);
 
 		NotesDatabase db = new NotesDatabase(serverName, filePath, "");
@@ -8142,4 +8186,124 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return null;
 	}
+	
+	public interface EncryptionInfo {
+		
+		EncryptionState getState();
+		
+		Encryption getStrength();
+		
+	}
+	
+	/**
+	 * Returns information about the current encryption strength and state of
+	 * this database.
+	 * 
+	 * @return encryption info
+	 */
+	public EncryptionInfo getLocalEncryptionInfo() {
+		checkHandle();
+		HANDLE hDb = getHandle();
+		
+		IntByReference retState = new IntByReference();
+		IntByReference retStrength = new IntByReference();
+		
+		short result = NotesNativeAPI.get().NSFDbLocalSecInfoGetLocal(hDb.getByValue(), retState, retStrength);
+		NotesErrorUtils.checkResult(result);
+		
+		EncryptionState state = EncryptionState.valueOf(retState.getValue());
+		Encryption strength = Encryption.valueOf(retStrength.getValue());
+		
+		return new EncryptionInfo() {
+
+			@Override
+			public EncryptionState getState() {
+				return state;
+			}
+
+			@Override
+			public Encryption getStrength() {
+				return strength;
+			}
+
+			@Override
+			public String toString() {
+				return "EncryptionInfo [state="+getState()+", strength="+getStrength()+"]";
+			}
+			
+		};
+	}
+	
+	/**
+	 * Changes the local encryption level/strenght
+	 * 
+	 * @param encryption new encryption
+	 * @param userName user to encrypt the database for; null/empty for current ID user (should be used in the Notes Client and in most cases on the server side as well)
+	 */
+	public void setLocalEncryptionInfo(Encryption encryption, String userName) {
+		checkHandle();
+		
+		HANDLE hDb = getHandle();
+
+		if (userName==null) {
+			userName = "";
+		}
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, true);
+
+		short option = NotesConstants.LSECINFOSET_MODIFY;
+		if (encryption == Encryption.None) {
+			option = NotesConstants.LSECINFOSET_CLEAR;
+		}
+		
+		byte strengthAsByte = (byte) (encryption.getValue() & 0xff);
+		
+		short result = NotesNativeAPI.get().NSFDbLocalSecInfoSet(hDb.getByValue(), option, strengthAsByte, userNameCanonicalMem);
+		short status = (short) (result & NotesConstants.ERR_MASK);
+		if (status == INotesErrorConstants.ERR_LOCALSEC_NEEDCOMPACT) {
+			return;
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+
+	/**
+	 * This function compresses a local database to remove the space left by deleting documents, freeing up disk space.
+	 * Deletion stubs however, are left intact in the database.<br>
+	 * <br>
+	 * Calls {@link #compact(String, Set, Set)} with null values for the options internally.
+	 * 
+	 * @param pathName pathname of a Domino database. The directory part of the path may be omitted if the database is in the data directory.  The filename extension may be omitted if it is ".NSF".
+	 * @return the original and compacted size of the NSF
+	 */
+	public static Pair<Double,Double> compact(String pathName) {
+		return compact(pathName, null, null);
+	}
+	
+	/**
+	 * This function compresses a local database to remove the space left by deleting documents, freeing up disk space.
+	 * Deletion stubs however, are left intact in the database.
+	 * 
+	 * @param pathName pathname of a Domino database. The directory part of the path may be omitted if the database is in the data directory.  The filename extension may be omitted if it is ".NSF".
+	 * @param options See {@link DBCompact}. If no options are desired, this parameter may be set to null
+	 * @param options2 See {@link DBCompact2}. If no options are desired, this parameter may be set to null
+	 * @return the original and compacted size of the NSF
+	 */
+	public static Pair<Double,Double> compact(String pathName, Set<DBCompact> options, Set<DBCompact2> options2) {
+		Memory pathNameMem = NotesStringUtils.toLMBCS(pathName, true);
+		int optionsAsInt = DBCompact.toBitMask(options);
+		int options2AsInt = DBCompact2.toBitMask(options2);
+		
+		DoubleByReference retOriginalSize = new DoubleByReference();
+		DoubleByReference retCompactedSize = new DoubleByReference();
+		
+		short result = NotesNativeAPI.get().NSFDbCompactExtendedExt2(pathNameMem, optionsAsInt, options2AsInt,
+				retOriginalSize, retCompactedSize);
+		if (result == INotesErrorConstants.ERR_NSFOPEN) {
+			
+		}
+		NotesErrorUtils.checkResult(result);
+		
+		return new Pair<>(retOriginalSize.getValue(), retCompactedSize.getValue());
+	}
+	
 }

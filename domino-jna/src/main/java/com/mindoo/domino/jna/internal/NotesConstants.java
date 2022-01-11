@@ -989,6 +989,15 @@ public byte DBCREATE_ENCRYPT_NONE = 0x00;
 public byte DBCREATE_ENCRYPT_SIMPLE	= 0x01;	
 public byte DBCREATE_ENCRYPT_MEDIUM	= 0x02;
 public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
+public byte DBCREATE_ENCRYPT_AES128 = 0x04;
+public byte DBCREATE_ENCRYPT_AES256 = 0x05;
+
+/** if setting up a new database */
+short LSECINFOSET_DBCREATE = 0x0001;
+/** if clearing local security */
+short LSECINFOSET_CLEAR = 0x0002;
+/** if changing bulk key encryption */
+short LSECINFOSET_MODIFY = 0x0004;
 
 	/*	Data Type Definitions. */
 
@@ -4325,8 +4334,6 @@ This allows an Editor to assume some Designer-level access */
 
 	/*	Define options for DB compact. */
 	
-	/* SDK BEGIN */
-	
 	/** Don't preserve view indexes */
 	int DBCOMPACT_NO_INDEXES = 0x00000001;
 	/** Don't lock out database users */
@@ -4334,35 +4341,23 @@ This allows an Editor to assume some Designer-level access */
 	/** Revert current ODS to the previous ODS version */
 	int DBCOMPACT_REVERT_ODS = 0x00000004;
 	
-	/* SDK END */
-	
 	/** Indicate we are encrypting database */
 	int DBCOMPACT_FOR_ENCRYPT = 0x00000008;
 	/** Indicate we are decrypting database */
 	int DBCOMPACT_FOR_DECRYPT = 0x00000010;
 	
-	/* SDK BEGIN */
-	
 	/** Create new file with 4GB file size limit */
 	int DBCOMPACT_MAX_4GB = 0x00000020;
 	
-	/* SDK END */
-	
 	/** This note should be updated as a ghost note */
 	int DBCOMPACT_GHOST_NOTE = 0x00000040;
-	
-	/* SDK BEGIN */
 	
 	/** Compact XXXX.BOX for mail router and other MTAs */
 	int DBCOMPACT_MAILBOX = 0x00000080;
 	/** Don't do in-place compaction */
 	int DBCOMPACT_NO_INPLACE = 0x00000100;
 	
-	/* SDK END */
-	
 	int DBCOMPACT_ENCRYPT_DEFAULT = 0x00000200;
-	
-	/* SDK BEGIN */
 	
 	/** Disable unread marks in destination database */
 	int DBCOMPACT_DISABLE_UNREAD = 0x00002000;
@@ -4380,14 +4375,10 @@ This allows an Editor to assume some Designer-level access */
 	 * That is, make best effort to get something at the end */
 	int DBCOMPACT_IGNORE_ERRORS = 0x00080000;
 	
-	/* SDK END */
-	
 	/** If set, disable transaction logging for new database */
 	int DBCOMPACT_DISABLE_TXN_LOGGING = 0x00100000;
 	/** If set, enable transaction logging for new database */
 	int DBCOMPACT_ENABLE_TXN_LOGGING = 0x00200000;
-	
-	/* SDK BEGIN */
 	
 	/** If set, do only bitmap correction if in-place can be done */
 	int DBCOMPACT_RECOVER_SPACE_ONLY = 0x00400000;
@@ -4396,17 +4387,11 @@ This allows an Editor to assume some Designer-level access */
 	/** Just archive/delete, no need to compact */
 	int DBCOMPACT_ARCHIVE_ONLY = 0x01000000;
 	
-	/* SDK END */
-	
 	/** Just check object size and position fidelity - looking for overlap */
 	int DBCOMPACT_VERIFY_NOOVERLAP = 0x02000000;
 	
-	/* SDK BEGIN */
-	
 	/** If set, always do full space recovery compaction */
 	int DBCOMPACT_RECOVER_ALL_SPACE = 0x04000000;
-	
-	/* SDK END */
 	
 	/** If set and inplace is possible, just dump space map - don't compact */
 	int DBCOMPACT_DUMP_SPACE_MAP_ONLY = 0x08000000;
@@ -4445,40 +4430,28 @@ This allows an Editor to assume some Designer-level access */
 	/** skip NSF databases while processing NSFDB2 databases */
 	int DBCOMPACT2_SKIP_NSF = 0x00000200;
 	
-	/* SDK BEGIN */
-	
 	/** TRUE if design note non-summary should be compressed */
 	int DBCOMPACT2_COMPRESS_DESIGN_NS = 0x00000400;
 	/** TRUE if design note non-summary should be uncompressed */
 	int DBCOMPACT2_UNCOMPRESS_DESIGN_NS = 0x00000800;
 	
-	/* SDK END */
-	
 	/** if TRUE, do db2 group compression for group associated with this nsf */
 	int DBCOMPACT2_DB2_ASSOCGRP_COMPACT = 0x00001000;
 	/** if TRUE, do db2 group compression directly on group*/
 	int DBCOMPACT2_DB2_GROUP_COMPACT = 0x00002000;
-
-	/* SDK BEGIN */
 	
 	/** TRUE if all data note non-summary should be compressed */
 	int DBCOMPACT2_COMPRESS_DATA_DOCS = 0x00004000;
 	/** TRUE if all data note non-summary should be uncompressed */
 	int DBCOMPACT2_UNCOMPRESS_DATA_DOCS = 0x00008000;
 	
-	/* SDK END */
-	
 	/** TRUE if return file sizes should be in granules to handle large file sizes */
 	int DBCOMPACT2_STATS_IN_GRANULES = 0x00010000;
-	
-	/* SDK BEGIN */
 	
 	/** enable compact TO DAOS */
 	int DBCOMPACT2_FORCE_DAOS_ON = 0x00020000;
 	/** enable compact FROM DAOS */
 	int DBCOMPACT2_FORCE_DAOS_OFF = 0x00040000;
-	
-	/* SDK END */
 	
 	/** revert one ods based on current ods of the database */
 	int DBCOMPACT2_REVERT_ONE_ODS = 0x00080000;
@@ -4491,14 +4464,10 @@ This allows an Editor to assume some Designer-level access */
 	/** see above, but off */
 	int DBCOMPACT2_UNSPLIT_NIF_DATA = 0x02000000;
 	
-	/* SDK BEGIN */
-	
 	/** enable compact with PIRC */
 	int DBCOMPACT2_FORCE_PIRC_ON = 0x00400000;
 	/** enable compact without PIRC */
 	int DBCOMPACT2_FORCE_PIRC_OFF = 0x00800000;
-
-	/* SDK END */
 	
 	/** SaaS option, enable advanced property override */
 	int DBCOMPACT2_ADV_OPT_OVERRIDE_ON = 0x01000000;
@@ -4511,8 +4480,6 @@ This allows an Editor to assume some Designer-level access */
 	int DBCOMPACT2_FORCE = 0x08000000;
 	/** for copy style compaction, force "new" target to be encrypted even if source db is not */
 	int DBCOMPACT2_ENABLE_ENCRYPTION = 0x10000000;
-	/** a saas-only option to collect information when compacting for import */
-	int DBCOMPACT2_SAAS_IMPORT = 0x20000000;
 	/** Upgrade previous DBCLASS_V*NOTEFILE classes to DBCLASS_NOTEFILE */
 	int DBCOMPACT2_DBCLASS_UPGRADE = 0x40000000;
 	/** Create a new replica in the copy style compact */

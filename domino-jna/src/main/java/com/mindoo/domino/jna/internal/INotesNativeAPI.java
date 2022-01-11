@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStr
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
@@ -591,5 +592,11 @@ public interface INotesNativeAPI extends Library {
 			IntByReference retSize,
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
+
+	short NSFDbLocalSecInfoGetLocal(HANDLE.ByValue hDb, IntByReference state, IntByReference strength);
+
+	short NSFDbLocalSecInfoSet(HANDLE.ByValue hDB, short Option, byte EncryptStrength, Memory Username);
+
+	short NSFDbCompactExtendedExt2(Memory pathname, int options, int options2, DoubleByReference originalSize, DoubleByReference compactedSize);
 
 }

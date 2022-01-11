@@ -532,12 +532,23 @@ public class BaseJNATestClass {
 				AclLevel.MANAGER, IDUtils.getIdUsername(), true);
 		
 		NotesDatabase db = new NotesDatabase("", tmpFilePath, "");
+		NotesError deleteDbError = null;
 		try {
 			consumer.accept(db);
 		}
 		finally {
 			db.recycle();
-			NotesDatabase.deleteDatabase("", tmpFilePath);
+			
+			try {
+				NotesDatabase.deleteDatabase("", tmpFilePath);
+			}
+			catch (NotesError e) {
+				deleteDbError = e;
+			}
+		}
+		
+		if (deleteDbError!=null) {
+			throw deleteDbError;
 		}
 	}
 
