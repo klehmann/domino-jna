@@ -599,4 +599,16 @@ public interface INotesNativeAPI extends Library {
 
 	short NSFDbCompactExtendedExt2(Memory pathname, int options, int options2, DoubleByReference originalSize, DoubleByReference compactedSize);
 
+	/**
+	 * Copys the ACL in hList into hNewList.
+	 * Unlocks, then locks both handles.
+	 * Allocates memory for the copied ACL in hNewList
+	 * 
+	 * @param hList the source list to copy
+	 * @param hNewList a handle pointer to house the new copy
+	 * @return the result status
+	 */ 
+	@UndocumentedAPI
+	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
+
 }

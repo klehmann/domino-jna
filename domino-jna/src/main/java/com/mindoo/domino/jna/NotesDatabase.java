@@ -3599,6 +3599,14 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		public boolean exists() {
 			return !m_notPresent;
 		}
+
+		@Override
+		public String toString() {
+			return "NoteInfo [noteId=" + m_noteId + ", sequence=" + m_sequence + ", sequenceTime="
+					+ m_sequenceTime + ", unid=" + m_unid + ", isDeleted=" + m_isDeleted + ", notPresent="
+					+ m_notPresent + "]";
+		}
+		
 	}
 
 	/**
@@ -3671,6 +3679,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		public int getParentNoteId() {
 			return m_parentNoteId;
 		}
+
+		@Override
+		public String toString() {
+			return "NoteInfoExt [modified=" + m_modified + ", noteClass=" + m_noteClass + ", addedToFile="
+					+ m_addedToFile + ", responseCount=" + m_responseCount + ", parentNoteId=" + m_parentNoteId
+					+ "]";
+		}
+		
+		
 	}
 	
 	/**

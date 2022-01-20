@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.constants;
 import java.util.EnumSet;
 
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesSearch.SearchCallback;
 import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
@@ -20,7 +21,8 @@ public enum Search {
 	SUMMARY(NotesConstants.SEARCH_SUMMARY),
 	/** For directory mode file type filtering. If set, "NoteClassMask" is treated as a FILE_xxx mask for directory filtering */
 	FILETYPE(NotesConstants.SEARCH_FILETYPE),
-	/** Set {@link NotesConstants#NOTE_CLASS_NOTIFYDELETION} bit of NoteClass for deleted notes */
+	/** Set {@link NotesConstants#NOTE_CLASS_NOTIFYDELETION} bit of NoteClass for deleted notes.
+	 * Otherwise they are reported as non-matches via {@link SearchCallback} */
 	NOTIFYDELETIONS(NotesConstants.SEARCH_NOTIFYDELETIONS),
 	/** by using this search option combined with a map of (key=programmatic column name, value=column formula)
 	 * entries, the NSF search function just returns these specified column values instead of the
