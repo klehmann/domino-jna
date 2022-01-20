@@ -8315,9 +8315,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		short result = NotesNativeAPI.get().NSFDbCompactExtendedExt2(pathNameMem, optionsAsInt, options2AsInt,
 				retOriginalSize, retCompactedSize);
-		if (result == INotesErrorConstants.ERR_NSFOPEN) {
-			
-		}
 		NotesErrorUtils.checkResult(result);
 		
 		return new Pair<>(retOriginalSize.getValue(), retCompactedSize.getValue());
