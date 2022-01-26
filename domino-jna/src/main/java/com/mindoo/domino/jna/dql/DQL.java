@@ -7,11 +7,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Objects;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDbQueryResult;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 
 /**
  * Utility class to programmatically compose syntactically correct
@@ -70,7 +72,32 @@ public class DQL {
 	public static NamedView view(String viewName) {
 		return new NamedView(viewName);
 	}
-	
+
+	/**
+	 * Use this method to filter documents based on a formula-language
+	 * expression
+	 * 
+	 * @param formula the formula expression to use
+	 * @return term representing the formula expression
+	 * @throws IllegalArgumentException if {@code formula} is empty
+	 */
+	public static FormulaTerm formula(String formula) {
+		return new FormulaTerm(formula);
+	}
+
+	/**
+	 * Use this method to filter documents based on a formula-language
+	 * expression
+	 * 
+	 * @param formula the {@link FormulaExecution} objects to use
+	 * @return term representing the formula expression
+	 * @throws NullPointerException if {@code formula} is {@code null}
+	 */
+	public static FormulaTerm formula(FormulaExecution formula) {
+		Objects.requireNonNull(formula, "formula cannot be null");
+		return new FormulaTerm(formula.getFormula());
+	}
+
 	/**
 	 * Creates a search term to find documents that exist in at least
 	 * one of the specified views.
@@ -945,4 +972,25 @@ public class DQL {
 		}
 	}
 
+	public static class FormulaTerm extends DQLTerm {
+		private final String m_formula;
+
+		private String m_toString;
+
+		private FormulaTerm(final String formula) {
+			if(formula == null || formula.isEmpty()) {
+				throw new IllegalArgumentException("Formula expression cannot be empty");
+			}
+			this.m_formula = formula;
+		}
+
+		@Override
+		public String toString() {
+			if (this.m_toString == null) {
+				this.m_toString = MessageFormat.format("@formula(''{0}'')", escapeStringValue(m_formula)); //$NON-NLS-1$
+			}
+			return this.m_toString;
+		}
+	}
+	
 }
