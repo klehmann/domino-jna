@@ -29,7 +29,7 @@ import lotus.domino.View;
 public class TestFormulaExecution extends BaseJNATestClass {
 
 	@Test
-	public void testFormulaAnalyze() {
+	public void testAnalyzeFormula() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
@@ -66,7 +66,7 @@ public class TestFormulaExecution extends BaseJNATestClass {
 		});
 	}
 	
-//	@Test
+	@Test
 	public void testFormulaExecution_formulaExecution() {
 
 		runWithSession(new IDominoCallable<Object>() {
