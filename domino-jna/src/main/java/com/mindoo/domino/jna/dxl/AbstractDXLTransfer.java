@@ -6,6 +6,7 @@ import java.util.List;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.ItemDecoder;
@@ -130,8 +131,10 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 				}
 				
 				NotesIDTable idTable = new NotesIDTable(new Handle(handle), true);
-				NotesIDTable clonedTable = (NotesIDTable) idTable.clone();
-				return clonedTable;
+				//register IDTable for later disposal
+				NotesGC.__objectCreated(NotesIDTable.class, idTable);
+
+				return idTable;
 			}
 			finally {
 				m.dispose();
@@ -151,8 +154,10 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 				}
 				
 				NotesIDTable idTable = new NotesIDTable(new Handle(handle), true);
-				NotesIDTable clonedTable = (NotesIDTable) idTable.clone();
-				return clonedTable;
+				//register IDTable for later disposal
+				NotesGC.__objectCreated(NotesIDTable.class, idTable);
+
+				return idTable;
 			}
 			finally {
 				m.dispose();
