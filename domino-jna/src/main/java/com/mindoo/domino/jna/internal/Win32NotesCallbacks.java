@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.internal;
 
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
@@ -174,6 +176,16 @@ public interface Win32NotesCallbacks {
 		@Override
 		short invoke(Pointer routineParameter, int hDB, int NoteID, NotesUniversalNoteIdStruct NoteUNID,
 				short NoteClass, Pointer summary, int designType);
+	}
+
+	interface NSFFORMFUNCPROCWin32 extends NSFFORMFUNCPROC, StdCallCallback {
+		@Override
+		short invoke(Pointer ptr);
+	}
+	
+	interface NSFFORMCMDSPROCWin32 extends NSFFORMCMDSPROC, StdCallCallback {
+		@Override
+		short invoke(Pointer ptr, short code, IntByReference stopFlag);
 	}
 
 }

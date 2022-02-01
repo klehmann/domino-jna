@@ -5,6 +5,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
@@ -593,8 +595,10 @@ public interface INotesNativeAPI extends Library {
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
 
+	@UndocumentedAPI
 	short NSFDbLocalSecInfoGetLocal(HANDLE.ByValue hDb, IntByReference state, IntByReference strength);
 
+	@UndocumentedAPI
 	short NSFDbLocalSecInfoSet(HANDLE.ByValue hDB, short Option, byte EncryptStrength, Memory Username);
 
 	short NSFDbCompactExtendedExt2(Memory pathname, int options, int options2, DoubleByReference originalSize, DoubleByReference compactedSize);
@@ -610,5 +614,19 @@ public interface INotesNativeAPI extends Library {
 	 */ 
 	@UndocumentedAPI
 	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
+
+	@UndocumentedAPI
+	Pointer NSFFindFormulaParameters(Memory pszString);
+	
+	@UndocumentedAPI
+	short NSFFormulaFunctions(NSFFORMFUNCPROC callback);
+
+	@UndocumentedAPI
+	short NSFFormulaCommands(NSFFORMCMDSPROC callback);
+	
+	@UndocumentedAPI
+	short NSFFormulaAnalyze (DHANDLE.ByValue hFormula,
+			IntByReference retAttributes,
+			ShortByReference retSummaryNamesOffset);
 
 }
