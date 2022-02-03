@@ -71,7 +71,6 @@ public interface INotesNativeAPI extends Library {
 	void OSSetEnvironmentInt(Memory variableName, int Value);
 	@UndocumentedAPI
 	void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
-	@UndocumentedAPI
 	short OSGetEnvironmentSeqNo();
 	
 	short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
@@ -252,11 +251,7 @@ public interface INotesNativeAPI extends Library {
 			NotesCallbacks.ActionRoutinePtr  ActionRoutine,
 			Pointer vContext);
 
-	@UndocumentedAPI
 	void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
-//  commented out, not compatible with later Notes version
-//	@UndocumentedAPI
-//	void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
 	void NSFDbInfoParse(
 			Pointer Info,
@@ -628,5 +623,31 @@ public interface INotesNativeAPI extends Library {
 	short NSFFormulaAnalyze (DHANDLE.ByValue hFormula,
 			IntByReference retAttributes,
 			ShortByReference retSummaryNamesOffset);
+
+	/**
+	 * @param handle the handle to lock
+	 * @return a pointer to the locked value
+	 * @deprecated use {@link Mem#OSLockObject(DHANDLE.ByValue)} instead
+	 */
+	@Deprecated Pointer OSLockObject(DHANDLE.ByValue handle);
+	/**
+	 * @param handle the handle to unlock
+	 * @return whether unlocking was successful
+	 * @deprecated use {@link Mem#OSUnlockObject(NotesBlockIdStruct)} instead
+	 */
+	@Deprecated boolean OSUnlockObject(DHANDLE.ByValue handle);
+
+	short NSFItemModifyValue (DHANDLE.ByValue hNote, NotesBlockIdStruct.ByValue bhItem, 
+		      short itemFlags, short dataType, 
+		      Pointer value, int valueLength);
+
+	@UndocumentedAPI
+	short DesignOpenCollection(HANDLE.ByValue hDB,
+            boolean bPrivate,
+            short OpenFlags,
+            DHANDLE.ByReference rethCollection,
+            IntByReference retCollectionNoteID);
+
+	short NIFCloseCollection(DHANDLE.ByValue hCollection);
 
 }

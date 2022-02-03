@@ -283,10 +283,6 @@ public interface INotesNativeAPI32 extends Library {
 			int value_len,
 			NotesBlockIdStruct item_bid_ptr);
 
-	@UndocumentedAPI
-	short NSFItemModifyValue (int hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
-			Pointer valuePtr, int valueLength);
-
 	void NSFNoteGetInfo(int hNote, short type, Pointer retValue);
 	void NSFNoteSetInfo(int hNote, short type, Pointer value);
 	short NSFNoteCopy(
@@ -302,7 +298,6 @@ public interface INotesNativeAPI32 extends Library {
 			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			IntByReference rethNote);
-	@UndocumentedAPI
 	short NSFNoteOpenByUNIDExtended(int hDB, NotesUniversalNoteIdStruct pUNID, int flags, IntByReference rtn);
 	short NSFNoteClose(int hNote);
 	short NSFNoteVerifySignature(
@@ -388,7 +383,6 @@ public interface INotesNativeAPI32 extends Library {
 			NotesBlockIdStruct.ByValue bhItem,
 			NotesBlockIdStruct.ByValue bhValue);
 	
-	@UndocumentedAPI
 	short NSFNoteHasReadersField(int hNote, NotesBlockIdStruct bhFirstReadersItem);
 	short NSFNoteCipherExtractWithCallback (int hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -461,7 +455,6 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference rethNote);
 	
 	short NSFItemCopy(int note_handle, NotesBlockIdStruct.ByValue item_blockid);
-	@UndocumentedAPI
 	short NSFItemCopyAndRename (int hNote, NotesBlockIdStruct.ByValue bhItem, Memory pszNewItemName);
 	
 	short IDCreateTable (int alignment, IntByReference rethTable);
@@ -578,9 +571,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hDB,
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
-	@UndocumentedAPI
 	short NSFDbIsRemote(int hDb);
-	@UndocumentedAPI
 	short NSFDbHasFullAccess(int hDb);
 	short NSFDbSpaceUsage(int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	short NSFDbSpaceUsageScaled (int dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
@@ -610,8 +601,6 @@ public interface INotesNativeAPI32 extends Library {
 	short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
 	@UndocumentedAPI
 	short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, IntByReference rethNames);
-//	@UndocumentedAPI
-//	short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, IntByReference rtnhNames);
 	@UndocumentedAPI
 	short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
 			Pointer pLookupFlags, Memory pTarget, IntByReference rethNames);
@@ -621,7 +610,6 @@ public interface INotesNativeAPI32 extends Library {
 	
 	short NIFReadEntries(int hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, IntByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
-	@UndocumentedAPI
 	short NIFReadEntriesExt(int hCollection,
 			NotesCollectionPositionStruct CollectionPos,
 			short SkipNavigator, int SkipCount,
@@ -633,6 +621,7 @@ public interface INotesNativeAPI32 extends Library {
 			NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	void NIFGetLastModifiedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
 	void NIFGetLastAccessedTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
+	@UndocumentedAPI
 	void NIFGetNextDiscardTime(int hCollection, NotesTimeDateStruct retLastModifiedTime);
 	short NIFFindByKeyExtended2 (int hCollection, Memory keyBuffer,
 			int findFlags,
@@ -687,6 +676,7 @@ public interface INotesNativeAPI32 extends Library {
 	short NIFGetCollectionData(
 			int hCollection,
 			IntByReference rethCollData);
+	@UndocumentedAPI
 	short NIFGetCollectionDocCountLW(int hCol, IntByReference pDocct);
 
 	@UndocumentedAPI
@@ -726,7 +716,6 @@ public interface INotesNativeAPI32 extends Library {
 	short AgentSetDocumentContext(int hAgentCtx, int hNote);
 	short AgentSetTimeExecutionLimit(int hAgentCtx, int timeLimit);
 	boolean AgentIsEnabled(int hAgent);
-	@UndocumentedAPI
 	void SetParamNoteID(int hAgentCtx, int noteId);
 	@UndocumentedAPI
 	short AgentSetUserName(int hAgentCtx, int hNameList);
@@ -737,9 +726,7 @@ public interface INotesNativeAPI32 extends Library {
 			int hAgentCtx,
 		    int hSelection,
 			int dwFlags);
-	@UndocumentedAPI
 	short AgentSetHttpStatusCode(int hAgentCtx, int httpStatus);
-	@UndocumentedAPI
 	short ClientRunServerAgent(int hdb, int nidAgent, int nidParamDoc,
 			int bForeignServer, int bSuppressPrintToConsole);
 	
