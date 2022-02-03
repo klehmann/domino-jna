@@ -3,6 +3,8 @@ package com.mindoo.domino.jna.internal;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.DHANDLE32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE64;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -197,4 +199,43 @@ public class Mem {
 			throw new IllegalArgumentException("Unsupported return handle type: "+retHandle==null ? "null" : retHandle.getClass().getName());
 		}
 	}
+	
+	public static Pointer OSLockObject(NotesBlockIdStruct blockId) {
+		DHANDLE.ByValue hdlByVal = DHANDLE.newInstanceByValue();
+		
+		if (PlatformUtils.is64Bit()) {
+			((DHANDLE64.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		else {
+			((DHANDLE32.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		
+		if (hdlByVal.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be unlocked");
+		}
+		
+		Pointer poolPtr = NotesNativeAPI.get().OSLockObject(hdlByVal);
+
+		int block = blockId.block & 0xffff;
+		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
+		return new Pointer(poolPtrLong);
+	}
+
+	public static boolean OSUnlockObject(NotesBlockIdStruct blockId) {
+		DHANDLE.ByValue hdlByVal = DHANDLE.newInstanceByValue();
+		
+		if (PlatformUtils.is64Bit()) {
+			((DHANDLE64.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		else {
+			((DHANDLE32.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		
+		if (hdlByVal.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be unlocked");
+		}
+		
+		return NotesNativeAPI.get().OSUnlockObject(hdlByVal);
+	}
+	
 }
