@@ -77,6 +77,9 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.NoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesFileObjectStruct;
@@ -830,6 +833,15 @@ public class NotesNote implements IRecyclableNotesObject {
 		return m_hNote64;
 	}
 
+	public DHANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return DHANDLE64.newInstance(m_hNote64);
+		}
+		else {
+			return DHANDLE32.newInstance(m_hNote32);
+		}
+	}
+	
 	void checkHandle() {
 		if (m_legacyDocRef!=null) {
 			if (isRecycled(m_legacyDocRef)) {
