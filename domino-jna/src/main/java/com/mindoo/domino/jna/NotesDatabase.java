@@ -87,6 +87,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE32;
 import com.mindoo.domino.jna.internal.handles.HANDLE64;
@@ -2356,6 +2357,28 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return design collection
 	 */
 	public NotesCollection openDesignCollection() {
+		try {
+			NotesCollection col = openCollection(NotesConstants.NOTE_ID_SPECIAL | NotesConstants.NOTE_CLASS_DESIGN, null);
+			if (col!=null) {
+				return col;
+			}
+		}
+		catch (NotesError e) {
+			//ignore, we call DesignOpenCollection next which creates the design collection
+		}
+		
+		HANDLE hDb = getHandle();
+		
+		DHANDLE.ByReference rethCollection = DHANDLE.newInstanceByReference();
+		IntByReference retCollectionNoteID = new IntByReference();
+		short openResult = NotesNativeAPI.get().DesignOpenCollection(hDb.getByValue(),
+				false, (short) 0, rethCollection, retCollectionNoteID);
+		
+		if (openResult==0) {
+			NotesErrorUtils.checkResult(NotesNativeAPI.get().NIFCloseCollection(rethCollection.getByValue()));
+		}
+		
+		//try again:
 		NotesCollection col = openCollection(NotesConstants.NOTE_ID_SPECIAL | NotesConstants.NOTE_CLASS_DESIGN, null);
 		return col;
 	}
@@ -8252,7 +8275,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
-	 * Changes the local encryption level/strenght
+	 * Changes the local encryption level/strength
 	 * 
 	 * @param encryption new encryption
 	 * @param userName user to encrypt the database for; null/empty for current ID user (should be used in the Notes Client and in most cases on the server side as well)
