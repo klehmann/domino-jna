@@ -32,7 +32,7 @@ public class ReadUtil {
 				
 				if (autoFree) {
 					NotesErrorUtils.checkResult(
-						Mem.OSMemFree(handle)
+						Mem.OSMemFree(handle.getByValue())
 					);
 				}
 			}

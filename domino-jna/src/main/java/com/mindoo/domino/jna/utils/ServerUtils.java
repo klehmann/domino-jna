@@ -240,7 +240,7 @@ public class ServerUtils {
 			NotesErrorUtils.checkResult(result);
 
 			if (!hResponseText.isNull()) {
-				Mem.OSMemFree(hResponseText);
+				Mem.OSMemFree(hResponseText.getByValue());
 			}
 		}
 		
@@ -314,7 +314,7 @@ public class ServerUtils {
 					}
 					finally {
 						Mem.OSUnlockObject(hAsyncBuffer);
-						Mem.OSMemFree(hAsyncBuffer);
+						Mem.OSMemFree(hAsyncBuffer.getByValue());
 					}
 				}
 				else {

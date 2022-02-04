@@ -7,12 +7,9 @@ import java.util.Map;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.PlatformUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
 
-public class NotesNativeAPI64V1000 implements INotesNativeAPI64V1000 {
+public class NotesNativeAPI64V1000 {
 	private static volatile INotesNativeAPI64V1000 m_instanceWithoutCrashLogging;
 	private static volatile INotesNativeAPI64V1000 m_instanceWithCrashLogging;
 
@@ -24,19 +21,6 @@ public class NotesNativeAPI64V1000 implements INotesNativeAPI64V1000 {
 	static void set(INotesNativeAPI64V1000 instance) {
 		m_instanceWithoutCrashLogging = instance;
 	}
-
-	@Override
-	public native short NSFQueryDB(long hDb, Memory query, int flags, int maxDocsScanned, int maxEntriesScanned, int maxMsecs,
-			LongByReference retResults, IntByReference retError, IntByReference retExplain);
-	
-	@Override
-	public native short NSFGetSoftDeletedViewFilter(long hViewDB, long hDataDB, int viewNoteID, IntByReference hFilter);
-	
-	@Override
-	public native short NSFDbLargeSummaryEnabled(long hDB);
-
-	@Override
-	public native short NSFDesignHarvest(long hDB, int flags);
 
 	/**
 	 * Returns the API instance used to call native Domino C API methods for 32 bit

@@ -1,8 +1,9 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
-import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -1216,71 +1217,6 @@ public interface INotesNativeAPI64 extends Library {
 			ABORTCHECKPROC AbortCheck,
 			OSSIGMSGPROC MessageProc);
 
-	short NSFDbReadACL(
-			long hDB,
-			LongByReference rethACL);
-	
-	short ACLEnumEntries(
-			long hACL,
-			ACLENTRYENUMFUNC EnumFunc,
-			Pointer EnumFuncParam);
-
-	short ACLGetPrivName(
-			long hACL,
-			short PrivNum,
-			Memory retPrivName);
-
-	short NSFDbStoreACL(
-			long hDB,
-			long hACL,
-			int ObjectID,
-			short Method);
-	
-	short ACLLookupAccess(
-			long hACL,
-			Pointer pNamesList,
-			ShortByReference retAccessLevel,
-			Memory retPrivileges,
-			ShortByReference retAccessFlags,
-			LongByReference rethPrivNames);
-	
-	short ACLSetAdminServer(
-			long hList,
-			Memory ServerName);
-	
-	short ACLAddEntry(
-			long hACL,
-			Memory name,
-			short AccessLevel,
-			Memory privileges,
-			short AccessFlags);
-
-	short ACLDeleteEntry(
-			long hACL,
-			Memory name);
-	
-	short ACLSetFlags(
-			long hACL,
-			int Flags);
-	
-	short ACLGetFlags(
-			long hACL,
-			IntByReference retFlags);
-
-	short ACLSetPrivName(
-			long hACL,
-			short PrivNum,
-			Memory privName);
-
-	short ACLUpdateEntry(
-			long hACL,
-			Memory name,
-			short updateFlags,
-			Memory newName,
-			short newAccessLevel,
-			Memory newPrivileges,
-			short newAccessFlags);
-
 	@UndocumentedAPI
 	short NSFSearchStartExtended(long hDB, long formula, long filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
@@ -1716,8 +1652,6 @@ public interface INotesNativeAPI64 extends Library {
 			short DefaultAccess,
 			LongByReference rethACL);
 	
-	short ACLCreate(LongByReference rethACL);
-
 	short NSFDbCopy(
 			long hSrcDB,
 			long hDstDB,
@@ -1809,5 +1743,11 @@ public interface INotesNativeAPI64 extends Library {
 
 	@UndocumentedAPI
 	short DesignGetNoteTable(long hDB, short NoteClass, LongByReference rethIDTable);
+
+	@UndocumentedAPI
+	short NSFDbGetModifiedNoteTableExt (HANDLE.ByValue hDB, short NoteClassMask, 
+			short Option, NotesTimeDateStruct.ByValue Since,
+			NotesTimeDateStruct.ByReference retUntil,
+			DHANDLE.ByReference rethTable);
 
 }

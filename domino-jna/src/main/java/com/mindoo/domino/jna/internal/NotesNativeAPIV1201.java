@@ -6,15 +6,10 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference;
-import com.mindoo.domino.jna.internal.handles.HANDLE.ByValue;
 import com.mindoo.domino.jna.utils.PlatformUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.ShortByReference;
 
-public class NotesNativeAPIV1201 implements INotesNativeAPIV1201 {
+public class NotesNativeAPIV1201 {
 	private static volatile INotesNativeAPIV1201 m_instanceWithoutCrashLogging;
 	private static volatile INotesNativeAPIV1201 m_instanceWithCrashLogging;
 
@@ -74,15 +69,4 @@ public class NotesNativeAPIV1201 implements INotesNativeAPIV1201 {
 		}
 	}
 
-	@Override
-	public native short NABLookupBasicAuthentication(Memory userName, Memory password, int dwFlags, int nMaxFullNameLen,
-			Memory fullUserName);
-
-	@Override
-	public native short NSFProcessResultsExt(ByValue hDb, Memory resultsname, int dwFlags, int hInResults, int hOutFields,
-			int hFieldRules, int hCombineRules, com.mindoo.domino.jna.internal.handles.DHANDLE.ByValue hReaders,
-			int dwHoursTillExpire, IntByReference phErrorText, ByReference phStreamedhQueue,
-			ShortByReference phViewOpened, IntByReference pViewNoteID, int dwQRPTimeLimit, int dwQRPEntriesLimit,
-			int dwQRPTimeCheckInterval);
-	
 }

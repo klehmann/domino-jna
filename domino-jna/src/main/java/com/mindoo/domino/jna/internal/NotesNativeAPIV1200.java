@@ -6,15 +6,10 @@ import java.util.Map;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.handles.DHANDLE.ByReference;
-import com.mindoo.domino.jna.internal.handles.HANDLE.ByValue;
 import com.mindoo.domino.jna.utils.PlatformUtils;
-import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
 
-public class NotesNativeAPIV1200 implements INotesNativeAPIV1200 {
+public class NotesNativeAPIV1200 {
 	private static volatile INotesNativeAPIV1200 m_instanceWithoutCrashLogging;
 	private static volatile INotesNativeAPIV1200 m_instanceWithCrashLogging;
 
@@ -74,10 +69,4 @@ public class NotesNativeAPIV1200 implements INotesNativeAPIV1200 {
 		}
 	}
 
-	@Override
-	public native short NSFProcessResults(ByValue hDb, Memory viewname, int dwFlags, int hInResults, int hOutFields,
-			int hFieldRules, int hCombineRules, IntByReference hErrorText, ByReference phStreamedhQueue);
-
-	@Override
-	public native short NSFQueryAddToResultsList(int type, Pointer pInEntry, Pointer phEntryList, IntByReference phErrorText);
 }

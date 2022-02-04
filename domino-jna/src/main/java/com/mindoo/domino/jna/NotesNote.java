@@ -4169,7 +4169,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (allNumbers)
 			return (List<?>) list;
 		
-		List convertedList = new ArrayList();
+		List<Object> convertedList = new ArrayList<>();
 		for (int i=0; i<list.size(); i++) {
 			if (list.get(i) instanceof Number) {
 				//ok

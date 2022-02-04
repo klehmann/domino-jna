@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
@@ -16,14 +17,15 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.Mem32;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.ListUtil;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -42,26 +44,40 @@ import com.sun.jna.ptr.ShortByReference;
  * @author Karsten Lehmann
  */
 public class NotesACL implements IAllocatedMemory {
-	private NotesDatabase m_parentDb;
-	private long m_hACL64;
-	private int m_hACL32;
+	private Optional<NotesDatabase> m_parentDb = Optional.empty();
+	private DHANDLE m_hACL;
+	private String m_server;
 	
-	NotesACL(NotesDatabase parentDb, long hACL) {
-		if (!PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 64bit only");
-		m_parentDb = parentDb;
-		m_hACL64 = hACL;
+	/**
+	 * Creates a standalone ACL without parent database
+	 * 
+	 * @param dhandle ACL handle
+	 * @param server parent server to lookup group membership
+	 */
+	NotesACL(DHANDLE dhandle, String server) {
+		m_hACL = dhandle;
+		m_server = server;
 	}
 	
-	NotesACL(NotesDatabase parentDb, int hACL) {
-		if (PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 32bit only");
-		m_parentDb = parentDb;
-		m_hACL32 = hACL;
+	/**
+	 * Creates a new NSF ACL instance
+	 * 
+	 * @param parentDb parent database
+	 * @param hACL ACL handle
+	 */
+	NotesACL(NotesDatabase parentDb, DHANDLE hACL) {
+		m_parentDb = Optional.ofNullable(parentDb);
+		m_server = parentDb.getServer();
+		m_hACL = hACL;
 	}
 	
+	/**
+	 * Returns the parent database
+	 * 
+	 * @return db or null if standalone ACL
+	 */
 	public NotesDatabase getParentDatabase() {
-		return m_parentDb;
+		return m_parentDb.isPresent() ? null : m_parentDb.get();
 	}
 	
 	@Override
@@ -69,40 +85,31 @@ public class NotesACL implements IAllocatedMemory {
 		if (isFreed())
 			return;
 
-		if (PlatformUtils.is64Bit()) {
-			NotesGC.__memoryBeeingFreed(this);
-			short result = Mem64.OSMemFree(m_hACL64);
-			NotesErrorUtils.checkResult(result);
-			m_hACL64=0;
-		}
-		else {
-			NotesGC.__memoryBeeingFreed(this);
-			short result = Mem32.OSMemFree(m_hACL32);
-			NotesErrorUtils.checkResult(result);
-			m_hACL32=0;
-		}
+		NotesGC.__memoryBeeingFreed(this);
+		short result = Mem.OSMemFree(m_hACL.getByValue());
+		NotesErrorUtils.checkResult(result);
+		m_hACL.setDisposed();
 	}
 
 	@Override
 	public boolean isFreed() {
-		if (PlatformUtils.is64Bit()) {
-			return m_hACL64 == 0;
-		}
-		else {
-			return m_hACL32 == 0;
-		}
+		return m_hACL.isDisposed();
 	}
 
 	@Override
 	public int getHandle32() {
-		return m_hACL32;
+		return m_hACL instanceof DHANDLE32 ? ((DHANDLE32)m_hACL).hdl : 0;
 	}
 
 	@Override
 	public long getHandle64() {
-		return m_hACL64;
+		return m_hACL instanceof DHANDLE64 ? ((DHANDLE64)m_hACL).hdl : 0;
 	}
 
+	public DHANDLE getHandle() {
+		return m_hACL;
+	}
+	
 	/**
 	 * Change the name of the administration server for the access control list.
 	 * 
@@ -112,13 +119,7 @@ public class NotesACL implements IAllocatedMemory {
 		checkHandle();
 		
 		Memory serverCanonicalMem = NotesStringUtils.toLMBCS(NotesNamingUtils.toCanonicalName(server), true);
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetAdminServer(m_hACL64, serverCanonicalMem);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLSetAdminServer(m_hACL32, serverCanonicalMem);
-		}
+		short result = NotesNativeAPI.get().ACLSetAdminServer(m_hACL.getByValue(), serverCanonicalMem);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -127,16 +128,14 @@ public class NotesACL implements IAllocatedMemory {
 	 */
 	public void save() {
 		checkHandle();
-		if (m_parentDb.isRecycled())
+		
+		if (!m_parentDb.isPresent()) {
+			throw new IllegalStateException("This is a detached ACL, so there's no parent database to save to.");
+		}
+		else if (m_parentDb.get().isRecycled())
 			throw new NotesError(0, "Parent database already recycled");
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NSFDbStoreACL(m_parentDb.getHandle64(), m_hACL64, 0, (short) 0);
-		}
-		else {
-			result = NotesNativeAPI32.get().NSFDbStoreACL(m_parentDb.getHandle32(), m_hACL32, 0, (short) 0);
-		}
+		short result = NotesNativeAPI.get().NSFDbStoreACL(m_parentDb.get().getHandle().getByValue(), getHandle().getByValue(), 0, (short) 0);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -144,16 +143,10 @@ public class NotesACL implements IAllocatedMemory {
 	 * Checks if the database is already recycled
 	 */
 	private void checkHandle() {
-		if (PlatformUtils.is64Bit()) {
-			if (m_hACL64==0)
-				throw new NotesError(0, "Memory already freed");
-			NotesGC.__b64_checkValidMemHandle(getClass(), m_hACL64);
-		}
-		else {
-			if (m_hACL32==0)
-				throw new NotesError(0, "Memory already freed");
-			NotesGC.__b32_checkValidMemHandle(getClass(), m_hACL32);
-		}
+		if (m_hACL.isDisposed())
+			throw new NotesError(0, "Memory already freed");
+
+		NotesGC.__checkValidMemHandle(getClass(), getHandle());
 	}
 
 	/**
@@ -163,7 +156,7 @@ public class NotesACL implements IAllocatedMemory {
 	 * @return acl access info, with access level, flags and roles
 	 */
 	public NotesACLAccess lookupAccess(String userName) {
-		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_parentDb.getServer(), userName);
+		NotesNamesList namesList = NotesNamingUtils.buildNamesList(m_server, userName);
 		try {
 			return lookupAccess(namesList);
 		}
@@ -187,112 +180,59 @@ public class NotesACL implements IAllocatedMemory {
 		ShortByReference retAccessFlags = new ShortByReference();
 		
 		short result;
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethPrivNames = new LongByReference();
+		
+		DHANDLE hAcl = getHandle();
+
+		LongByReference rethPrivNames = new LongByReference();
+		
+		long hNamesList = namesList.getHandle64();
+		Pointer pNamesList = Mem64.OSLockObject(hNamesList);
+		try {
+			result = NotesNativeAPI.get().ACLLookupAccess(hAcl.getByValue(), pNamesList, retAccessLevel,
+					retPrivileges, retAccessFlags, rethPrivNames);
+			NotesErrorUtils.checkResult(result);
 			
-			long hNamesList = namesList.getHandle64();
-			Pointer pNamesList = Mem64.OSLockObject(hNamesList);
-			try {
-				result = NotesNativeAPI64.get().ACLLookupAccess(m_hACL64, pNamesList, retAccessLevel,
-						retPrivileges, retAccessFlags, rethPrivNames);
-				NotesErrorUtils.checkResult(result);
-				
-				long hPrivNames = rethPrivNames.getValue();
-				List<String> roles;
-				if (hPrivNames==0)
-					roles = Collections.emptyList();
-				else {
-					Pointer pPrivNames = Mem64.OSLockObject(hPrivNames);
-					ShortByReference retTextLength = new ShortByReference();
-					Memory retTextPointer = new Memory(Native.POINTER_SIZE);
-					try {
-						int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
-						roles = new ArrayList<String>(numEntriesAsInt);
-						for (int i=0; i<numEntriesAsInt; i++) {
-							result = NotesNativeAPI.get().ListGetText(pPrivNames, false, (short) (i & 0xffff), retTextPointer, retTextLength);
-							NotesErrorUtils.checkResult(result);
-							
-							String currRole = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);
-							roles.add(currRole);
-						}
-					}
-					finally {
-						Mem64.OSUnlockObject(hPrivNames);
-						Mem64.OSMemFree(hPrivNames);
+			long hPrivNames = rethPrivNames.getValue();
+			List<String> roles;
+			if (hPrivNames==0)
+				roles = Collections.emptyList();
+			else {
+				Pointer pPrivNames = Mem64.OSLockObject(hPrivNames);
+				ShortByReference retTextLength = new ShortByReference();
+				Memory retTextPointer = new Memory(Native.POINTER_SIZE);
+				try {
+					int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
+					roles = new ArrayList<String>(numEntriesAsInt);
+					for (int i=0; i<numEntriesAsInt; i++) {
+						result = NotesNativeAPI.get().ListGetText(pPrivNames, false, (short) (i & 0xffff), retTextPointer, retTextLength);
+						NotesErrorUtils.checkResult(result);
+						
+						String currRole = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);
+						roles.add(currRole);
 					}
 				}
-
-				int iAccessLevel = retAccessLevel.getValue();
-				AclLevel accessLevel = AclLevel.toLevel(iAccessLevel);
-
-				int iAccessFlag = (int) (retAccessFlags.getValue() & 0xffff);
-				EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
-				for (AclFlag currFlag : AclFlag.values()) {
-					if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
-						retFlags.add(currFlag);
-					}
+				finally {
+					Mem64.OSUnlockObject(hPrivNames);
+					Mem64.OSMemFree(hPrivNames);
 				}
+			}
 
-				NotesACLAccess access = new NotesACLAccess(accessLevel, roles, retFlags);
-				return access;
+			int iAccessLevel = retAccessLevel.getValue();
+			AclLevel accessLevel = AclLevel.toLevel(iAccessLevel);
+
+			int iAccessFlag = (int) (retAccessFlags.getValue() & 0xffff);
+			EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
+			for (AclFlag currFlag : AclFlag.values()) {
+				if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
+					retFlags.add(currFlag);
+				}
 			}
-			finally {
-				Mem64.OSUnlockObject(hNamesList);
-			}
+
+			NotesACLAccess access = new NotesACLAccess(accessLevel, roles, retFlags);
+			return access;
 		}
-		else {
-			IntByReference rethPrivNames = new IntByReference();
-			
-			int hNamesList = namesList.getHandle32();
-			Pointer pNamesList = Mem32.OSLockObject(hNamesList);
-			try {
-				result = NotesNativeAPI32.get().ACLLookupAccess(m_hACL32, pNamesList, retAccessLevel,
-						retPrivileges, retAccessFlags, rethPrivNames);
-				NotesErrorUtils.checkResult(result);
-				
-				int hPrivNames = rethPrivNames.getValue();
-				List<String> roles;
-				if (hPrivNames==0)
-					roles = Collections.emptyList();
-				else {
-					Pointer pPrivNames = Mem32.OSLockObject(hPrivNames);
-					ShortByReference retTextLength = new ShortByReference();
-					Memory retTextPointer = new Memory(Native.POINTER_SIZE);
-					try {
-						int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
-						roles = new ArrayList<String>(numEntriesAsInt);
-						for (int i=0; i<numEntriesAsInt; i++) {
-							result = NotesNativeAPI.get().ListGetText(pPrivNames, false, (short) (i & 0xffff), retTextPointer, retTextLength);
-							NotesErrorUtils.checkResult(result);
-							
-							String currRole = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);
-							roles.add(currRole);
-						}
-					}
-					finally {
-						Mem32.OSUnlockObject(hPrivNames);
-						Mem32.OSMemFree(hPrivNames);
-					}
-				}
-				
-				int iAccessLevel = retAccessLevel.getValue();
-				AclLevel accessLevel = AclLevel.toLevel(iAccessLevel);
-
-				int iAccessFlag = (int) (retAccessFlags.getValue() & 0xffff);
-				EnumSet<AclFlag> retFlags = EnumSet.noneOf(AclFlag.class);
-				for (AclFlag currFlag : AclFlag.values()) {
-					if ((iAccessFlag & currFlag.getValue()) == currFlag.getValue()) {
-						retFlags.add(currFlag);
-					}
-				}
-
-				NotesACLAccess access = new NotesACLAccess(accessLevel, roles, retFlags);
-				return access;
-			}
-			finally {
-				Mem32.OSUnlockObject(hNamesList);
-			}
-			
+		finally {
+			Mem64.OSUnlockObject(hNamesList);
 		}
 	}
 	
@@ -409,13 +349,8 @@ public class NotesACL implements IAllocatedMemory {
 			};
 		}
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLEnumEntries(m_hACL64, callback, null);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLEnumEntries(m_hACL32, callback, null);
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLEnumEntries(hAcl.getByValue(), callback, null);
 		NotesErrorUtils.checkResult(result);
 		
 		return aclAccessInfoByName;
@@ -491,13 +426,8 @@ public class NotesACL implements IAllocatedMemory {
 		
 		Memory newNameStrippedMem = NotesStringUtils.toLMBCS(newNameStripped, true);
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (roleIndex & 0xffff), newNameStrippedMem);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (roleIndex & 0xffff), newNameStrippedMem);			
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLSetPrivName(hAcl.getByValue(), (short) (roleIndex & 0xffff), newNameStrippedMem);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -509,35 +439,22 @@ public class NotesACL implements IAllocatedMemory {
 	public List<String> getRoles() {
 		List<String> roles = new ArrayList<String>();
 
+		DHANDLE hAcl = getHandle();
+		
 		short result;
 		DisposableMemory retPrivName = new DisposableMemory(NotesConstants.ACL_PRIVSTRINGMAX);
 		try {
 			for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
-				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().ACLGetPrivName(m_hACL64, (short) (i & 0xffff), retPrivName);
-					if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
-						break;
-					}
-
-					NotesErrorUtils.checkResult(result);
-
-					String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
-					if (!StringUtil.isEmpty(role)) {
-						roles.add(role);
-					}
+				result = NotesNativeAPI.get().ACLGetPrivName(hAcl.getByValue(), (short) (i & 0xffff), retPrivName);
+				if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+					break;
 				}
-				else {
-					result = NotesNativeAPI32.get().ACLGetPrivName(m_hACL32, (short) (i & 0xffff), retPrivName);
-					if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
-						break;
-					}
 
-					NotesErrorUtils.checkResult(result);
+				NotesErrorUtils.checkResult(result);
 
-					String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
-					if (!StringUtil.isEmpty(role)) {
-						roles.add(role);
-					}
+				String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+				if (!StringUtil.isEmpty(role)) {
+					roles.add(role);
 				}
 			}
 		}
@@ -559,32 +476,19 @@ public class NotesACL implements IAllocatedMemory {
 		short result;
 		Memory retPrivName = new Memory(NotesConstants.ACL_PRIVSTRINGMAX);
 		
+		DHANDLE hAcl = getHandle();
+		
 		for (int i=5; i<NotesConstants.ACL_PRIVCOUNT; i++) { // Privilege names associated with privilege numbers 0 through 4 are privilege levels compatible with versions of Notes prior to Release 3
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().ACLGetPrivName(m_hACL64, (short) (i & 0xffff), retPrivName);
-				if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
-					break;
-				}
-
-				NotesErrorUtils.checkResult(result);
-				
-				String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
-				if (!StringUtil.isEmpty(role)) {
-					roles.put(i, role);
-				}
+			result = NotesNativeAPI.get().ACLGetPrivName(hAcl.getByValue(), (short) (i & 0xffff), retPrivName);
+			if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
+				break;
 			}
-			else {
-				result = NotesNativeAPI32.get().ACLGetPrivName(m_hACL32, (short) (i & 0xffff), retPrivName);
-				if ((result & NotesConstants.ERR_MASK)==1060)  { //Error "The name is not in the list" => no more entries
-					break;
-				}
-				
-				NotesErrorUtils.checkResult(result);
-				
-				String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
-				if (!StringUtil.isEmpty(role)) {
-					roles.put(i, role);
-				}
+
+			NotesErrorUtils.checkResult(result);
+			
+			String role = NotesStringUtils.fromLMBCS(retPrivName, -1);
+			if (!StringUtil.isEmpty(role)) {
+				roles.put(i, role);
 			}
 		}
 		
@@ -663,13 +567,8 @@ public class NotesACL implements IAllocatedMemory {
 		try {
 			privilegesMem.write(0, privilegesArr, 0, privilegesArr.length);
 			
-			short result;
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().ACLAddEntry(m_hACL64, nameCanonicalMem, (short) (accessLevel.getValue() & 0xffff), privilegesMem, accessFlagsAsShort);
-			}
-			else {
-				result = NotesNativeAPI32.get().ACLAddEntry(m_hACL32, nameCanonicalMem, (short) (accessLevel.getValue() & 0xffff), privilegesMem, accessFlagsAsShort);
-			}
+			DHANDLE hAcl = getHandle();
+			short result = NotesNativeAPI.get().ACLAddEntry(hAcl.getByValue(), nameCanonicalMem, (short) (accessLevel.getValue() & 0xffff), privilegesMem, accessFlagsAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
 		finally {
@@ -688,13 +587,8 @@ public class NotesACL implements IAllocatedMemory {
 		String nameCanonical = NotesNamingUtils.toCanonicalName(name);
 		Memory nameCanonicalMem = NotesStringUtils.toLMBCS(nameCanonical, true);
 
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLDeleteEntry(m_hACL64, nameCanonicalMem);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLDeleteEntry(m_hACL32, nameCanonicalMem);
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLDeleteEntry(hAcl.getByValue(), nameCanonicalMem);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -708,13 +602,8 @@ public class NotesACL implements IAllocatedMemory {
 		
 		IntByReference retFlags = new IntByReference();
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
-		}
-		else {
-			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLGetFlags(hAcl.getByValue(), retFlags);
 		NotesErrorUtils.checkResult(result);
 		
 		return (retFlags.getValue() & NotesConstants.ACL_UNIFORM_ACCESS) == NotesConstants.ACL_UNIFORM_ACCESS;
@@ -730,13 +619,8 @@ public class NotesACL implements IAllocatedMemory {
 		
 		IntByReference retFlags = new IntByReference();
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
-		}
-		else {
-			result = NotesNativeAPI64.get().ACLGetFlags(m_hACL64, retFlags);
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLGetFlags(hAcl.getByValue(), retFlags);
 		NotesErrorUtils.checkResult(result);
 		
 		boolean isSet = (retFlags.getValue() & NotesConstants.ACL_UNIFORM_ACCESS) == NotesConstants.ACL_UNIFORM_ACCESS;
@@ -752,12 +636,7 @@ public class NotesACL implements IAllocatedMemory {
 			newFlags -= NotesConstants.ACL_UNIFORM_ACCESS;
 		}
 		
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetFlags(m_hACL64, newFlags);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLSetFlags(m_hACL32, newFlags);
-		}
+		result = NotesNativeAPI.get().ACLSetFlags(hAcl.getByValue(), newFlags);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -814,13 +693,8 @@ public class NotesACL implements IAllocatedMemory {
 		
 		Memory roleStrippedMem = NotesStringUtils.toLMBCS(roleStripped, true);
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (freeIndex & 0xffff), roleStrippedMem);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (freeIndex & 0xffff), roleStrippedMem);			
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLSetPrivName(hAcl.getByValue(), (short) (freeIndex & 0xffff), roleStrippedMem);
 		NotesErrorUtils.checkResult(result);
 	}
 
@@ -874,15 +748,9 @@ public class NotesACL implements IAllocatedMemory {
 				newPrivilegesMem.write(0, newPrivileges, 0, newPrivileges.length);
 				
 				try {
-					short result;
-					if (PlatformUtils.is64Bit()) {
-						result = NotesNativeAPI64.get().ACLUpdateEntry(m_hACL64, currNameMem, NotesConstants.ACL_UPDATE_PRIVILEGES, null, (short) 0,
-								newPrivilegesMem, (short) 0);
-					}
-					else {
-						result = NotesNativeAPI32.get().ACLUpdateEntry(m_hACL32, currNameMem, NotesConstants.ACL_UPDATE_PRIVILEGES, null, (short) 0,
-								newPrivilegesMem, (short) 0);
-					}
+					DHANDLE hAcl = getHandle();
+					short result = NotesNativeAPI.get().ACLUpdateEntry(hAcl.getByValue(), currNameMem, NotesConstants.ACL_UPDATE_PRIVILEGES, null, (short) 0,
+							newPrivilegesMem, (short) 0);
 					NotesErrorUtils.checkResult(result);
 				}
 				finally {
@@ -893,13 +761,8 @@ public class NotesACL implements IAllocatedMemory {
 		
 		Memory emptyStrMem = NotesStringUtils.toLMBCS("", true);
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ACLSetPrivName(m_hACL64, (short) (roleIndex & 0xffff), emptyStrMem);
-		}
-		else {
-			result = NotesNativeAPI32.get().ACLSetPrivName(m_hACL32, (short) (roleIndex & 0xffff), emptyStrMem);
-		}
+		DHANDLE hAcl = getHandle();
+		short result = NotesNativeAPI.get().ACLSetPrivName(hAcl.getByValue(), (short) (roleIndex & 0xffff), emptyStrMem);
 		NotesErrorUtils.checkResult(result);
 	}
 	
@@ -1023,17 +886,10 @@ public class NotesACL implements IAllocatedMemory {
 		}
 		
 		try {
-			short result;
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().ACLUpdateEntry(m_hACL64, oldAclEntryNameMem, (short) (updateFlags & 0xffff),
-						newNameMem, (short) (iNewAccessLevel & 0xffff),
-						newPrivilegesMem, newFlagsAsShort);
-			}
-			else {
-				result = NotesNativeAPI32.get().ACLUpdateEntry(m_hACL32, oldAclEntryNameMem, (short) (updateFlags & 0xffff),
-						newNameMem, (short) (iNewAccessLevel & 0xffff),
-						newPrivilegesMem, newFlagsAsShort);
-			}
+			DHANDLE hAcl = getHandle();
+			short result = NotesNativeAPI.get().ACLUpdateEntry(hAcl.getByValue(), oldAclEntryNameMem, (short) (updateFlags & 0xffff),
+					newNameMem, (short) (iNewAccessLevel & 0xffff),
+					newPrivilegesMem, newFlagsAsShort);
 			NotesErrorUtils.checkResult(result);
 		}
 		finally {
@@ -1049,10 +905,15 @@ public class NotesACL implements IAllocatedMemory {
 			return "NotesACL [freed]";
 		}
 		else {
-			String server = m_parentDb.getServer();
-			String filePath = m_parentDb.getRelativeFilePath();
-			String dbNetPath = StringUtil.isEmpty(server) ? filePath : server+"!!"+filePath;
-			return "NotesACL [handle="+(PlatformUtils.is64Bit() ? m_hACL64 : m_hACL32)+", db="+dbNetPath+"]";
+			if (!m_parentDb.isPresent()) {
+				return "NotesACL [handle="+m_hACL+", isdetached=true]";
+			}
+			else {
+				String server = m_parentDb.get().getServer();
+				String filePath = m_parentDb.get().getRelativeFilePath();
+				String dbNetPath = StringUtil.isEmpty(server) ? filePath : server+"!!"+filePath;
+				return "NotesACL [handle="+m_hACL+", db="+dbNetPath+"]";
+			}
 		}
 	}
 	
@@ -1124,5 +985,26 @@ public class NotesACL implements IAllocatedMemory {
 			return "NotesACLEntry [name="+m_name+", level="+getAclLevel()+", roles="+getRoles()+", flags="+getAclFlags()+"]";
 		}
 
+	}
+	
+	/**
+	 * Clones the ACL data and returns a new {@link NotesACL} not bound to
+	 * the parent database.
+	 * 
+	 * @return acl clone
+	 */
+	public NotesACL cloneDetached() {
+		checkHandle();
+		
+		DHANDLE hAcl = getHandle();
+		
+		DHANDLE.ByReference retNewHandle = DHANDLE.newInstanceByReference();
+		
+		short result = NotesNativeAPI.get().ACLCopy(hAcl.getByValue(), retNewHandle);
+		NotesErrorUtils.checkResult(result);
+		
+		NotesACL aclClone = new NotesACL(retNewHandle, m_server);
+		NotesGC.__memoryAllocated(aclClone);
+		return aclClone;
 	}
 }

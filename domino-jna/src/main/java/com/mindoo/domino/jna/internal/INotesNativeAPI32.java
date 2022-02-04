@@ -1,7 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
-import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
@@ -1202,72 +1201,7 @@ public interface INotesNativeAPI32 extends Library {
 			int dwFlags,
 			ABORTCHECKPROC AbortCheck,
 			OSSIGMSGPROC MessageProc);
-	
-	short NSFDbReadACL(
-			int hDB,
-			IntByReference rethACL);
-	
-	short ACLEnumEntries(
-			int hACL,
-			ACLENTRYENUMFUNC EnumFunc,
-			Pointer EnumFuncParam);
-	
-	short ACLGetPrivName(
-			int hACL,
-			short PrivNum,
-			Memory retPrivName);
-	
-	short NSFDbStoreACL(
-			int hDB,
-			int hACL,
-			int ObjectID,
-			short Method);
-	
-	short ACLLookupAccess(
-			int hACL,
-			Pointer pNamesList,
-			ShortByReference retAccessLevel,
-			Memory retPrivileges,
-			ShortByReference retAccessFlags,
-			IntByReference rethPrivNames);
-	
-	short ACLSetAdminServer(
-			int hList,
-			Memory ServerName);
 
-	short ACLAddEntry(
-			int hACL,
-			Memory name,
-			short AccessLevel,
-			Memory privileges,
-			short AccessFlags);
-	
-	short ACLDeleteEntry(
-			int hACL,
-			Memory name);
-
-	short ACLSetFlags(
-			int hACL,
-			int Flags);
-	
-	short ACLGetFlags(
-			int hACL,
-			IntByReference retFlags);
-	
-	short ACLSetPrivName(
-			int hACL,
-			short PrivNum,
-			Memory privName);
-
-	short ACLUpdateEntry(
-			int hACL,
-			Memory name,
-			short updateFlags,
-			Memory newName,
-			short newAccessLevel,
-			Memory newPrivileges,
-			short newAccessFlags);
-	
 	@UndocumentedAPI
 	short NSFSearchStartExtended(int hDB, int formula, int filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
@@ -1701,8 +1635,6 @@ public interface INotesNativeAPI32 extends Library {
 			Memory Manager,
 			short DefaultAccess,
 			IntByReference rethACL);
-	
-	short ACLCreate(IntByReference rethACL);
 
 	short NSFDbCopy(
 			int hSrcDB,

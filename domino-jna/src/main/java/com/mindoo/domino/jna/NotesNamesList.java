@@ -12,6 +12,9 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
@@ -88,6 +91,15 @@ public class NotesNamesList implements IAllocatedMemory {
 	@Override
 	public long getHandle64() {
 		return m_handle64;
+	}
+
+	public DHANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return DHANDLE64.newInstance(m_handle64);
+		}
+		else {
+			return DHANDLE32.newInstance(m_handle32);
+		}
 	}
 
 	/**

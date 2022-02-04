@@ -5,10 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
+import com.mindoo.domino.jna.internal.structs.DbOptionsStruct;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -25,6 +27,7 @@ import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -146,7 +149,15 @@ public interface INotesNativeAPI extends Library {
 			short  Options,
 			byte  EncryptStrength,
 			long  MaxFileSize);
-	
+
+	@UndocumentedAPI
+	short NSFDbCreateExtended4 (Memory pathName, short dbClass, 
+			 boolean forceCreation, short options, int options2,
+			 byte encryptStrength, int MaxFileSize,
+			 Memory string1, Memory string2, 
+			 short ReservedListLength, short ReservedListCount, 
+			 DbOptionsStruct.ByValue dbOptions, DHANDLE.ByValue hNamesList, DHANDLE.ByValue hReservedList);
+
 	short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 	short NSFDbMarkInService(Memory dbPath);
 	short NSFDbMarkOutOfService(Memory dbPath);
@@ -598,18 +609,6 @@ public interface INotesNativeAPI extends Library {
 
 	short NSFDbCompactExtendedExt2(Memory pathname, int options, int options2, DoubleByReference originalSize, DoubleByReference compactedSize);
 
-	/**
-	 * Copys the ACL in hList into hNewList.
-	 * Unlocks, then locks both handles.
-	 * Allocates memory for the copied ACL in hNewList
-	 * 
-	 * @param hList the source list to copy
-	 * @param hNewList a handle pointer to house the new copy
-	 * @return the result status
-	 */ 
-	@UndocumentedAPI
-	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
-
 	@UndocumentedAPI
 	Pointer NSFFindFormulaParameters(Memory pszString);
 	
@@ -649,5 +648,97 @@ public interface INotesNativeAPI extends Library {
             IntByReference retCollectionNoteID);
 
 	short NIFCloseCollection(DHANDLE.ByValue hCollection);
+
+	@UndocumentedAPI
+	short NLS_goto_prev_whole_char (
+	    PointerByReference ppString, 
+	    Pointer pStrStart, 
+	    Pointer pInfo);
+
+	/**
+	 * @param handle the handle to free
+	 * @return the result status
+	 * @deprecated use {@link Mem#OSMemFree(DHANDLE.ByValue)} instead
+	 */
+	@Deprecated short OSMemFree(DHANDLE.ByValue handle);
+
+	/**
+	 * @param handle the handle for which to get the size
+	 * @param retSize the size return value
+	 * @return the result status
+	 * @deprecated use {@link Mem#OSMemGetSize(DHANDLE.ByValue, IntByReference)} instead
+	 */
+	@Deprecated short OSMemGetSize(DHANDLE.ByValue handle, IntByReference retSize);
+
+	short NSFDbReadACL(
+			HANDLE.ByValue hDB,
+			DHANDLE.ByReference rethACL);
+	
+	short ACLSetAdminServer(
+			DHANDLE.ByValue hList,
+			Memory ServerName);
+
+	@UndocumentedAPI
+	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
+
+	short ACLLookupAccess(
+			DHANDLE.ByValue hACL,
+			Pointer pNamesList,
+			ShortByReference retAccessLevel,
+			Memory retPrivileges,
+			ShortByReference retAccessFlags,
+			LongByReference rethPrivNames);
+	
+	short ACLAddEntry(
+			DHANDLE.ByValue hACL,
+			Memory name,
+			short AccessLevel,
+			Memory privileges,
+			short AccessFlags);
+
+	short ACLDeleteEntry(
+			DHANDLE.ByValue hACL,
+			Memory name);
+	
+	short ACLSetFlags(
+			DHANDLE.ByValue hACL,
+			int Flags);
+	
+	short ACLGetFlags(
+			DHANDLE.ByValue hACL,
+			IntByReference retFlags);
+
+	short ACLSetPrivName(
+			DHANDLE.ByValue hACL,
+			short PrivNum,
+			Memory privName);
+
+	short ACLUpdateEntry(
+			DHANDLE.ByValue hACL,
+			Memory name,
+			short updateFlags,
+			Memory newName,
+			short newAccessLevel,
+			Memory newPrivileges,
+			short newAccessFlags);
+
+	short ACLEnumEntries(
+			DHANDLE.ByValue hACL,
+			ACLENTRYENUMFUNC EnumFunc,
+			Pointer EnumFuncParam);
+
+	short ACLGetPrivName(
+			DHANDLE.ByValue hACL,
+			short PrivNum,
+			Memory retPrivName);
+
+	short NSFDbStoreACL(
+			HANDLE.ByValue hDB,
+			DHANDLE.ByValue hACL,
+			int ObjectID,
+			short Method);
+	
+	short ACLCreate(DHANDLE.ByReference rethACL);
+
 
 }

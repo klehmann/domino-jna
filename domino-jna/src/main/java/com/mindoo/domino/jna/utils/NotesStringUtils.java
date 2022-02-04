@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 
@@ -20,6 +21,7 @@ import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.SizeLimitedLRUCache;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.PointerByReference;
 
 /**
  * String conversion functions between Java and LMBCS
@@ -873,5 +875,88 @@ public class NotesStringUtils {
 		}
 		
 	}
-	
+
+	/**
+	 * Converts a Java string to LMBCS and splits it into chunks of the specified
+	 * max length.
+	 * 
+	 * @param txt text to convert and split
+	 * @param addNull true to add a null terminator
+	 * @param replaceLinebreaks true to replace linebreaks with \0
+	 * @param chunkSize max size of chunks (might be less for LMBCS with multibyte sequences), must be greater than 4
+	 * @return list of chunks
+	 */
+	public static List<ByteBuffer> splitAsLMBCS(String txt, boolean addNull, boolean replaceLinebreaks, int chunkSize) {
+		Memory mem = toLMBCS(txt, addNull, replaceLinebreaks);
+		return splitLMBCS(mem, mem.size(), chunkSize);
+	}
+
+	/**
+	 * Splits an LMBCS string into chunks of the specified max length
+	 * 
+	 * @param txtPtr pointer to LMBCS string
+	 * @param txtSize length of string
+	 * @param chunkSize max size of chunks (might be less for LMBCS with multibyte sequences), must be greater than 4
+	 * @return list of chunks
+	 */
+	public static List<ByteBuffer> splitLMBCS(Pointer txtPtr, long txtSize, int chunkSize) {
+		if (chunkSize<5) {
+			throw new IllegalArgumentException("Chunk size must be greater than 4");
+		}
+
+		if (txtSize < chunkSize) {
+			return Arrays.asList(txtPtr.getByteBuffer(0, txtSize));
+		}
+
+		Pointer nlsInfoPtr = NotesNativeAPI.get().OSGetLMBCSCLS();
+
+		List<ByteBuffer> chunks = new ArrayList<>();
+
+		long offset = 0;
+
+		ByteBuffer wholeByteBuf = txtPtr.getByteBuffer(offset, txtSize);
+
+		while (true) {
+			long nextOffset = offset + chunkSize + 1;
+
+			if (nextOffset > txtSize) {
+				//add last chunk
+				wholeByteBuf.position((int) offset);
+				ByteBuffer lastByteBuf = wholeByteBuf.slice();
+				lastByteBuf.position(0);
+				lastByteBuf.limit((int) (txtSize - offset));
+				chunks.add(lastByteBuf);
+				break;
+			}
+
+			//end NLS_goto_prev_whole_char at current offset
+			Pointer ppStart = txtPtr.share(offset);
+
+			//set pointer to offset where we want to split
+			PointerByReference ppString = new PointerByReference();
+			ppString.setValue(txtPtr.share(nextOffset));
+
+			//make sure we are at the beginning of the character for multibyte
+			NotesNativeAPI.get().NLS_goto_prev_whole_char(ppString, ppStart, nlsInfoPtr);
+
+			long correctedNextOffset = Pointer.nativeValue(ppString.getValue()) - Pointer.nativeValue(txtPtr);
+			long actualChunkSize = correctedNextOffset - offset;
+
+			if (actualChunkSize==0) {
+				break;
+			}
+
+			//extract chunk data from bytebuffer
+			wholeByteBuf.position((int) offset);
+			ByteBuffer chunkByteBuf = wholeByteBuf.slice();
+			chunkByteBuf.position(0);
+			chunkByteBuf.limit((int) actualChunkSize);
+
+			chunks.add(chunkByteBuf);
+			//start next scan at corrected offset
+			offset = correctedNextOffset;
+		}
+
+		return chunks;
+	}
 }

@@ -620,22 +620,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	 * @return acl
 	 */
 	public NotesACL getACL() {
+		checkHandle();
+		HANDLE hDb = getHandle();
+		
 		if (m_acl==null || m_acl.isFreed()) {
-			short result;
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethACL = new LongByReference();
-				result = NotesNativeAPI64.get().NSFDbReadACL(m_hDB64, rethACL);
-				NotesErrorUtils.checkResult(result);
-				m_acl = new NotesACL(this, rethACL.getValue());
-				NotesGC.__memoryAllocated(m_acl);
-			}
-			else {
-				IntByReference rethACL = new IntByReference();
-				result = NotesNativeAPI32.get().NSFDbReadACL(m_hDB32, rethACL);
-				NotesErrorUtils.checkResult(result);
-				m_acl = new NotesACL(this, rethACL.getValue());
-				NotesGC.__memoryAllocated(m_acl);
-			}
+			DHANDLE.ByReference rethACL = DHANDLE.newInstanceByReference();
+			short result = NotesNativeAPI.get().NSFDbReadACL(hDb.getByValue(), rethACL);
+			NotesErrorUtils.checkResult(result);
+			m_acl = new NotesACL(this, rethACL);
+			NotesGC.__memoryAllocated(m_acl);
 		}
 		return m_acl;
 	}
@@ -885,22 +878,13 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		NotesDatabase db = new NotesDatabase(serverName, filePath, "");
 		
 		//create ACL
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethACL = new LongByReference();
-			result = NotesNativeAPI64.get().ACLCreate(rethACL);
-			NotesErrorUtils.checkResult(result);
+		
+		DHANDLE.ByReference rethACL = DHANDLE.newInstanceByReference();
+		result = NotesNativeAPI.get().ACLCreate(rethACL);
+		NotesErrorUtils.checkResult(result);
 
-			result = NotesNativeAPI64.get().NSFDbStoreACL(db.getHandle64(), rethACL.getValue(), 0, (short) 1);
-			NotesErrorUtils.checkResult(result);
-		}
-		else {
-			IntByReference rethACL = new IntByReference();
-			result = NotesNativeAPI32.get().ACLCreate(rethACL);
-			NotesErrorUtils.checkResult(result);
-
-			result = NotesNativeAPI32.get().NSFDbStoreACL(db.getHandle32(), rethACL.getValue(), 0, (short) 1);
-			NotesErrorUtils.checkResult(result);
-		}
+		result = NotesNativeAPI.get().NSFDbStoreACL(db.getHandle().getByValue(), rethACL.getByValue(), 0, (short) 1);
+		NotesErrorUtils.checkResult(result);
 
 		if (initDbDesign) {
 			InputStream in = null;
