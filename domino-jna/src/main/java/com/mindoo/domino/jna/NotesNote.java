@@ -5413,11 +5413,13 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (PlatformUtils.is64Bit()) {
 				result = NotesNativeAPI64.get().HTMLDestroyConverter(m_hHTML64);
 				NotesErrorUtils.checkResult(result);
+				NotesGC.__objectBeeingBeRecycled(HtmlConverter.class, this);
 				m_hHTML64 = 0;
 			}
 			else {
 				result = NotesNativeAPI32.get().HTMLDestroyConverter(m_hHTML32);
 				NotesErrorUtils.checkResult(result);
+				NotesGC.__objectBeeingBeRecycled(HtmlConverter.class, this);
 				m_hHTML32 = 0;
 			}
 		}
