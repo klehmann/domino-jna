@@ -61,6 +61,7 @@ public interface INotesNativeAPI extends Library {
 			Memory retFileName);
 	void OSGetExecutableDirectory(Memory retPathName);
 	void OSGetDataDirectory(Memory retPathName);
+	@UndocumentedAPI
 	short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
 	@UndocumentedAPI
 	void OSPathAddTrailingPathSep(Memory retPathName);
@@ -189,6 +190,7 @@ public interface INotesNativeAPI extends Library {
 			int dwReserved,
 			Pointer vpReserved);
 
+	@UndocumentedAPI
 	short SECidvIsIDInVault(Memory pServer, Memory pUserName);
 	
 	short ODSLength(short type);
@@ -567,6 +569,7 @@ public interface INotesNativeAPI extends Library {
 			short Privileges,
 			IntByReference retObjectID);
 
+	@UndocumentedAPI
 	short NSFDbAllocObjectExtended2(HANDLE.ByValue cDB,
 			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
 

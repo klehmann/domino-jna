@@ -308,6 +308,7 @@ public interface INotesNativeAPI64 extends Library {
 			Memory retSigner,
 			Memory retCertifier);
 	short NSFNoteContract(long hNote);
+	@UndocumentedAPI
 	short NSFNoteExpand(long hNote);
 	short NSFNoteSign(long hNote);
 	short NSFNoteSignExt3(long hNote, 
@@ -627,6 +628,7 @@ public interface INotesNativeAPI64 extends Library {
             ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
             NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	void NIFGetLastModifiedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
+	@UndocumentedAPI
 	void NIFGetLastAccessedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
 	@UndocumentedAPI
 	void NIFGetNextDiscardTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
@@ -1679,8 +1681,6 @@ public interface INotesNativeAPI64 extends Library {
 			short jitflag, short wMailNoteFlags, NotesCallbacks.b64_FPMailNoteJitEx2CallBack vCallBack, Pointer vCallBackCtx);
 
 	short MailSetSMTPMessageID(long hNote, Memory domain, Memory string, short stringLength);
-	
-	short NSFDbReopenWithFullAccess(long hDb, LongByReference hReopenedDb);
 
 	/*	This is exactly the same as lookup name BE, except it will use the
 	cache of the design collection as known to the client.  This is safe
