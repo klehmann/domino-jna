@@ -681,6 +681,10 @@ public interface INotesNativeAPI extends Library {
 			DHANDLE.ByValue hList,
 			Memory ServerName);
 
+	short ACLGetAdminServer(
+			DHANDLE.ByValue hList,
+			Memory ServerName);
+	
 	@UndocumentedAPI
 	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
 

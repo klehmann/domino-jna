@@ -122,6 +122,27 @@ public class NotesACL implements IAllocatedMemory {
 		short result = NotesNativeAPI.get().ACLSetAdminServer(m_hACL.getByValue(), serverCanonicalMem);
 		NotesErrorUtils.checkResult(result);
 	}
+
+	/**
+	 * Reads the name of the administration server for the access control list.
+	 * 
+	 * @return admin server
+	 */
+	public String getAdminServer() {
+		checkHandle();
+		
+		DisposableMemory retServerNameMem = new DisposableMemory(NotesConstants.MAXUSERNAME);
+		retServerNameMem.clear();
+		try {
+			short result = NotesNativeAPI.get().ACLGetAdminServer(m_hACL.getByValue(), retServerNameMem);
+			NotesErrorUtils.checkResult(result);
+			String adminServer = NotesStringUtils.fromLMBCS(retServerNameMem, -1);
+			return adminServer;
+		}
+		finally {
+			retServerNameMem.dispose();
+		}
+	}
 	
 	/**
 	 * This function stores the access control list in the parent database.<br>

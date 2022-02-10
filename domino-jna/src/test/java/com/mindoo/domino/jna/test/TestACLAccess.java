@@ -13,7 +13,6 @@ import org.junit.Test;
 import com.mindoo.domino.jna.NotesACL;
 import com.mindoo.domino.jna.NotesACL.NotesACLAccess;
 import com.mindoo.domino.jna.NotesACL.NotesACLEntry;
-import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.constants.AclFlag;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.utils.IDUtils;
@@ -125,6 +124,12 @@ public class TestACLAccess extends BaseJNATestClass {
 					acl.addEntry("Testuser123/Mindoo", AclLevel.DESIGNER,
 							Arrays.asList("[PolicyReader]", "NetCreator"), EnumSet.noneOf(AclFlag.class));
 
+					String oldAdminServer = acl.getAdminServer();
+					assertEquals("", oldAdminServer);
+					acl.setAdminServer("MyServer/MyOrg");
+					String newAdminServer = acl.getAdminServer();
+					assertEquals("CN=MyServer/O=MyOrg", newAdminServer);
+					
 					NotesACLAccess aclAccess = acl.lookupAccess("Testuser123/Mindoo");
 
 					//this one can be cached in memory to run a number of queries on it
