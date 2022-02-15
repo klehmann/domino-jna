@@ -522,7 +522,7 @@ public class BaseJNATestClass {
 		public void accept(NotesDatabase db) throws Exception;
 	}
 	
-	public void withTempDb(DatabaseConsumer consumer) throws Exception {
+	public NotesDatabase createTempDb() throws Exception {
 		File tmpFile = File.createTempFile("jnatmp_", ".nsf");
 		String tmpFilePath = tmpFile.getAbsolutePath();
 		tmpFile.delete();
@@ -532,12 +532,29 @@ public class BaseJNATestClass {
 				AclLevel.MANAGER, IDUtils.getIdUsername(), true);
 		
 		NotesDatabase db = new NotesDatabase("", tmpFilePath, "");
+		return db;
+	}
+	
+	public void withTempDb(DatabaseConsumer consumer) throws Exception {
+		NotesDatabase db = createTempDb();
+		String tmpFilePath = db.getAbsoluteFilePathOnLocal();
+		NotesError deleteDbError = null;
 		try {
 			consumer.accept(db);
 		}
 		finally {
 			db.recycle();
-			NotesDatabase.deleteDatabase("", tmpFilePath);
+			
+			try {
+				NotesDatabase.deleteDatabase("", tmpFilePath);
+			}
+			catch (NotesError e) {
+				deleteDbError = e;
+			}
+		}
+		
+		if (deleteDbError!=null) {
+			throw deleteDbError;
 		}
 	}
 

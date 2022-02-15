@@ -1,8 +1,9 @@
 package com.mindoo.domino.jna.internal;
 
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
-import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.OSSIGMSGPROC;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -284,10 +285,6 @@ public interface INotesNativeAPI64 extends Library {
 			int value_len,
 			NotesBlockIdStruct item_bid_ptr);
 
-	@UndocumentedAPI
-	short NSFItemModifyValue (long hNote, NotesBlockIdStruct.ByValue bhItem, short ItemFlags, short DataType,
-			Pointer valuePtr, int valueLength);
-
 	void NSFNoteGetInfo(long hNote, short type, Pointer retValue);
 	void NSFNoteSetInfo(long hNote, short type, Pointer value);
 	short NSFNoteCopy(
@@ -302,7 +299,6 @@ public interface INotesNativeAPI64 extends Library {
 			NotesUniversalNoteIdStruct pUNID,
 			short  flags,
 			LongByReference rethNote);
-	@UndocumentedAPI
 	short NSFNoteOpenByUNIDExtended(long hDB, NotesUniversalNoteIdStruct pUNID, int flags, LongByReference rtn); 
 	short NSFNoteClose(long hNote);
 	short NSFNoteVerifySignature(
@@ -312,6 +308,7 @@ public interface INotesNativeAPI64 extends Library {
 			Memory retSigner,
 			Memory retCertifier);
 	short NSFNoteContract(long hNote);
+	@UndocumentedAPI
 	short NSFNoteExpand(long hNote);
 	short NSFNoteSign(long hNote);
 	short NSFNoteSignExt3(long hNote, 
@@ -388,7 +385,6 @@ public interface INotesNativeAPI64 extends Library {
 			NotesBlockIdStruct.ByValue bhItem,
 			NotesBlockIdStruct.ByValue bhValue);
 
-	@UndocumentedAPI
 	short NSFNoteHasReadersField(long hNote, NotesBlockIdStruct bhFirstReadersItem);
 	short NSFNoteCipherExtractWithCallback (long hNote, NotesBlockIdStruct.ByValue bhItem,
 			int ExtractFlags, int hDecryptionCipher,
@@ -461,7 +457,6 @@ public interface INotesNativeAPI64 extends Library {
 			LongByReference rethNote);
 
 	short NSFItemCopy(long note_handle, NotesBlockIdStruct.ByValue item_blockid);
-	@UndocumentedAPI
 	short NSFItemCopyAndRename (long hNote, NotesBlockIdStruct.ByValue bhItem, Memory pszNewItemName);
 
 	short IDCreateTable (int alignment, LongByReference rethTable);
@@ -469,7 +464,6 @@ public interface INotesNativeAPI64 extends Library {
 	short IDInsert (long hTable, int id, IntByReference retfInserted);
 	short IDDelete (long hTable, int id, IntByReference retfDeleted);
 	boolean IDScan (long hTable, boolean fFirst, IntByReference retID);
-	@UndocumentedAPI
 	boolean IDScanBack (long hTable, boolean fLast, IntByReference retID);
 	int IDEntries (long hTable);
 	boolean IDIsPresent (long hTable, int id);
@@ -586,9 +580,7 @@ public interface INotesNativeAPI64 extends Library {
 			long hDB,
 			Memory retCanonicalPathName,
 			Memory retExpandedPathName);
-	@UndocumentedAPI
 	short NSFDbIsRemote(long hDb);
-	@UndocumentedAPI
 	short NSFDbHasFullAccess(long hDb);
 	short NSFDbSpaceUsage(long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes);
 	short NSFDbSpaceUsageScaled (long dbHandle, IntByReference retAllocatedBytes, IntByReference retFreeBytes, IntByReference retGranularity);
@@ -617,8 +609,6 @@ public interface INotesNativeAPI64 extends Library {
 	short CreateNamesListFromNames(short cTargets, Pointer ptrArrTargets, LongByReference rethNames);
 	@UndocumentedAPI
 	short CreateNamesListFromNamesExtend(Memory pszServerName, short cTargets, Pointer ptrArrTargets, LongByReference rethNames);
-//	@UndocumentedAPI
-//	short CreateNamesListFromSessionID(Memory pszServerName, SESSIONID SessionId, LongByReference rtnhNames);
 	@UndocumentedAPI
 	short CreateNamesListFromSingleName(Memory pszServerName, short fDontLookupAlternateNames,
 			Pointer pLookupFlags, Memory pTarget, LongByReference rethNames);
@@ -628,7 +618,6 @@ public interface INotesNativeAPI64 extends Library {
 
 	short NIFReadEntries(long hCollection, NotesCollectionPositionStruct IndexPos, short SkipNavigator, int SkipCount, short ReturnNavigator, int ReturnCount, int ReturnMask, LongByReference rethBuffer,
 			ShortByReference retBufferLength, IntByReference retNumEntriesSkipped, IntByReference retNumEntriesReturned, ShortByReference retSignalFlags);
-	@UndocumentedAPI
 	short NIFReadEntriesExt(long hCollection,
 			NotesCollectionPositionStruct CollectionPos,
             short SkipNavigator, int SkipCount,
@@ -639,7 +628,9 @@ public interface INotesNativeAPI64 extends Library {
             ShortByReference retSignalFlags, NotesTimeDateStruct retDiffTime,
             NotesTimeDateStruct retModifiedTime, IntByReference retSequence);
 	void NIFGetLastModifiedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
+	@UndocumentedAPI
 	void NIFGetLastAccessedTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
+	@UndocumentedAPI
 	void NIFGetNextDiscardTime(long hCollection, NotesTimeDateStruct retLastModifiedTime);
 	short NIFFindByKeyExtended2 (long hCollection, Memory keyBuffer,
 			int findFlags,
@@ -703,6 +694,7 @@ public interface INotesNativeAPI64 extends Library {
 	short NIFGetCollectionData(
 			long hCollection,
 			LongByReference rethCollData);
+	@UndocumentedAPI
 	short NIFGetCollectionDocCountLW(long hCol, IntByReference pDocct);
 
 	@UndocumentedAPI
@@ -742,7 +734,6 @@ public interface INotesNativeAPI64 extends Library {
 	short AgentSetDocumentContext(long hAgentCtx, long hNote);
 	short AgentSetTimeExecutionLimit(long hAgentCtx, int timeLimit);
 	boolean AgentIsEnabled(long hAgent);
-	@UndocumentedAPI
 	void SetParamNoteID(long hAgentCtx, int noteId);
 	@UndocumentedAPI
 	short AgentSetUserName(long hAgentCtx, long hNameList);
@@ -753,9 +744,7 @@ public interface INotesNativeAPI64 extends Library {
 			long hAgentCtx,
 		    int hSelection,
 			int dwFlags);
-	@UndocumentedAPI
 	short AgentSetHttpStatusCode(long hAgentCtx, int httpStatus);
-	@UndocumentedAPI
 	short ClientRunServerAgent(long hdb, int nidAgent, int nidParamDoc,
 			int bForeignServer, int bSuppressPrintToConsole);
 
@@ -1230,71 +1219,6 @@ public interface INotesNativeAPI64 extends Library {
 			ABORTCHECKPROC AbortCheck,
 			OSSIGMSGPROC MessageProc);
 
-	short NSFDbReadACL(
-			long hDB,
-			LongByReference rethACL);
-	
-	short ACLEnumEntries(
-			long hACL,
-			ACLENTRYENUMFUNC EnumFunc,
-			Pointer EnumFuncParam);
-
-	short ACLGetPrivName(
-			long hACL,
-			short PrivNum,
-			Memory retPrivName);
-
-	short NSFDbStoreACL(
-			long hDB,
-			long hACL,
-			int ObjectID,
-			short Method);
-	
-	short ACLLookupAccess(
-			long hACL,
-			Pointer pNamesList,
-			ShortByReference retAccessLevel,
-			Memory retPrivileges,
-			ShortByReference retAccessFlags,
-			LongByReference rethPrivNames);
-	
-	short ACLSetAdminServer(
-			long hList,
-			Memory ServerName);
-	
-	short ACLAddEntry(
-			long hACL,
-			Memory name,
-			short AccessLevel,
-			Memory privileges,
-			short AccessFlags);
-
-	short ACLDeleteEntry(
-			long hACL,
-			Memory name);
-	
-	short ACLSetFlags(
-			long hACL,
-			int Flags);
-	
-	short ACLGetFlags(
-			long hACL,
-			IntByReference retFlags);
-
-	short ACLSetPrivName(
-			long hACL,
-			short PrivNum,
-			Memory privName);
-
-	short ACLUpdateEntry(
-			long hACL,
-			Memory name,
-			short updateFlags,
-			Memory newName,
-			short newAccessLevel,
-			Memory newPrivileges,
-			short newAccessFlags);
-
 	@UndocumentedAPI
 	short NSFSearchStartExtended(long hDB, long formula, long filter,
 			int filterflags, NotesUniversalNoteIdStruct ViewUNID, Memory ViewTitle, 
@@ -1730,8 +1654,6 @@ public interface INotesNativeAPI64 extends Library {
 			short DefaultAccess,
 			LongByReference rethACL);
 	
-	short ACLCreate(LongByReference rethACL);
-
 	short NSFDbCopy(
 			long hSrcDB,
 			long hDstDB,
@@ -1759,8 +1681,6 @@ public interface INotesNativeAPI64 extends Library {
 			short jitflag, short wMailNoteFlags, NotesCallbacks.b64_FPMailNoteJitEx2CallBack vCallBack, Pointer vCallBackCtx);
 
 	short MailSetSMTPMessageID(long hNote, Memory domain, Memory string, short stringLength);
-	
-	short NSFDbReopenWithFullAccess(long hDb, LongByReference hReopenedDb);
 
 	/*	This is exactly the same as lookup name BE, except it will use the
 	cache of the design collection as known to the client.  This is safe
@@ -1823,5 +1743,11 @@ public interface INotesNativeAPI64 extends Library {
 
 	@UndocumentedAPI
 	short DesignGetNoteTable(long hDB, short NoteClass, LongByReference rethIDTable);
+
+	@UndocumentedAPI
+	short NSFDbGetModifiedNoteTableExt (HANDLE.ByValue hDB, short NoteClassMask, 
+			short Option, NotesTimeDateStruct.ByValue Since,
+			NotesTimeDateStruct.ByReference retUntil,
+			DHANDLE.ByReference rethTable);
 
 }

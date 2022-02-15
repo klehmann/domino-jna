@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-base</artifactId>
-		<version>0.9.45-SNAPSHOT</version>
+		<version>0.9.46-SNAPSHOT</version>
 	</parent>
 
 	<name>Domino JNA Add-on for data indexing with CQEngine</name>

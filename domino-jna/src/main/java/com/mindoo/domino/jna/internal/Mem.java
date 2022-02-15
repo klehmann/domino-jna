@@ -3,6 +3,11 @@ package com.mindoo.domino.jna.internal;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.DHANDLE32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE64;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE32;
+import com.mindoo.domino.jna.internal.handles.HANDLE64;
+import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
@@ -37,28 +42,38 @@ public class Mem {
 		}
 	}
 	
-	public static short OSMemFree(DHANDLE handle) {
-		if (handle==null || handle.isNull())
-			throw new IllegalArgumentException("Memory for null handle cannot be freed");
-		else if (handle instanceof DHANDLE64) {
-			short result = Mem64.OSMemFree(((DHANDLE64) handle).getValue());
-			if (result==0) {
-				handle.setDisposed();
-			}
-			return result;
+	public static short OSMemFree(DHANDLE.ByValue hdl) {
+		if (hdl==null || hdl.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be freed");
 		}
-		else if (handle instanceof DHANDLE32) {
-			short result = Mem32.OSMemFree(((DHANDLE32) handle).getValue());
-			if (result==0) {
-				handle.setDisposed();
-			}
-			return result;
+		short result = NotesNativeAPI.get().OSMemFree(hdl);
+		if (result==0) {
+			hdl.setDisposed();
+		}
+		return result;
+	}
+
+	public static short OSMemFree(HANDLE.ByValue hdl) {
+		if (hdl==null || hdl.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be freed");
+		}
+		
+		DHANDLE.ByValue hdlByVal = DHANDLE.newInstanceByValue();
+		
+		if (PlatformUtils.is64Bit()) {
+			((DHANDLE64.ByValue)hdlByVal).hdl = ((HANDLE64.ByValue)hdl).hdl;
 		}
 		else {
-			throw new IllegalArgumentException("Unsupported handle type: "+handle.getClass().getName());
+			((DHANDLE32.ByValue)hdlByVal).hdl = ((HANDLE32.ByValue)hdl).hdl;
 		}
+		
+		short result = NotesNativeAPI.get().OSMemFree(hdlByVal);
+		if (result==0) {
+			hdlByVal.setDisposed();
+		}
+		return result;
 	}
-	
+
 	public static short OSMemGetSize(DHANDLE handle, IntByReference retSize) {
 		if (handle==null || handle.isNull())
 			throw new IllegalArgumentException("Size of memory with null handle cannot be read");
@@ -197,4 +212,43 @@ public class Mem {
 			throw new IllegalArgumentException("Unsupported return handle type: "+retHandle==null ? "null" : retHandle.getClass().getName());
 		}
 	}
+	
+	public static Pointer OSLockObject(NotesBlockIdStruct blockId) {
+		DHANDLE.ByValue hdlByVal = DHANDLE.newInstanceByValue();
+		
+		if (PlatformUtils.is64Bit()) {
+			((DHANDLE64.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		else {
+			((DHANDLE32.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		
+		if (hdlByVal.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be unlocked");
+		}
+		
+		Pointer poolPtr = NotesNativeAPI.get().OSLockObject(hdlByVal);
+
+		int block = blockId.block & 0xffff;
+		long poolPtrLong = Pointer.nativeValue(poolPtr) + block;
+		return new Pointer(poolPtrLong);
+	}
+
+	public static boolean OSUnlockObject(NotesBlockIdStruct blockId) {
+		DHANDLE.ByValue hdlByVal = DHANDLE.newInstanceByValue();
+		
+		if (PlatformUtils.is64Bit()) {
+			((DHANDLE64.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		else {
+			((DHANDLE32.ByValue)hdlByVal).hdl = blockId.pool;
+		}
+		
+		if (hdlByVal.isNull()) {
+			throw new IllegalArgumentException("Null handle cannot be unlocked");
+		}
+		
+		return NotesNativeAPI.get().OSUnlockObject(hdlByVal);
+	}
+	
 }

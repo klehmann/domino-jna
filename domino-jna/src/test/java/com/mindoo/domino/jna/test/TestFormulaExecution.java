@@ -1,12 +1,16 @@
 package com.mindoo.domino.jna.test;
 
+import static org.junit.Assert.*;
+
 import java.util.EnumSet;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.constants.FormulaAttributes;
 import com.mindoo.domino.jna.constants.OpenNote;
 import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.formula.FormulaExecution.FormulaExecutionResult;
@@ -24,6 +28,44 @@ import lotus.domino.View;
  */
 public class TestFormulaExecution extends BaseJNATestClass {
 
+	@Test
+	public void testAnalyzeFormula() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				assertEquals(
+						EnumSet.of(FormulaAttributes.CONSTANT),
+						new FormulaExecution("123").analyze().getAttributes()
+						);
+				assertEquals(
+						EnumSet.of(FormulaAttributes.CONSTANT, FormulaAttributes.FUNC_SIBLINGS),
+						new FormulaExecution("@DocSiblings").analyze().getAttributes()
+						);
+
+				assertEquals(
+						EnumSet.of(FormulaAttributes.CONSTANT, FormulaAttributes.FUNC_DESCENDANTS),
+						new FormulaExecution("@DocDescendants").analyze().getAttributes()
+						);
+
+				assertEquals(
+						EnumSet.of(FormulaAttributes.TIME_VARIANT),
+						new FormulaExecution("@Now").analyze().getAttributes()
+						);
+
+				List<String> allFunctions = FormulaExecution.getAllFunctions();
+				assertTrue(allFunctions.contains("@Left("));
+				assertTrue(!FormulaExecution.getFunctionParameters("@Left(").isEmpty());
+				
+				List<String> allCommands = FormulaExecution.getAllCommands();
+				assertTrue(allCommands.contains("MailSend"));
+				assertTrue(!FormulaExecution.getFunctionParameters("ToolsRunMacro").isEmpty());
+				
+				return null;
+			}
+		});
+	}
+	
 	@Test
 	public void testFormulaExecution_formulaExecution() {
 

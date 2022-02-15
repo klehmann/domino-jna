@@ -252,4 +252,12 @@ public interface NotesCallbacks {
 				NotesUniversalNoteIdStruct NoteUNID, short NoteClass, Pointer summary, int designType);
 	}
 
+	interface NSFFORMFUNCPROC extends Callback {
+		short invoke(Pointer ptr);
+	}
+	
+	interface NSFFORMCMDSPROC extends Callback {
+		short invoke(Pointer ptr, short code, IntByReference stopFlag);
+	}
+
 }

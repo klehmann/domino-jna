@@ -1,14 +1,18 @@
 package com.mindoo.domino.jna.formula;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import com.mindoo.domino.jna.IAdaptable;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.constants.FormulaAttributes;
 import com.mindoo.domino.jna.errors.FormulaCompilationError;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -19,9 +23,16 @@ import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
-import com.mindoo.domino.jna.utils.DumpUtil;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks.NSFFORMCMDSPROCWin32;
+import com.mindoo.domino.jna.internal.Win32NotesCallbacks.NSFFORMFUNCPROCWin32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -584,4 +595,168 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	public long getHandle64() {
 		return m_hFormula64;
 	}
+	
+	public DHANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return DHANDLE64.newInstance(m_hFormula64);
+		}
+		else {
+			return DHANDLE32.newInstance(m_hFormula32);
+		}
+	}
+	
+	/**
+	 * Returns a list of all registered (public) formula functions. Use {@link #getFunctionParameters(String)}
+	 * to get a list of function parameters.
+	 * 
+	 * @return functions, e.g. "@Left("
+	 */
+	public static List<String> getAllFunctions() {
+		List<String> retNames = new ArrayList<>();
+		
+		NSFFORMFUNCPROC callback;
+		if (PlatformUtils.isWin32()) {
+			callback = new NSFFORMFUNCPROCWin32() {
+
+				@Override
+				public short invoke(Pointer ptr) {
+					String name = NotesStringUtils.fromLMBCS(ptr, -1);
+					retNames.add(name);
+					return 0;
+				}
+				
+			};
+		}
+		else {
+			callback = new NSFFORMFUNCPROC() {
+
+				@Override
+				public short invoke(Pointer ptr) {
+					String name = NotesStringUtils.fromLMBCS(ptr, -1);
+					retNames.add(name);
+					return 0;
+				}
+				
+			};
+		}
+		short result = NotesNativeAPI.get().NSFFormulaFunctions(callback);
+		NotesErrorUtils.checkResult(result);
+		
+		return retNames;
+	}
+
+	/**
+	 * Returns a list of all registered (public) formula commands. Use {@link #getFunctionParameters(String)}
+	 * to get a list of command parameters.
+	 * 
+	 * @return commands, e.g. "MailSend"
+	 */
+	public static List<String> getAllCommands() {
+		List<String> retNames = new ArrayList<>();
+		
+		NSFFORMCMDSPROC callback;
+		if (PlatformUtils.isWin32()) {
+			callback = new NSFFORMCMDSPROCWin32() {
+
+				@Override
+				public short invoke(Pointer ptr, short code, IntByReference stopFlag) {
+					String name = NotesStringUtils.fromLMBCS(ptr, -1);
+					retNames.add(name);
+					return 0;
+				}
+				
+			};
+		}
+		else {
+			callback = new NSFFORMCMDSPROC() {
+
+				@Override
+				public short invoke(Pointer ptr, short code, IntByReference stopFlag) {
+					String name = NotesStringUtils.fromLMBCS(ptr, -1);
+					retNames.add(name);
+					return 0;
+				}
+				
+			};
+		}
+		short result = NotesNativeAPI.get().NSFFormulaCommands(callback);
+		NotesErrorUtils.checkResult(result);
+		
+		return retNames;
+	}
+	
+	public static class FormulaAnalyzeResult {
+		private EnumSet<FormulaAttributes> attributes;
+		
+		private FormulaAnalyzeResult(EnumSet<FormulaAttributes> attributes) {
+			this.attributes = attributes;
+		}
+		
+		public Set<FormulaAttributes> getAttributes() {
+			return Collections.unmodifiableSet(this.attributes);
+		}
+
+		@Override
+		public String toString() {
+			return "FormulaAnalyzeResult [attributes=" + attributes + "]";
+		}
+		
+	}
+
+	/**
+	 * Scan through the function table (ftable) or keyword table (ktable)
+	 * to find parameters of an @ function or an @ command.
+	 * 
+	 * @param formulaName name returned by {@link FormulaExecution#getAllFunctions()}, e.g. "@Left("
+	 * @return function parameters, e.g. "stringToSearch; numberOfChars)stringToSearch; subString)" for the function "@Left("
+	 */
+	public static List<String> getFunctionParameters(String formulaName) {
+		Memory formulaMem = NotesStringUtils.toLMBCS(formulaName, true);
+		Pointer ptr = NotesNativeAPI.get().NSFFindFormulaParameters(formulaMem);
+		if (ptr==null) {
+			return Collections.emptyList();
+		}
+		else {
+			//example format for @Middle(:
+			//string; offset; numberchars)string; offset; endstring)string; startString; endstring)string; startString; numberchars)
+			List<String> params = new ArrayList<>();
+			String paramsConc = NotesStringUtils.fromLMBCS(ptr, -1);
+
+			StringBuilder sb = new StringBuilder();
+
+			for (int i=0; i<paramsConc.length(); i++) {
+				char c = paramsConc.charAt(i);
+				sb.append(c);
+
+				if (c==')') {
+					params.add(sb.toString());
+					sb.setLength(0);
+				}
+			}
+			return params;
+		}
+	}
+	
+	/**
+	 * Analyzes the @-function
+	 * 
+	 * @return result with flags, e.g. whether the function returns a constant value or is time based
+	 */
+	public FormulaAnalyzeResult analyze() {
+		checkHandle();
+		
+		DHANDLE hFormula = getHandle();
+		
+		IntByReference retAttributes = new IntByReference();
+		ShortByReference retSummaryNamesOffset = new ShortByReference();
+		
+		short result = NotesNativeAPI.get().NSFFormulaAnalyze(hFormula.getByValue(),
+				retAttributes,
+				retSummaryNamesOffset);
+		NotesErrorUtils.checkResult(result);
+		
+		EnumSet<FormulaAttributes> attributes = FormulaAttributes.toFormulaAttributes(retAttributes.getValue());
+		return new FormulaAnalyzeResult(attributes);
+	}
+	
 }

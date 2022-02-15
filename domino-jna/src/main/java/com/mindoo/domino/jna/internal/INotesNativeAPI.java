@@ -5,8 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
+import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
+import com.mindoo.domino.jna.internal.structs.DbOptionsStruct;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -21,7 +25,9 @@ import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStr
 import com.sun.jna.Library;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import com.sun.jna.ptr.ShortByReference;
 
@@ -55,6 +61,7 @@ public interface INotesNativeAPI extends Library {
 			Memory retFileName);
 	void OSGetExecutableDirectory(Memory retPathName);
 	void OSGetDataDirectory(Memory retPathName);
+	@UndocumentedAPI
 	short OSGetSystemTempDirectory(Memory retPathName, int bufferLength);
 	@UndocumentedAPI
 	void OSPathAddTrailingPathSep(Memory retPathName);
@@ -68,7 +75,6 @@ public interface INotesNativeAPI extends Library {
 	void OSSetEnvironmentInt(Memory variableName, int Value);
 	@UndocumentedAPI
 	void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
-	@UndocumentedAPI
 	short OSGetEnvironmentSeqNo();
 	
 	short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
@@ -144,7 +150,15 @@ public interface INotesNativeAPI extends Library {
 			short  Options,
 			byte  EncryptStrength,
 			long  MaxFileSize);
-	
+
+	@UndocumentedAPI
+	short NSFDbCreateExtended4 (Memory pathName, short dbClass, 
+			 boolean forceCreation, short options, int options2,
+			 byte encryptStrength, int MaxFileSize,
+			 Memory string1, Memory string2, 
+			 short ReservedListLength, short ReservedListCount, 
+			 DbOptionsStruct.ByValue dbOptions, DHANDLE.ByValue hNamesList, DHANDLE.ByValue hReservedList);
+
 	short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 	short NSFDbMarkInService(Memory dbPath);
 	short NSFDbMarkOutOfService(Memory dbPath);
@@ -176,6 +190,7 @@ public interface INotesNativeAPI extends Library {
 			int dwReserved,
 			Pointer vpReserved);
 
+	@UndocumentedAPI
 	short SECidvIsIDInVault(Memory pServer, Memory pUserName);
 	
 	short ODSLength(short type);
@@ -249,11 +264,7 @@ public interface INotesNativeAPI extends Library {
 			NotesCallbacks.ActionRoutinePtr  ActionRoutine,
 			Pointer vContext);
 
-	@UndocumentedAPI
 	void NIFGetViewRebuildDir(Memory retPathName, int BufferLength);
-//  commented out, not compatible with later Notes version
-//	@UndocumentedAPI
-//	void DAOSGetBaseStoragePath(Memory retPathName, int BufferLength);
 	 
 	void NSFDbInfoParse(
 			Pointer Info,
@@ -558,6 +569,7 @@ public interface INotesNativeAPI extends Library {
 			short Privileges,
 			IntByReference retObjectID);
 
+	@UndocumentedAPI
 	short NSFDbAllocObjectExtended2(HANDLE.ByValue cDB,
 			int size, short noteClass, short privs, short type, IntByReference rtnRRV);
 
@@ -591,5 +603,149 @@ public interface INotesNativeAPI extends Library {
 			IntByReference retSize,
 			ShortByReference retClass,
 			ShortByReference retPrivileges);
+
+	@UndocumentedAPI
+	short NSFDbLocalSecInfoGetLocal(HANDLE.ByValue hDb, IntByReference state, IntByReference strength);
+
+	@UndocumentedAPI
+	short NSFDbLocalSecInfoSet(HANDLE.ByValue hDB, short Option, byte EncryptStrength, Memory Username);
+
+	short NSFDbCompactExtendedExt2(Memory pathname, int options, int options2, DoubleByReference originalSize, DoubleByReference compactedSize);
+
+	@UndocumentedAPI
+	Pointer NSFFindFormulaParameters(Memory pszString);
+	
+	@UndocumentedAPI
+	short NSFFormulaFunctions(NSFFORMFUNCPROC callback);
+
+	@UndocumentedAPI
+	short NSFFormulaCommands(NSFFORMCMDSPROC callback);
+	
+	@UndocumentedAPI
+	short NSFFormulaAnalyze (DHANDLE.ByValue hFormula,
+			IntByReference retAttributes,
+			ShortByReference retSummaryNamesOffset);
+
+	/**
+	 * @param handle the handle to lock
+	 * @return a pointer to the locked value
+	 * @deprecated use {@link Mem#OSLockObject(DHANDLE.ByValue)} instead
+	 */
+	@Deprecated Pointer OSLockObject(DHANDLE.ByValue handle);
+	/**
+	 * @param handle the handle to unlock
+	 * @return whether unlocking was successful
+	 * @deprecated use {@link Mem#OSUnlockObject(NotesBlockIdStruct)} instead
+	 */
+	@Deprecated boolean OSUnlockObject(DHANDLE.ByValue handle);
+
+	short NSFItemModifyValue (DHANDLE.ByValue hNote, NotesBlockIdStruct.ByValue bhItem, 
+		      short itemFlags, short dataType, 
+		      Pointer value, int valueLength);
+
+	@UndocumentedAPI
+	short DesignOpenCollection(HANDLE.ByValue hDB,
+            boolean bPrivate,
+            short OpenFlags,
+            DHANDLE.ByReference rethCollection,
+            IntByReference retCollectionNoteID);
+
+	short NIFCloseCollection(DHANDLE.ByValue hCollection);
+
+	@UndocumentedAPI
+	short NLS_goto_prev_whole_char (
+	    PointerByReference ppString, 
+	    Pointer pStrStart, 
+	    Pointer pInfo);
+
+	/**
+	 * @param handle the handle to free
+	 * @return the result status
+	 * @deprecated use {@link Mem#OSMemFree(DHANDLE.ByValue)} instead
+	 */
+	@Deprecated short OSMemFree(DHANDLE.ByValue handle);
+
+	/**
+	 * @param handle the handle for which to get the size
+	 * @param retSize the size return value
+	 * @return the result status
+	 * @deprecated use {@link Mem#OSMemGetSize(DHANDLE.ByValue, IntByReference)} instead
+	 */
+	@Deprecated short OSMemGetSize(DHANDLE.ByValue handle, IntByReference retSize);
+
+	short NSFDbReadACL(
+			HANDLE.ByValue hDB,
+			DHANDLE.ByReference rethACL);
+	
+	short ACLSetAdminServer(
+			DHANDLE.ByValue hList,
+			Memory ServerName);
+
+	short ACLGetAdminServer(
+			DHANDLE.ByValue hList,
+			Memory ServerName);
+	
+	@UndocumentedAPI
+	short ACLCopy(DHANDLE.ByValue hList, DHANDLE.ByReference hNewList);
+
+	short ACLLookupAccess(
+			DHANDLE.ByValue hACL,
+			Pointer pNamesList,
+			ShortByReference retAccessLevel,
+			Memory retPrivileges,
+			ShortByReference retAccessFlags,
+			LongByReference rethPrivNames);
+	
+	short ACLAddEntry(
+			DHANDLE.ByValue hACL,
+			Memory name,
+			short AccessLevel,
+			Memory privileges,
+			short AccessFlags);
+
+	short ACLDeleteEntry(
+			DHANDLE.ByValue hACL,
+			Memory name);
+	
+	short ACLSetFlags(
+			DHANDLE.ByValue hACL,
+			int Flags);
+	
+	short ACLGetFlags(
+			DHANDLE.ByValue hACL,
+			IntByReference retFlags);
+
+	short ACLSetPrivName(
+			DHANDLE.ByValue hACL,
+			short PrivNum,
+			Memory privName);
+
+	short ACLUpdateEntry(
+			DHANDLE.ByValue hACL,
+			Memory name,
+			short updateFlags,
+			Memory newName,
+			short newAccessLevel,
+			Memory newPrivileges,
+			short newAccessFlags);
+
+	short ACLEnumEntries(
+			DHANDLE.ByValue hACL,
+			ACLENTRYENUMFUNC EnumFunc,
+			Pointer EnumFuncParam);
+
+	short ACLGetPrivName(
+			DHANDLE.ByValue hACL,
+			short PrivNum,
+			Memory retPrivName);
+
+	short NSFDbStoreACL(
+			HANDLE.ByValue hDB,
+			DHANDLE.ByValue hACL,
+			int ObjectID,
+			short Method);
+	
+	short ACLCreate(DHANDLE.ByReference rethACL);
+
 
 }

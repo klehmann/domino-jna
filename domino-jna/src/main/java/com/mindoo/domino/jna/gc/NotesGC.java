@@ -11,6 +11,9 @@ import java.util.concurrent.Callable;
 
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 
 /**
@@ -330,6 +333,22 @@ public class NotesGC {
 		}
 	}
 
+	/**
+	 * Internal method to check whether a 64 bit handle exists
+	 * 
+	 * @param memClazz class of Notes object
+	 * @param handle handle
+	 * @throws NotesError if handle does not exist
+	 */
+	public static void __checkValidMemHandle(Class<? extends IAllocatedMemory> memClazz, DHANDLE handle) {
+		if (PlatformUtils.is64Bit()) {
+			__b64_checkValidMemHandle(memClazz, ((DHANDLE64)handle).hdl);
+		}
+		else {
+			__b32_checkValidMemHandle(memClazz, ((DHANDLE32)handle).hdl);
+		}
+	}
+	
 	/**
 	 * Internal method to check whether a 64 bit handle exists
 	 * 
