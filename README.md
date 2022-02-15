@@ -278,7 +278,7 @@ The test cases use sample databases that we provide for download and will update
 
 You can download the two sample databases fakenames.nsf and fakenames-views.nsf from this URL:
 
-**[Download Link](https://mindoo-my.sharepoint.com/:u:/g/personal/karsten_lehmann_mindoo_onmicrosoft_com/EQBTfJNeqeNFlcRzEVC5OaYB0xLhMHKg0pzm60qlVQrbMA?e=0SWK7u)**
+**[Download Link](https://mindoo-my.sharepoint.com/:u:/g/personal/karsten_lehmann_mindoo_de/EQBTfJNeqeNFlcRzEVC5OaYB0xLhMHKg0pzm60qlVQrbMA?e=OVThA4)**
 
 Next, place them in the data folder of your HCL Notes Client.
 
