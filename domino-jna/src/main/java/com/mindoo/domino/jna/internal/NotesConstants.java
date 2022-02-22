@@ -128,6 +128,8 @@ public interface NotesConstants {
 	public final int notesCDIdNameStructSize = NotesCDIdNameStruct.newInstance().size();
 	public final int notesCDResourceStructSize = NotesCDResourceStruct.newInstance().size();
 	public final int notesReplicationHistorySummaryStructSize = NotesReplicationHistorySummaryStruct.newInstance().size();
+	int queueEntryHeaderSize = 8; // DHANDLE/DHANDLE with 32 bit
+	int resultsStreamBufferHeaderSize = 12;
 
 	public static final short MAXALPHATIMEDATE = 80;
 
@@ -4497,4 +4499,63 @@ This allows an Editor to assume some Designer-level access */
 	int FA_ONLY_CONST_COMMAND_AND_SETTARGETFRAME = 0x00000200;
 	int FA_FUNC_SETTARGETFRAME = 0x00000400;
 
+	int MAX_CMD_VALLEN = NotesConstants.MAXSPRINTF + 1; // 256 + null term
+
+	public enum QUEP_LISTTYPE {
+		INPUT_RESULTS_LST(0),
+		SORT_COL_LST(1),
+		COMBINES_LST(2),
+		FIELD_FORMULA_LST(3), BAD_LISTTYPE(4);
+
+		private final int m_value;
+
+		QUEP_LISTTYPE(final int value) {
+			this.m_value = value;
+		}
+
+		public int getValue() {
+			return this.m_value;
+		}
+	}
+
+	  /* Flags for NSFProcessResults */
+	  
+	  /** Output of results processing is a created, populated view */
+	  int PROCRES_CREATE_VIEW = 0x00000001;
+
+	  /** Output of results processing is a JSON stream */
+	  int PROCRES_JSON_OUTPUT = 0x00000002;
+
+	  /**
+	   * NOT SUPPORTED YET - Output of results processing is a SEARCH_MATCH || ITEM_TABLE summary stream
+	   */
+	  int PROCRES_SUMMARY_OUTPUT = 0x00000004;
+
+	  /** return UNID(s) with each result, default is NoteID(s) */
+	  int PROCRES_RETURN_UNID = 0X00000008;
+
+	  /** return the replicaID of the database of the entry */
+	  int PROCRES_RETURN_REPLICAID = 0x00000010;
+
+	  /** return a root element for each returned entry */
+	  int PROCRES_RETURN_MULTIPLE_ROOTS = 0x00000020;
+
+	  int PROCRES_STREAMED_OUTPUT = NotesConstants.PROCRES_JSON_OUTPUT | NotesConstants.PROCRES_SUMMARY_OUTPUT;
+
+	  /** Coupled with PROCRES_CREATE_VIEW, return an opened instance of the view */
+	  int PROCRES_RETURN_OPEN_VIEW = 0x00000040;
+	  
+
+	  /** internal flag to indicate category processing */
+	  int PROCRES_HAS_CATEGORIZED_KEYS = 0x00000080;
+
+	  /** For formatting JSON arrays (from the outside) */
+	  int PROCRES_JSON_PREPEND_COMMA = 0x00000100;
+
+	  /** If TYPE_ERROR occurs, drop the document from results with no error */
+	  int PROCRES_IGNORE_TYPE_ERROR = 0x00000200;
+
+	  /** For every input result set, only process each document once */
+	  int PROCRES_DEDUPE_NOTEIDS = 0x00000400;
+	  
 }
