@@ -250,5 +250,159 @@ public class Mem {
 		
 		return NotesNativeAPI.get().OSUnlockObject(hdlByVal);
 	}
+
+	public static LockedMemory OSMemoryLock(int handle) { 
+		return OSMemoryLock(handle, false);
+	}
+
+	public static LockedMemory OSMemoryLock(int handle, boolean freeAfterClose) {
+		return new LockedMemory32(NotesNativeAPI.get().OSMemoryLock(handle), handle, freeAfterClose);
+	}
+	
+	public static LockedMemory OSMemoryLock(long handle) { 
+		return OSMemoryLock(handle, false);
+	}
+	
+	public static LockedMemory OSMemoryLock(long handle, boolean freeAfterClose) {
+		return new LockedMemory64(NotesNativeAPI.get().OSMemoryLock(handle), handle, freeAfterClose);
+	}
+
+	public interface LockedMemory extends AutoCloseable {
+		Pointer getPointer();
+		long getSize();
+		@Override void close();
+	}
+	
+	public static class NullLockedMemory implements LockedMemory {
+		@Override
+		public Pointer getPointer() {
+			return null;
+		}
+		
+		@Override
+		public long getSize() {
+			return 0;
+		}
+		
+		@Override
+		public void close() {
+			// nothing to close
+		}
+	}
+	
+	private static class LockedMemory32 implements LockedMemory {
+		private final Pointer pointer;
+		private final int handle;
+		private final boolean freeAfterClose;
+		
+		public LockedMemory32(Pointer pointer, int handle, boolean freeAfterClose) {
+			this.pointer = pointer;
+			this.handle = handle;
+			this.freeAfterClose=freeAfterClose;
+		}
+		
+		@Override
+		public Pointer getPointer() {
+			return pointer;
+		}
+		
+		@Override
+		public long getSize() {
+			return NotesNativeAPI.get().OSMemoryGetSize(handle);
+		}
+		
+		@Override
+		public void close() {
+			try {
+				NotesNativeAPI.get().OSMemoryUnlock(handle);
+			}
+			finally {
+				if (freeAfterClose) {
+					NotesNativeAPI.get().OSMemoryFree(handle);
+				}
+			}
+		}
+	}
+	
+	private static class LockedMemory64 implements LockedMemory {
+		private final Pointer pointer;
+		private final long handle;
+		private final boolean freeAfterClose;
+		
+		public LockedMemory64(Pointer pointer, long handle, boolean freeAfterClose) {
+			this.pointer = pointer;
+			this.handle = handle;
+			this.freeAfterClose=freeAfterClose;
+		}
+		
+		@Override
+		public Pointer getPointer() {
+			return pointer;
+		}
+		
+		@Override
+		public long getSize() {
+			return NotesNativeAPI.get().OSMemoryGetSize(handle);
+		}
+
+		@Override
+		public void close() {
+			try {
+				NotesNativeAPI.get().OSMemoryUnlock(handle);
+			}
+			finally {
+				if (freeAfterClose) {
+					NotesNativeAPI.get().OSMemoryFree(handle);
+				}
+			}
+		}
+	}
+	
+	public static LockedMemory OSMemoryLock(DHANDLE.ByReference hdl, boolean freeAfterClose) {
+		DHANDLE.ByValue hdlByVal = hdl.getByValue();
+		if (!hdlByVal.isNull()) {
+			if (PlatformUtils.is64Bit()) {
+				return OSMemoryLock(((DHANDLE64.ByValue)hdlByVal).hdl, freeAfterClose);
+			}
+			else {
+				return OSMemoryLock(((DHANDLE32.ByValue)hdlByVal).hdl, freeAfterClose);
+			}
+		}
+		else {
+			return new NullLockedMemory();
+		}
+	}
+
+	public static boolean OSMemoryUnlock(int handle) {
+		return NotesNativeAPI.get().OSMemoryUnlock(handle);
+	}
+	
+	public static boolean OSMemoryUnlock(long handle) {
+		return NotesNativeAPI.get().OSMemoryUnlock(handle);
+	}
+	
+	public static void OSMemoryFree(int handle) {
+		NotesNativeAPI.get().OSMemoryFree(handle);
+	}
+	
+	public static void OSMemoryFree(long handle) {
+		NotesNativeAPI.get().OSMemoryFree(handle);
+	}
+
+	public static int OSMemoryGetSize(int handle) {
+		return NotesNativeAPI.get().OSMemoryGetSize(handle);
+	}
+	
+	public static int OSMemoryGetSize(long handle) {
+		return NotesNativeAPI.get().OSMemoryGetSize(handle);
+	}
+
+	public static short OSMemRealloc(DHANDLE.ByValue handle, int newSize) {
+		return NotesNativeAPI.get().OSMemRealloc(handle, newSize);
+	}
+
+	public static LockedMemory OSMemoryLock(DHANDLE.ByReference hdl) {
+		return OSMemoryLock(hdl, false);
+	}
 	
 }
