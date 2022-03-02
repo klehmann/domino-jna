@@ -10,6 +10,9 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -238,6 +241,15 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 		return m_handle64;
 	}
 
+	public DHANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return DHANDLE64.newInstance(m_handle64);
+		}
+		else {
+			return DHANDLE32.newInstance(m_handle32);
+		}
+	}
+	
 	@Override
 	public Iterator<String> iterator() {
 		return m_values.iterator();

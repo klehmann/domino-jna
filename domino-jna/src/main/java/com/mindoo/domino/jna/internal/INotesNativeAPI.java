@@ -10,7 +10,7 @@ import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
-import com.mindoo.domino.jna.internal.structs.DbOptionsStruct;
+import com.mindoo.domino.jna.internal.structs.NotesDbOptionsStruct;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
@@ -76,8 +76,64 @@ public interface INotesNativeAPI extends Library {
 	@UndocumentedAPI
 	void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
 	short OSGetEnvironmentSeqNo();
-	
+
 	short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
+
+	/**
+	 * @param handle the handle to lock
+	 * @return a pointer to the locked memory
+	 * @deprecated use {@link Mem#OSMemoryLock(int)} instead
+	 */
+	@Deprecated
+	Pointer OSMemoryLock(int handle);
+
+	/**
+	 * @param handle the handle to lock
+	 * @return a pointer to the locked memory
+	 * @deprecated use {@link Mem#OSMemoryLock(long)} instead
+	 */
+	@Deprecated
+	Pointer OSMemoryLock(long handle);
+
+	/**
+	 * @param handle the handle to unlock
+	 * @return whether unlocking was successful
+	 * @deprecated use {@link LockedMemory#close} instead
+	 */
+	@Deprecated
+	boolean OSMemoryUnlock(int handle);
+
+	/**
+	 * @param handle the handle to unlock
+	 * @return whether unlocking was successful
+	 * @deprecated use {@link LockedMemory#close} instead
+	 */
+	@Deprecated
+	boolean OSMemoryUnlock(long handle);
+
+	/**
+	 * @param handle the handle to get the size
+	 * @return the size of the handle's data in memory
+	 * @deprecated use {@link Mem#OSMemoryGetSize(int)} instead
+	 */
+	@Deprecated int OSMemoryGetSize(int handle);
+	/**
+	 * @param handle the handle to get the size
+	 * @return the size of the handle's data in memory
+	 * @deprecated use {@link Mem#OSMemoryGetSize(long)} instead
+	 */
+	@Deprecated int OSMemoryGetSize(long handle);
+
+	/**
+	 * @param handle the handle to free
+	 * @deprecated use {@link Mem#OSMemoryFree(int)} instead
+	 */
+	@Deprecated void OSMemoryFree(int handle);
+	/**
+	 * @param handle the handle to free
+	 * @deprecated use {@link Mem#OSMemoryFree(long)} instead
+	 */
+	@Deprecated void OSMemoryFree(long handle);
 
 	boolean TimeLocalToGM(Memory timePtr);
 	boolean TimeLocalToGM(NotesTimeStruct timePtr);
@@ -157,7 +213,7 @@ public interface INotesNativeAPI extends Library {
 			 byte encryptStrength, int MaxFileSize,
 			 Memory string1, Memory string2, 
 			 short ReservedListLength, short ReservedListCount, 
-			 DbOptionsStruct.ByValue dbOptions, DHANDLE.ByValue hNamesList, DHANDLE.ByValue hReservedList);
+			 NotesDbOptionsStruct.ByValue dbOptions, DHANDLE.ByValue hNamesList, DHANDLE.ByValue hReservedList);
 
 	short NSFDbRename(Memory dbNameOld, Memory dbNameNew);
 	short NSFDbMarkInService(Memory dbPath);
@@ -672,6 +728,16 @@ public interface INotesNativeAPI extends Library {
 	 * @deprecated use {@link Mem#OSMemGetSize(DHANDLE.ByValue, IntByReference)} instead
 	 */
 	@Deprecated short OSMemGetSize(DHANDLE.ByValue handle, IntByReference retSize);
+
+	/**
+	 * @param handle the handle of the memory to realloc
+	 * @param newSize new size of memory
+	 * @return status
+	 * @deprecated use {@link Mem#OSMemRealloc(com.hcl.domino.jna.internal.gc.handles.DHANDLE.ByValue, int)} instead
+	 */
+	@Deprecated short OSMemRealloc(
+			DHANDLE.ByValue handle,
+			int newSize);
 
 	short NSFDbReadACL(
 			HANDLE.ByValue hDB,

@@ -37,6 +37,12 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
+import com.mindoo.domino.jna.internal.handles.HANDLE;
+import com.mindoo.domino.jna.internal.handles.HANDLE32;
+import com.mindoo.domino.jna.internal.handles.HANDLE64;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -244,6 +250,15 @@ public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 
 	public long getHandle64() {
 		return m_idTableHandle64;
+	}
+
+	public DHANDLE getHandle() {
+		if (PlatformUtils.is64Bit()) {
+			return DHANDLE64.newInstance(m_idTableHandle64);
+		}
+		else {
+			return DHANDLE32.newInstance(m_idTableHandle32);
+		}
 	}
 
 	private void checkHandle() {

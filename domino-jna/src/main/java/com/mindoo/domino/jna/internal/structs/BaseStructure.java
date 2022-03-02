@@ -20,6 +20,10 @@ public abstract class BaseStructure extends Structure {
 
 	protected BaseStructure() {
 		super(NotesNativeAPI.getPlatformAlignment());
+		int overrideAlignment = getOverrideAlignment();
+		if (overrideAlignment!=-1) {
+			setAlignType(overrideAlignment);
+		}
 	}
 	
 	public BaseStructure(int alignType, TypeMapper mapper) {
@@ -36,15 +40,27 @@ public abstract class BaseStructure extends Structure {
 
 	public BaseStructure(Pointer p, int alignType) {
 		super(p, alignType);
+		int overrideAlignment = getOverrideAlignment();
+		if (overrideAlignment!=-1) {
+			setAlignType(overrideAlignment);
+		}
 	}
 
 	public BaseStructure(Pointer p) {
 		super(p, NotesNativeAPI.getPlatformAlignment());
+		int overrideAlignment = getOverrideAlignment();
+		if (overrideAlignment!=-1) {
+			setAlignType(overrideAlignment);
+		}
 	}
 
 	public BaseStructure(TypeMapper mapper) {
 		super(mapper);
 		setAlignType(NotesNativeAPI.getPlatformAlignment());
+		int overrideAlignment = getOverrideAlignment();
+		if (overrideAlignment!=-1) {
+			setAlignType(overrideAlignment);
+		}
 	}
 	
 	@Override
@@ -81,5 +97,9 @@ public abstract class BaseStructure extends Structure {
 			}
 		});
 	}
-	
+
+	protected int getOverrideAlignment() {
+		return -1;
+	}
+
 }

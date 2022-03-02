@@ -13,13 +13,17 @@ import com.mindoo.domino.jna.constants.CDRecordType;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.DisposableMemory;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
+import com.mindoo.domino.jna.richtext.RichTextBuilder;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -213,6 +217,64 @@ public class NotesItem {
 		return m_dataType;
 	}
 
+
+	/**
+	 * Returns a copy of the item raw value
+	 * 
+	 * @param prefixDataType true to keep the datatype WORD as prefix
+	 * @return item value
+	 */
+	public DisposableMemory getValueRaw(boolean prefixDataType) {
+		loadItemNameAndFlags();
+		NotesBlockIdStruct valueBlockId = getValueBlockId();
+		
+		DisposableMemory mem = new DisposableMemory(prefixDataType ? m_valueLength : m_valueLength-2);
+		Pointer valuePtr = Mem.OSLockObject(valueBlockId);
+		try {
+			byte[] valueArr = prefixDataType ? valuePtr.getByteArray(0, m_valueLength) : valuePtr.getByteArray(2, m_valueLength-2);
+			mem.write(0, valueArr, 0, valueArr.length);
+			return mem;
+		}
+		finally {
+			Mem.OSUnlockObject(valueBlockId);
+		}
+	}
+	
+	/**
+	 * Changes the item type.<br>
+	 * <br>
+	 * <b>Should only be used if you really know what you
+	 * are doing</b>, e.g. when writing CD records into design elements
+	 * with our {@link RichTextBuilder}
+	 * to change the item type afterwards from {@link NotesItem#TYPE_COMPOSITE}
+	 * to {@link NotesItem#TYPE_QUERY} or {@link NotesItem#TYPE_ACTION}
+	 * 
+	 * @param newType new type
+	 */
+	public void setItemType(int newType) {
+		m_parentNote.checkHandle();
+
+		loadItemNameAndFlags();
+
+		NotesBlockIdStruct.ByValue itemBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
+		itemBlockIdByVal.pool = m_itemBlockId.pool;
+		itemBlockIdByVal.block = m_itemBlockId.block;
+
+		DisposableMemory itemValue = getValueRaw(false);
+		try {
+			DHANDLE docHandle = m_parentNote.getHandle();
+			
+			short result = NotesNativeAPI.get().NSFItemModifyValue(docHandle.getByValue(),
+					itemBlockIdByVal, 
+					(short) (m_itemFlags & 0xffff), (short) (newType & 0xffff), 
+					itemValue, (int) itemValue.size());
+			NotesErrorUtils.checkResult(result);
+		}
+		finally {
+			itemValue.dispose();
+		}
+	}
+	
 	/**
 	 * Returns false if the item's type is {@link #TYPE_UNAVAILABLE}
 	 * 
