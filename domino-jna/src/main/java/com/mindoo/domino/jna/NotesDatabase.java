@@ -8326,5 +8326,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return new Pair<>(retOriginalSize.getValue(), retCompactedSize.getValue());
 	}
-	
+
+	/**
+	 * This function gets the database creation class specified when the database was created.<br>
+	 * <br>
+	 * This function is useful for those API programs that need to determine whether the database was
+	 * created specifically for alternate mail (in this case, {@link DBClass#ENCAPSMAILFILE} will be returned).<br>
+	 * <br>
+	 * However, for all other types of databases, there is no guarantee that the database matches the database
+	 * creation class description.
+	 * 
+	 * @return database class
+	 */
+	public DBClass getDbClass() {
+		checkHandle();
+		
+		HANDLE.ByValue hDb = getHandle().getByValue();
+		ShortByReference retClass = new ShortByReference();
+		short result = NotesNativeAPI.get().NSFDbClassGet(hDb, retClass);
+		NotesErrorUtils.checkResult(result);
+		
+		return DBClass.toType(retClass.getValue() & 0xffff);
+	}
 }

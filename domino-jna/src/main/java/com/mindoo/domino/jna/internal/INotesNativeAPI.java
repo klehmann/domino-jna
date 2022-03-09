@@ -813,5 +813,12 @@ public interface INotesNativeAPI extends Library {
 	
 	short ACLCreate(DHANDLE.ByReference rethACL);
 
+	short NSFDbGetSpecialNoteID(
+			HANDLE.ByValue hDB,
+			short Index,
+			IntByReference retNoteID);
 
+	short NSFDbClassGet(
+			HANDLE.ByValue hDB,
+			ShortByReference retClass);
 }

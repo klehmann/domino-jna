@@ -11,7 +11,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.EnumSet;
 import java.util.Set;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
@@ -86,6 +85,17 @@ public class DumpUtil {
 				return null;
 			}
 		});
+	}
+	
+	/**
+	 * Produces a String with hex codes for the specified byte array and
+	 * character data in case the memory contains bytes in ascii range.
+	 * 
+	 * @param data byte array
+	 * @return memory dump
+	 */
+	public static String dumpAsAscii(byte[] data) {
+		return dumpAsAscii(ByteBuffer.wrap(data), data.length);
 	}
 	
 	/**
