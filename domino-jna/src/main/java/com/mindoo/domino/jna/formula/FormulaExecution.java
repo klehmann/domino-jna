@@ -42,7 +42,10 @@ import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
- * Utility class to execute a Domino formula on one or more {@link NotesNote} objects.
+ * Utility class to execute a Domino formula on one or more {@link NotesNote} objects.<br>
+ * <br>
+ * The implementation supports more than the usual 64K of return value, e.g. to use
+ * <code>@DBColumn</code> to read the column values in views with many entries.
  * 
  * @author Karsten Lehmann
  */
@@ -423,21 +426,25 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethResult = new LongByReference();
-			ShortByReference retResultLength = new ShortByReference();
+			IntByReference retResultLength = new IntByReference();
 			IntByReference retNoteMatchesFormula = new IntByReference();
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
-			
-			short result = NotesNativeAPI64.get().NSFComputeEvaluate(m_hCompute64, note==null ? 0 : note.getHandle64(), rethResult, retResultLength,
-					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
+
+			//NSFComputeEvaluateExt supports more than the usual 64K of formula result data
+			final int retDWordResultLength = 1;
+			short result = NotesNativeAPI64.get().NSFComputeEvaluateExt(m_hCompute64, note==null ? 0 : note.getHandle64(), rethResult, retResultLength, retDWordResultLength,
+					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified
+					);
 			NotesErrorUtils.checkResult(result);
 			
+			int valueLength = retResultLength.getValue();
+
 			List<Object> formulaResult = null;
 			
 			long hResult = rethResult.getValue();
 			if (hResult!=0) {
 				Pointer valuePtr = Mem64.OSLockObject(hResult);
-				int valueLength = retResultLength.getValue() & 0xffff;
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);
@@ -457,13 +464,16 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 		}
 		else {
 			IntByReference rethResult = new IntByReference();
-			ShortByReference retResultLength = new ShortByReference();
+			IntByReference retResultLength = new IntByReference();
 			IntByReference retNoteMatchesFormula = new IntByReference();
 			IntByReference retNoteShouldBeDeleted = new IntByReference();
 			IntByReference retNoteModified = new IntByReference();
 
-			short result = NotesNativeAPI32.get().NSFComputeEvaluate(m_hCompute32, note==null ? 0 : note.getHandle32(), rethResult, retResultLength,
-					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified);
+			//NSFComputeEvaluateExt supports more than the usual 64K of formula result data
+			final int retDWordResultLength = 1;
+			short result = NotesNativeAPI32.get().NSFComputeEvaluateExt(m_hCompute32, note==null ? 0 : note.getHandle32(), rethResult, retResultLength, retDWordResultLength,
+					retNoteMatchesFormula, retNoteShouldBeDeleted, retNoteModified
+					);
 			NotesErrorUtils.checkResult(result);
 			
 			List<Object> formulaResult = null;
@@ -471,7 +481,7 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 			int hResult = rethResult.getValue();
 			if (hResult!=0) {
 				Pointer valuePtr = Mem32.OSLockObject(hResult);
-				int valueLength = retResultLength.getValue() & 0xffff;
+				int valueLength = retResultLength.getValue();
 				
 				try {
 					formulaResult = parseFormulaResult(valuePtr, valueLength);

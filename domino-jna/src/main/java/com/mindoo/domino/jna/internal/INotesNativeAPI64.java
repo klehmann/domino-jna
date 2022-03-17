@@ -822,6 +822,16 @@ public interface INotesNativeAPI64 extends Library {
 			IntByReference retNoteModified);
 
 	@UndocumentedAPI
+	short NSFComputeEvaluateExt(long hCompute,
+			long hNote,
+			LongByReference rethResult,
+			IntByReference retResultLength,
+			int allowDWordResults,
+			IntByReference retNoteMatchesFormula,
+			IntByReference retNoteShouldBeDeleted,
+			IntByReference retNoteModified);
+
+	@UndocumentedAPI
 	short CESCreateCTXFromNote(int hNote, LongByReference rethCESCTX);
 	@UndocumentedAPI
 	short CESGetNoSigCTX(LongByReference rethCESCTX);
