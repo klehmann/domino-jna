@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import java.lang.reflect.Array;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
@@ -16,6 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -40,9 +42,6 @@ import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.DHANDLE32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE64;
-import com.mindoo.domino.jna.internal.handles.HANDLE;
-import com.mindoo.domino.jna.internal.handles.HANDLE32;
-import com.mindoo.domino.jna.internal.handles.HANDLE64;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.utils.NotesDateTimeUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
@@ -1412,6 +1411,276 @@ public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 			
 			return nextId;
 		}
+		
+	}
+
+	/**
+	 * Returns an adapter to use this IDTable like a normal Java {@link Set} of
+	 * Integer values. All changes applied to the {@link Set} will be tranferred
+	 * to the IDTable and vice versa.
+	 * 
+	 * @return Set
+	 */
+	public IDTableAsSet asSet() {
+		return new IDTableAsSet() {
+
+			@Override
+			public NotesIDTable getIDTable() {
+				return NotesIDTable.this;
+			}
+			
+			@Override
+			public int size() {
+				return NotesIDTable.this.getCount();
+			}
+
+			@Override
+			public boolean isEmpty() {
+				return NotesIDTable.this.isEmpty();
+			}
+
+			@Override
+			public boolean contains(Object o) {
+				if (o instanceof Integer) {
+					return NotesIDTable.this.contains((Integer) o);
+				}
+				return false;
+			}
+
+			@Override
+			public Iterator<Integer> iterator() {
+				return NotesIDTable.this.iterator();
+			}
+
+			@Override
+			public Object[] toArray() {
+				List<Integer> idsAsList = NotesIDTable.this.toList();
+				Object[] idsArr = new Object[idsAsList.size()];
+				
+				for (int i=0; i<idsAsList.size(); i++) {
+					idsArr[i] = idsAsList.get(i).intValue();
+				}
+				return idsArr;
+			}
+
+			@Override
+			public <T> T[] toArray(T[] a) {
+				int size = size();
+				
+				List<Integer> noteIds = NotesIDTable.this.toList();
+				
+				if (a.length < size) {
+					// Make a new array of a's runtime type
+					T[] arr = (T[]) Array.newInstance(a.getClass().getComponentType(), size);
+					
+					for (int i=0; i<noteIds.size(); i++) {
+						arr[i] = (T) noteIds.get(i);
+					}
+					return arr;
+				}
+				else {
+					for (int i=0; i<noteIds.size(); i++) {
+						a[i] = (T) noteIds.get(i);
+					}
+					
+					if (a.length > size) {
+						a[size] = null;
+					}
+					
+					return a;
+				}
+			}
+
+			@Override
+			public boolean add(Integer e) {
+				return NotesIDTable.this.addNote(e);
+			}
+
+			@Override
+			public boolean remove(Object o) {
+				if (o instanceof Integer) {
+					return NotesIDTable.this.removeNote((Integer) o);
+				}
+				return false;
+			}
+
+			private Collection<Integer> toIntCollection(Collection<?> c) {
+				if (c.isEmpty() || c instanceof IDTableAsSet) {
+					return (Collection<Integer>) c;
+				}
+				
+				boolean allInts = true;
+				for (Object currObj : c) {
+					if (!(currObj instanceof Integer)) {
+						allInts = false;
+						break;
+					}
+				}
+				
+				Collection<Integer> noteIds;
+				
+				if (!allInts) {
+					noteIds = c
+					.stream()
+					.filter((o) -> { return o instanceof Integer; })
+					.mapToInt((o) -> { return (Integer) o; })
+					.boxed().collect(Collectors.toList());
+					
+					if (noteIds.isEmpty()) {
+						return new ArrayList<>();
+					}
+				}
+				else {
+					noteIds = (Collection<Integer>) c;
+				}
+				
+				return noteIds;
+			}
+			
+			@Override
+			public boolean containsAll(Collection<?> c) {
+				NotesIDTable.this.checkHandle();
+				
+				NotesIDTable otherIDTable;
+				boolean recycleOtherIDTable;
+				
+				if (c instanceof NotesIDTable) {
+					otherIDTable = (NotesIDTable) c;
+					otherIDTable.checkHandle();
+					recycleOtherIDTable = false;
+				}
+				else if (c instanceof IDTableAsSet) {
+					otherIDTable = ((IDTableAsSet) c).getIDTable();
+					otherIDTable.checkHandle();
+					recycleOtherIDTable = false;
+				}
+				else {
+					Collection<Integer> intCol = toIntCollection(c);
+					if (intCol.size() != c.size()) {
+						return false;
+					}
+					
+					otherIDTable = new NotesIDTable(intCol);
+					recycleOtherIDTable = true;
+				}
+				
+				try {
+					//intersect both IDTables and check if the result size matches our current size
+					DHANDLE.ByReference rethDstTable = DHANDLE.newInstanceByReference();
+
+					short result = NotesNativeAPI.get().IDTableIntersect(getHandle().getByValue(),
+							otherIDTable.getHandle().getByValue(),
+							rethDstTable);
+					NotesErrorUtils.checkResult(result);
+
+					int intersectedEntries = NotesNativeAPI.get().IDEntries(rethDstTable.getByValue());
+					NotesNativeAPI.get().IDDestroyTable(rethDstTable.getByValue());
+
+					return size() == intersectedEntries;
+				}
+				finally {
+					if (recycleOtherIDTable) {
+						otherIDTable.recycle();
+					}
+				}
+			}
+
+			@Override
+			public boolean addAll(Collection<? extends Integer> c) {
+				int oldSize = size();
+
+				if (c instanceof IDTableAsSet) {
+					IDTableAsSet otherTableAsSet = (IDTableAsSet) c;
+					NotesIDTable otherTable = otherTableAsSet.getIDTable();
+					otherTable.checkHandle();
+					NotesIDTable.this.addTable(otherTable);
+				}
+				else {
+					Collection<Integer> noteIds = toIntCollection(c);
+					NotesIDTable.this.addNotes(noteIds);
+				}
+				
+				return oldSize != size();
+			}
+
+			@Override
+			public boolean retainAll(Collection<?> c) {
+				Collection<Integer> noteIds = toIntCollection(c);
+				NotesIDTable noteIdsAsTable = new NotesIDTable(noteIds);
+				
+				int oldSize = size();
+				
+				if (c.isEmpty()) {
+					clear();
+					return oldSize > 0;
+				}
+
+				NotesIDTable thisCloned = (NotesIDTable) NotesIDTable.this.clone();
+				NotesIDTable intersectResult = (NotesIDTable) thisCloned.intersect(noteIdsAsTable);
+				clear();
+				NotesIDTable.this.addTable(intersectResult);
+				
+				return oldSize != size();
+			}
+
+			@Override
+			public boolean removeAll(Collection<?> c) {
+				checkHandle();
+				
+				Collection<Integer> noteIds = toIntCollection(c);
+
+				if (c.isEmpty()) {
+					return false;
+				}
+
+				NotesIDTable otherIDTable;
+				boolean disposeOtherIDTable;
+				
+				if (noteIds instanceof NotesIDTable) {
+					otherIDTable = (NotesIDTable) noteIds;
+					otherIDTable.checkHandle();
+					disposeOtherIDTable = false;
+				}
+				else {
+					otherIDTable = new NotesIDTable(noteIds);
+					disposeOtherIDTable = true;
+				}
+				
+				int oldSize = size();
+				
+				try {
+					NotesIDTable.this.removeTable(otherIDTable);
+					return oldSize != size();
+				}
+				finally {
+					if (disposeOtherIDTable) {
+						otherIDTable.recycle();
+					}
+				}
+			}
+
+			@Override
+			public void clear() {
+				NotesIDTable.this.clear();
+			}
+			
+		};
+	}
+	
+	/**
+	 * Extension of the {@link Set} interface to give access to an underlying
+	 * IDTable.
+	 * 
+	 * @author Karsten Lehmann
+	 */
+	public static interface IDTableAsSet extends Set<Integer> {
+		
+		/**
+		 * Returns a reference to the underlying {@link NotesIDTable}
+		 * 
+		 * @return IDTable
+		 */
+		NotesIDTable getIDTable();
 		
 	}
 }
