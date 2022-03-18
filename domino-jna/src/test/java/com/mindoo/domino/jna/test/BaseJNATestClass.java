@@ -18,6 +18,7 @@ import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -34,9 +35,12 @@ import java.util.zip.ZipInputStream;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import com.devskiller.jfairy.Fairy;
+import com.devskiller.jfairy.producer.person.Person;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.Encryption;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CreateDatabase;
@@ -50,6 +54,7 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.NotesInitUtils;
+import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.StringUtil;
 
 import lotus.domino.Database;
@@ -492,6 +497,7 @@ public class BaseJNATestClass {
 
 					//prevent ID password prompt
 					String idFilePath = System.getenv("Notes_IDPath");
+					
 					String idPassword = System.getenv("Notes_IDPassword");
 					if (!StringUtil.isEmpty(idPassword)) {
 						IDUtils.switchToId(idFilePath, idPassword, true);
@@ -710,4 +716,46 @@ public class BaseJNATestClass {
 			}
 		}
 	}
+
+	protected static List<Pair<String, Integer>> generateNABPersons(final NotesDatabase db, final int nrOfDocs) {
+		final List<Pair<String, Integer>> unidsAndNoteIds = new ArrayList<>();
+
+		final Fairy fairy = Fairy
+				.builder()
+				.withRandomSeed(5) // return deterministic data
+				.withLocale(Locale.ENGLISH)
+				.build();
+
+		for (int i = 0; i < nrOfDocs; i++) {
+			final Person person = fairy.person();
+
+			final NotesNote doc = db.createNote();
+			doc.replaceItemValue("Form", "Person");
+			doc.replaceItemValue("Type", "Person");
+			doc.replaceItemValue("Firstname", person.getFirstName());
+			doc.replaceItemValue("Lastname", person.getLastName());
+			doc.replaceItemValue("InternetAddress", person.getCompanyEmail());
+			doc.replaceItemValue("StreetAddress", person.getAddress().getStreet() + " " + person.getAddress().getStreetNumber());
+			doc.replaceItemValue("City", person.getAddress().getCity());
+			doc.replaceItemValue("Zip", person.getAddress().getPostalCode());
+			doc.replaceItemValue("CompanyName", person.getCompany().getName());
+			doc.replaceItemValue("MailAddress", person.getEmail());
+			doc.replaceItemValue("OfficePhoneNumber", person.getTelephoneNumber());
+			doc.replaceItemValue("Birthday", person.getDateOfBirth());
+			doc.replaceItemValue("WebSite", person.getCompany().getUrl());
+			doc.replaceItemValue("Country", person.getNationality().getCode());
+
+			doc.update();
+			unidsAndNoteIds.add(new Pair<>(doc.getUNID(), doc.getNoteId()));
+
+			// System.out.println("created doc with unid "+doc.getUNID()+" note id
+			// "+doc.getNoteID()+
+			// " ("+Integer.toHexString(doc.getNoteID())+")"+",
+			// seq="+doc.getOID().getSequenceTime()+",
+			// modified="+doc.getModifiedInThisFile());
+		}
+
+		return unidsAndNoteIds;
+	}
+
 }
