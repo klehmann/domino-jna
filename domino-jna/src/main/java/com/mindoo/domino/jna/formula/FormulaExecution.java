@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -25,6 +26,7 @@ import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
@@ -50,6 +52,35 @@ import com.sun.jna.ptr.ShortByReference;
  * @author Karsten Lehmann
  */
 public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
+	public enum Disallow {
+		/** Setting of environment variables */
+		SETENVIRONMENT(NotesConstants.COMPUTE_CAPABILITY_SETENVIRONMENT),
+		/** Commands like @Prompt */
+		UICOMMANDS(NotesConstants.COMPUTE_CAPABILITY_UICOMMANDS),
+		/** FIELD Foo := */
+		ASSIGN(NotesConstants.COMPUTE_CAPABILITY_ASSIGN),
+		 /** @SetDocField, @DocMark. */
+		SIDEEFFECTS(NotesConstants.COMPUTE_CAPABILITY_SIDEEFFECTS),
+		/** Any compute extension. */
+		EXTENSION(NotesConstants.COMPUTE_CAPABILITY_EXTENSION),
+		 /** Any compute extension with side-effects */
+		UNSAFE_EXTENSION(NotesConstants.COMPUTE_CAPABILITY_UNSAFE_EXTENSION),
+		/** Built-in compute extensions */
+		FALLBACK_EXT(NotesConstants.COMPUTE_CAPABILITY_FALLBACK_EXT),
+		/**	Unsafe is any @func that creates/modifies anything (i.e. not "read only") */
+		UNSAFE(NotesConstants.COMPUTE_CAPABILITY_UNSAFE);
+		
+		private final int m_value;
+		
+		private Disallow(int value) {
+			m_value = value;
+		}
+		
+		public int getValue() {
+			return m_value;
+		}
+	}
+	
 	private String m_formula;
 	
 	private long m_hFormula64;
@@ -62,8 +93,9 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	
 	private Pointer m_ptrCompiledFormula;
 	
-	private boolean m_preferNotesTimeDates;
-
+	private Boolean m_preferNotesTimeDates;
+	private Set<Disallow> m_disallowedActions = new HashSet<>();
+	
 	/**
 	 * Creates a new instance. The constructure compiles the formula and throws a {@link FormulaCompilationError},
 	 * if there are any compilation errors
@@ -186,9 +218,11 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	 * returned as {@link NotesTimeDate} instead of being converted to {@link Calendar}.
 	 * 
 	 * @param b true to prefer NotesTimeDate (false by default)
+	 * @return this instance
 	 */
-	public void setPreferNotesTimeDates(boolean b) {
+	public FormulaExecution setPreferNotesTimeDates(boolean b) {
 		m_preferNotesTimeDates = b;
+		return this;
 	}
 	
 	/**
@@ -198,7 +232,25 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	 * @return true to prefer NotesTimeDate
 	 */
 	public boolean isPreferNotesTimeDates() {
-		return m_preferNotesTimeDates;
+		if (m_preferNotesTimeDates==null) {
+			return NotesGC.isPreferNotesTimeDate();
+		}
+		return m_preferNotesTimeDates.booleanValue();
+	}
+	
+	/**
+	 * Blocks execution of certain unsafe actions
+	 * 
+	 * @param val action
+	 * @return this instance
+	 */
+	public FormulaExecution disallow(Disallow val) {
+		m_disallowedActions.add(val);
+		return this;
+	}
+	
+	public boolean isDisallowed(Disallow val) {
+		return m_disallowedActions.contains(val);
 	}
 	
 	public String toString() {
@@ -425,6 +477,15 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 		}
 
 		if (PlatformUtils.is64Bit()) {
+			if (!m_disallowedActions.isEmpty()) {
+				int disallowedFlags = 0;
+				for (Disallow currAction : m_disallowedActions) {
+					disallowedFlags |= currAction.getValue();
+				}
+				
+				NotesNativeAPI64.get().NSFComputeSetDisallowFlags(m_hCompute64, disallowedFlags);
+			}
+			
 			LongByReference rethResult = new LongByReference();
 			IntByReference retResultLength = new IntByReference();
 			IntByReference retNoteMatchesFormula = new IntByReference();
@@ -463,6 +524,15 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 					retNoteShouldBeDeleted.getValue()==1, retNoteModified.getValue()==1);
 		}
 		else {
+			if (!m_disallowedActions.isEmpty()) {
+				int disallowedFlags = 0;
+				for (Disallow currAction : m_disallowedActions) {
+					disallowedFlags |= currAction.getValue();
+				}
+				
+				NotesNativeAPI64.get().NSFComputeSetDisallowFlags(m_hCompute64, disallowedFlags);
+			}
+
 			IntByReference rethResult = new IntByReference();
 			IntByReference retResultLength = new IntByReference();
 			IntByReference retNoteMatchesFormula = new IntByReference();
