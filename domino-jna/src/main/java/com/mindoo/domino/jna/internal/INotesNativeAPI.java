@@ -821,4 +821,10 @@ public interface INotesNativeAPI extends Library {
 	short NSFDbClassGet(
 			HANDLE.ByValue hDB,
 			ShortByReference retClass);
+	
+	short IDTableIntersect(DHANDLE.ByValue hSrc1Table, DHANDLE.ByValue hSrc2Table, DHANDLE.ByReference rethDstTable);
+	int IDEntries (DHANDLE.ByValue hTable);
+	short IDDestroyTable(DHANDLE.ByValue hTable);
+	short IDDeleteTable  (DHANDLE.ByValue hTable, DHANDLE.ByValue hIDsToDelete);
+
 }

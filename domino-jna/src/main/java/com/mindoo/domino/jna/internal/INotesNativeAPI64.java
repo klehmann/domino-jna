@@ -91,11 +91,6 @@ public interface INotesNativeAPI64 extends Library {
 	@Deprecated
 	int OSMemoryGetSize(long handle);
 	/**
-	 * @deprecated use {@link Mem64#OSMemoryAllocate(int, int, LongByReference)} instead
-	 */
-	@Deprecated
-	short OSMemoryAllocate(int dwtype, int size, LongByReference retHandle);
-	/**
 	 * @deprecated use {@link Mem64#OSMemoryFree(long)} instead
 	 */
 	@Deprecated
@@ -830,6 +825,9 @@ public interface INotesNativeAPI64 extends Library {
 			IntByReference retNoteMatchesFormula,
 			IntByReference retNoteShouldBeDeleted,
 			IntByReference retNoteModified);
+
+	@UndocumentedAPI
+	void NSFComputeSetDisallowFlags (long vc, int dwFlags);
 
 	@UndocumentedAPI
 	short CESCreateCTXFromNote(int hNote, LongByReference rethCESCTX);

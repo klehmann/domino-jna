@@ -816,6 +816,9 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retNoteModified);
 
 	@UndocumentedAPI
+	void NSFComputeSetDisallowFlags (int vc, int dwFlags);
+
+	@UndocumentedAPI
 	short CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
 	@UndocumentedAPI
 	short CESGetNoSigCTX(IntByReference rethCESCTX);
