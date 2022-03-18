@@ -143,7 +143,7 @@ public class NotesNote implements IRecyclableNotesObject {
 	private NotesDatabase m_parentDb;
 	private Document m_legacyDocRef;
 	private EnumSet<NoteClass> m_noteClass;
-	private boolean m_preferNotesTimeDates;
+	private Boolean m_preferNotesTimeDates;
 	
 	/**
 	 * Creates a new instance
@@ -1734,6 +1734,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	 * @return true to prefer NotesTimeDate
 	 */
 	public boolean isPreferNotesTimeDates() {
+		if (m_preferNotesTimeDates==null) {
+			return NotesGC.isPreferNotesTimeDate();
+		}
 		return m_preferNotesTimeDates;
 	}
 	

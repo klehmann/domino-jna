@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -62,7 +63,7 @@ public class NotesGC {
 	public static void setDebugLoggingEnabled(boolean enabled) {
 		DominoGCContext ctx = threadContext.get();
 		if (ctx!=null) {
-			ctx.setWriteDebugMessages(enabled);
+			ctx.setDebugLoggingEnabled(enabled);
 		}
 	}
 	
@@ -78,7 +79,34 @@ public class NotesGC {
 			return false;
 		}
 		else {
-			return ctx.isWriteDebugMessages();
+			return ctx.isDebugLoggingEnabled();
+		}
+	}
+	
+	public static boolean isPreferNotesTimeDate() {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			return false;
+		}
+		else {
+			return ctx.isPreferNotesTimeDate();
+		}
+	}
+	
+	/**
+	 * General switch to prefer {@link NotesTimeDate} as return values for various functions,
+	 * e.g. formula execution and view lookups.<br>
+	 * If not set, those functions will return {@link Calendar} objects because in the
+	 * early days of this project our {@link NotesTimeDate} implementation was not powerful
+	 * enough. If there will ever be a major rewrite of this project, we will always return
+	 * {@link NotesTimeDate} objects for dates/times.
+	 * 
+	 * @param b true to prefer {@link NotesTimeDate}
+	 */
+	public static void setPreferNotesTimeDate(boolean b) {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx!=null) {
+			ctx.setPreferNotesTimeDate(b);
 		}
 	}
 	
@@ -274,7 +302,7 @@ public class NotesGC {
 			}
 		}
 		
-		if (ctx.isWriteDebugMessages()) {
+		if (ctx.isDebugLoggingEnabled()) {
 			System.out.println("AutoGC - Added object: "+obj);
 		}
 	}
@@ -305,7 +333,7 @@ public class NotesGC {
 			}
 		}
 		
-		if (ctx.isWriteDebugMessages()) {
+		if (ctx.isDebugLoggingEnabled()) {
 			System.out.println("AutoGC - Added memory: "+mem);
 		}
 	}
@@ -420,7 +448,7 @@ public class NotesGC {
 		if (obj.isRecycled())
 			throw new NotesError(0, "Object is already recycled");
 
-		if (ctx.isWriteDebugMessages()) {
+		if (ctx.isDebugLoggingEnabled()) {
 			System.out.println("AutoGC - Removing object: "+obj.getClass()+" with handle="+(PlatformUtils.is64Bit() ? obj.getHandle64() : obj.getHandle32()));
 		}
 		
@@ -447,7 +475,7 @@ public class NotesGC {
 		if (mem.isFreed())
 			throw new NotesError(0, "Memory has already been freed");
 
-		if (ctx.isWriteDebugMessages()) {
+		if (ctx.isDebugLoggingEnabled()) {
 			System.out.println("AutoGC - Removing memory: "+mem.getClass()+" with handle="+(PlatformUtils.is64Bit() ? mem.getHandle64() : mem.getHandle32()));
 		}
 		
@@ -622,8 +650,9 @@ public class NotesGC {
 		private LinkedHashMap<Integer, IAllocatedMemory> m_b32OpenHandlesMemory;
 		private LinkedHashMap<HashKey64, IRecyclableNotesObject> m_b64OpenHandlesDominoObjects;
 		private LinkedHashMap<Long, IAllocatedMemory> m_b64OpenHandlesMemory;
-		private boolean m_writeDebugMessages;
+		private boolean m_debugLoggingEnabled;
 		private boolean m_logCrashingThreadStackTrace;
+		private boolean m_preferNotesTimeDate;
 		
 		private DominoGCContext(DominoGCContext parentCtx) {
 			m_parentCtx = parentCtx;
@@ -656,19 +685,31 @@ public class NotesGC {
 			}
 		}
 		
-		public boolean isWriteDebugMessages() {
+		public boolean isDebugLoggingEnabled() {
 			if (m_parentCtx!=null) {
-				return m_parentCtx.isWriteDebugMessages();
+				return m_parentCtx.isDebugLoggingEnabled();
 			}
-			return m_writeDebugMessages;
+			return m_debugLoggingEnabled;
 		}
 		
-		public void setWriteDebugMessages(boolean b) {
+		public void setDebugLoggingEnabled(boolean b) {
 			if (m_parentCtx!=null) {
-				m_parentCtx.setWriteDebugMessages(b);
+				m_parentCtx.setDebugLoggingEnabled(b);
 				return;
 			}
-			m_writeDebugMessages = b;
+			m_debugLoggingEnabled = b;
+		}
+		
+		public boolean isPreferNotesTimeDate() {
+			return m_preferNotesTimeDate;
+		}
+		
+		public void setPreferNotesTimeDate(boolean b) {
+			if (m_parentCtx!=null) {
+				m_parentCtx.setPreferNotesTimeDate(b);
+				return;
+			}
+			m_preferNotesTimeDate = b;
 		}
 		
 		public boolean isLogCrashingThreadStackTrace() {
@@ -756,7 +797,7 @@ public class NotesGC {
 					if (m_b64OpenHandlesDominoObjects!=null && !m_b64OpenHandlesDominoObjects.isEmpty()) {
 						Entry[] mapEntries = m_b64OpenHandlesDominoObjects.entrySet().toArray(new Entry[m_b64OpenHandlesDominoObjects.size()]);
 						if (mapEntries.length>0) {
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Auto-recycling "+mapEntries.length+" Domino objects:");
 							}
 							
@@ -765,7 +806,7 @@ public class NotesGC {
 								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {
-										if (m_writeDebugMessages) {
+										if (m_debugLoggingEnabled) {
 											System.out.println("AutoGC - Auto-recycling "+obj);
 										}
 										obj.recycle();
@@ -777,7 +818,7 @@ public class NotesGC {
 								m_b64OpenHandlesDominoObjects.remove(currEntry.getKey());
 							}
 							
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Done auto-recycling "+mapEntries.length+" Domino objects");
 							}
 							
@@ -791,7 +832,7 @@ public class NotesGC {
 					if (m_b64OpenHandlesMemory!=null && !m_b64OpenHandlesMemory.isEmpty()) {
 						Entry[] mapEntries = m_b64OpenHandlesMemory.entrySet().toArray(new Entry[m_b64OpenHandlesMemory.size()]);
 						if (mapEntries.length>0) {
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
 							}
 
@@ -800,7 +841,7 @@ public class NotesGC {
 								IAllocatedMemory obj = currEntry.getValue();
 								try {
 									if (!obj.isFreed()) {
-										if (m_writeDebugMessages) {
+										if (m_debugLoggingEnabled) {
 											System.out.println("AutoGC - Freeing "+obj);
 										}
 										obj.free();
@@ -812,7 +853,7 @@ public class NotesGC {
 								m_b64OpenHandlesMemory.remove(currEntry.getKey());
 							}
 
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
 							}
 
@@ -828,7 +869,7 @@ public class NotesGC {
 						//recycle created Domino objects
 						Entry[] mapEntries = m_b32OpenHandlesDominoObjects.entrySet().toArray(new Entry[m_b32OpenHandlesDominoObjects.size()]);
 						if (mapEntries.length>0) {
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Recycling "+mapEntries.length+" Domino objects:");
 							}
 
@@ -837,7 +878,7 @@ public class NotesGC {
 								IRecyclableNotesObject obj = currEntry.getValue();
 								try {
 									if (!obj.isRecycled()) {
-										if (m_writeDebugMessages) {
+										if (m_debugLoggingEnabled) {
 											System.out.println("AutoGC - Recycling "+obj);
 										}
 										obj.recycle();
@@ -848,7 +889,7 @@ public class NotesGC {
 								}
 								m_b32OpenHandlesDominoObjects.remove(currEntry.getKey());
 							}
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Done recycling "+mapEntries.length+" memory handles");
 							}
 
@@ -862,7 +903,7 @@ public class NotesGC {
 						//dispose allocated memory
 						Entry[] mapEntries = m_b32OpenHandlesMemory.entrySet().toArray(new Entry[m_b32OpenHandlesMemory.size()]);
 						if (mapEntries.length>0) {
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Freeing "+mapEntries.length+" memory handles");
 							}
 
@@ -871,7 +912,7 @@ public class NotesGC {
 								IAllocatedMemory obj = currEntry.getValue();
 								try {
 									if (!obj.isFreed()) {
-										if (m_writeDebugMessages) {
+										if (m_debugLoggingEnabled) {
 											System.out.println("AutoGC - Freeing "+obj);
 										}
 										obj.free();
@@ -882,7 +923,7 @@ public class NotesGC {
 								}
 								m_b32OpenHandlesMemory.remove(currEntry.getKey());
 							}
-							if (m_writeDebugMessages) {
+							if (m_debugLoggingEnabled) {
 								System.out.println("AutoGC - Done freeing "+mapEntries.length+" memory handles");
 							}
 
