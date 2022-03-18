@@ -10,6 +10,9 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.text.MessageFormat;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -17,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
 import com.mindoo.domino.jna.NotesMIMEPart.PartType;
@@ -3366,7 +3371,10 @@ public class NotesNote implements IRecyclableNotesObject {
 		else if (value instanceof Number) {
 			return true;
 		}
-		else if (value instanceof Calendar || value instanceof NotesTimeDate || value instanceof Date) {
+		else if (value instanceof Calendar ||
+				value instanceof NotesTimeDate ||
+				value instanceof Date ||
+				value instanceof TemporalAccessor) {
 			return true;
 		}
 		else if (value instanceof List && ((List)value).isEmpty()) {
@@ -3585,36 +3593,25 @@ public class NotesNote implements IRecyclableNotesObject {
 				}
 			}
 		}
-		else if (value instanceof Calendar || value instanceof NotesTimeDate || value instanceof Date) {
+		else if (value instanceof Calendar || value instanceof Temporal || value instanceof Date) {
 			int[] innards;
-			boolean hasDate;
-			boolean hasTime;
 			
 			if (value instanceof NotesTimeDate) {
 				//no date conversion to innards needing, we already have them
 				innards = ((NotesTimeDate)value).getInnards();
-				hasTime = innards[0] != NotesConstants.ALLDAY;
-				hasDate = innards[1] != NotesConstants.ANYDAY;
+			}
+			else if (value instanceof Calendar) {
+				Calendar calValue = (Calendar) value;
+				innards = NotesDateTimeUtils.calendarToInnards(calValue);
+			}
+			else if (value instanceof Date) {
+				innards = new NotesTimeDate(((Date)value).toInstant()).getInnards();
+			}
+			else if(value instanceof Temporal) {
+				innards = new NotesTimeDate((Temporal)value).getInnards();
 			}
 			else {
-				Calendar calValue;
-				if (value instanceof Calendar) {
-					calValue = (Calendar) value;
-				}
-				else if (value instanceof NotesTimeDate) {
-					calValue = ((NotesTimeDate)value).toCalendar();
-				}
-				else if (value instanceof Date) {
-					calValue = Calendar.getInstance();
-					calValue.setTime((Date) value);
-				}
-				else {
-					throw new IllegalArgumentException("Unsupported date value type: "+(value==null ? "null" : value.getClass().getName()));
-				}
-				
-				hasDate = NotesDateTimeUtils.hasDate(calValue);
-				hasTime = NotesDateTimeUtils.hasTime(calValue);
-				innards = NotesDateTimeUtils.calendarToInnards(calValue, hasDate, hasTime);
+				throw new UnsupportedItemValueError(MessageFormat.format("Unsupported value type: {0}", (value==null ? "null" : value.getClass().getName()))); //$NON-NLS-2$
 			}
 
 			int valueSize = 2 + 8;
@@ -3664,7 +3661,7 @@ public class NotesNote implements IRecyclableNotesObject {
 				finally {
 					Mem32.OSUnlockObject(rethItem.getValue());
 				}
-			}
+			}			
 		}
 		else if (value instanceof List && (((List)value).isEmpty() || isStringList((List) value))) {
 			List<String> strList = (List<String>) value;
@@ -3872,32 +3869,32 @@ public class NotesNote implements IRecyclableNotesObject {
 			return appendItemValue(itemName, flags, Arrays.asList(value));
 		}
 		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
-			List<?> calendarOrCalendarArrList = toCalendarOrCalendarArrayList((List<?>) value);
+			List<?> dateOrDateTimeRangeList = toDateTimeOrDateTimeRangeList((Iterable<?>) value);
 			
-			List<Calendar> calendarList = new ArrayList<Calendar>();
-			List<Calendar[]> calendarArrList = new ArrayList<Calendar[]>();
+			List<NotesTimeDate> dateTimeList = new ArrayList<>();
+			List<NotesDateRange> dateRangeList = new ArrayList<>();
 			
-			for (int i=0; i<calendarOrCalendarArrList.size(); i++) {
-				Object currObj = calendarOrCalendarArrList.get(i);
-				if (currObj instanceof Calendar) {
-					calendarList.add((Calendar) currObj);
+			for (int i=0; i<dateOrDateTimeRangeList.size(); i++) {
+				Object currObj = dateOrDateTimeRangeList.get(i);
+				if (currObj instanceof NotesTimeDate) {
+					dateTimeList.add((NotesTimeDate) currObj);
 				}
-				else if (currObj instanceof Calendar[]) {
-					calendarArrList.add((Calendar[]) currObj);
+				else if (currObj instanceof NotesDateRange) {
+					dateRangeList.add((NotesDateRange) currObj);
 				}
 			}
 			
-			if (calendarList.size() > 65535) {
-				throw new IllegalArgumentException("Date list size must fit in a WORD ("+calendarList.size()+">65535)");
+			if (dateTimeList.size() > 65535) {
+				throw new IllegalArgumentException(MessageFormat.format("Date list size must fit in a WORD ({0}>65535)", dateTimeList.size()));
 			}
-			if (calendarArrList.size() > 65535) {
-				throw new IllegalArgumentException("Date range list size must fit in a WORD ("+calendarArrList.size()+">65535)");
+			if (dateRangeList.size() > 65535) {
+				throw new IllegalArgumentException(MessageFormat.format("Date range list size must fit in a WORD ({0}>65535)", dateRangeList.size()));
 			}
 
 			int valueSize = 2 + NotesConstants.rangeSize + 
-					8 * calendarList.size() +
-					NotesConstants.timeDatePairSize * calendarArrList.size();
-			
+					8 * dateTimeList.size() +
+					NotesConstants.timeDatePairSize * dateRangeList.size();
+
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethItem = new LongByReference();
 				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
@@ -3911,16 +3908,14 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 					Pointer rangePtr = valuePtr;
 					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (calendarList.size() & 0xffff);
-					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
+					range.ListEntries = (short) (dateTimeList.size() & 0xffff);
+					range.RangeEntries = (short) (dateRangeList.size() & 0xffff);
 					range.write();
 
 					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
-					for (Calendar currCal : calendarList) {
-						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
-						boolean hasTime = NotesDateTimeUtils.hasTime(currCal);
-						int[] innards = NotesDateTimeUtils.calendarToInnards(currCal, hasDate, hasTime);
+					for (NotesTimeDate currCal : dateTimeList) {
+						int[] innards = currCal.getInnards();
 
 						dateListPtr.setInt(0, innards[0]);
 						dateListPtr = dateListPtr.share(4);
@@ -3930,16 +3925,13 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 					Pointer rangeListPtr = dateListPtr;
 					
-					for (int i=0; i<calendarArrList.size(); i++) {
-						Calendar[] currRangeVal = calendarArrList.get(i);
+					for (int i=0; i<dateRangeList.size(); i++) {
+						NotesDateRange currRangeVal = dateRangeList.get(i);
+						NotesTimeDate start = currRangeVal.getStartDateTime();
+						NotesTimeDate end = currRangeVal.getEndDateTime();
 						
-						boolean hasDateStart = NotesDateTimeUtils.hasDate(currRangeVal[0]);
-						boolean hasTimeStart = NotesDateTimeUtils.hasTime(currRangeVal[0]);
-						int[] innardsStart = NotesDateTimeUtils.calendarToInnards(currRangeVal[0], hasDateStart, hasTimeStart);
-
-						boolean hasDateEnd = NotesDateTimeUtils.hasDate(currRangeVal[1]);
-						boolean hasTimeEnd = NotesDateTimeUtils.hasTime(currRangeVal[1]);
-						int[] innardsEnd = NotesDateTimeUtils.calendarToInnards(currRangeVal[1], hasDateEnd, hasTimeEnd);
+						int[] innardsStart = start.getInnards();
+						int[] innardsEnd = end.getInnards();
 
 						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
 						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
@@ -3972,16 +3964,14 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 					Pointer rangePtr = valuePtr;
 					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (calendarList.size() & 0xffff);
-					range.RangeEntries = (short) (calendarArrList.size() & 0xffff);
+					range.ListEntries = (short) (dateTimeList.size() & 0xffff);
+					range.RangeEntries = (short) (dateRangeList.size() & 0xffff);
 					range.write();
 
 					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
 					
-					for (Calendar currCal : calendarList) {
-						boolean hasDate = NotesDateTimeUtils.hasDate(currCal);
-						boolean hasTime = NotesDateTimeUtils.hasTime(currCal);
-						int[] innards = NotesDateTimeUtils.calendarToInnards(currCal, hasDate, hasTime);
+					for (NotesTimeDate currCal : dateTimeList) {
+						int[] innards = currCal.getInnards();
 
 						dateListPtr.setInt(0, innards[0]);
 						dateListPtr = dateListPtr.share(4);
@@ -3991,16 +3981,13 @@ public class NotesNote implements IRecyclableNotesObject {
 					
 					Pointer rangeListPtr = dateListPtr;
 					
-					for (int i=0; i<calendarArrList.size(); i++) {
-						Calendar[] currRangeVal = calendarArrList.get(i);
+					for (int i=0; i<dateRangeList.size(); i++) {
+						NotesDateRange currRangeVal = dateRangeList.get(i);
+						NotesTimeDate start = currRangeVal.getStartDateTime();
+						NotesTimeDate end = currRangeVal.getEndDateTime();
 						
-						boolean hasDateStart = NotesDateTimeUtils.hasDate(currRangeVal[0]);
-						boolean hasTimeStart = NotesDateTimeUtils.hasTime(currRangeVal[0]);
-						int[] innardsStart = NotesDateTimeUtils.calendarToInnards(currRangeVal[0], hasDateStart, hasTimeStart);
-
-						boolean hasDateEnd = NotesDateTimeUtils.hasDate(currRangeVal[1]);
-						boolean hasTimeEnd = NotesDateTimeUtils.hasTime(currRangeVal[1]);
-						int[] innardsEnd = NotesDateTimeUtils.calendarToInnards(currRangeVal[1], hasDateEnd, hasTimeEnd);
+						int[] innardsStart = start.getInnards();
+						int[] innardsEnd = end.getInnards();
 
 						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
 						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
@@ -4279,62 +4266,58 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		return convertedList;
 	}
-	private List<?> toCalendarOrCalendarArrayList(List<?> list) {
-		boolean allCalendar = true;
-		for (int i=0; i<list.size(); i++) {
-			if (!(list.get(i) instanceof Calendar[]) && !(list.get(i) instanceof Calendar)) {
-				allCalendar = false;
-				break;
-			}
+	
+	private List<?> toDateTimeOrDateTimeRangeList(Iterable<?> list) {
+		boolean allDateTime = StreamSupport.stream(list.spliterator(), false)
+		    .allMatch(i -> i instanceof NotesTimeDate[] || i instanceof NotesTimeDate);
+		
+		if (allDateTime) {
+			return StreamSupport.stream(list.spliterator(), false).collect(Collectors.toList());
 		}
 		
-		if (allCalendar)
-			return (List<?>) list;
-		
-		List convertedList = new ArrayList();
-		for (int i=0; i<list.size(); i++) {
-			if (list.get(i) instanceof Calendar) {
-				//ok
-				convertedList.add(list.get(i));
+		List<Object> convertedList = new ArrayList<>();
+		for (Object obj : list) {
+			if (obj instanceof GregorianCalendar) {
+				convertedList.add(new NotesTimeDate(((GregorianCalendar) obj).toZonedDateTime()));
 			}
-			else if (list.get(i) instanceof Calendar[]) {
-				//ok
-				convertedList.add((Calendar[]) list.get(i));
+			else if (obj instanceof Calendar[]) {
+				Calendar[] calArr = (Calendar[]) obj;
+				if (calArr.length!=2) {
+					throw new IllegalArgumentException("Length of Calendar array entry must be 2 for date ranges");
+				}
+				NotesTimeDate start = new NotesTimeDate((((GregorianCalendar)calArr[0]).toZonedDateTime()));
+				NotesTimeDate end = new NotesTimeDate((((GregorianCalendar)calArr[1]).toZonedDateTime()));
+				convertedList.add(new NotesDateRange(start, end));
 			}
-			else if (list.get(i) instanceof Date) {
-				Calendar cal = Calendar.getInstance();
-				cal.setTime((Date) list.get(i));
-				convertedList.add(cal);
+			else if (obj instanceof Date) {
+				Date dt = (Date) obj;
+				convertedList.add(new NotesTimeDate(dt.getTime()));
 			}
-			else if (list.get(i) instanceof NotesTimeDate) {
-				Calendar cal = ((NotesTimeDate)list.get(i)).toCalendar();
-				convertedList.add(cal);
+			else if (obj instanceof NotesTimeDate) {
+				convertedList.add(obj);
 			}
-			else if (list.get(i) instanceof Date[]) {
-				Date[] dateArr = (Date[]) list.get(i);
+			else if (obj instanceof Date[]) {
+				Date[] dateArr = (Date[]) obj;
 				if (dateArr.length!=2) {
 					throw new IllegalArgumentException("Length of Date array entry must be 2 for date ranges");
 				}
-				Calendar val1 = Calendar.getInstance();
-				val1.setTime(dateArr[0]);
-
-				Calendar val2 = Calendar.getInstance();
-				val2.setTime(dateArr[1]);
-
-				convertedList.add(new Calendar[] {val1, val2});
+				NotesTimeDate start = new NotesTimeDate(dateArr[0].getTime());
+				NotesTimeDate end = new NotesTimeDate(dateArr[1].getTime());
+				convertedList.add(new NotesDateRange(start, end));
 			}
-			else if (list.get(i) instanceof NotesTimeDate[]) {
-				NotesTimeDate[] ntdArr = (NotesTimeDate[]) list.get(i);
+			else if (obj instanceof NotesTimeDate[]) {
+				NotesTimeDate[] ntdArr = (NotesTimeDate[]) obj;
 				if (ntdArr.length!=2) {
-					throw new IllegalArgumentException("Length of NotesTimeDate array entry must be 2 for date ranges");
+					throw new IllegalArgumentException("Length of DominoDateTime array entry must be 2 for date ranges");
 				}
-				Calendar val1 = ntdArr[0].toCalendar();
-				Calendar val2 = ntdArr[1].toCalendar();
-				
-				convertedList.add(new Calendar[] {val1, val2});
+				convertedList.add(new NotesDateRange(ntdArr[0], ntdArr[1]));
+			}
+			else if(obj instanceof NotesDateRange) {
+				NotesDateRange range = (NotesDateRange)obj;
+				convertedList.add(new NotesDateRange(range.getStartDateTime(), range.getEndDateTime()));
 			}
 			else {
-				throw new IllegalArgumentException("Unsupported date format found in list: "+(list.get(i)==null ? "null" : list.get(i).getClass().getName()));
+				throw new IllegalArgumentException(MessageFormat.format("Unsupported date format found in list: {0}", (obj==null ? "null" : obj.getClass().getName()))); //$NON-NLS-2$
 			}
 		}
 		return convertedList;
@@ -4351,15 +4334,13 @@ public class NotesNote implements IRecyclableNotesObject {
 		}
 		return true;
 	}
-
+	
 	private boolean isCalendarOrCalendarArrayList(List<?> list) {
-		if (list==null || list.isEmpty()) {
+		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
-		for (int i=0; i<list.size(); i++) {
+		for(Object currObj : list) {
 			boolean isAccepted=false;
-			
-			Object currObj = list.get(i);
 			
 			if (currObj instanceof Calendar[]) {
 				Calendar[] calArr = (Calendar[]) currObj;
@@ -4379,6 +4360,9 @@ public class NotesNote implements IRecyclableNotesObject {
 					isAccepted = true;
 				}
 			}
+			else if (currObj instanceof TemporalAccessor[]) {
+				isAccepted = true;
+			}
 			else if (currObj instanceof Calendar) {
 				isAccepted = true;
 			}
@@ -4386,6 +4370,12 @@ public class NotesNote implements IRecyclableNotesObject {
 				isAccepted = true;
 			}
 			else if (currObj instanceof NotesTimeDate) {
+				isAccepted = true;
+			}
+			else if (currObj instanceof NotesDateRange) {
+				isAccepted = true;
+			}
+			else if (currObj instanceof TemporalAccessor) {
 				isAccepted = true;
 			}
 			
