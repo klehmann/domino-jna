@@ -479,7 +479,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * and re-read the rebuilt index.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_DEFN_ITEM_MODIFIED = 0x0001;
+	public static final short SIGNAL_DEFN_ITEM_MODIFIED = 0x0001;
 
 	/** At least one of the non-"definition"
 	 * view items ($TITLE,etc) has been
@@ -489,7 +489,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * copies of these items are needed.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_VIEW_ITEM_MODIFIED = 0x0002;
+	public static final short SIGNAL_VIEW_ITEM_MODIFIED = 0x0002;
 	
 	/** Collection index has been modified
 	 * by another user since last ReadEntries.
@@ -498,7 +498,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * and re-read the modified index.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_INDEX_MODIFIED = 0x0004;
+	public static final short SIGNAL_INDEX_MODIFIED = 0x0004;
 	
 	/** Unread list has been modified
 	 * by another window using the same
@@ -508,44 +508,49 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * contains the state of unread flags
 	 * (This signal is never generated
 	 *  by NIF - only unread list users) */
-	public static final int SIGNAL_UNREADLIST_MODIFIED = 0x0008;
+	public static final short SIGNAL_UNREADLIST_MODIFIED = 0x0008;
 	
 	/** Collection is not up to date */
-	public static final int SIGNAL_DATABASE_MODIFIED = 0x0010;
+	public static final short SIGNAL_DATABASE_MODIFIED = 0x0010;
 	
 	/** End of collection has not been reached
 	 * due to buffer being too full.
 	 * The ReadEntries should be repeated
 	 * to continue reading the desired entries. */
-	public static final int SIGNAL_MORE_TO_DO = 0x0020;
+	public static final short SIGNAL_MORE_TO_DO = 0x0020;
 	
 	/** The view contains a time-relative formula
 	 * (e.g., @Now).  Use this flag to tell if the
 	 * collection will EVER be up-to-date since
 	 * time-relative views, by definition, are NEVER
 	 * up-to-date. */
-	public static final int SIGNAL_VIEW_TIME_RELATIVE = 0x0040;
+	public static final short SIGNAL_VIEW_TIME_RELATIVE = 0x0040;
 	
 	/** Returned if signal flags are not supported
 	 * This is used by NIFFindByKeyExtended when it
 	 * is talking to a pre-V4 server that does not
 	 * support signal flags for FindByKey */
-	public static final int SIGNAL_NOT_SUPPORTED = 0x0080;
+	public static final short SIGNAL_NOT_SUPPORTED = 0x0080;
 	
     /** The view contains documents with readers fields */
-	public static final int SIGNAL_VIEW_HASPRIVS = 0x0100;
+	public static final short SIGNAL_VIEW_HASPRIVS = 0x0100;
 
+	/** Differential view read was requested but could not be done */
+	public static final short SIGNAL_DIFF_READ_NOT_DONE = 0x0200;
+	
+	/** Used to optimize NRPC transactions for a single doc unread state modification */
+	public static final short SIGNAL_SINGLENOTE_UNREAD_MODIFIED = 0x0400;
 
 	/**	Mask that defines all "sharing conflicts", which are cases when
 	the database or collection has changed out from under the user. */
-	public static final int SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);
+	public static final short SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);
 	
 	/**	Mask that defines all "sharing conflicts" except for SIGNAL_DATABASE_MODIFIED.
 	This can be used in combination with SIGNAL_VIEW_TIME_RELATIVE to tell if
 	the database or collection has truly changed out from under the user or if the
 	view is a time-relative view which will NEVER be up-to-date.  SIGNAL_DATABASE_MODIFIED
 	is always returned for a time-relative view to indicate that it is never up-to-date. */
-	public static final int SIGNAL_ANY_NONDATA_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED);
+	public static final short SIGNAL_ANY_NONDATA_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED);
 
 	public static final short OS_TRANSLATE_NATIVE_TO_LMBCS = 0;	/* Translate platform-specific to LMBCS */
 	public static final short OS_TRANSLATE_LMBCS_TO_NATIVE = 1;	/* Translate LMBCS to platform-specific */

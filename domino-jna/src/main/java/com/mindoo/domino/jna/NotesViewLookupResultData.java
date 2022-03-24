@@ -1,9 +1,10 @@
 package com.mindoo.domino.jna;
 
 import java.util.List;
+import java.util.Set;
 
+import com.mindoo.domino.jna.constants.NIFSignal;
 import com.mindoo.domino.jna.constants.ReadMask;
-import com.mindoo.domino.jna.internal.NotesConstants;
 
 /**
  * Container class for a lookup result in a collection/view
@@ -15,7 +16,7 @@ public class NotesViewLookupResultData {
 	private List<NotesViewEntryData> m_entries;
 	private int m_numEntriesReturned;
 	private int m_numEntriesSkipped;
-	private short m_signalFlags;
+	private Set<NIFSignal> m_signalFlags;
 	private String m_pos;
 	private int m_indexModifiedSequenceNo;
 	private NotesTimeDate m_retDiffTime;
@@ -37,7 +38,7 @@ public class NotesViewLookupResultData {
 		m_entries = entries;
 		m_numEntriesSkipped = numEntriesSkipped;
 		m_numEntriesReturned = numEntriesReturned;
-		m_signalFlags = signalFlags;
+		m_signalFlags = NIFSignal.valuesOf(signalFlags);
 		m_pos = pos;
 		m_indexModifiedSequenceNo = indexModifiedSequenceNo;
 		m_retDiffTime = retDiffTime;
@@ -122,7 +123,7 @@ public class NotesViewLookupResultData {
 	 * @return true if more to do
 	 */
 	public boolean hasMoreToDo() {
-		return (m_signalFlags & NotesConstants.SIGNAL_MORE_TO_DO) == NotesConstants.SIGNAL_MORE_TO_DO;
+		return m_signalFlags.contains(NIFSignal.MORE_TO_DO);
 	}
 	
 	/**
@@ -131,7 +132,7 @@ public class NotesViewLookupResultData {
 	 * @return true if database was modified
 	 */
 	public boolean isDatabaseModified() {
-		return (m_signalFlags & NotesConstants.SIGNAL_DATABASE_MODIFIED) == NotesConstants.SIGNAL_DATABASE_MODIFIED;
+		return m_signalFlags.contains(NIFSignal.DATABASE_MODIFIED);
 	}
 	
 	/**
@@ -145,7 +146,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewDefiningItemModified() {
-		return (m_signalFlags & NotesConstants.SIGNAL_DEFN_ITEM_MODIFIED) == NotesConstants.SIGNAL_DEFN_ITEM_MODIFIED;
+		return m_signalFlags.contains(NIFSignal.DEFN_ITEM_MODIFIED);
 	}
 
 	/**
@@ -159,7 +160,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewOtherItemModified() {
-		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_ITEM_MODIFIED) == NotesConstants.SIGNAL_VIEW_ITEM_MODIFIED;
+		return m_signalFlags.contains(NIFSignal.VIEW_ITEM_MODIFIED);
 	}
 	
 	/**
@@ -170,7 +171,7 @@ public class NotesViewLookupResultData {
 	 * @return true if modified
 	 */
 	public boolean isViewIndexModified() {
-		return (m_signalFlags & NotesConstants.SIGNAL_INDEX_MODIFIED) == NotesConstants.SIGNAL_INDEX_MODIFIED;
+		return m_signalFlags.contains(NIFSignal.INDEX_MODIFIED);
 	}
 
 	/**
@@ -180,7 +181,7 @@ public class NotesViewLookupResultData {
 	 * @return true if time relative
 	 */
 	public boolean isViewTimeRelative() {
-		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_TIME_RELATIVE) == NotesConstants.SIGNAL_VIEW_TIME_RELATIVE;
+		return m_signalFlags.contains(NIFSignal.VIEW_TIME_RELATIVE);
 	}
 	
 	/**
@@ -189,11 +190,19 @@ public class NotesViewLookupResultData {
 	 * @return true if reader fields
 	 */
 	public boolean hasDocsWithReaderFields() {
-		return (m_signalFlags & NotesConstants.SIGNAL_VIEW_HASPRIVS) == NotesConstants.SIGNAL_VIEW_HASPRIVS;
+		return m_signalFlags.contains(NIFSignal.VIEW_HASPRIVS);
 	}
 	
+	/**
+	 * Returns if differential view read was requested but could not be done
+	 * 
+	 * @return true if not done
+	 */
+	public boolean isDifferentialReadNotDone() {
+		return m_signalFlags.contains(NIFSignal.DIFF_READ_NOT_DONE);
+	}
 	/**	
-	 * Mask that defines all "sharing conflicts" except for {@link #isDatabaseModified()}.
+	 * Defines all "sharing conflicts" except for {@link #isDatabaseModified()}.
 	 * This can be used in combination with {@link #isViewTimeRelative()} to tell if
 	 * the database or collection has truly changed out from under the user or if the
 	 * view is a time-relative view which will NEVER be up-to-date. {@link #isDatabaseModified()}
@@ -202,6 +211,35 @@ public class NotesViewLookupResultData {
 	 *  @return true if we have conflicts
 	 */
 	public boolean hasAnyNonDataConflicts() {
-		return (m_signalFlags & NotesConstants.SIGNAL_ANY_NONDATA_CONFLICT) != 0;
+		return NIFSignal.ANY_NONDATA_CONFLICT
+				.stream()
+				.anyMatch((flag) -> {
+					return m_signalFlags.contains(flag);
+				});
 	}
+
+	/**
+	 * Defines all "sharing conflicts", which are cases when
+	 * the database or collection has changed out from under the user.
+	 * 
+	 * @return true if we have conflicts
+	 */
+	public boolean hasAnyConflict() {
+		return NIFSignal.ANY_CONFLICT
+				.stream()
+				.anyMatch((flag) -> {
+					return m_signalFlags.contains(flag);
+				});
+	}
+
+	@Override
+	public String toString() {
+		return "NotesViewLookupResultData [numEntriesSkipped=" + m_numEntriesSkipped
+				+ ", numEntriesReturned=" + m_numEntriesReturned + ", pos=" + m_pos
+				+ ", entries=" + m_entries + ", stats=" + m_stats
+				+ ", signals=" + m_signalFlags + ", "
+				+ ", indexModifiedSequenceNo=" + m_indexModifiedSequenceNo
+				+ ", retDiffTime=" + m_retDiffTime + "]";
+	}
+	
 }
