@@ -2227,6 +2227,7 @@ public class NotesWorkspace {
 		for (int i=0; i<tabPaletteColors.length; i++) {
 			Color currColor = tabPaletteColors[i];
 			
+			//uses algorithm described here: https://www.compuphase.com/cmetric.htm
 		    int red2 = currColor.getRed();
 		    int rmean = (red + red2) >> 1;
 		    int r = red - red2;
