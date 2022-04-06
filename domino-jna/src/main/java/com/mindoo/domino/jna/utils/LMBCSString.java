@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import com.mindoo.domino.jna.internal.LMBCSStringConversionCache;
@@ -21,6 +22,20 @@ public class LMBCSString {
 	 */
 	public LMBCSString(byte[] data) {
 		m_data = data;
+		
+		//handle simple case of a pure ASCII string to have more readible string values in the Java debugger
+		boolean isPureAscii = true;
+		for (int i=0; i<m_data.length; i++) {
+			byte b = m_data[i];
+			if (b <= 0x1f || b >= 0x80) {
+				isPureAscii = false;
+				break;
+			}
+		}
+
+		if (isPureAscii) {
+			m_strValue = new String(m_data, StandardCharsets.US_ASCII);
+		}
 	}
 	
 	/**
@@ -70,4 +85,16 @@ public class LMBCSString {
 		return m_strValue;
 	}
 
+	@Override
+	public String toString() {
+		String strValueIfCached = m_strValue!=null ? m_strValue : LMBCSStringConversionCache.get(this, true);
+		
+		if (strValueIfCached!=null) {
+			return "LMBCSString [decoded value=" + m_strValue + "]";
+		}
+		else {
+			return "LMBCSString [not decoded yet]";
+		}
+	}
+	
 }
