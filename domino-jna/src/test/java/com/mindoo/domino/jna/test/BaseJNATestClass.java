@@ -469,12 +469,14 @@ public class BaseJNATestClass {
 	}
 
 	public Database getFakeNamesDbLegacy() throws NotesException {
-		Database db = getSession().getDatabase("", DBPATH_FAKENAMES_NSF);
+		Session session = getSession();
+		Database db = session.getDatabase("", DBPATH_FAKENAMES_NSF, false);
 		return db;
 	}
 
 	public Database getFakeNamesViewsDbLegacy() throws NotesException {
-		Database db = getSession().getDatabase("", DBPATH_FAKENAMES_VIEWS_NSF);
+		Session session = getSession();
+		Database db = session.getDatabase("", DBPATH_FAKENAMES_VIEWS_NSF, false);
 		return db;
 	}
 
@@ -747,7 +749,8 @@ public class BaseJNATestClass {
 
 			doc.update();
 			unidsAndNoteIds.add(new Pair<>(doc.getUNID(), doc.getNoteId()));
-
+			doc.recycle();
+			
 			// System.out.println("created doc with unid "+doc.getUNID()+" note id
 			// "+doc.getNoteID()+
 			// " ("+Integer.toHexString(doc.getNoteID())+")"+",
