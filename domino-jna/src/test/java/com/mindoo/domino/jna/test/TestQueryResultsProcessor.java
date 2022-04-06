@@ -28,6 +28,7 @@ import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
 import com.mindoo.domino.jna.constants.Navigate;
+import com.mindoo.domino.jna.constants.OpenCollection;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.dql.DQL.DQLTerm;
 import com.mindoo.domino.jna.errors.NotesError;
@@ -155,7 +156,7 @@ public class TestQueryResultsProcessor extends BaseJNATestClass {
 					
 					String qrpViewName = "qrp_"+(new Date());
 					
-					new NotesQueryResultsProcessor(dbQRP)
+					int viewNoteId = new NotesQueryResultsProcessor(dbQRP)
 					.addNoteIds(db, allIds, "people")
 					.addColumn("lastname", "Lastname", "Lastname", SortOrder.DESCENDING, Hidden.FALSE, Categorized.TRUE)
 					.addColumn("firstname", "Firstname", "Firstname", SortOrder.DESCENDING, Hidden.FALSE, Categorized.FALSE)
@@ -164,7 +165,7 @@ public class TestQueryResultsProcessor extends BaseJNATestClass {
 					.executeToView(qrpViewName, 1, Arrays.asList(IDUtils.getIdUsername()));
 
 					//let's check if our created QRP view has category and document rows
-					NotesCollection qrpCol = dbQRP.openCollectionByName(qrpViewName);
+					NotesCollection qrpCol = dbQRP.openCollection(viewNoteId, EnumSet.of(OpenCollection.NOUPDATE));
 					AtomicInteger categoryCount = new AtomicInteger();
 					AtomicInteger docCount = new AtomicInteger();
 					
