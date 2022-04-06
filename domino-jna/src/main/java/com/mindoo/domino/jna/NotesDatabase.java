@@ -2486,6 +2486,37 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	}
 	
 	/**
+	 * Returns the new true color icon note (form design document with $TITLE="$DBIcon")
+	 * 
+	 * @return icon note or null if not found
+	 */
+	public NotesNote openTrueColorIconNote() {
+		checkHandle();
+		AtomicInteger retNoteId = new AtomicInteger();
+
+		NotesSearch.search(this, null, "$TITLE=\"$DBIcon\"", "-",
+				EnumSet.noneOf(Search.class),
+				EnumSet.of(NoteClass.FORM),
+				null, new NotesSearch.SearchCallback() {
+
+			@Override
+			public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
+					IItemTableData summaryBufferData) {
+				retNoteId.set(searchMatch.getNoteId());
+				return Action.Stop;
+			}
+
+		});
+
+		if (retNoteId.get()==0) {
+			return null;
+		}
+		else {
+			return openNoteById(retNoteId.get());
+		}
+	}
+	
+	/**
 	 * Returns the note of the default form
 	 * 
 	 * @return default form note or null if not found
