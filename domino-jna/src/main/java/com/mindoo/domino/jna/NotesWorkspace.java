@@ -13,9 +13,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -32,11 +34,11 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.richtext.FontStyle.StandardColors;
+import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.StringUtil;
-import com.mindoo.domino.jna.richtext.IRichTextNavigator;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -347,9 +349,20 @@ public class NotesWorkspace {
 				workspaceSize);
 			NotesErrorUtils.checkResult(result);
 			
+			Set<Integer> deletedHandles = new HashSet<>();
+			
 			for (int objId : m_dbObjectsToFreeOnSave) {
-				NotesDatabaseObject dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
-				dbObj.delete();
+				if (!deletedHandles.contains(objId)) {
+					try {
+						NotesDatabaseObject dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
+						dbObj.delete();
+						deletedHandles.add(objId);
+					}
+					catch (Exception e) {
+						//ignore
+					}
+				}
+				
 			}
 			m_dbObjectsToFreeOnSave.clear();
 		}
