@@ -1864,6 +1864,18 @@ public class NotesWorkspace {
 	public NotesWorkspace removeIcon(WorkspaceIcon icon) {
 		if (m_icons.contains(icon)) {
 			m_icons.remove(icon);
+			
+			//clean up referenced resources on next save
+			int objId = icon.getAdditionalDataRRV();
+			if (objId!=0) {
+				m_dbObjectsToFreeOnSave.add(objId);
+				icon.setAdditionalDataRRV(0);
+			}
+			objId = icon.getTrueColorIconObjectId();
+			if (objId!=0) {
+				m_dbObjectsToFreeOnSave.add(objId);
+				icon.setTrueColorIconObjectId(0);
+			}
 			m_modified = true;
 		}
 		return this;
