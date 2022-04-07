@@ -888,12 +888,49 @@ public class NotesWorkspace {
 			return iconDataBuf;
 		}
 		
+		public boolean isOnTopOfStack() {
+			return isStackDatabases() && (getFlags() & 0x40) == 0x00;
+		}
+		
+		public WorkspaceIcon moveToTopOfStack() {
+			if (!isStackDatabases()) {
+				throw new IllegalStateException("Workspace icons are not stacked");
+			}
+			
+			WorkspaceIcon thisIcon = this;
+			
+			String replicaId = getReplicaID();
+			
+			if (!StringUtil.isEmpty(replicaId)) {
+				getIcons()
+				.stream()
+				.filter((icon) -> {
+					return !thisIcon.equals(icon) && replicaId.equals(icon.getReplicaID());
+				})
+				.forEach((icon) -> {
+					short oldFlags = icon.getFlags();
+					if ((oldFlags & 0x0040) != 0x0040) {
+						short newFlags = (short) ((oldFlags | 0x0040) & 0xffff);
+						icon.setFlags(newFlags);
+					}
+				});
+			}
+			
+			short newFlags = (short) ((getFlags() & ~0x0040) & 0xffff);
+			setFlags(newFlags);
+			return this;
+		}
+		
 		public short getFlags() {
 			return m_iconBuf.getShort(4);
 		}
 		
 		public WorkspaceIcon setFlags(short flags) {
-			m_iconBuf.putShort(4, flags);
+			short oldFlags = getFlags();
+			if (oldFlags!=flags) {
+				m_iconBuf.putShort(4, flags);
+				m_modified = true;
+			}
 			return this;
 		}
 		
@@ -909,13 +946,17 @@ public class NotesWorkspace {
 		}
 		
 		public WorkspaceIcon setFlags2(short flags) {
-			switch (getWorkspaceVersion()) {
-			case R4:
-				m_iconBuf.putShort(0x336, flags);
-			case R5_6:
-			case R12:
-			default:
-				m_iconBuf.putShort(0x412, flags);
+			short oldFlags2 = getFlags2();
+			if (oldFlags2!=flags) {
+				switch (getWorkspaceVersion()) {
+				case R4:
+					m_iconBuf.putShort(0x336, flags);
+				case R5_6:
+				case R12:
+				default:
+					m_iconBuf.putShort(0x412, flags);
+				}
+				m_modified = true;
 			}
 			return this;
 		}
@@ -1860,7 +1901,7 @@ public class NotesWorkspace {
 		public String toString() {
 			return "WorkspaceIcon [path=" + getNetPath() + ", title="
 					+ getTitle() + ", tabindex=" + getTabIndex() + ", x=" + getPosX() + ", y="
-					+ getPosY() + ", timestamp=" + getTimestamp()
+					+ getPosY() + ", topofstack="+isOnTopOfStack() + ", timestamp=" + getTimestamp()
 					+ ", flags=0x" + (Integer.toHexString(Short.toUnsignedInt(getFlags())))
 					+ ", flags2=0x" + (Integer.toHexString(Short.toUnsignedInt(getFlags2())))
 							+ ", datarrv=" + getAdditionalDataRRV() + ", truecoloriconobjid=" + getTrueColorIconObjectId() + "]";
