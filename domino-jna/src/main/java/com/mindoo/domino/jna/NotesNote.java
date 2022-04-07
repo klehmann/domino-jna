@@ -366,6 +366,7 @@ public class NotesNote implements IRecyclableNotesObject {
 		finally {
 			noteClassMem.dispose();
 		}
+		m_noteClass = null;
 	}
 	
 	/**
