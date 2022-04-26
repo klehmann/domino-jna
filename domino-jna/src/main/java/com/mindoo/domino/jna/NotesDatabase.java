@@ -2322,6 +2322,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
+			
+			retUntil.getInnardsNoClone()[0] = retUntilStruct.Innards[0];
+			retUntil.getInnardsNoClone()[1] = retUntilStruct.Innards[1];
+
 			return new NotesIDTable(rethTable.getValue(), false);
 		}
 		else {
@@ -2331,6 +2335,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
+			
+			retUntil.getInnardsNoClone()[0] = retUntilStruct.Innards[0];
+			retUntil.getInnardsNoClone()[1] = retUntilStruct.Innards[1];
+
 			return new NotesIDTable(rethTable.getValue(), false);
 		}
 	}
