@@ -115,6 +115,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.Ref;
+import com.mindoo.domino.jna.utils.SetUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
@@ -3788,6 +3789,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return retUnidsByNoteId.get(noteId);
 	}
 	
+	/**
+	 * Convenience method to convert note ids to UNIDs.
+	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
+	 * 
+	 * @param noteIds note ids to look up
+	 * @param retUnidsByNoteId map is populated with found UNIDs
+	 * @param retNoteIdsNotFound set is populated with any note id that could not be found
+	 */
+	public void toUnids(Collection<Integer> noteIds, Map<Integer,String> retUnidsByNoteId, Set<Integer> retNoteIdsNotFound) {
+		toUnids(SetUtil.toPrimitiveArray(noteIds), retUnidsByNoteId, retNoteIdsNotFound);
+	}
+
 	/**
 	 * Convenience method to convert note ids to UNIDs.
 	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
