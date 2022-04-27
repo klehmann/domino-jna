@@ -278,6 +278,17 @@ public class NotesGC {
 	 * @param obj Notes object
 	 */
 	public static void __objectCreated(Class<?> clazz, IRecyclableNotesObject obj) {
+		__objectCreated(clazz, obj, false);
+	}
+	
+	/**
+	 * Internal method to register a created Notes object that needs to be recycled
+	 * 
+	 * @param clazz class of hash pool
+	 * @param skipDuplicateHandleCheck to skip checking for a duplicate handle registration, used for shared handles (e.g. coming from Notes.jar objects)
+	 * @param obj Notes object
+	 */
+	public static void __objectCreated(Class<?> clazz, IRecyclableNotesObject obj, boolean skipDuplicateHandleCheck) {
 		DominoGCContext ctx = getThreadContext();
 		
 		if (obj.isRecycled())
@@ -288,7 +299,7 @@ public class NotesGC {
 			
 			LinkedHashMap<HashKey64, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects64();
 			IRecyclableNotesObject oldObj = openHandles.put(key, obj);
-			if (oldObj!=null && oldObj!=obj) {
+			if (!skipDuplicateHandleCheck && oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}
@@ -297,7 +308,7 @@ public class NotesGC {
 			
 			LinkedHashMap<HashKey32, IRecyclableNotesObject> openHandles = ctx.getOpenHandlesDominoObjects32();
 			IRecyclableNotesObject oldObj = openHandles.put(key, obj);
-			if (oldObj!=null && oldObj!=obj) {
+			if (!skipDuplicateHandleCheck && oldObj!=null && oldObj!=obj) {
 				throw new IllegalStateException("Duplicate handle detected. Object to store: "+obj+", object found in open handle list: "+oldObj);
 			}
 		}

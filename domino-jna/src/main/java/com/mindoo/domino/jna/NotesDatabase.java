@@ -523,7 +523,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			else {
 				m_hDB32 = (int) dbHandle;
 			}
-			NotesGC.__objectCreated(NotesDatabase.class, this);
+			NotesGC.__objectCreated(NotesDatabase.class, this, true); //true -> do not check for duplicate handle since it's a shared handle
 			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
 
