@@ -57,6 +57,10 @@ public class NotesAgent implements IRecyclableNotesObject {
 		return m_parentDb;
 	}
 	
+	public int getNoteId() {
+		return m_hNoteId;
+	}
+	
 	/**
 	 * Opens the agent note and stores it in a variable for reuse
 	 * 
