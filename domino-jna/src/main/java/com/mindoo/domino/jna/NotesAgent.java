@@ -61,6 +61,10 @@ public class NotesAgent implements IRecyclableNotesObject {
 		return m_hNoteId;
 	}
 	
+	public String getUNID() {
+		return getParent().toUnid(m_hNoteId);
+	}
+	
 	/**
 	 * Opens the agent note and stores it in a variable for reuse
 	 * 
