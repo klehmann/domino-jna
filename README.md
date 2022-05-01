@@ -211,6 +211,12 @@ The code is available under Apache 2.0 license.
 
 Copyright by [Mindoo GmbH](http://www.mindoo.com)
 
+## Java Profiler
+For development, we are using [JProfiler Java profiler](https://www.ej-technologies.com/products/jprofiler/overview.html).
+It's the perfect tool to analyze performance bottlenecks and memory leaks.
+
+![JProfiler logo](https://www.ej-technologies.com/images/product_banners/jprofiler_small.png)
+
 ## Creating your own build
 The following instructions are only relevant when you want to create your own Domino JNA release version.
 
