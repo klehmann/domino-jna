@@ -15,6 +15,7 @@ import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -45,12 +46,16 @@ public class NotesAgent implements IRecyclableNotesObject {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB32 = hAgent;
+		
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	NotesAgent(NotesDatabase parentDb, int hNoteId, long hAgent) {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB64 = hAgent;
+		
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	public NotesDatabase getParent() {
@@ -106,6 +111,8 @@ public class NotesAgent implements IRecyclableNotesObject {
 		if (isRecycled())
 			return;
 
+		RecycleHierarchy.removeChild(m_parentDb, this);
+		
 		if (PlatformUtils.is64Bit()) {
 			NotesNativeAPI64.get().AgentClose(m_hAgentB64);
 			NotesGC.__objectBeeingBeRecycled(NotesAgent.class, this);

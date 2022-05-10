@@ -45,6 +45,7 @@ import com.mindoo.domino.jna.internal.NotesLookupResultBufferDecoder;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesSearchKeyEncoder;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.structs.NIFFindByKeyContextStruct;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionDataStruct;
@@ -124,6 +125,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_unreadTable = unreadTable;
 		
 		m_autoUpdate = true;
+		
+		RecycleHierarchy.addChild(parentDb, this);
 	}
 
 	/**
@@ -153,6 +156,8 @@ public class NotesCollection implements IRecyclableNotesObject {
 		m_unreadTable = unreadTable;
 		
 		m_autoUpdate = true;
+		
+		RecycleHierarchy.addChild(parentDb, this);
 	}
 
 	/**
@@ -495,36 +500,31 @@ public class NotesCollection implements IRecyclableNotesObject {
 	}
 	
 	public void recycle() {
+		if (isRecycled()) {
+			return;
+		}
+		
 		if (!m_noRecycle) {
-			boolean bHandleIsNull = false;
-			if (PlatformUtils.is64Bit()) {
-				bHandleIsNull = m_hCollection64==0;
-			}
-			else {
-				bHandleIsNull = m_hCollection32==0;
+			clearSearch();
+			
+			if (m_unreadTable!=null && !m_unreadTable.isRecycled()) {
+				m_unreadTable.recycle();
 			}
 			
-			if (!bHandleIsNull) {
-				clearSearch();
-				
-				if (m_unreadTable!=null && !m_unreadTable.isRecycled()) {
-					m_unreadTable.recycle();
-				}
-				
-				short result;
-				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().NIFCloseCollection(m_hCollection64);
-					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
-					m_hCollection64=0;
-				}
-				else {
-					result = NotesNativeAPI32.get().NIFCloseCollection(m_hCollection32);
-					NotesErrorUtils.checkResult(result);
-					NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
-					m_hCollection32=0;
-				}
-				
+			RecycleHierarchy.removeChild(m_parentDb, this);
+			
+			short result;
+			if (PlatformUtils.is64Bit()) {
+				result = NotesNativeAPI64.get().NIFCloseCollection(m_hCollection64);
+				NotesErrorUtils.checkResult(result);
+				NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
+				m_hCollection64=0;
+			}
+			else {
+				result = NotesNativeAPI32.get().NIFCloseCollection(m_hCollection32);
+				NotesErrorUtils.checkResult(result);
+				NotesGC.__objectBeeingBeRecycled(NotesCollection.class, this);
+				m_hCollection32=0;
 			}
 		}
 	}

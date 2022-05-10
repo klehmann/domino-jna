@@ -85,6 +85,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32V1000;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -138,7 +139,7 @@ import lotus.domino.Session;
  * 
  * @author Karsten Lehmann
  */
-public class NotesDatabase implements IRecyclableNotesObject {
+public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	static final String NAMEDNOTES_APPLICATION_PREFIX = "$app_";
 	
 	private int m_hDB32;
@@ -160,6 +161,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	boolean m_passNamesListToDbOpen;
 	private boolean m_passNamesListToViewOpen;
 	private DbMode m_dbMode;
+	
+	private final RecycleHierarchy m_recycleHierarchy = new RecycleHierarchy();
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -196,6 +199,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		this(server, filePath, (List<String>) null, asUserCanonical, openFlags);
 	}
 
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (RecycleHierarchy.class.equals(clazz)) {
+			return (T) m_recycleHierarchy;
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Checks if a database exists
 	 * 
@@ -1501,6 +1513,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (!m_noRecycleDb) {
 			if (PlatformUtils.is64Bit()) {
 				if (m_hDB64!=0) {
+					m_recycleHierarchy.recycleChildren();
+					
 					short result = NotesNativeAPI64.get().NSFDbClose(m_hDB64);
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
@@ -1512,6 +1526,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			else {
 				if (m_hDB32!=0) {
+					m_recycleHierarchy.recycleChildren();
+					
 					short result = NotesNativeAPI32.get().NSFDbClose(m_hDB32);
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
@@ -1520,11 +1536,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						m_namesList.free();
 					}
 				}
-			}
-			
-			if (m_acl!=null && !m_acl.isFreed()) {
-				m_acl.free();
-				m_acl = null;
 			}
 		}
 	}
@@ -2314,7 +2325,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		sinceStructByVal.Innards[0] = sinceStruct.Innards[0];
 		sinceStructByVal.Innards[1] = sinceStruct.Innards[1];
 		sinceStructByVal.write();
-		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance(retUntil.getInnards());
+		NotesTimeDateStruct.ByReference retUntilStruct = NotesTimeDateStruct.newInstanceByReference();
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethTable = new LongByReference();

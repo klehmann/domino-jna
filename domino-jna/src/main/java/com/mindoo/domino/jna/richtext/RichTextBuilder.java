@@ -12,6 +12,7 @@ import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.internal.CompoundTextWriter;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.sun.jna.Memory;
 
 /**
@@ -34,6 +35,7 @@ public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText<Ri
 	public RichTextBuilder(NotesNote parentNote, CompoundTextWriter compoundText) {
 		m_parentNote = parentNote;
 		m_compoundText = compoundText;
+		RecycleHierarchy.addChild(m_parentNote, this);
 	}
 
 	@Override
@@ -231,6 +233,7 @@ public class RichTextBuilder implements IRecyclableNotesObject, ICompoundText<Ri
 		if (isRecycled())
 			return;
 
+		RecycleHierarchy.removeChild(m_parentNote, this);
 		m_compoundText.recycle();
 	}
 

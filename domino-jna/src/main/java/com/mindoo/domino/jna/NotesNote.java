@@ -80,6 +80,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -141,7 +142,7 @@ import lotus.domino.NotesException;
  * 
  * @author Karsten Lehmann
  */
-public class NotesNote implements IRecyclableNotesObject {
+public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	private int m_hNote32;
 	private long m_hNote64;
 	private boolean m_noRecycle;
@@ -149,6 +150,8 @@ public class NotesNote implements IRecyclableNotesObject {
 	private Document m_legacyDocRef;
 	private EnumSet<NoteClass> m_noteClass;
 	private Boolean m_preferNotesTimeDates;
+	
+	private final RecycleHierarchy m_recycleHierarchy = new RecycleHierarchy();
 	
 	/**
 	 * Creates a new instance
@@ -161,6 +164,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			throw new IllegalStateException("Constructor is 32bit only");
 		m_parentDb = parentDb;
 		m_hNote32 = hNote;
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	/**
@@ -174,6 +178,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			throw new IllegalStateException("Constructor is 64bit only");
 		m_parentDb = parentDb;
 		m_hNote64 = hNote;
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	/**
@@ -217,6 +222,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			} catch (NotesError e) {
 				m_parentDb = LegacyAPIUtils.toNotesDatabase(legacyDb);
 			}
+			RecycleHierarchy.addChild(m_parentDb, this);
 			return;
 		}
 		if (PlatformUtils.is64Bit()) {
@@ -224,6 +230,7 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (calOpenNote!=null) {
 				m_parentDb = calOpenNote.getDb();
 				m_hNote64 = calOpenNote.getNoteHandle();
+				RecycleHierarchy.addChild(m_parentDb, this);
 				return;
 			}
 		}
@@ -232,12 +239,22 @@ public class NotesNote implements IRecyclableNotesObject {
 			if (calOpenNote!=null) {
 				m_parentDb = calOpenNote.getDb();
 				m_hNote32 = calOpenNote.getNoteHandle();
+				RecycleHierarchy.addChild(m_parentDb, this);
 				return;
 			}
 		}
 		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
 
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (RecycleHierarchy.class.equals(clazz)) {
+			return (T) m_recycleHierarchy;
+		}
+		
+		return null;
+	}
+	
 	private boolean isRecycled(Document doc) {
 		try {
 			//call any method to check recycled state
@@ -784,6 +801,9 @@ public class NotesNote implements IRecyclableNotesObject {
 		if (m_noRecycle || isRecycled())
 			return;
 
+		m_recycleHierarchy.recycleChildren();
+		RecycleHierarchy.removeChild(m_parentDb, this);
+
 		short result;
 		if (PlatformUtils.is64Bit()) {
 			result = NotesNativeAPI64.get().NSFNoteClose(m_hNote64);
@@ -1319,9 +1339,9 @@ public class NotesNote implements IRecyclableNotesObject {
 	}
 	
 	/** default size of return buffer for operations returning strings like NSFItemGetText  */
-	private final int DEFAULT_STRINGRETVALUE_LENGTH = 16384;
+	private static final int DEFAULT_STRINGRETVALUE_LENGTH = 16384;
 	/** max size of return buffer for operations returning strings like NSFItemGetText  */
-	private final int MAX_STRINGRETVALUE_LENGTH = 65535;
+	private static final int MAX_STRINGRETVALUE_LENGTH = 65535;
 
 	private ThreadLocal<DisposableMemory> stringretBuffer = new ThreadLocal<DisposableMemory>();
 	private boolean m_saveMessageOnSend;

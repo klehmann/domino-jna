@@ -505,7 +505,8 @@ public interface INotesNativeAPI32 extends Library {
 	short NSFDbReplicaInfoSet(
 			int  hDB,
 			NotesDbReplicaInfoStruct ReplicationInfo);
-	short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
+	short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since,
+			NotesTimeDateStruct.ByReference retUntil, IntByReference rethTable);
 	short NSFDbGetNotes(
 			int hDB,
 			int NumNotes,
