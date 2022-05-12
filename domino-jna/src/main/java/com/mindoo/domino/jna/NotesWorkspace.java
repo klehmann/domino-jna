@@ -217,6 +217,16 @@ public class NotesWorkspace {
 	};
 
 	/**
+	 * Finds a tab by its name
+	 * 
+	 * @param title tab title to search for
+	 * @return tab if found
+	 */
+	public Optional<WorkspaceTab> getTab(String title) {
+		return m_tabs.stream().filter((tab) -> { return title.equals(tab.getTitle()); }).findFirst();
+	}
+	
+	/**
 	 * Returns all workspace icons
 	 * 
 	 * @return icons
