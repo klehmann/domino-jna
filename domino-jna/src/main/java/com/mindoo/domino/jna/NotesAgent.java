@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.OpenNote;
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -106,6 +107,15 @@ public class NotesAgent implements IRecyclableNotesObject {
 		return m_comment;
 	}
 
+	/**
+	 * Returns a signer of the agent
+	 * 
+	 * @return signer
+	 */
+	public String getSigner() {
+		return getAgentNote().getSigner();
+	}
+	
 	@Override
 	public void recycle() {
 		if (isRecycled())
@@ -337,6 +347,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 				}
 				
 				result = NotesNativeAPI64.get().AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
+				handleAgentTimeoutError(result, timeoutSeconds);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
@@ -412,6 +423,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 				}
 
 				result = NotesNativeAPI32.get().AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
+				handleAgentTimeoutError(result, timeoutSeconds);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
@@ -443,6 +455,41 @@ public class NotesAgent implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Improves Exception error message for an agent execution timeout
+	 * 
+	 * @param err C API error code
+	 * @param timeoutSec timeout in seconds
+	 * @throws NotesError if a timeout occurred
+	 */
+	private void handleAgentTimeoutError(short err, int timeoutSec) throws NotesError {
+		short status = (short) (err & NotesConstants.ERR_MASK);
+		
+		if (status == INotesErrorConstants.ERR_ASSISTANT_TIMEOUT) {
+			// Execution time limit exceeded by Agent '%s' in database '%p'. Agent signer '%a'.
+			String errMsg = NotesErrorUtils.errToString(status);
+
+			errMsg = errMsg.replace("%s", getTitle());
+
+			String signer = getSigner();
+			errMsg = errMsg.replace("%a", signer);
+			
+			String dbServer = m_parentDb.getServer();
+			String dbFilePath = m_parentDb.getRelativeFilePath();
+			if (StringUtil.isEmpty(dbServer)) {
+				errMsg = errMsg.replace("%p", dbFilePath);
+			}
+			else {
+				errMsg = errMsg.replace("%p", dbServer+"!!"+dbFilePath);
+			}
+			
+			//add current timeout to error text
+			errMsg += " (Timeout: "+timeoutSec+"s)";
+			
+			throw new NotesError(err, errMsg);
+		}
+	}
+	
 	/**
 	 * Runs the agent on the server
 	 * 
