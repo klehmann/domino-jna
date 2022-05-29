@@ -13,9 +13,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,9 +50,9 @@ import com.sun.jna.ptr.ShortByReference;
  * Utility class for read and write support of the Notes client workspace.<br>
  * We provide functionality to
  * <ul>
- * <li>Read/write the tab titles and colors</li>
+ * <li>Read/write the page titles and colors</li>
  * <li>Set workspace flags showUnreadMarks, showServerNames, stackDatabases</li>
- * <li>Read/write icon server, filename, title, position and tabindex</li>
+ * <li>Read/write icon server, filename, title, position and pageindex</li>
  * <li>Read/write classic and modern (true color) icon image</li>
  * </ul>
  * 
@@ -59,12 +61,12 @@ import com.sun.jna.ptr.ShortByReference;
 public class NotesWorkspace {
 	//fixed structure sizes (icon structure depends on version)
 	private static final int HEADERSIZE = 58;
-	private static final int TABSIZE = 40;
+	private static final int PAGESIZE = 40;
 	
 	//position of certain elements in the workspace header
 	private static final int POS_HEADER_FLAGS = 0x06;
 	private static final int POS_HEADER_ICONCOUNT = 0x0C;
-	private static final int POS_HEADER_TABCOUNT = 0x12;
+	private static final int POS_HEADER_PAGECOUNT = 0x12;
 	
 	private static final int FLAGS_SHOWUNREADMARKS = 0x01;
 	private static final int FLAGS_SHOWSERVERNAMES = 0x02;
@@ -78,7 +80,7 @@ public class NotesWorkspace {
 	private NotesDatabase m_dbDesktop;
 	private int m_workspaceObjId;
 
-	private List<WorkspaceTab> m_tabs = new ArrayList<>();
+	private List<WorkspacePage> m_pages = new ArrayList<>();
 	private List<WorkspaceIcon> m_icons = new ArrayList<>();
 	
 	//buffer with the workspace header
@@ -208,22 +210,40 @@ public class NotesWorkspace {
 	}
 	
 	/**
-	 * Returns a list of all workspace tabs
+	 * Returns a list of all workspace pages
 	 * 
-	 * @return tabs
+	 * @return pages
 	 */
-	public List<WorkspaceTab> getTabs() {
-		return Collections.unmodifiableList(new ArrayList<>(m_tabs));
+	public List<WorkspacePage> getPages() {
+		return Collections.unmodifiableList(new ArrayList<>(m_pages));
 	};
 
 	/**
-	 * Finds a tab by its name
+	 * Returns the first workspace page
 	 * 
-	 * @param title tab title to search for
-	 * @return tab if found
+	 * @return first page
 	 */
-	public Optional<WorkspaceTab> getTab(String title) {
-		return m_tabs.stream().filter((tab) -> { return title.equals(tab.getTitle()); }).findFirst();
+	public Optional<WorkspacePage> getFirstPage() {
+		return m_pages.isEmpty() ? Optional.empty() : Optional.of(m_pages.get(0));
+	}
+	
+	/**
+	 * Returns the last workspace page
+	 * 
+	 * @return last page
+	 */
+	public Optional<WorkspacePage> getLastPage() {
+		return m_pages.isEmpty() ? Optional.empty() : Optional.of(m_pages.get(m_pages.size()-1));
+	}
+	
+	/**
+	 * Finds a page by its name
+	 * 
+	 * @param title page title to search for
+	 * @return page if found
+	 */
+	public Optional<WorkspacePage> getPage(String title) {
+		return m_pages.stream().filter((page) -> { return title.equals(page.getTitle()); }).findFirst();
 	}
 	
 	/**
@@ -236,13 +256,13 @@ public class NotesWorkspace {
 	}
 	
 	/**
-	 * Returns all workspace icons on the specified tab
+	 * Returns all workspace icons on the specified page
 	 * 
-	 * @param tab tab
-	 * @return icons on tab
+	 * @param page page
+	 * @return icons on page
 	 */
-	public List<WorkspaceIcon> getIcons(WorkspaceTab tab) {
-		int idx = m_tabs.indexOf(tab);
+	public List<WorkspaceIcon> getIcons(WorkspacePage page) {
+		int idx = m_pages.indexOf(page);
 		if (idx==-1) {
 			return Collections.emptyList();
 		}
@@ -250,7 +270,7 @@ public class NotesWorkspace {
 			return m_icons
 					.stream()
 					.filter((icon) -> {
-						return icon.getTabIndex() == idx;
+						return icon.getPageIndex() == idx;
 					})
 					.collect(Collectors.toList());
 		}
@@ -264,7 +284,7 @@ public class NotesWorkspace {
 	public String toString() {
 		return "NotesWorkspace [database=" + m_dbDesktop + ", timedate=" + getWorkspaceTimeDate()
 				+ ", showUnreadMarks=" + isShowUnreadMarks() + ", showServerNames=" + isShowServerNames()
-				+ ", stackDatabases=" + isStackDatabases() + ", tabs=" + getTabs() + ", numberoficons="
+				+ ", stackDatabases=" + isStackDatabases() + ", pages=" + getPages() + ", numberoficons="
 				+ m_icons.size() + "]";
 	}
 
@@ -279,25 +299,25 @@ public class NotesWorkspace {
 	public NotesWorkspace store() {
 		//assemble new workspace data
 		int workspaceSize = HEADERSIZE +
-				m_tabs.size() * TABSIZE +
+				m_pages.size() * PAGESIZE +
 				m_icons.size() * getIconStructureSize();
 		ByteBuffer newWorkspaceBuf = ByteBuffer.allocate(workspaceSize)
 				.order(ByteOrder.nativeOrder());
 
-		//update icon and tab count in header
+		//update icon and page count in header
 		m_workspaceHeaderBuf.putShort(POS_HEADER_ICONCOUNT, (short) (m_icons.size() & 0xffff));
-		m_workspaceHeaderBuf.put(POS_HEADER_TABCOUNT, (byte) (m_tabs.size() & 0xff));
+		m_workspaceHeaderBuf.put(POS_HEADER_PAGECOUNT, (byte) (m_pages.size() & 0xff));
 		
 		//write header
 		m_workspaceHeaderBuf.position(0);
 		newWorkspaceBuf.put(m_workspaceHeaderBuf);
 		
-		//write tabs
-		for (int i=0; i<m_tabs.size(); i++) {
-			WorkspaceTab currTab = m_tabs.get(i);
-			ByteBuffer currTabBuf = currTab.m_tabBuf;
-			currTabBuf.position(0);
-			newWorkspaceBuf.put(currTabBuf);
+		//write pages
+		for (int i=0; i<m_pages.size(); i++) {
+			WorkspacePage currPage = m_pages.get(i);
+			ByteBuffer currPageBuf = currPage.m_pageBuf;
+			currPageBuf.position(0);
+			newWorkspaceBuf.put(currPageBuf);
 		}
 		
 		//write icons
@@ -427,7 +447,7 @@ public class NotesWorkspace {
 				rethBuffer);
 		NotesErrorUtils.checkResult(result);
 
-		//read the whole workspace obj: header + tabCount*tabdata + iconCount*icondata
+		//read the whole workspace obj: header + pageCount*pagedata + iconCount*icondata
 		byte[] workspaceData;
 
 		Pointer ptr = Mem.OSLockObject(rethBuffer.getByValue());
@@ -450,24 +470,24 @@ public class NotesWorkspace {
 		//iconCount is a WORD, so that would allow 0xFFFF icons in total, which seems to be a lot
 		int iconCount = m_workspaceHeaderBuf.getShort(POS_HEADER_ICONCOUNT) & 0xffff;
 
-		//tabCount is a BYTE, so some more tabs than 32 should be possible
-		int tabCount = m_workspaceHeaderBuf.get(POS_HEADER_TABCOUNT) & 0xff;
+		//pageCount is a BYTE, so some more pages than 32 should be possible
+		int pageCount = m_workspaceHeaderBuf.get(POS_HEADER_PAGECOUNT) & 0xff;
 
 		//but the problem here is that stacked icons (e.g. local/remote replicas of the same DB) are
 		//counted separately, so without breaking backward compatibility, it's pretty risky to
-		//allow a lot more tabs
+		//allow a lot more pages
 		
-		for (int i=0; i<tabCount; i++) {
-			workspaceAllBuf.position(HEADERSIZE + i * TABSIZE);
-			byte[] tabData = new byte[TABSIZE];
-			workspaceAllBuf.get(tabData);
-			ByteBuffer tabDataBuf = ByteBuffer.wrap(tabData).order(ByteOrder.nativeOrder());
+		for (int i=0; i<pageCount; i++) {
+			workspaceAllBuf.position(HEADERSIZE + i * PAGESIZE);
+			byte[] pageData = new byte[PAGESIZE];
+			workspaceAllBuf.get(pageData);
+			ByteBuffer pageDataBuf = ByteBuffer.wrap(pageData).order(ByteOrder.nativeOrder());
 			
-			WorkspaceTab tab = createWorkspaceTab(tabDataBuf);
-			m_tabs.add(tab);
+			WorkspacePage page = createWorkspacePage(pageDataBuf);
+			m_pages.add(page);
 		}
 
-		workspaceAllBuf.position(HEADERSIZE + tabCount * TABSIZE);
+		workspaceAllBuf.position(HEADERSIZE + pageCount * PAGESIZE);
 		
 		//buffer with iconCount*icondata (old icons) plus data of hi-res icons
 		ByteBuffer allIconDataBuf = workspaceAllBuf.slice().order(ByteOrder.nativeOrder());
@@ -498,8 +518,8 @@ public class NotesWorkspace {
 		}
 	}
 	
-	protected WorkspaceTab createWorkspaceTab(ByteBuffer tabBuf) {
-		return new WorkspaceTab(tabBuf);
+	protected WorkspacePage createWorkspacePage(ByteBuffer pageBuf) {
+		return new WorkspacePage(pageBuf);
 	}
 	
 	protected WorkspaceIcon createWorkspaceIcon(int iconDataOffset, ByteBuffer iconBuf, int fileNameLength, int titleLength) {
@@ -560,71 +580,71 @@ public class NotesWorkspace {
 	}
 
 	/**
-	 * A single tab of the workspace
+	 * A single page of the workspace
 	 * 
 	 * @author Karsten Lehmann
 	 */
-	public class WorkspaceTab implements IAdaptable {
-		private ByteBuffer m_tabBuf;
+	public class WorkspacePage implements IAdaptable {
+		private ByteBuffer m_pageBuf;
 		
-		private WorkspaceTab(ByteBuffer tabData) {
-			m_tabBuf = tabData;
+		private WorkspacePage(ByteBuffer pageData) {
+			m_pageBuf = pageData;
 		}
 		
 		protected ByteBuffer getBuffer() {
-			return m_tabBuf;
+			return m_pageBuf;
 		}
 
 		/**
-		 * Returns the index of this tab (0=first tab)
+		 * Returns the index of this page (0=first page)
 		 * 
-		 * @return index or -1 if tab has been removed from workspace
+		 * @return index or -1 if page has been removed from workspace
 		 */
-		public int getTabIndex() {
-			return getTabs().indexOf(this);
+		public int getPageIndex() {
+			return getPages().indexOf(this);
 		}
 		
 		/**
-		 * Returns all icons on this tab
+		 * Returns all icons on this page
 		 * 
 		 * @return icons
 		 */
 		public List<WorkspaceIcon> getIcons() {
-			int tabIdx = getTabIndex();
-			if (tabIdx==-1) {
+			int pageIdx = getPageIndex();
+			if (pageIdx==-1) {
 				return Collections.emptyList();
 			}
 			
 			return m_icons
 					.stream()
 					.filter((icon) -> {
-						return tabIdx == icon.getTabIndex();
+						return pageIdx == icon.getPageIndex();
 					})
 					.collect(Collectors.toList());
 		}
 		
 		/**
-		 * Returns all icons on this tab at the specified position
+		 * Returns all icons on this page at the specified position
 		 * 
 		 * @param x x position (0 = first column)
 		 * @param y y position (0 = first row)
 		 * @return icons
 		 */
 		public List<WorkspaceIcon> getIconsAtPosition(int x, int y) {
-			int tabIdx = getTabIndex();
-			if (tabIdx==-1) {
+			int pageIdx = getPageIndex();
+			if (pageIdx==-1) {
 				return Collections.emptyList();
 			}
 			
 			return getIcons()
 					.stream()
 					.filter((icon) -> {
-						return tabIdx == icon.getTabIndex() && x == icon.getPosX() && y == icon.getPosY();
+						return pageIdx == icon.getPageIndex() && x == icon.getPosX() && y == icon.getPosY();
 					})
 					.collect(Collectors.toList());
 		}
 		
-//		Tab content:
+//		Page content:
 //		[00 00 00 00 00 00 04 00]   [........]
 //		[74 61 62 31 00 00 00 00]   [tab1....]
 //		[00 00 00 00 00 00 00 00]   [........]
@@ -632,93 +652,93 @@ public class NotesWorkspace {
 //		[00 00 00 00 00 00 00 00]   [........]
 
 		public String getTitle() {
-			int tabTitleLen = m_tabBuf.get(6) & 0xff;
-			byte[] tabTitleData = new byte[tabTitleLen];
-			m_tabBuf.position(8);
-			m_tabBuf.get(tabTitleData, 0, tabTitleLen);
-			String tabTitle = NotesStringUtils.fromLMBCS(tabTitleData);
-			return tabTitle;
+			int pageTitleLen = m_pageBuf.get(6) & 0xff;
+			byte[] pageTitleData = new byte[pageTitleLen];
+			m_pageBuf.position(8);
+			m_pageBuf.get(pageTitleData, 0, pageTitleLen);
+			String pageTitle = NotesStringUtils.fromLMBCS(pageTitleData);
+			return pageTitle;
 		}
 		
-		public WorkspaceTab setTitle(String title) {
+		public WorkspacePage setTitle(String title) {
 			Memory titleMem = NotesStringUtils.toLMBCS(title, false); // not null-terminated here
 			int titleLen = (int) titleMem.size();
 			if (titleLen > 32) {
-				throw new IllegalArgumentException("Title exceeds max size of 32 bytes");
+				throw new IllegalArgumentException(MessageFormat.format("Title exceeds max size of 32 bytes: {0}", title));
 			}
 			byte[] titleArr = titleMem.getByteArray(0, titleLen);
-			m_tabBuf.put(6, (byte) (titleLen & 0xff));
+			m_pageBuf.put(6, (byte) (titleLen & 0xff));
 			//overwrite old title
-			m_tabBuf.position(8);
-			m_tabBuf.put(new byte[32]);
+			m_pageBuf.position(8);
+			m_pageBuf.put(new byte[32]);
 			
-			m_tabBuf.position(8);
-			m_tabBuf.put(titleArr);
+			m_pageBuf.position(8);
+			m_pageBuf.put(titleArr);
 			m_modified = true;
 			
 			return this;
 		}
 
 		/**
-		 * Returns the color of the tab
+		 * Returns the color of the page
 		 * 
 		 * @return color
 		 */
 		public Color getColor() {
 			int idx = getColorIndex();
-			if (idx < tabPaletteColors.length) {
-				return tabPaletteColors[idx];
+			if (idx < pagePaletteColors.length) {
+				return pagePaletteColors[idx];
 			}
 			return Color.BLACK;
 		}
 		
 		/**
-		 * Returns the current tab color palette index
+		 * Returns the current page color palette index
 		 * 
 		 * @return index
-		 * @see NotesWorkspace#getAvailableTabColor(int)
+		 * @see NotesWorkspace#getAvailablePageColors()
 		 */
 		public int getColorIndex() {
-			return Byte.toUnsignedInt(m_tabBuf.get(2));
+			return Byte.toUnsignedInt(m_pageBuf.get(2));
 		}
 		
 		/**
-		 * Changes the tab color
+		 * Changes the page color
 		 * 
 		 * @param color new color index in palette
-		 * @return this tab
-		 * @see NotesWorkspace#getAvailableTabColors()
+		 * @return this page
+		 * @see NotesWorkspace#getAvailablePageColors()
 		 */
-		public WorkspaceTab setColorIndex(int color) {
+		public WorkspacePage setColorIndex(int color) {
 			if (color<0 || color>=255) {
 				throw new IllegalArgumentException(MessageFormat.format("Color index must be between 0 and 255: {0}", color));
 			}
 			
-			m_tabBuf.put(2, (byte) (color & 0xff));
+			m_pageBuf.put(2, (byte) (color & 0xff));
 			m_modified = true;
 			return this;
 		}
 		
 		/**
 		 * Finds the nearest palette color for the given {@link StandardColors} in the palette
-		 * and sets it for the tab
+		 * and sets it for the page
 		 * 
 		 * @param stdColor color to set
-		 * @return this tab
+		 * @return this page
 		 */
-		public WorkspaceTab setColor(StandardColors stdColor) {
-			int idx = findNearestTabColor(stdColor);
+		public WorkspacePage setColor(StandardColors stdColor) {
+			int idx = findNearestPageColor(stdColor);
 			return setColorIndex(idx);
 		}
 
 		/**
 		 * Finds the nearest palette color for the given {@link Color} in the palette
-		 * and sets it for the tab
+		 * and sets it for the page
 		 * 
 		 * @param color color to set
-		 * @return this tab
+		 * @return this page
 		 */
-		public WorkspaceTab setColor(Color color) {
+		public WorkspacePage setColor(Color color) {
 			int idx = findNearestTabColor(color.getRed(), color.getGreen(), color.getBlue());
 			return setColorIndex((byte) idx);
 		}
@@ -726,18 +746,32 @@ public class NotesWorkspace {
 		@Override
 		public <T> T getAdapter(Class<T> clazz) {
 			if (ByteBuffer.class.equals(clazz)) {
-				return (T) m_tabBuf;
+				return (T) m_pageBuf;
 			}
 			return null;
 		}
 
 		@Override
 		public String toString() {
-			return "WorkspaceTab [title=" + getTitle() + ", color="+getColor()+ "]";
+			return "WorkspacePage [title=" + getTitle() + ", color="+getColor()+ "]";
 		}
 		
 		/**
-		 * Adds an icon to the workspace tab
+		 * Adds an icon to the workspace page
+		 * 
+		 * @param db database to add the icon for
+		 * @param x x position
+		 * @param y y position
+		 * @return the new icon
+		 */
+		public WorkspaceIcon addIcon(NotesDatabase db, int x, int y) {
+			WorkspaceIcon icon = addIcon(db.getTitle(), db.getServer(), db.getRelativeFilePath(), db.getReplicaID(), x, y);
+			icon.setIconFrom(db);
+			return icon;
+		}
+		
+		/**
+		 * Adds an icon to the workspace page
 		 * 
 		 * @param title database title
 		 * @param server database server
@@ -768,6 +802,36 @@ public class NotesWorkspace {
 			m_icons.add(icon);
 			m_modified=true;
 			return icon;
+		}
+		
+		/**
+		 * Moves a page within the workspace with all its icons
+		 * 
+		 * @param targetPageTitle title of new page position
+		 * @param addBefore true to add before targetPage
+		 * @return this workspace page
+		 */
+		public WorkspacePage movePage(String targetPageTitle,
+				boolean addBefore) {
+			WorkspacePage targetPage = NotesWorkspace.this.getPage(targetPageTitle).orElseThrow(() -> {
+				throw new IllegalArgumentException(MessageFormat.format("No page found with title: {0}", targetPageTitle));
+			});
+			
+			return movePage(targetPage, addBefore);
+		}
+		
+		/**
+		 * Moves a page within the workspace with all its icons
+		 * 
+		 * @param targetPage new page position
+		 * @param addBefore true to add before targetPage
+		 * @return this workspace page
+		 */
+		public WorkspacePage movePage(WorkspacePage targetPage,
+				boolean addBefore) {
+			
+			NotesWorkspace.this.movePage(this, targetPage, addBefore);
+			return this;
 		}
 	}
 	
@@ -826,8 +890,8 @@ public class NotesWorkspace {
 			int objId = getAdditionalDataRRV();
 			if (objId!=0) {
 				try {
-				NotesDatabaseObject dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
-				dbObj.delete();
+					NotesDatabaseObject dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
+					dbObj.delete();
 				}
 				catch (NotesError e) {
 					short status = (short) (e.getId() & NotesConstants.ERR_MASK);
@@ -876,7 +940,7 @@ public class NotesWorkspace {
 					rethBuffer);
 			NotesErrorUtils.checkResult(result);
 
-			//read the whole workspace obj: header + tabCount*tabdata + iconCount*icondata
+			//read the whole workspace obj: header + pageCount*tabdata + iconCount*icondata
 			byte[] workspaceData;
 
 			Pointer ptr = Mem.OSLockObject(rethBuffer.getByValue());
@@ -992,12 +1056,27 @@ public class NotesWorkspace {
 		}
 
 		/**
-		 * Returns the index of the tab that contains the icon
+		 * Returns the index of the page that contains the icon
 		 * 
 		 * @return index
 		 */
-		public int getTabIndex() {
+		public int getPageIndex() {
 			return m_iconBuf.get(0x06) & 0xff;
+		}
+		
+		/**
+		 * Returns the workspace page an icon belongs to
+		 * 
+		 * @return page if icon is part of the workspace
+		 */
+		public Optional<WorkspacePage> getPage() {
+			int idx = getPageIndex();
+			if (idx < m_pages.size()) {
+				return Optional.of(m_pages.get(idx));
+			}
+			else {
+				return Optional.empty();
+			}
 		}
 		
 		/**
@@ -1010,18 +1089,27 @@ public class NotesWorkspace {
 		}
 		
 		/**
+		 * Returns the y coordinate of the icon
+		 * 
+		 * @return 0 based y coordinate
+		 */
+		public int getPosY() {
+			return m_iconBuf.get(0x07) & 0xff;
+		}
+
+		/**
 		 * Moves the icon in the workspace
 		 * 
-		 * @param tab target tab
+		 * @param page target page
 		 * @param x target x position
 		 * @param y target y position
 		 * @return this instance
 		 * @throws IconPositionNotAvailable
 		 */
-		public WorkspaceIcon move(WorkspaceTab tab, int x, int y) throws IconPositionNotAvailable {
-			int targetTabIdx = m_tabs.indexOf(tab);
-			if (targetTabIdx==-1) {
-				throw new IllegalArgumentException(MessageFormat.format("Tab is not part of the workspace: {0}",tab));
+		public WorkspaceIcon move(WorkspacePage page, int x, int y) throws IconPositionNotAvailable {
+			int targetPageIdx = m_pages.indexOf(page);
+			if (targetPageIdx==-1) {
+				throw new IllegalArgumentException(MessageFormat.format("Page is not part of the workspace: {0}",page));
 			}
 			
 			boolean isStacked = isStackDatabases();
@@ -1032,13 +1120,13 @@ public class NotesWorkspace {
 			.stream()
 			.filter((icon) -> {
 				if (isStacked) {
-					return targetTabIdx == icon.getTabIndex() &&
+					return targetPageIdx == icon.getPageIndex() &&
 							x == icon.getPosX() &&
 							y == icon.getPosY() &&
 							!ourReplicaID.equals(icon.getReplicaID());
 				}
 				else {
-					return targetTabIdx == icon.getTabIndex() &&
+					return targetPageIdx == icon.getPageIndex() &&
 							x == icon.getPosX() &&
 							y == icon.getPosY();
 				}
@@ -1057,32 +1145,23 @@ public class NotesWorkspace {
 				}
 			}
 			
-			return moveSafe(targetTabIdx, x, y);
+			return moveSafe(targetPageIdx, x, y);
 		}
 		
 		/**
 		 * Changes the icon position without checks
 		 * 
-		 * @param tabIdx new tab index
+		 * @param pageIdx new page index
 		 * @param x new x position
 		 * @param y new y position
 		 * @return this icon
 		 */
-		private WorkspaceIcon moveSafe(int tabIdx, int x, int y) {
-			m_iconBuf.put(0x06, (byte) (tabIdx & 0xff));
+		private WorkspaceIcon moveSafe(int pageIdx, int x, int y) {
+			m_iconBuf.put(0x06, (byte) (pageIdx & 0xff));
 			m_iconBuf.put(0x08, (byte) (x & 0xff));
 			m_iconBuf.put(0x07, (byte) (y & 0xff));
 			m_modified = true;
 			return this;
-		}
-		
-		/**
-		 * Returns the y coordinate of the icon
-		 * 
-		 * @return 0 based y coordinate
-		 */
-		public int getPosY() {
-			return m_iconBuf.get(0x07) & 0xff;
 		}
 		
 		public String getFilePath() {
@@ -1179,8 +1258,53 @@ public class NotesWorkspace {
 			m_modified = true;
 			return this;
 		}
-		
+
+		//extracted standard workspace icon (blue Domino logo)
+		final byte[] initialIconR5 = new byte[] {
+				(byte) 0xae, 0x76, 0x00, 0x00, 0x00, 0x30, 0x05, 0x01, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1b, 0x5c, 0x79, 0x00, 0x51, (byte) 0x88, 0x25, (byte) 0xc1, 0x00, 0x00, 0x02, 0x20, 0x20, 0x01, 0x00, 0x00, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xf0,
+				0x0f, (byte) 0xff, (byte) 0xff, (byte) 0xe0, 0x07, (byte) 0xff, (byte) 0xff, (byte) 0xc0, 0x03, (byte) 0xff, (byte) 0xfe, 0x00, 0x00, 0x7f, (byte) 0xfc, 0x00, 0x00, 0x3f, (byte) 0xf8, 0x00, 0x00, 0x1f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00,
+				0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xe0, 0x00, 0x00, 0x07, (byte) 0xc0, 0x00, 0x00, 0x03, (byte) 0x80, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0x80, 0x00, 0x00, 0x01, (byte) 0xc0, 0x00, 0x00, 0x03, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf0, 0x00,
+				0x00, 0x0f, (byte) 0xf0, 0x00, 0x00, 0x0f, (byte) 0xf8, 0x00, 0x00, 0x1f, (byte) 0xfc, 0x00, 0x00, 0x3f, (byte) 0xff, (byte) 0xf0, 0x0f, (byte) 0xff, (byte) 0xff, (byte) 0xf8, 0x1f, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f,
+				0x11, 0x11, 0x11, 0x11, (byte) 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, 0x1d, (byte) 0xdd, (byte) 0xdd, (byte) 0xd1, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, (byte) 0xff, (byte) 0xf1,
+				(byte) 0xdd, 0x77, 0x77, (byte) 0xdd, 0x1f, (byte) 0xff, (byte) 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, 0x11, 0x11, (byte) 0xd7, 0x77, 0x77, 0x7d, 0x11, 0x11, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x11, (byte) 0xdd, (byte) 0xdd,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xdd, (byte) 0xdd, 0x11, (byte) 0xf0, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, 0x1d, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, (byte) 0xd1, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x0f, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, (byte) 0xf0, 0x00, 0x00, (byte) 0xf1, 0x11, (byte) 0xd7, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x11, 0x1f, 0x00, 0x0f, 0x11, (byte) 0xdd, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, (byte) 0xdd, 0x11, (byte) 0xf0, (byte) 0xf1, 0x1d, 0x77, 0x77, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x77, (byte) 0xd1, 0x1f, (byte) 0xf1, (byte) 0xd7, 0x77, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x77, 0x7d, 0x1f, (byte) 0xf1, (byte) 0xd7, 0x77, 0x77, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x77, 0x7d, 0x1f, (byte) 0xf1, (byte) 0xd7, 0x77, 0x77, 0x77, (byte) 0xd1, (byte) 0xd7, 0x77, 0x77, 0x7d, 0x1d, 0x77, 0x77, 0x77, 0x7d, 0x1f, (byte) 0xf1, 0x1d, (byte) 0xdd, (byte) 0xdd, (byte) 0xdd, 0x11,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, 0x11, (byte) 0xdd, (byte) 0xdd, (byte) 0xdd, (byte) 0xd1, 0x1f, 0x0f, 0x11, 0x11, 0x1d, (byte) 0xdd, (byte) 0xd1, 0x1d, (byte) 0xdd, (byte) 0xdd, (byte) 0xd1, 0x1d, (byte) 0xdd, (byte) 0xd1, 0x11, 0x11, (byte) 0xf0, 0x00, (byte) 0xff, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d,
+				0x11, (byte) 0xdd, (byte) 0xdd, 0x11, (byte) 0xd7, 0x77, 0x7d, 0x1f, (byte) 0xff, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d, 0x1d, 0x77, 0x77, (byte) 0xd1, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, (byte) 0xd7, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x77, 0x7d, (byte) 0xd7, 0x77, 0x7d, 0x1f, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, 0x1d, (byte) 0xdd, (byte) 0xd1,
+				(byte) 0xd7, 0x77, 0x77, 0x7d, 0x1d, (byte) 0xdd, (byte) 0xd1, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x11, 0x11, 0x11, 0x1d, 0x77, 0x77, (byte) 0xd1, 0x11, 0x11, 0x11, (byte) 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff, (byte) 0xff,
+				0x11, (byte) 0xdd, (byte) 0xdd, 0x11, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xf1, 0x11, 0x11, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x0f, (byte) 0xff, (byte) 0xff, (byte) 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x70, (byte) 0xc8, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x45, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0x80, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+		};
+						
 		private void init() {
+			if (NotesWorkspace.this.getWorkspaceVersion() != WorkspaceVersion.R4) {
+				//initial icon currently only working for R5+, need to copy icon data from r4
+				m_iconBuf.position(0);
+				m_iconBuf.put(initialIconR5);
+				setAdditionalDataRRV(0);
+			}
+			
 			//replica id
 			m_iconBuf.position(9 + m_fileNameLength + m_titleLength + 1);
 			m_iconBuf.putInt(0);
@@ -1209,8 +1333,6 @@ public class NotesWorkspace {
 				//timestamp
 				m_iconBuf.putInt(0x40E, 0x01494cb6);
 			}
-
-			clearIcon();
 		}
 		
 		/**
@@ -1892,8 +2014,15 @@ public class NotesWorkspace {
 				iconVersionAndData.put(iconData);
 				iconVersionAndData.position(0);
 				
-				NotesDatabaseObject dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
-				dbObj.reallocate(iconVersionAndData.remaining(), false);
+				NotesDatabaseObject dbObj;
+				if (objId==0) {
+					dbObj = new NotesDatabaseObject(m_dbDesktop, iconVersionAndData.remaining(), EnumSet.of(NoteClass.DATA),
+							(short) 0, NotesConstants.OBJECT_FILE);
+				}
+				else {
+					dbObj = new NotesDatabaseObject(m_dbDesktop, objId);
+					dbObj.reallocate(iconVersionAndData.remaining(), false);
+				}
 				dbObj.put(0, iconVersionAndData);
 			}
 		}
@@ -1910,7 +2039,7 @@ public class NotesWorkspace {
 		@Override
 		public String toString() {
 			return "WorkspaceIcon [path=" + getNetPath() + ", title="
-					+ getTitle() + ", tabindex=" + getTabIndex() + ", x=" + getPosX() + ", y="
+					+ getTitle() + ", pageindex=" + getPageIndex() + ", x=" + getPosX() + ", y="
 					+ getPosY() + ", topofstack="+isOnTopOfStack() + ", timestamp=" + getTimestamp()
 					+ ", flags=0x" + (Integer.toHexString(Short.toUnsignedInt(getFlags())))
 					+ ", flags2=0x" + (Integer.toHexString(Short.toUnsignedInt(getFlags2())))
@@ -1946,58 +2075,171 @@ public class NotesWorkspace {
 	}
 	
 	/**
-	 * Removes a tab and all its icons
+	 * Removes a page and all its icons
 	 * 
-	 * @param tab tab to remove
+	 * @param page page to remove
 	 * @return this workspace
 	 */
-	public NotesWorkspace removeTab(WorkspaceTab tab) {
-		int idx = m_tabs.indexOf(tab);
+	public NotesWorkspace removePage(WorkspacePage page) {
+		int idx = m_pages.indexOf(page);
 		if (idx==-1) {
 			return this;
 		}
 		
-		//remove all icons on the tab
-		//and fix the tabindex of icons on later tabs
+		//remove all icons on the page
+		//and fix the pageindex of icons on later pages
 		Iterator<WorkspaceIcon> iconsIt = m_icons.iterator();
 		while (iconsIt.hasNext()) {
 			WorkspaceIcon currIcon = iconsIt.next();
-			if (currIcon.getTabIndex() == idx) {
+			if (currIcon.getPageIndex() == idx) {
 				iconsIt.remove();
 				m_modified = true;
 			}
-			else if (currIcon.getTabIndex() > idx) {
-				currIcon.moveSafe(currIcon.getTabIndex()-1, currIcon.getPosX(), currIcon.getPosY());
+			else if (currIcon.getPageIndex() > idx) {
+				currIcon.moveSafe(currIcon.getPageIndex()-1, currIcon.getPosX(), currIcon.getPosY());
 				m_modified = true;
 			}
 		}
+		
+		m_pages.remove(idx);
+		
 		return this;
 	}
 	
 	/**
-	 * Finds a free slot on the specified tab
+	 * Adds a new workspace page at the end of the page list
 	 * 
-	 * @param tab tab
+	 * @param title page title
+	 * @return new page
+	 */
+	public WorkspacePage addPage(String title) {
+		ByteBuffer pageDataBuf = ByteBuffer.allocate(PAGESIZE).order(ByteOrder.nativeOrder());
+		WorkspacePage newPage = new WorkspacePage(pageDataBuf);
+		newPage.setTitle(title);
+		m_pages.add(newPage);
+		m_modified = true;
+		return newPage;
+	}
+	
+	/**
+	 * Inserts a new workspace page before the specified target page
+	 * 
+	 * @param beforePage target page
+	 * @param title page title
+	 * @return new page
+	 */
+	public WorkspacePage insertPage(WorkspacePage beforePage, String title) {
+		int targetIdx = m_pages.indexOf(beforePage);
+		if (targetIdx==-1) {
+			throw new IllegalArgumentException(MessageFormat.format("Target page is not part of the workspace: {0}",beforePage));
+		}
+		
+		return insertPage(targetIdx, title);
+	}
+
+	/**
+	 * Inserts a new workspace page before the specified target page
+	 * 
+	 * @param targetIdx insert index
+	 * @param title page title
+	 * @return new page
+	 */
+	public WorkspacePage insertPage(int targetIdx, String title) {
+		if (targetIdx >= m_pages.size()) {
+			return addPage(title);
+		}
+		
+		//fix pageIndex of all icons to the right
+		m_icons
+		.stream()
+		.filter((icon) -> { return icon.getPageIndex() >= targetIdx; })
+		.forEach((icon) -> {
+			icon.moveSafe(icon.getPageIndex()+1, icon.getPosX(), icon.getPosY());
+			m_modified = true;
+		});
+		
+		ByteBuffer pageDataBuf = ByteBuffer.allocate(PAGESIZE).order(ByteOrder.nativeOrder());
+		WorkspacePage newPage = new WorkspacePage(pageDataBuf);
+		newPage.setTitle(title);
+		m_pages.add(targetIdx, newPage);
+		m_modified = true;
+		return newPage;
+	}
+	
+	/**
+	 * Moves a page within the workspace with all its icons
+	 * 
+	 * @param pageToMove page to move
+	 * @param targetPage new page position
+	 * @param addBefore true to add before targetPage
+	 * @return this workspace
+	 */
+	public NotesWorkspace movePage(WorkspacePage pageToMove, WorkspacePage targetPage,
+			boolean addBefore) {
+
+		if (!m_pages.contains(targetPage)) {
+			throw new IllegalArgumentException(MessageFormat.format("Target page is not part of the workspace: {0}",targetPage));
+		}
+		
+		//remember the current icon parent pages to restore the right index
+		Map<WorkspaceIcon,WorkspacePage> iconParentPages = new HashMap<>();
+		m_icons
+		.stream()
+		.forEach((icon) -> {
+			iconParentPages.put(icon, icon.getPage().get());
+		});
+		
+		m_pages.remove(pageToMove);
+		
+		int targetIdx = m_pages.indexOf(targetPage);
+		
+		if (!addBefore) {
+			targetIdx++;
+		}
+
+		if (targetIdx==m_pages.size()) {
+			m_pages.add(pageToMove);
+		}
+		else {
+			m_pages.add(targetIdx, pageToMove);
+		}
+
+		//fix icon page index
+		m_icons
+		.stream()
+		.forEach((icon) -> {
+			WorkspacePage page = iconParentPages.get(icon);
+			int pageIdx = m_pages.indexOf(page);
+			icon.moveSafe(pageIdx, icon.getPosX(), icon.getPosY());
+		});
+		
+		return this;
+	}
+	
+	/**
+	 * Finds a free slot on the specified page
+	 * 
+	 * @param page page
 	 * @param maxWidth max icons in x direction
 	 * @return x/y position of free slot
 	 */
-	public Pair<Integer,Integer> findFreeSlot(WorkspaceTab tab, int maxWidth) {
-		int tabIdx = m_tabs.indexOf(tab);
+	public Pair<Integer,Integer> findFreeSlot(WorkspacePage page, int maxWidth) {
+		int pageIdx = m_pages.indexOf(page);
 		
-		if (tabIdx==-1) {
-			throw new IllegalArgumentException(MessageFormat.format("Tab is not part of the workspace: {0}",tab));
+		if (pageIdx==-1) {
+			throw new IllegalArgumentException(MessageFormat.format("Page is not part of the workspace: {0}",page));
 		}
 		
-		//collect all icons on that tab
-		List<WorkspaceIcon> iconsOnTab = getIcons()
+		//collect all icons on that page
+		List<WorkspaceIcon> iconsOnPage = getIcons()
 				.stream()
-				.filter((icon) -> { return tabIdx == icon.getTabIndex(); })
+				.filter((icon) -> { return pageIdx == icon.getPageIndex(); })
 				.collect(Collectors.toList());
 		
 		AtomicInteger y = new AtomicInteger();
 		do {
 			for (AtomicInteger x=new AtomicInteger(); x.get()<maxWidth; x.incrementAndGet()) {
-				boolean hasIconsAtPos = iconsOnTab
+				boolean hasIconsAtPos = iconsOnPage
 						.stream()
 						.anyMatch((icon) -> {
 							return icon.getPosX() == x.get() && icon.getPosY() == y.get();
@@ -2015,31 +2257,31 @@ public class NotesWorkspace {
 	/**
 	 * Swaps the icons at the specified positions
 	 * 
-	 * @param tab1 tab 1
+	 * @param page1 page 1
 	 * @param pos1 position 1
-	 * @param tab2 tab 2
+	 * @param page2 page 2
 	 * @param pos2 position 2
 	 * @return this icon
 	 */
-	public NotesWorkspace swapIcons(WorkspaceTab tab1, Pair<Integer,Integer> pos1,
-			WorkspaceTab tab2, Pair<Integer,Integer> pos2) {
+	public NotesWorkspace swapIcons(WorkspacePage page1, Pair<Integer,Integer> pos1,
+			WorkspacePage page2, Pair<Integer,Integer> pos2) {
 		
-		int tabIdx1 = m_tabs.indexOf(tab1);
+		int pageIdx1 = m_pages.indexOf(page1);
 		
-		if (tabIdx1==-1) {
-			throw new IllegalArgumentException(MessageFormat.format("First tab is not part of the workspace: {0}",tab1));
+		if (pageIdx1==-1) {
+			throw new IllegalArgumentException(MessageFormat.format("First page is not part of the workspace: {0}",page1));
 		}
 
-		int tabIdx2 = m_tabs.indexOf(tab2);
+		int pageIdx2 = m_pages.indexOf(page2);
 		
-		if (tabIdx2==-1) {
-			throw new IllegalArgumentException(MessageFormat.format("Second tab is not part of the workspace: {0}",tab1));
+		if (pageIdx2==-1) {
+			throw new IllegalArgumentException(MessageFormat.format("Second page is not part of the workspace: {0}",page1));
 		}
 
 		List<WorkspaceIcon> iconsAtPos1 = getIcons()
 				.stream()
 				.filter((icon) -> {
-					return tabIdx1 == icon.getTabIndex() &&
+					return pageIdx1 == icon.getPageIndex() &&
 							pos1.getValue1() == icon.getPosX() &&
 							pos1.getValue2() == icon.getPosY();
 					})
@@ -2049,18 +2291,18 @@ public class NotesWorkspace {
 		List<WorkspaceIcon> iconsAtPos2 = getIcons()
 				.stream()
 				.filter((icon) -> {
-					return tabIdx2 == icon.getTabIndex() &&
+					return pageIdx2 == icon.getPageIndex() &&
 							pos2.getValue1() == icon.getPosX() &&
 							pos2.getValue2() == icon.getPosY();
 					})
 				.collect(Collectors.toList());
 
 		iconsAtPos1.forEach((icon) -> {
-			icon.moveSafe(tabIdx2, pos2.getValue1(), pos2.getValue2());
+			icon.moveSafe(pageIdx2, pos2.getValue1(), pos2.getValue2());
 		});
 		
 		iconsAtPos2.forEach((icon) -> {
-			icon.moveSafe(tabIdx1, pos1.getValue1(), pos1.getValue2());
+			icon.moveSafe(pageIdx1, pos1.getValue1(), pos1.getValue2());
 		});
 
 		return this;
@@ -2081,7 +2323,7 @@ public class NotesWorkspace {
 	}
 	
 	/**
-	 * Sorts icons by tabindex / y / x
+	 * Sorts icons by pageindex / y / x
 	 * 
 	 * @author Karsten Lehmann
 	 */
@@ -2089,13 +2331,13 @@ public class NotesWorkspace {
 
 		@Override
 		public int compare(WorkspaceIcon o1, WorkspaceIcon o2) {
-			int tabIndex1 = o1.getTabIndex();
-			int tabIndex2 = o2.getTabIndex();
+			int pageIndex1 = o1.getPageIndex();
+			int pageIndex2 = o2.getPageIndex();
 			
-			if (tabIndex1 < tabIndex2) {
+			if (pageIndex1 < pageIndex2) {
 				return -1;
 			}
-			else if (tabIndex1 > tabIndex2) {
+			else if (pageIndex1 > pageIndex2) {
 				return 1;
 			}
 			
@@ -2252,15 +2494,15 @@ public class NotesWorkspace {
 		}
 	}
 
-	//convenience methods to work with workspace tab colors
+	//convenience methods to work with workspace page colors
 	
 	/**
-	 * Returns all available colors for the workspace tabs
+	 * Returns all available colors for the workspace pages
 	 * 
 	 * @return readonly list of colors
 	 */
-	public static List<Color> getAvailableTabColors() {
-		return Collections.unmodifiableList(Arrays.asList(tabPaletteColors));
+	public static List<Color> getAvailablePageColors() {
+		return Collections.unmodifiableList(Arrays.asList(pagePaletteColors));
 	}
 	
 	/**
@@ -2281,7 +2523,7 @@ public class NotesWorkspace {
 	 * @param stdColor standard color
 	 * @return index of nearest palette color
 	 */
-	public static int findNearestTabColor(StandardColors stdColor) {
+	public static int findNearestPageColor(StandardColors stdColor) {
 		return findNearestTabColor(stdColor.getRed(), stdColor.getGreen(), stdColor.getBlue());
 	}
 
@@ -2298,8 +2540,8 @@ public class NotesWorkspace {
 		int nearestColorIndex = -1;
 		double nearestDistance = Double.MAX_VALUE;
 		
-		for (int i=0; i<tabPaletteColors.length; i++) {
-			Color currColor = tabPaletteColors[i];
+		for (int i=0; i<pagePaletteColors.length; i++) {
+			Color currColor = pagePaletteColors[i];
 			
 			//uses algorithm described here: https://www.compuphase.com/cmetric.htm
 		    int red2 = currColor.getRed();
@@ -2319,253 +2561,253 @@ public class NotesWorkspace {
 	}
 
 	/**
-	 * Manually extracted list of available workspace tab colors;
+	 * Manually extracted list of available workspace page colors;
 	 * unfortunately not corresponding to {@link StandardColors},
 	 * so we have to provide convenience functions to find the
 	 * best match.
 	 */
-	private static final Color[] tabPaletteColors = new Color[240];
+	private static final Color[] pagePaletteColors = new Color[240];
 	static {
-		tabPaletteColors[0]=new Color(0x80, 0x80, 0x80);
-		tabPaletteColors[1]=new Color(0x00, 0x00, 0x00);
-		tabPaletteColors[2]=new Color(0xFF, 0xFF, 0xFF);
-		tabPaletteColors[3]=new Color(0xEA, 0x32, 0x24);
-		tabPaletteColors[4]=new Color(0x75, 0xFA, 0x4C);
-		tabPaletteColors[5]=new Color(0x00, 0x1C, 0xF5);
-		tabPaletteColors[6]=new Color(0xEB, 0x3B, 0xF6);
-		tabPaletteColors[7]=new Color(0xFF, 0xFE, 0x54);
-		tabPaletteColors[8]=new Color(0x73, 0xFB, 0xFD);
-		tabPaletteColors[9]=new Color(0x75, 0x15, 0x0C);
-		tabPaletteColors[10]=new Color(0x38, 0x7E, 0x22);
-		tabPaletteColors[11]=new Color(0x00, 0x09, 0x7B);
-		tabPaletteColors[12]=new Color(0x75, 0x19, 0x7C);
-		tabPaletteColors[13]=new Color(0x80, 0x7F, 0x26);
-		tabPaletteColors[14]=new Color(0x36, 0x7E, 0x7F);
-		tabPaletteColors[15]=new Color(0x81, 0x80, 0x80);
-		tabPaletteColors[16]=new Color(0xBF, 0xBF, 0xBF);
-		tabPaletteColors[17]=new Color(0xFF, 0xFF, 0xFF);
-		tabPaletteColors[18]=new Color(0xFD, 0xEF, 0xD1);
-		tabPaletteColors[19]=new Color(0xFF, 0xFE, 0xC9);
-		tabPaletteColors[20]=new Color(0xFF, 0xFF, 0xD5);
-		tabPaletteColors[21]=new Color(0xE6, 0xFD, 0xC6);
-		tabPaletteColors[22]=new Color(0xE6, 0xFF, 0xE1);
-		tabPaletteColors[23]=new Color(0xE5, 0xFE, 0xFE);
-		tabPaletteColors[24]=new Color(0xCA, 0xEF, 0xFD);
-		tabPaletteColors[25]=new Color(0xE3, 0xF1, 0xFE);
-		tabPaletteColors[26]=new Color(0xE0, 0xE1, 0xFC);
-		tabPaletteColors[27]=new Color(0xE7, 0xE1, 0xFD);
-		tabPaletteColors[28]=new Color(0xEE, 0xE1, 0xFD);
-		tabPaletteColors[29]=new Color(0xFA, 0xE2, 0xFD);
-		tabPaletteColors[30]=new Color(0xFA, 0xE1, 0xF4);
-		tabPaletteColors[31]=new Color(0xFA, 0xE2, 0xE6);
-		tabPaletteColors[32]=new Color(0xFF, 0xFF, 0xFF);
-		tabPaletteColors[33]=new Color(0xFB, 0xE3, 0xDD);
-		tabPaletteColors[34]=new Color(0xFB, 0xE2, 0xB6);
-		tabPaletteColors[35]=new Color(0xFF, 0xFF, 0xAF);
-		tabPaletteColors[36]=new Color(0xF1, 0xF1, 0xBB);
-		tabPaletteColors[37]=new Color(0xCF, 0xFD, 0x9E);
-		tabPaletteColors[38]=new Color(0xCE, 0xFC, 0xD9);
-		tabPaletteColors[39]=new Color(0xB8, 0xFD, 0xFE);
-		tabPaletteColors[40]=new Color(0xAF, 0xE1, 0xFC);
-		tabPaletteColors[41]=new Color(0xC6, 0xE0, 0xFC);
-		tabPaletteColors[42]=new Color(0xBE, 0xC0, 0xFA);
-		tabPaletteColors[43]=new Color(0xCF, 0xC1, 0xFA);
-		tabPaletteColors[44]=new Color(0xDB, 0xC1, 0xFA);
-		tabPaletteColors[45]=new Color(0xF6, 0xC4, 0xF9);
-		tabPaletteColors[46]=new Color(0xF5, 0xC3, 0xE2);
-		tabPaletteColors[47]=new Color(0xF6, 0xC3, 0xCE);
-		tabPaletteColors[48]=new Color(0xF7, 0xF7, 0xF7);
-		tabPaletteColors[49]=new Color(0xF5, 0xC3, 0xB9);
-		tabPaletteColors[50]=new Color(0xF6, 0xC4, 0x8A);
-		tabPaletteColors[51]=new Color(0xFF, 0xFE, 0x62);
-		tabPaletteColors[52]=new Color(0xF1, 0xF1, 0x8F);
-		tabPaletteColors[53]=new Color(0xA0, 0xFB, 0x8E);
-		tabPaletteColors[54]=new Color(0xA2, 0xFC, 0xCE);
-		tabPaletteColors[55]=new Color(0xA0, 0xFC, 0xFE);
-		tabPaletteColors[56]=new Color(0x98, 0xDE, 0xFC);
-		tabPaletteColors[57]=new Color(0x8F, 0xBF, 0xFA);
-		tabPaletteColors[58]=new Color(0x9E, 0xA0, 0xF9);
-		tabPaletteColors[59]=new Color(0xBC, 0xA2, 0xF9);
-		tabPaletteColors[60]=new Color(0xD9, 0xA3, 0xF9);
-		tabPaletteColors[61]=new Color(0xF2, 0xA5, 0xF9);
-		tabPaletteColors[62]=new Color(0xF2, 0xA4, 0xCD);
-		tabPaletteColors[63]=new Color(0xF2, 0xA3, 0xAA);
-		tabPaletteColors[64]=new Color(0xEF, 0xEE, 0xEF);
-		tabPaletteColors[65]=new Color(0xF1, 0xA3, 0xA1);
-		tabPaletteColors[66]=new Color(0xF2, 0xA2, 0x79);
-		tabPaletteColors[67]=new Color(0xFF, 0xFE, 0x54);
-		tabPaletteColors[68]=new Color(0xE0, 0xDF, 0x83);
-		tabPaletteColors[69]=new Color(0x82, 0xFA, 0x5B);
-		tabPaletteColors[70]=new Color(0x81, 0xFB, 0xCB);
-		tabPaletteColors[71]=new Color(0x80, 0xFC, 0xFD);
-		tabPaletteColors[72]=new Color(0x54, 0xBD, 0xFA);
-		tabPaletteColors[73]=new Color(0x60, 0x92, 0xE8);
-		tabPaletteColors[74]=new Color(0x7F, 0x82, 0xF7);
-		tabPaletteColors[75]=new Color(0xB7, 0x87, 0xF8);
-		tabPaletteColors[76]=new Color(0xD3, 0x88, 0xF7);
-		tabPaletteColors[77]=new Color(0xEF, 0x88, 0xF8);
-		tabPaletteColors[78]=new Color(0xEF, 0x8A, 0xBF);
-		tabPaletteColors[79]=new Color(0xEF, 0x89, 0xA0);
-		tabPaletteColors[80]=new Color(0xE1, 0xE1, 0xE0);
-		tabPaletteColors[81]=new Color(0xEF, 0x87, 0x84);
-		tabPaletteColors[82]=new Color(0xF0, 0x88, 0x50);
-		tabPaletteColors[83]=new Color(0xFA, 0xE1, 0x50);
-		tabPaletteColors[84]=new Color(0xE1, 0xE0, 0x5F);
-		tabPaletteColors[85]=new Color(0x75, 0xFA, 0x4C);
-		tabPaletteColors[86]=new Color(0x74, 0xFA, 0xB7);
-		tabPaletteColors[87]=new Color(0x74, 0xFB, 0xFD);
-		tabPaletteColors[88]=new Color(0x45, 0x9F, 0xDA);
-		tabPaletteColors[89]=new Color(0x3D, 0x82, 0xF7);
-		tabPaletteColors[90]=new Color(0x66, 0x83, 0xF7);
-		tabPaletteColors[91]=new Color(0x97, 0x67, 0xF6);
-		tabPaletteColors[92]=new Color(0xB4, 0x6A, 0xF7);
-		tabPaletteColors[93]=new Color(0xEC, 0x6D, 0xF8);
-		tabPaletteColors[94]=new Color(0xED, 0x6B, 0xAC);
-		tabPaletteColors[95]=new Color(0xED, 0x6B, 0x88);
-		tabPaletteColors[96]=new Color(0xD2, 0xD2, 0xD2);
-		tabPaletteColors[97]=new Color(0xEC, 0x51, 0x4A);
-		tabPaletteColors[98]=new Color(0xEB, 0x52, 0x33);
-		tabPaletteColors[99]=new Color(0xF6, 0xC1, 0x47);
-		tabPaletteColors[100]=new Color(0xE1, 0xE0, 0x4A);
-		tabPaletteColors[101]=new Color(0x66, 0xDD, 0x42);
-		tabPaletteColors[102]=new Color(0x65, 0xDD, 0xB0);
-		tabPaletteColors[103]=new Color(0x64, 0xDD, 0xDE);
-		tabPaletteColors[104]=new Color(0x36, 0x81, 0xB9);
-		tabPaletteColors[105]=new Color(0x33, 0x81, 0xF7);
-		tabPaletteColors[106]=new Color(0x4F, 0x82, 0xF7);
-		tabPaletteColors[107]=new Color(0x79, 0x4B, 0xF5);
-		tabPaletteColors[108]=new Color(0xB2, 0x4F, 0xF6);
-		tabPaletteColors[109]=new Color(0xEB, 0x57, 0xF1);
-		tabPaletteColors[110]=new Color(0xEC, 0x53, 0x9D);
-		tabPaletteColors[111]=new Color(0xEB, 0x52, 0x71);
-		tabPaletteColors[112]=new Color(0xC0, 0xC0, 0xC0);
-		tabPaletteColors[113]=new Color(0xEA, 0x3C, 0x40);
-		tabPaletteColors[114]=new Color(0xEA, 0x3D, 0x2A);
-		tabPaletteColors[115]=new Color(0xEF, 0x87, 0x33);
-		tabPaletteColors[116]=new Color(0xC0, 0xBE, 0x3D);
-		tabPaletteColors[117]=new Color(0x58, 0xBE, 0x38);
-		tabPaletteColors[118]=new Color(0x57, 0xBE, 0x99);
-		tabPaletteColors[119]=new Color(0x55, 0xBE, 0xC0);
-		tabPaletteColors[120]=new Color(0x51, 0x80, 0xBB);
-		tabPaletteColors[121]=new Color(0x25, 0x63, 0xD9);
-		tabPaletteColors[122]=new Color(0x3E, 0x48, 0xF5);
-		tabPaletteColors[123]=new Color(0x39, 0x1E, 0xF4);
-		tabPaletteColors[124]=new Color(0xB1, 0x30, 0xF6);
-		tabPaletteColors[125]=new Color(0xEB, 0x45, 0xF6);
-		tabPaletteColors[126]=new Color(0xE1, 0x43, 0x94);
-		tabPaletteColors[127]=new Color(0xEB, 0x3F, 0x5D);
-		tabPaletteColors[128]=new Color(0xB2, 0xB2, 0xB2);
-		tabPaletteColors[129]=new Color(0xCE, 0x37, 0x31);
-		tabPaletteColors[130]=new Color(0xCF, 0x37, 0x1F);
-		tabPaletteColors[131]=new Color(0xD3, 0x69, 0x29);
-		tabPaletteColors[132]=new Color(0xA1, 0xA0, 0x32);
-		tabPaletteColors[133]=new Color(0x47, 0x9D, 0x2D);
-		tabPaletteColors[134]=new Color(0x45, 0x9D, 0x83);
-		tabPaletteColors[135]=new Color(0x4F, 0x7E, 0x7F);
-		tabPaletteColors[136]=new Color(0x26, 0x60, 0x9B);
-		tabPaletteColors[137]=new Color(0x13, 0x43, 0xBB);
-		tabPaletteColors[138]=new Color(0x00, 0x27, 0xB7);
-		tabPaletteColors[139]=new Color(0x3A, 0x16, 0xBA);
-		tabPaletteColors[140]=new Color(0x74, 0x25, 0xF6);
-		tabPaletteColors[141]=new Color(0xEA, 0x3B, 0xF7);
-		tabPaletteColors[142]=new Color(0xEB, 0x34, 0x7F);
-		tabPaletteColors[143]=new Color(0xEA, 0x33, 0x48);
-		tabPaletteColors[144]=new Color(0xA2, 0xA2, 0xA2);
-		tabPaletteColors[145]=new Color(0xB2, 0x24, 0x18);
-		tabPaletteColors[146]=new Color(0xEA, 0x32, 0x23);
-		tabPaletteColors[147]=new Color(0xB1, 0x49, 0x1E);
-		tabPaletteColors[148]=new Color(0x81, 0x7F, 0x48);
-		tabPaletteColors[149]=new Color(0x4F, 0x7E, 0x46);
-		tabPaletteColors[150]=new Color(0x38, 0x80, 0x54);
-		tabPaletteColors[151]=new Color(0x27, 0x5F, 0x62);
-		tabPaletteColors[152]=new Color(0x16, 0x40, 0x7C);
-		tabPaletteColors[153]=new Color(0x00, 0x29, 0xD9);
-		tabPaletteColors[154]=new Color(0x3F, 0x43, 0xBB);
-		tabPaletteColors[155]=new Color(0x39, 0x12, 0x9C);
-		tabPaletteColors[156]=new Color(0x57, 0x16, 0x9B);
-		tabPaletteColors[157]=new Color(0xCD, 0x32, 0xD8);
-		tabPaletteColors[158]=new Color(0xCC, 0x2D, 0x7D);
-		tabPaletteColors[159]=new Color(0xB2, 0x24, 0x43);
-		tabPaletteColors[160]=new Color(0x8F, 0x8F, 0x8F);
-		tabPaletteColors[161]=new Color(0x93, 0x1C, 0x12);
-		tabPaletteColors[162]=new Color(0xCE, 0x2B, 0x1E);
-		tabPaletteColors[163]=new Color(0x96, 0x45, 0x19);
-		tabPaletteColors[164]=new Color(0x63, 0x62, 0x1B);
-		tabPaletteColors[165]=new Color(0x27, 0x5E, 0x16);
-		tabPaletteColors[166]=new Color(0x28, 0x5E, 0x3F);
-		tabPaletteColors[167]=new Color(0x18, 0x3E, 0x40);
-		tabPaletteColors[168]=new Color(0x0D, 0x30, 0x7A);
-		tabPaletteColors[169]=new Color(0x00, 0x1C, 0xF4);
-		tabPaletteColors[170]=new Color(0x1E, 0x24, 0x99);
-		tabPaletteColors[171]=new Color(0x1C, 0x0E, 0x9B);
-		tabPaletteColors[172]=new Color(0x39, 0x0D, 0x7A);
-		tabPaletteColors[173]=new Color(0x94, 0x21, 0x9A);
-		tabPaletteColors[174]=new Color(0xB0, 0x26, 0x7C);
-		tabPaletteColors[175]=new Color(0x92, 0x1B, 0x1A);
-		tabPaletteColors[176]=new Color(0x80, 0x80, 0x80);
-		tabPaletteColors[177]=new Color(0x57, 0x0D, 0x06);
-		tabPaletteColors[178]=new Color(0xB2, 0x2A, 0x21);
-		tabPaletteColors[179]=new Color(0x7A, 0x45, 0x15);
-		tabPaletteColors[180]=new Color(0x42, 0x42, 0x0F);
-		tabPaletteColors[181]=new Color(0x19, 0x41, 0x0D);
-		tabPaletteColors[182]=new Color(0x18, 0x3F, 0x26);
-		tabPaletteColors[183]=new Color(0x10, 0x31, 0x3E);
-		tabPaletteColors[184]=new Color(0x06, 0x21, 0x5C);
-		tabPaletteColors[185]=new Color(0x00, 0x27, 0xBA);
-		tabPaletteColors[186]=new Color(0x1F, 0x28, 0xB9);
-		tabPaletteColors[187]=new Color(0x00, 0x08, 0x7A);
-		tabPaletteColors[188]=new Color(0x1A, 0x09, 0x7A);
-		tabPaletteColors[189]=new Color(0x75, 0x18, 0x7B);
-		tabPaletteColors[190]=new Color(0x77, 0x16, 0x40);
-		tabPaletteColors[191]=new Color(0x75, 0x15, 0x0C);
-		tabPaletteColors[192]=new Color(0x5F, 0x5F, 0x5F);
-		tabPaletteColors[193]=new Color(0x3A, 0x06, 0x03);
-		tabPaletteColors[194]=new Color(0x95, 0x2B, 0x1E);
-		tabPaletteColors[195]=new Color(0x5C, 0x43, 0x11);
-		tabPaletteColors[196]=new Color(0x21, 0x21, 0x04);
-		tabPaletteColors[197]=new Color(0x09, 0x20, 0x04);
-		tabPaletteColors[198]=new Color(0x08, 0x20, 0x1E);
-		tabPaletteColors[199]=new Color(0x07, 0x20, 0x3F);
-		tabPaletteColors[200]=new Color(0x07, 0x20, 0x4B);
-		tabPaletteColors[201]=new Color(0x00, 0x17, 0xD7);
-		tabPaletteColors[202]=new Color(0x00, 0x0E, 0x9A);
-		tabPaletteColors[203]=new Color(0x00, 0x05, 0x5C);
-		tabPaletteColors[204]=new Color(0x1A, 0x06, 0x5E);
-		tabPaletteColors[205]=new Color(0x3A, 0x0A, 0x5B);
-		tabPaletteColors[206]=new Color(0x59, 0x0F, 0x40);
-		tabPaletteColors[207]=new Color(0x59, 0x0D, 0x15);
-		tabPaletteColors[208]=new Color(0x4F, 0x4F, 0x4F);
-		tabPaletteColors[209]=new Color(0xCC, 0xB2, 0xA3);
-		tabPaletteColors[210]=new Color(0xD7, 0xA3, 0x7B);
-		tabPaletteColors[211]=new Color(0xCD, 0xB1, 0x74);
-		tabPaletteColors[212]=new Color(0xC0, 0xC1, 0x85);
-		tabPaletteColors[213]=new Color(0x90, 0xBE, 0x72);
-		tabPaletteColors[214]=new Color(0x8F, 0xBE, 0x9A);
-		tabPaletteColors[215]=new Color(0x8E, 0xC1, 0xBC);
-		tabPaletteColors[216]=new Color(0x7F, 0xB1, 0xCC);
-		tabPaletteColors[217]=new Color(0xB1, 0xB1, 0xCF);
-		tabPaletteColors[218]=new Color(0x9F, 0xA0, 0xDB);
-		tabPaletteColors[219]=new Color(0xBB, 0xA3, 0xDB);
-		tabPaletteColors[220]=new Color(0xD9, 0xA2, 0xDA);
-		tabPaletteColors[221]=new Color(0xE2, 0x96, 0xE6);
-		tabPaletteColors[222]=new Color(0xD8, 0xA2, 0xC7);
-		tabPaletteColors[223]=new Color(0xE4, 0x95, 0xBA);
-		tabPaletteColors[224]=new Color(0x2F, 0x2F, 0x2F);
-		tabPaletteColors[225]=new Color(0x7A, 0x61, 0x52);
-		tabPaletteColors[226]=new Color(0x98, 0x64, 0x56);
-		tabPaletteColors[227]=new Color(0x7B, 0x62, 0x24);
-		tabPaletteColors[228]=new Color(0x82, 0x82, 0x49);
-		tabPaletteColors[229]=new Color(0x46, 0x60, 0x29);
-		tabPaletteColors[230]=new Color(0x44, 0x60, 0x41);
-		tabPaletteColors[231]=new Color(0x41, 0x5E, 0x5E);
-		tabPaletteColors[232]=new Color(0x1E, 0x41, 0x5D);
-		tabPaletteColors[233]=new Color(0x41, 0x43, 0x7E);
-		tabPaletteColors[234]=new Color(0x61, 0x61, 0x9C);
-		tabPaletteColors[235]=new Color(0x5D, 0x43, 0x7E);
-		tabPaletteColors[236]=new Color(0x5A, 0x35, 0x7C);
-		tabPaletteColors[237]=new Color(0x59, 0x27, 0x5E);
-		tabPaletteColors[238]=new Color(0x5A, 0x26, 0x4F);
-		tabPaletteColors[239]=new Color(0x79, 0x43, 0x60);
+		pagePaletteColors[0]=new Color(0x80, 0x80, 0x80);
+		pagePaletteColors[1]=new Color(0x00, 0x00, 0x00);
+		pagePaletteColors[2]=new Color(0xFF, 0xFF, 0xFF);
+		pagePaletteColors[3]=new Color(0xEA, 0x32, 0x24);
+		pagePaletteColors[4]=new Color(0x75, 0xFA, 0x4C);
+		pagePaletteColors[5]=new Color(0x00, 0x1C, 0xF5);
+		pagePaletteColors[6]=new Color(0xEB, 0x3B, 0xF6);
+		pagePaletteColors[7]=new Color(0xFF, 0xFE, 0x54);
+		pagePaletteColors[8]=new Color(0x73, 0xFB, 0xFD);
+		pagePaletteColors[9]=new Color(0x75, 0x15, 0x0C);
+		pagePaletteColors[10]=new Color(0x38, 0x7E, 0x22);
+		pagePaletteColors[11]=new Color(0x00, 0x09, 0x7B);
+		pagePaletteColors[12]=new Color(0x75, 0x19, 0x7C);
+		pagePaletteColors[13]=new Color(0x80, 0x7F, 0x26);
+		pagePaletteColors[14]=new Color(0x36, 0x7E, 0x7F);
+		pagePaletteColors[15]=new Color(0x81, 0x80, 0x80);
+		pagePaletteColors[16]=new Color(0xBF, 0xBF, 0xBF);
+		pagePaletteColors[17]=new Color(0xFF, 0xFF, 0xFF);
+		pagePaletteColors[18]=new Color(0xFD, 0xEF, 0xD1);
+		pagePaletteColors[19]=new Color(0xFF, 0xFE, 0xC9);
+		pagePaletteColors[20]=new Color(0xFF, 0xFF, 0xD5);
+		pagePaletteColors[21]=new Color(0xE6, 0xFD, 0xC6);
+		pagePaletteColors[22]=new Color(0xE6, 0xFF, 0xE1);
+		pagePaletteColors[23]=new Color(0xE5, 0xFE, 0xFE);
+		pagePaletteColors[24]=new Color(0xCA, 0xEF, 0xFD);
+		pagePaletteColors[25]=new Color(0xE3, 0xF1, 0xFE);
+		pagePaletteColors[26]=new Color(0xE0, 0xE1, 0xFC);
+		pagePaletteColors[27]=new Color(0xE7, 0xE1, 0xFD);
+		pagePaletteColors[28]=new Color(0xEE, 0xE1, 0xFD);
+		pagePaletteColors[29]=new Color(0xFA, 0xE2, 0xFD);
+		pagePaletteColors[30]=new Color(0xFA, 0xE1, 0xF4);
+		pagePaletteColors[31]=new Color(0xFA, 0xE2, 0xE6);
+		pagePaletteColors[32]=new Color(0xFF, 0xFF, 0xFF);
+		pagePaletteColors[33]=new Color(0xFB, 0xE3, 0xDD);
+		pagePaletteColors[34]=new Color(0xFB, 0xE2, 0xB6);
+		pagePaletteColors[35]=new Color(0xFF, 0xFF, 0xAF);
+		pagePaletteColors[36]=new Color(0xF1, 0xF1, 0xBB);
+		pagePaletteColors[37]=new Color(0xCF, 0xFD, 0x9E);
+		pagePaletteColors[38]=new Color(0xCE, 0xFC, 0xD9);
+		pagePaletteColors[39]=new Color(0xB8, 0xFD, 0xFE);
+		pagePaletteColors[40]=new Color(0xAF, 0xE1, 0xFC);
+		pagePaletteColors[41]=new Color(0xC6, 0xE0, 0xFC);
+		pagePaletteColors[42]=new Color(0xBE, 0xC0, 0xFA);
+		pagePaletteColors[43]=new Color(0xCF, 0xC1, 0xFA);
+		pagePaletteColors[44]=new Color(0xDB, 0xC1, 0xFA);
+		pagePaletteColors[45]=new Color(0xF6, 0xC4, 0xF9);
+		pagePaletteColors[46]=new Color(0xF5, 0xC3, 0xE2);
+		pagePaletteColors[47]=new Color(0xF6, 0xC3, 0xCE);
+		pagePaletteColors[48]=new Color(0xF7, 0xF7, 0xF7);
+		pagePaletteColors[49]=new Color(0xF5, 0xC3, 0xB9);
+		pagePaletteColors[50]=new Color(0xF6, 0xC4, 0x8A);
+		pagePaletteColors[51]=new Color(0xFF, 0xFE, 0x62);
+		pagePaletteColors[52]=new Color(0xF1, 0xF1, 0x8F);
+		pagePaletteColors[53]=new Color(0xA0, 0xFB, 0x8E);
+		pagePaletteColors[54]=new Color(0xA2, 0xFC, 0xCE);
+		pagePaletteColors[55]=new Color(0xA0, 0xFC, 0xFE);
+		pagePaletteColors[56]=new Color(0x98, 0xDE, 0xFC);
+		pagePaletteColors[57]=new Color(0x8F, 0xBF, 0xFA);
+		pagePaletteColors[58]=new Color(0x9E, 0xA0, 0xF9);
+		pagePaletteColors[59]=new Color(0xBC, 0xA2, 0xF9);
+		pagePaletteColors[60]=new Color(0xD9, 0xA3, 0xF9);
+		pagePaletteColors[61]=new Color(0xF2, 0xA5, 0xF9);
+		pagePaletteColors[62]=new Color(0xF2, 0xA4, 0xCD);
+		pagePaletteColors[63]=new Color(0xF2, 0xA3, 0xAA);
+		pagePaletteColors[64]=new Color(0xEF, 0xEE, 0xEF);
+		pagePaletteColors[65]=new Color(0xF1, 0xA3, 0xA1);
+		pagePaletteColors[66]=new Color(0xF2, 0xA2, 0x79);
+		pagePaletteColors[67]=new Color(0xFF, 0xFE, 0x54);
+		pagePaletteColors[68]=new Color(0xE0, 0xDF, 0x83);
+		pagePaletteColors[69]=new Color(0x82, 0xFA, 0x5B);
+		pagePaletteColors[70]=new Color(0x81, 0xFB, 0xCB);
+		pagePaletteColors[71]=new Color(0x80, 0xFC, 0xFD);
+		pagePaletteColors[72]=new Color(0x54, 0xBD, 0xFA);
+		pagePaletteColors[73]=new Color(0x60, 0x92, 0xE8);
+		pagePaletteColors[74]=new Color(0x7F, 0x82, 0xF7);
+		pagePaletteColors[75]=new Color(0xB7, 0x87, 0xF8);
+		pagePaletteColors[76]=new Color(0xD3, 0x88, 0xF7);
+		pagePaletteColors[77]=new Color(0xEF, 0x88, 0xF8);
+		pagePaletteColors[78]=new Color(0xEF, 0x8A, 0xBF);
+		pagePaletteColors[79]=new Color(0xEF, 0x89, 0xA0);
+		pagePaletteColors[80]=new Color(0xE1, 0xE1, 0xE0);
+		pagePaletteColors[81]=new Color(0xEF, 0x87, 0x84);
+		pagePaletteColors[82]=new Color(0xF0, 0x88, 0x50);
+		pagePaletteColors[83]=new Color(0xFA, 0xE1, 0x50);
+		pagePaletteColors[84]=new Color(0xE1, 0xE0, 0x5F);
+		pagePaletteColors[85]=new Color(0x75, 0xFA, 0x4C);
+		pagePaletteColors[86]=new Color(0x74, 0xFA, 0xB7);
+		pagePaletteColors[87]=new Color(0x74, 0xFB, 0xFD);
+		pagePaletteColors[88]=new Color(0x45, 0x9F, 0xDA);
+		pagePaletteColors[89]=new Color(0x3D, 0x82, 0xF7);
+		pagePaletteColors[90]=new Color(0x66, 0x83, 0xF7);
+		pagePaletteColors[91]=new Color(0x97, 0x67, 0xF6);
+		pagePaletteColors[92]=new Color(0xB4, 0x6A, 0xF7);
+		pagePaletteColors[93]=new Color(0xEC, 0x6D, 0xF8);
+		pagePaletteColors[94]=new Color(0xED, 0x6B, 0xAC);
+		pagePaletteColors[95]=new Color(0xED, 0x6B, 0x88);
+		pagePaletteColors[96]=new Color(0xD2, 0xD2, 0xD2);
+		pagePaletteColors[97]=new Color(0xEC, 0x51, 0x4A);
+		pagePaletteColors[98]=new Color(0xEB, 0x52, 0x33);
+		pagePaletteColors[99]=new Color(0xF6, 0xC1, 0x47);
+		pagePaletteColors[100]=new Color(0xE1, 0xE0, 0x4A);
+		pagePaletteColors[101]=new Color(0x66, 0xDD, 0x42);
+		pagePaletteColors[102]=new Color(0x65, 0xDD, 0xB0);
+		pagePaletteColors[103]=new Color(0x64, 0xDD, 0xDE);
+		pagePaletteColors[104]=new Color(0x36, 0x81, 0xB9);
+		pagePaletteColors[105]=new Color(0x33, 0x81, 0xF7);
+		pagePaletteColors[106]=new Color(0x4F, 0x82, 0xF7);
+		pagePaletteColors[107]=new Color(0x79, 0x4B, 0xF5);
+		pagePaletteColors[108]=new Color(0xB2, 0x4F, 0xF6);
+		pagePaletteColors[109]=new Color(0xEB, 0x57, 0xF1);
+		pagePaletteColors[110]=new Color(0xEC, 0x53, 0x9D);
+		pagePaletteColors[111]=new Color(0xEB, 0x52, 0x71);
+		pagePaletteColors[112]=new Color(0xC0, 0xC0, 0xC0);
+		pagePaletteColors[113]=new Color(0xEA, 0x3C, 0x40);
+		pagePaletteColors[114]=new Color(0xEA, 0x3D, 0x2A);
+		pagePaletteColors[115]=new Color(0xEF, 0x87, 0x33);
+		pagePaletteColors[116]=new Color(0xC0, 0xBE, 0x3D);
+		pagePaletteColors[117]=new Color(0x58, 0xBE, 0x38);
+		pagePaletteColors[118]=new Color(0x57, 0xBE, 0x99);
+		pagePaletteColors[119]=new Color(0x55, 0xBE, 0xC0);
+		pagePaletteColors[120]=new Color(0x51, 0x80, 0xBB);
+		pagePaletteColors[121]=new Color(0x25, 0x63, 0xD9);
+		pagePaletteColors[122]=new Color(0x3E, 0x48, 0xF5);
+		pagePaletteColors[123]=new Color(0x39, 0x1E, 0xF4);
+		pagePaletteColors[124]=new Color(0xB1, 0x30, 0xF6);
+		pagePaletteColors[125]=new Color(0xEB, 0x45, 0xF6);
+		pagePaletteColors[126]=new Color(0xE1, 0x43, 0x94);
+		pagePaletteColors[127]=new Color(0xEB, 0x3F, 0x5D);
+		pagePaletteColors[128]=new Color(0xB2, 0xB2, 0xB2);
+		pagePaletteColors[129]=new Color(0xCE, 0x37, 0x31);
+		pagePaletteColors[130]=new Color(0xCF, 0x37, 0x1F);
+		pagePaletteColors[131]=new Color(0xD3, 0x69, 0x29);
+		pagePaletteColors[132]=new Color(0xA1, 0xA0, 0x32);
+		pagePaletteColors[133]=new Color(0x47, 0x9D, 0x2D);
+		pagePaletteColors[134]=new Color(0x45, 0x9D, 0x83);
+		pagePaletteColors[135]=new Color(0x4F, 0x7E, 0x7F);
+		pagePaletteColors[136]=new Color(0x26, 0x60, 0x9B);
+		pagePaletteColors[137]=new Color(0x13, 0x43, 0xBB);
+		pagePaletteColors[138]=new Color(0x00, 0x27, 0xB7);
+		pagePaletteColors[139]=new Color(0x3A, 0x16, 0xBA);
+		pagePaletteColors[140]=new Color(0x74, 0x25, 0xF6);
+		pagePaletteColors[141]=new Color(0xEA, 0x3B, 0xF7);
+		pagePaletteColors[142]=new Color(0xEB, 0x34, 0x7F);
+		pagePaletteColors[143]=new Color(0xEA, 0x33, 0x48);
+		pagePaletteColors[144]=new Color(0xA2, 0xA2, 0xA2);
+		pagePaletteColors[145]=new Color(0xB2, 0x24, 0x18);
+		pagePaletteColors[146]=new Color(0xEA, 0x32, 0x23);
+		pagePaletteColors[147]=new Color(0xB1, 0x49, 0x1E);
+		pagePaletteColors[148]=new Color(0x81, 0x7F, 0x48);
+		pagePaletteColors[149]=new Color(0x4F, 0x7E, 0x46);
+		pagePaletteColors[150]=new Color(0x38, 0x80, 0x54);
+		pagePaletteColors[151]=new Color(0x27, 0x5F, 0x62);
+		pagePaletteColors[152]=new Color(0x16, 0x40, 0x7C);
+		pagePaletteColors[153]=new Color(0x00, 0x29, 0xD9);
+		pagePaletteColors[154]=new Color(0x3F, 0x43, 0xBB);
+		pagePaletteColors[155]=new Color(0x39, 0x12, 0x9C);
+		pagePaletteColors[156]=new Color(0x57, 0x16, 0x9B);
+		pagePaletteColors[157]=new Color(0xCD, 0x32, 0xD8);
+		pagePaletteColors[158]=new Color(0xCC, 0x2D, 0x7D);
+		pagePaletteColors[159]=new Color(0xB2, 0x24, 0x43);
+		pagePaletteColors[160]=new Color(0x8F, 0x8F, 0x8F);
+		pagePaletteColors[161]=new Color(0x93, 0x1C, 0x12);
+		pagePaletteColors[162]=new Color(0xCE, 0x2B, 0x1E);
+		pagePaletteColors[163]=new Color(0x96, 0x45, 0x19);
+		pagePaletteColors[164]=new Color(0x63, 0x62, 0x1B);
+		pagePaletteColors[165]=new Color(0x27, 0x5E, 0x16);
+		pagePaletteColors[166]=new Color(0x28, 0x5E, 0x3F);
+		pagePaletteColors[167]=new Color(0x18, 0x3E, 0x40);
+		pagePaletteColors[168]=new Color(0x0D, 0x30, 0x7A);
+		pagePaletteColors[169]=new Color(0x00, 0x1C, 0xF4);
+		pagePaletteColors[170]=new Color(0x1E, 0x24, 0x99);
+		pagePaletteColors[171]=new Color(0x1C, 0x0E, 0x9B);
+		pagePaletteColors[172]=new Color(0x39, 0x0D, 0x7A);
+		pagePaletteColors[173]=new Color(0x94, 0x21, 0x9A);
+		pagePaletteColors[174]=new Color(0xB0, 0x26, 0x7C);
+		pagePaletteColors[175]=new Color(0x92, 0x1B, 0x1A);
+		pagePaletteColors[176]=new Color(0x80, 0x80, 0x80);
+		pagePaletteColors[177]=new Color(0x57, 0x0D, 0x06);
+		pagePaletteColors[178]=new Color(0xB2, 0x2A, 0x21);
+		pagePaletteColors[179]=new Color(0x7A, 0x45, 0x15);
+		pagePaletteColors[180]=new Color(0x42, 0x42, 0x0F);
+		pagePaletteColors[181]=new Color(0x19, 0x41, 0x0D);
+		pagePaletteColors[182]=new Color(0x18, 0x3F, 0x26);
+		pagePaletteColors[183]=new Color(0x10, 0x31, 0x3E);
+		pagePaletteColors[184]=new Color(0x06, 0x21, 0x5C);
+		pagePaletteColors[185]=new Color(0x00, 0x27, 0xBA);
+		pagePaletteColors[186]=new Color(0x1F, 0x28, 0xB9);
+		pagePaletteColors[187]=new Color(0x00, 0x08, 0x7A);
+		pagePaletteColors[188]=new Color(0x1A, 0x09, 0x7A);
+		pagePaletteColors[189]=new Color(0x75, 0x18, 0x7B);
+		pagePaletteColors[190]=new Color(0x77, 0x16, 0x40);
+		pagePaletteColors[191]=new Color(0x75, 0x15, 0x0C);
+		pagePaletteColors[192]=new Color(0x5F, 0x5F, 0x5F);
+		pagePaletteColors[193]=new Color(0x3A, 0x06, 0x03);
+		pagePaletteColors[194]=new Color(0x95, 0x2B, 0x1E);
+		pagePaletteColors[195]=new Color(0x5C, 0x43, 0x11);
+		pagePaletteColors[196]=new Color(0x21, 0x21, 0x04);
+		pagePaletteColors[197]=new Color(0x09, 0x20, 0x04);
+		pagePaletteColors[198]=new Color(0x08, 0x20, 0x1E);
+		pagePaletteColors[199]=new Color(0x07, 0x20, 0x3F);
+		pagePaletteColors[200]=new Color(0x07, 0x20, 0x4B);
+		pagePaletteColors[201]=new Color(0x00, 0x17, 0xD7);
+		pagePaletteColors[202]=new Color(0x00, 0x0E, 0x9A);
+		pagePaletteColors[203]=new Color(0x00, 0x05, 0x5C);
+		pagePaletteColors[204]=new Color(0x1A, 0x06, 0x5E);
+		pagePaletteColors[205]=new Color(0x3A, 0x0A, 0x5B);
+		pagePaletteColors[206]=new Color(0x59, 0x0F, 0x40);
+		pagePaletteColors[207]=new Color(0x59, 0x0D, 0x15);
+		pagePaletteColors[208]=new Color(0x4F, 0x4F, 0x4F);
+		pagePaletteColors[209]=new Color(0xCC, 0xB2, 0xA3);
+		pagePaletteColors[210]=new Color(0xD7, 0xA3, 0x7B);
+		pagePaletteColors[211]=new Color(0xCD, 0xB1, 0x74);
+		pagePaletteColors[212]=new Color(0xC0, 0xC1, 0x85);
+		pagePaletteColors[213]=new Color(0x90, 0xBE, 0x72);
+		pagePaletteColors[214]=new Color(0x8F, 0xBE, 0x9A);
+		pagePaletteColors[215]=new Color(0x8E, 0xC1, 0xBC);
+		pagePaletteColors[216]=new Color(0x7F, 0xB1, 0xCC);
+		pagePaletteColors[217]=new Color(0xB1, 0xB1, 0xCF);
+		pagePaletteColors[218]=new Color(0x9F, 0xA0, 0xDB);
+		pagePaletteColors[219]=new Color(0xBB, 0xA3, 0xDB);
+		pagePaletteColors[220]=new Color(0xD9, 0xA2, 0xDA);
+		pagePaletteColors[221]=new Color(0xE2, 0x96, 0xE6);
+		pagePaletteColors[222]=new Color(0xD8, 0xA2, 0xC7);
+		pagePaletteColors[223]=new Color(0xE4, 0x95, 0xBA);
+		pagePaletteColors[224]=new Color(0x2F, 0x2F, 0x2F);
+		pagePaletteColors[225]=new Color(0x7A, 0x61, 0x52);
+		pagePaletteColors[226]=new Color(0x98, 0x64, 0x56);
+		pagePaletteColors[227]=new Color(0x7B, 0x62, 0x24);
+		pagePaletteColors[228]=new Color(0x82, 0x82, 0x49);
+		pagePaletteColors[229]=new Color(0x46, 0x60, 0x29);
+		pagePaletteColors[230]=new Color(0x44, 0x60, 0x41);
+		pagePaletteColors[231]=new Color(0x41, 0x5E, 0x5E);
+		pagePaletteColors[232]=new Color(0x1E, 0x41, 0x5D);
+		pagePaletteColors[233]=new Color(0x41, 0x43, 0x7E);
+		pagePaletteColors[234]=new Color(0x61, 0x61, 0x9C);
+		pagePaletteColors[235]=new Color(0x5D, 0x43, 0x7E);
+		pagePaletteColors[236]=new Color(0x5A, 0x35, 0x7C);
+		pagePaletteColors[237]=new Color(0x59, 0x27, 0x5E);
+		pagePaletteColors[238]=new Color(0x5A, 0x26, 0x4F);
+		pagePaletteColors[239]=new Color(0x79, 0x43, 0x60);
 
 	}
 	
