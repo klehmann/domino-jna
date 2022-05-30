@@ -94,7 +94,7 @@ public interface INotesNativeAPI32 extends Library {
 	@Deprecated
 	void OSMemoryFree(int handle);
 	/**
-	 * @deprecated use {@link Mem32#OSMemoryAllocate(int, int, IntByReference)} instead
+	 * @deprecated use {@link Mem#OSMemoryAllocate(int, int, IntByReference)} instead
 	 */
 	@Deprecated
 	short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle);

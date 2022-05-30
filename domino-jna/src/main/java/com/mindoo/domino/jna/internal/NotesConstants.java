@@ -4621,7 +4621,7 @@ This allows an Editor to assume some Designer-level access */
 	  int COMPUTE_CAPABILITY_UICOMMANDS = 0x00000002;
 	  /** FIELD Foo := */
 	  int COMPUTE_CAPABILITY_ASSIGN = 0x00000004;
-	  /** @SetDocField, @DocMark. */
+	  /** <code>@SetDocField</code>, <code>@DocMark</code>. */
 	  int COMPUTE_CAPABILITY_SIDEEFFECTS = 0x00000008;
 	  /** Any compute extension. */
 	  int COMPUTE_CAPABILITY_EXTENSION	 = 0x00000010;

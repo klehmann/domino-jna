@@ -817,9 +817,10 @@ public class NotesWorkspace {
 		 * @param targetPageTitle title of new page position
 		 * @param addBefore true to add before targetPage
 		 * @return this workspace page
+		 * @throws Throwable if target page could not be found
 		 */
 		public WorkspacePage movePage(String targetPageTitle,
-				boolean addBefore) {
+				boolean addBefore) throws Throwable {
 			WorkspacePage targetPage = NotesWorkspace.this.getPage(targetPageTitle).orElseThrow(() -> {
 				throw new IllegalArgumentException(MessageFormat.format("No page found with title: {0}", targetPageTitle));
 			});
@@ -1643,7 +1644,7 @@ public class NotesWorkspace {
 		/**
 		 * Returns the classic 32x32 pixel 16 color icon in the specified file format
 		 * 
-		 * @param icon format, e.g. "PNG" or "GIF" (passed to {@link ImageIO}
+		 * @param format icon format, e.g. "PNG" or "GIF" (passed to {@link ImageIO}
 		 * @return icon
 		 */
 		public ByteBuffer getIcon(String format) {
@@ -1994,7 +1995,7 @@ public class NotesWorkspace {
 		/**
 		 * Replaces the content of the true color icon
 		 * 
-		 * @param buf new icon data or null to remove the old icon
+		 * @param icon new icon data or null to remove the old icon
 		 */
 		public void setTrueColorIcon(TrueColorIcon icon) {
 			checkRecycled();
@@ -2388,7 +2389,7 @@ public class NotesWorkspace {
 	}
 	
 	/**
-	 * Exception is thrown when {@link WorkspaceIcon#move(int, int)} is called with
+	 * Exception is thrown when {@link WorkspaceIcon#move(WorkspacePage, int, int)} is called with
 	 * a position that already contains an icon
 	 * 
 	 * @author Karsten Lehmann

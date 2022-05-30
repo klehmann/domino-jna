@@ -59,7 +59,7 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 		UICOMMANDS(NotesConstants.COMPUTE_CAPABILITY_UICOMMANDS),
 		/** FIELD Foo := */
 		ASSIGN(NotesConstants.COMPUTE_CAPABILITY_ASSIGN),
-		 /** @SetDocField, @DocMark. */
+		 /** <code>@SetDocField</code>, <code>@DocMark</code>. */
 		SIDEEFFECTS(NotesConstants.COMPUTE_CAPABILITY_SIDEEFFECTS),
 		/** Any compute extension. */
 		EXTENSION(NotesConstants.COMPUTE_CAPABILITY_EXTENSION),

@@ -30,7 +30,7 @@ import com.mindoo.domino.jna.NotesViewEntryData;
  * .addColumn(NotesMarkdownTable.POS)<br>
  * .addColumn(NotesMarkdownTable.NOTEID)<br>
  * .addColumn(NotesMarkdownTable.UNID)<br>
- * .addColumn("CustomVal1", 30, (entry) -> {<br>
+ * .addColumn("CustomVal1", 30, (entry) -&gt; {<br>
  * &nbsp;&nbsp;return entry.getAsString("lastname", "") + "," +entry.getAsString("firstname", "");<br>
  *  })<br>
  * .addAllViewColumns()<br>
@@ -131,6 +131,7 @@ public class NotesMarkdownTable {
 	 * <li>{@link #POS}</li>
 	 * <li>{@link #NOTEID}</li>
 	 * <li>{@link #UNID}</li>
+	 * </ul>
 	 * 
 	 * @param col column
 	 * @return this table
