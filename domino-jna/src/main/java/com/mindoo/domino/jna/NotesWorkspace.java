@@ -50,11 +50,18 @@ import com.sun.jna.ptr.ShortByReference;
  * Utility class for read and write support of the Notes client workspace.<br>
  * We provide functionality to
  * <ul>
- * <li>Read/write the page titles and colors</li>
+ * <li>Read/write the workspace page titles and colors</li>
  * <li>Set workspace flags showUnreadMarks, showServerNames, stackDatabases</li>
- * <li>Read/write icon server, filename, title, position and pageindex</li>
+ * <li>Read/write workspace icons: server, filename, title, position and pageindex</li>
  * <li>Read/write classic and modern (true color) icon image</li>
+ * <li>Create new workspace icons, optionally copying a database's icon from the design (classic/modern format)</li>
+ * <li>Create new workspace pages</li>
+ * <li>Move workspace pages with all their icons</li>
  * </ul>
+ * <u>Usage:</u><br>
+ * Create a new {@link NotesWorkspace} instance and pass the {@link NotesDatabase} of the local
+ * Notes desktop (e.g. desktop8.ndk) in the constructor.
+ * Call the various methods to read and tweak the workspace configuration/content, then call {@link #store()}
  * 
  * @author Karsten Lehmann
  */
