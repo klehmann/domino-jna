@@ -9,7 +9,7 @@
 		<dependency>
 			<groupId>com.mindoo.domino</groupId>
 			<artifactId>domino-jna</artifactId>
-			<version>0.9.46-SNAPSHOT</version>
+			<version>0.9.48-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 	<build>
