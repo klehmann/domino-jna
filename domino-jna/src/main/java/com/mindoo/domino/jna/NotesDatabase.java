@@ -85,6 +85,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32V1000;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -115,6 +116,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.Ref;
+import com.mindoo.domino.jna.utils.SetUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil;
 import com.mindoo.domino.jna.utils.SignalHandlerUtil.IBreakHandler;
 import com.mindoo.domino.jna.utils.StringTokenizerExt;
@@ -137,7 +139,7 @@ import lotus.domino.Session;
  * 
  * @author Karsten Lehmann
  */
-public class NotesDatabase implements IRecyclableNotesObject {
+public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	static final String NAMEDNOTES_APPLICATION_PREFIX = "$app_";
 	
 	private int m_hDB32;
@@ -159,6 +161,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 	boolean m_passNamesListToDbOpen;
 	private boolean m_passNamesListToViewOpen;
 	private DbMode m_dbMode;
+	
+	private final RecycleHierarchy m_recycleHierarchy = new RecycleHierarchy();
 	
 	/**
 	 * Opens a database either as server or on behalf of a specified user
@@ -195,6 +199,15 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		this(server, filePath, (List<String>) null, asUserCanonical, openFlags);
 	}
 
+	@Override
+	public <T> T getAdapter(Class<T> clazz) {
+		if (RecycleHierarchy.class.equals(clazz)) {
+			return (T) m_recycleHierarchy;
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Checks if a database exists
 	 * 
@@ -522,7 +535,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			else {
 				m_hDB32 = (int) dbHandle;
 			}
-			NotesGC.__objectCreated(NotesDatabase.class, this);
+			NotesGC.__objectCreated(NotesDatabase.class, this, true); //true -> do not check for duplicate handle since it's a shared handle
 			setNoRecycleDb();
 			m_legacyDbRef = legacyDB;
 
@@ -1500,6 +1513,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		if (!m_noRecycleDb) {
 			if (PlatformUtils.is64Bit()) {
 				if (m_hDB64!=0) {
+					m_recycleHierarchy.recycleChildren();
+					
 					short result = NotesNativeAPI64.get().NSFDbClose(m_hDB64);
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
@@ -1511,6 +1526,8 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			}
 			else {
 				if (m_hDB32!=0) {
+					m_recycleHierarchy.recycleChildren();
+					
 					short result = NotesNativeAPI32.get().NSFDbClose(m_hDB32);
 					NotesErrorUtils.checkResult(result);
 					NotesGC.__objectBeeingBeRecycled(NotesDatabase.class, this);
@@ -1519,11 +1536,6 @@ public class NotesDatabase implements IRecyclableNotesObject {
 						m_namesList.free();
 					}
 				}
-			}
-			
-			if (m_acl!=null && !m_acl.isFreed()) {
-				m_acl.free();
-				m_acl = null;
 			}
 		}
 	}
@@ -2313,7 +2325,7 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		sinceStructByVal.Innards[0] = sinceStruct.Innards[0];
 		sinceStructByVal.Innards[1] = sinceStruct.Innards[1];
 		sinceStructByVal.write();
-		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance(retUntil.getInnards());
+		NotesTimeDateStruct.ByReference retUntilStruct = NotesTimeDateStruct.newInstanceByReference();
 		
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethTable = new LongByReference();
@@ -2322,6 +2334,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
+			
+			retUntil.getInnardsNoClone()[0] = retUntilStruct.Innards[0];
+			retUntil.getInnardsNoClone()[1] = retUntilStruct.Innards[1];
+
 			return new NotesIDTable(rethTable.getValue(), false);
 		}
 		else {
@@ -2331,6 +2347,10 @@ public class NotesDatabase implements IRecyclableNotesObject {
 				return new NotesIDTable();
 			}
 			NotesErrorUtils.checkResult(result);
+			
+			retUntil.getInnardsNoClone()[0] = retUntilStruct.Innards[0];
+			retUntil.getInnardsNoClone()[1] = retUntilStruct.Innards[1];
+
 			return new NotesIDTable(rethTable.getValue(), false);
 		}
 	}
@@ -2483,6 +2503,37 @@ public class NotesDatabase implements IRecyclableNotesObject {
 			return null;
 		}
 		return openNoteById(noteId);
+	}
+	
+	/**
+	 * Returns the new true color icon note (form design document with $TITLE="$DBIcon")
+	 * 
+	 * @return icon note or null if not found
+	 */
+	public NotesNote openTrueColorIconNote() {
+		checkHandle();
+		AtomicInteger retNoteId = new AtomicInteger();
+
+		NotesSearch.search(this, null, "$TITLE=\"$DBIcon\"", "-",
+				EnumSet.noneOf(Search.class),
+				EnumSet.of(NoteClass.FORM),
+				null, new NotesSearch.SearchCallback() {
+
+			@Override
+			public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
+					IItemTableData summaryBufferData) {
+				retNoteId.set(searchMatch.getNoteId());
+				return Action.Stop;
+			}
+
+		});
+
+		if (retNoteId.get()==0) {
+			return null;
+		}
+		else {
+			return openNoteById(retNoteId.get());
+		}
 	}
 	
 	/**
@@ -3749,6 +3800,18 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		return retUnidsByNoteId.get(noteId);
 	}
 	
+	/**
+	 * Convenience method to convert note ids to UNIDs.
+	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
+	 * 
+	 * @param noteIds note ids to look up
+	 * @param retUnidsByNoteId map is populated with found UNIDs
+	 * @param retNoteIdsNotFound set is populated with any note id that could not be found
+	 */
+	public void toUnids(Collection<Integer> noteIds, Map<Integer,String> retUnidsByNoteId, Set<Integer> retNoteIdsNotFound) {
+		toUnids(SetUtil.toPrimitiveArray(noteIds), retUnidsByNoteId, retNoteIdsNotFound);
+	}
+
 	/**
 	 * Convenience method to convert note ids to UNIDs.
 	 * The method internally calls {@link NotesDatabase#getMultiNoteInfo(int[])}.
@@ -8326,5 +8389,26 @@ public class NotesDatabase implements IRecyclableNotesObject {
 		
 		return new Pair<>(retOriginalSize.getValue(), retCompactedSize.getValue());
 	}
-	
+
+	/**
+	 * This function gets the database creation class specified when the database was created.<br>
+	 * <br>
+	 * This function is useful for those API programs that need to determine whether the database was
+	 * created specifically for alternate mail (in this case, {@link DBClass#ENCAPSMAILFILE} will be returned).<br>
+	 * <br>
+	 * However, for all other types of databases, there is no guarantee that the database matches the database
+	 * creation class description.
+	 * 
+	 * @return database class
+	 */
+	public DBClass getDbClass() {
+		checkHandle();
+		
+		HANDLE.ByValue hDb = getHandle().getByValue();
+		ShortByReference retClass = new ShortByReference();
+		short result = NotesNativeAPI.get().NSFDbClassGet(hDb, retClass);
+		NotesErrorUtils.checkResult(result);
+		
+		return DBClass.toType(retClass.getValue() & 0xffff);
+	}
 }

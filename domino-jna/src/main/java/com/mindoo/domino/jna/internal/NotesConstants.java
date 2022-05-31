@@ -479,7 +479,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * and re-read the rebuilt index.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_DEFN_ITEM_MODIFIED = 0x0001;
+	public static final short SIGNAL_DEFN_ITEM_MODIFIED = 0x0001;
 
 	/** At least one of the non-"definition"
 	 * view items ($TITLE,etc) has been
@@ -489,7 +489,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * copies of these items are needed.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_VIEW_ITEM_MODIFIED = 0x0002;
+	public static final short SIGNAL_VIEW_ITEM_MODIFIED = 0x0002;
 	
 	/** Collection index has been modified
 	 * by another user since last ReadEntries.
@@ -498,7 +498,7 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * and re-read the modified index.<br>
 	 * <br>
 	 * Signal returned only ONCE per detection */
-	public static final int SIGNAL_INDEX_MODIFIED = 0x0004;
+	public static final short SIGNAL_INDEX_MODIFIED = 0x0004;
 	
 	/** Unread list has been modified
 	 * by another window using the same
@@ -508,44 +508,49 @@ NSFNoteDelete. See also NOTEID_xxx special definitions in nsfdata.h. */
 	 * contains the state of unread flags
 	 * (This signal is never generated
 	 *  by NIF - only unread list users) */
-	public static final int SIGNAL_UNREADLIST_MODIFIED = 0x0008;
+	public static final short SIGNAL_UNREADLIST_MODIFIED = 0x0008;
 	
 	/** Collection is not up to date */
-	public static final int SIGNAL_DATABASE_MODIFIED = 0x0010;
+	public static final short SIGNAL_DATABASE_MODIFIED = 0x0010;
 	
 	/** End of collection has not been reached
 	 * due to buffer being too full.
 	 * The ReadEntries should be repeated
 	 * to continue reading the desired entries. */
-	public static final int SIGNAL_MORE_TO_DO = 0x0020;
+	public static final short SIGNAL_MORE_TO_DO = 0x0020;
 	
 	/** The view contains a time-relative formula
 	 * (e.g., @Now).  Use this flag to tell if the
 	 * collection will EVER be up-to-date since
 	 * time-relative views, by definition, are NEVER
 	 * up-to-date. */
-	public static final int SIGNAL_VIEW_TIME_RELATIVE = 0x0040;
+	public static final short SIGNAL_VIEW_TIME_RELATIVE = 0x0040;
 	
 	/** Returned if signal flags are not supported
 	 * This is used by NIFFindByKeyExtended when it
 	 * is talking to a pre-V4 server that does not
 	 * support signal flags for FindByKey */
-	public static final int SIGNAL_NOT_SUPPORTED = 0x0080;
+	public static final short SIGNAL_NOT_SUPPORTED = 0x0080;
 	
     /** The view contains documents with readers fields */
-	public static final int SIGNAL_VIEW_HASPRIVS = 0x0100;
+	public static final short SIGNAL_VIEW_HASPRIVS = 0x0100;
 
+	/** Differential view read was requested but could not be done */
+	public static final short SIGNAL_DIFF_READ_NOT_DONE = 0x0200;
+	
+	/** Used to optimize NRPC transactions for a single doc unread state modification */
+	public static final short SIGNAL_SINGLENOTE_UNREAD_MODIFIED = 0x0400;
 
 	/**	Mask that defines all "sharing conflicts", which are cases when
 	the database or collection has changed out from under the user. */
-	public static final int SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);
+	public static final short SIGNAL_ANY_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED | SIGNAL_DATABASE_MODIFIED);
 	
 	/**	Mask that defines all "sharing conflicts" except for SIGNAL_DATABASE_MODIFIED.
 	This can be used in combination with SIGNAL_VIEW_TIME_RELATIVE to tell if
 	the database or collection has truly changed out from under the user or if the
 	view is a time-relative view which will NEVER be up-to-date.  SIGNAL_DATABASE_MODIFIED
 	is always returned for a time-relative view to indicate that it is never up-to-date. */
-	public static final int SIGNAL_ANY_NONDATA_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED);
+	public static final short SIGNAL_ANY_NONDATA_CONFLICT	= (SIGNAL_DEFN_ITEM_MODIFIED | SIGNAL_VIEW_ITEM_MODIFIED | SIGNAL_INDEX_MODIFIED | SIGNAL_UNREADLIST_MODIFIED);
 
 	public static final short OS_TRANSLATE_NATIVE_TO_LMBCS = 0;	/* Translate platform-specific to LMBCS */
 	public static final short OS_TRANSLATE_LMBCS_TO_NATIVE = 1;	/* Translate LMBCS to platform-specific */
@@ -4557,5 +4562,75 @@ This allows an Editor to assume some Designer-level access */
 
 	  /** For every input result set, only process each document once */
 	  int PROCRES_DEDUPE_NOTEIDS = 0x00000400;
-	  
+
+	  /*  Define memory allocator hints for static memory, which also re-use the
+	  top 2 bits of the BLK_ codes.  These codes are used by the Static
+	  memory package, e.g. OSStaticMem(), NOT by OSMemAlloc() */
+
+	  /* Object is truly global */
+	  int MEM_GLOBAL = 0x00000000;
+	  /* Object is process-instance */
+	  int MEM_PROCESS = 0x00008000;
+	  /* Object is thread-instance */
+	  int MEM_THREAD = 0x0000C000;
+	  /* Object is physical thread-instance */
+	  int MEM_PTHREAD = 0x00004000;
+	  /* Object is thread group-instance */
+	  int MEM_GTHREAD = 0x00010000;
+
+	  /* LSXBE errors, 0 - 47 */
+	  int PKG_LSBE = 0x11b0;
+
+	  /* OSStaticMem */
+	  int BLK_LIST_HDR = ((PKG_LSBE +0x1) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_MEM_STVPOOL = ((PKG_LSBE +0x2) | MEM_PROCESS);
+	  /* OSMemAlloc */
+	  int BLK_MEM_HVPOOL = ((PKG_LSBE +0x3) | 0);
+	  /* OSStaticMem */
+	  int BLK_MEM_REFCOUNT = ((PKG_LSBE +0x4) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_RESOURCE_HMOD = ((PKG_LSBE +0x5) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_MEM_POOLLOCK = ((PKG_LSBE +0x6) | MEM_PROCESS);
+	  /* OSMemAlloc id tag */
+	  int BLK_MEM_ALLOC = ((PKG_LSBE +0x7));
+	  /* OSStaticMem */
+	  int BLK_SEM_SESSION = ((PKG_LSBE +0x8) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_CCSTR_LOCK = ((PKG_LSBE +0x9) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_JAVA_JNIPTR = ((PKG_LSBE +0xa) | MEM_THREAD);
+	  /* OSStaticMem */
+	  int BLK_DB_SEM = ((PKG_LSBE +0xb) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_VIEW_SEM = ((PKG_LSBE +0xc) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_OBJECT_SEM = ((PKG_LSBE +0xd) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_MEM_LOCK_SEM = ((PKG_LSBE +0xe) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_MEM_CORBA = ((PKG_LSBE +0xf) | MEM_PROCESS);
+	  /* OSStaticMem */
+	  int BLK_MEM_MONITORTH = ((PKG_LSBE +0x10) | MEM_PROCESS);
+
+	  /*	Set of capabilities that we do not allow; The caller can call NSFComputeSetDisallowFlags
+		to prevent compute from executing one or more of the following things: */
+
+	  int COMPUTE_CAPABILITY_SETENVIRONMENT = 0x00000001;
+	  int COMPUTE_CAPABILITY_UICOMMANDS = 0x00000002;
+	  /** FIELD Foo := */
+	  int COMPUTE_CAPABILITY_ASSIGN = 0x00000004;
+	  /** <code>@SetDocField</code>, <code>@DocMark</code>. */
+	  int COMPUTE_CAPABILITY_SIDEEFFECTS = 0x00000008;
+	  /** Any compute extension. */
+	  int COMPUTE_CAPABILITY_EXTENSION	 = 0x00000010;
+	  /** Any compute extension with side-effects */
+	  int COMPUTE_CAPABILITY_UNSAFE_EXTENSION = 0x00000020;
+	  /** Built-in compute extensions */
+	  int COMPUTE_CAPABILITY_FALLBACK_EXT = 0x00000040;
+
+	  /**	Unsafe is any @func that creates/modifies anything (i.e. not "read only") */
+	  int COMPUTE_CAPABILITY_UNSAFE = 0x0000002F;
+
 }

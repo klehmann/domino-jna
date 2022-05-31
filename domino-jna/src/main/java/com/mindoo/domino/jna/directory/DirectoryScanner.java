@@ -407,7 +407,8 @@ public class DirectoryScanner {
 
 		/**
 		 * Returns the database creation date as a {@link NotesTimeDate}
-		 * @return
+		 * 
+		 * @return creation date
 		 */
 		public NotesTimeDate getCreatedAsTimeDate() {
 			return m_created;

@@ -48,6 +48,7 @@ The project provides functionality that is not available in the classic Java API
 * **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
 * creation of **ghost notes** (documents that do not appear in any views)
 * API to **read the remote server console** and send commands.
+* **read/write access for the Notes Client workspace** (desktop8.nsk), e.g. read/write tab and chicklet infos (titles, server, filename, tabindex, x, y, classic and modern iicon)
 
 **Please note:**
 

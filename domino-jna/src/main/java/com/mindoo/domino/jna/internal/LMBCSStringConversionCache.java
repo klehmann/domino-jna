@@ -34,7 +34,21 @@ public class LMBCSStringConversionCache {
 	 * @return converted string
 	 */
 	public static String get(LMBCSString lmbcsString) {
+		return get(lmbcsString, false);
+	}
+	
+	/**
+	 * Converts an LMBCS string to a Java String. If already cached, no native call is made.
+	 * 
+	 * @param lmbcsString LMBCS string
+	 * @param onlyIfCached returns null if value is not already in the cache
+	 * @return converted string
+	 */
+	public static String get(LMBCSString lmbcsString, boolean onlyIfCached) {
 		String stringFromCache = LMBCS2STRINGCACHE.get(lmbcsString);
+		if (onlyIfCached) {
+			return stringFromCache;
+		}
 		String convertedString;
 		
 		if (stringFromCache==null) {

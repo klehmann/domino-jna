@@ -24,6 +24,7 @@ import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
@@ -564,7 +565,7 @@ public class NotesLookupResultBufferDecoder {
 		protected int[] m_itemValueLengthsInBytes;
 		protected boolean m_convertStringsLazily;
 		protected boolean m_freed;
-		private boolean m_preferNotesTimeDates;
+		private Boolean m_preferNotesTimeDates;
 		
 		public ItemValueTableDataImpl(boolean convertStringsLazily) {
 			m_convertStringsLazily = convertStringsLazily;
@@ -585,6 +586,9 @@ public class NotesLookupResultBufferDecoder {
 		
 		@Override
 		public boolean isPreferNotesTimeDates() {
+			if (m_preferNotesTimeDates==null) {
+				return NotesGC.isPreferNotesTimeDate();
+			}
 			return m_preferNotesTimeDates;
 		}
 

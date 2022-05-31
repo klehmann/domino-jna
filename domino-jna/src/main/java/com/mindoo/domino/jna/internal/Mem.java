@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.DHANDLE32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE64;
@@ -195,22 +196,9 @@ public class Mem {
 		}
 	}
 	
-	public static short OSMemoryAllocate(int dwtype, int size, DHANDLE.ByReference retHandle) {
-		if (retHandle instanceof DHANDLE64) {
-			LongByReference retHandle64 = new LongByReference();
-			short status = Mem64.OSMemoryAllocate(dwtype, size, retHandle64);
-			((DHANDLE64)retHandle).hdl = retHandle64.getValue();
-			return status;
-		}
-		else if (retHandle instanceof DHANDLE32) {
-			IntByReference retHandle32 = new IntByReference();
-			short status = Mem32.OSMemoryAllocate(dwtype, size, retHandle32);
-			((DHANDLE32)retHandle).hdl = retHandle32.getValue();
-			return status;
-		}
-		else {
-			throw new IllegalArgumentException("Unsupported return handle type: "+retHandle==null ? "null" : retHandle.getClass().getName());
-		}
+	public static void OSMemoryAllocate(int dwtype, int size, IntByReference retHandle) {
+		short status = NotesNativeAPI.get().OSMemoryAllocate(dwtype, size, retHandle);
+		NotesErrorUtils.checkResult(status);
 	}
 	
 	public static Pointer OSLockObject(NotesBlockIdStruct blockId) {

@@ -8,7 +8,6 @@ import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesDatabase.DesignElement;
 import com.mindoo.domino.jna.NotesDatabase.SignCallback;
 import com.mindoo.domino.jna.NotesUserId;
-import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -22,14 +21,28 @@ import lotus.domino.Session;
  */
 public class TestSignDb extends BaseJNATestClass {
 
-	@Test
+//	@Test
 	public void testSignDb() {
 
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				NotesDatabase db = new NotesDatabase(session, "", "test/signtest.nsf");
+				String signDbServer = System.getenv("SIGN_DB_SERVER");
+				if (signDbServer==null) {
+					signDbServer = "";
+				}
+				String signDbFilePath = System.getenv("SIGN_DB_FILEPATH");
+
+				if (StringUtil.isEmpty(signDbFilePath)) {
+					System.out.println("SIGN_DB_SERVER / SIGN_DB_FILEPATH must be set in environment to run DB sign test");
+					return null;
+				}
+
+				NotesDatabase db = new NotesDatabase(session, signDbServer, signDbFilePath);
+
+				System.out.println("Signing database "+db.getServer()+"!!"+db.getRelativeFilePath()+" as "+IDUtils.getIdUsername());
+				
 				db.signAll(EnumSet.of(NoteClass.ALLNONDATA), new SignCallback() {
 
 					@Override
@@ -57,16 +70,34 @@ public class TestSignDb extends BaseJNATestClass {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				NotesDatabase db = new NotesDatabase(session, "", "test/signtest.nsf");
-				
-				String userNameToSign = System.getenv("SIGN_USERNAME");
-				String userPasswordToSign = System.getenv("SIGN_PASSWORD");
-				String idVaultServer = System.getenv("SIGN_IDVAULTSERVER");
+				String userNameToSign = System.getenv("SIGNASUSER_USERNAME");
+				String userPasswordToSign = System.getenv("SIGNASUSER_PASSWORD");
+				String idVaultServer = System.getenv("SIGNASUSER_IDVAULTSERVER");
 				
 				if (StringUtil.isEmpty(userNameToSign) || StringUtil.isEmpty(userPasswordToSign)
 						|| StringUtil.isEmpty(idVaultServer)) {
-					System.out.println("SIGN_USERNAME / SIGN_PASSWORD / SIGN_IDVAULTSERVER must be set in environment to sign DB as someone else");
+					System.out.println("SIGNASUSER_USERNAME / SIGNASUSER_PASSWORD / SIGNASUSER_IDVAULTSERVER must be set in environment to run sign as other user test");
 					return null;
+				}
+
+				String signDbServer = System.getenv("SIGNASUSER_DB_SERVER");
+				if (signDbServer==null) {
+					signDbServer = "";
+				}
+				String signDbFilePath = System.getenv("SIGNASUSER_DB_FILEPATH");
+
+				if (StringUtil.isEmpty(signDbFilePath)) {
+					System.out.println("SIGNASUSER_DB_SERVER / SIGNASUSER_DB_FILEPATH must be set in environment to run sign as other user test");
+					return null;
+				}
+
+				NotesDatabase db;
+				if (IDUtils.isOnServer()) {
+					//open DB as signer user so that $UpdatedBy contains the right value (does not work in client, maybe if we are added to the trusted servers group)
+					db = new NotesDatabase(signDbServer, signDbFilePath, userNameToSign);
+				}
+				else {
+					db = new NotesDatabase(session, signDbServer, signDbFilePath);
 				}
 				
 				//fetch id from vault
@@ -74,6 +105,8 @@ public class TestSignDb extends BaseJNATestClass {
 				
 				//probably not required for signing design elements:
 				boolean signNotesIfMimePresent = false;
+				
+				System.out.println("Signing database "+db.getServer()+"!!"+db.getRelativeFilePath()+" as "+userId.getUsername());
 				
 				db.signAll(userId, EnumSet.of(NoteClass.ALLNONDATA), signNotesIfMimePresent,
 						new SignCallback() {

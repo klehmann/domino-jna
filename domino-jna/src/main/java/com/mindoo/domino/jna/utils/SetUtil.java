@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -96,15 +95,15 @@ public class SetUtil {
 	}
 
 	/**
-	 * Converts a set to an int array using the order of the {@link Set#iterator()}
+	 * Converts a Collection of Integer values to an int array using the order of the {@link Set#iterator()}
 	 * 
-	 * @param set set
+	 * @param collection collection
 	 * @return int array
 	 */
-	public static int[] toPrimitiveArray(Set<Integer> set) {
-		int[] arr = new int[set.size()];
+	public static int[] toPrimitiveArray(Collection<Integer> collection) {
+		int[] arr = new int[collection.size()];
 		int i=0;
-		Iterator<Integer> values = set.iterator();
+		Iterator<Integer> values = collection.iterator();
 		while (values.hasNext()) {
 			arr[i++] = values.next().intValue();
 		}

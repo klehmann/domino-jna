@@ -166,6 +166,8 @@ public class DominoJNAStandaloneSampleApp {
 						IDUtils.switchToId(notesIdFilePath, idPassword, dontSetEnvVar);
 					}
 					
+					NotesGC.setPreferNotesTimeDate(true);
+					
 					readNotesData();
 
 					return null;
@@ -235,8 +237,6 @@ public class DominoJNAStandaloneSampleApp {
 		System.out.println("Read "+viewEntries.size()+" entries");
 		
 		for (NotesViewEntryData currEntry : viewEntries) {
-			currEntry.setPreferNotesTimeDates(true);
-			
 			System.out.println(currEntry.getUNID() + "\t" + currEntry.getColumnDataAsMap());
 		}
 	}

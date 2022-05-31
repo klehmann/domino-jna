@@ -5,15 +5,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.mindoo.domino.jna.internal.Mem.LockedMemory;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ACLENTRYENUMFUNC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMFUNCPROC;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
-import com.mindoo.domino.jna.internal.structs.NotesDbOptionsStruct;
 import com.mindoo.domino.jna.internal.structs.IntlFormatStruct;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
+import com.mindoo.domino.jna.internal.structs.NotesDbOptionsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSSOTokenInfoDescStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
@@ -685,7 +686,7 @@ public interface INotesNativeAPI extends Library {
 	/**
 	 * @param handle the handle to lock
 	 * @return a pointer to the locked value
-	 * @deprecated use {@link Mem#OSLockObject(DHANDLE.ByValue)} instead
+	 * @deprecated use {@link Mem#OSLockObject(DHANDLE)} instead
 	 */
 	@Deprecated Pointer OSLockObject(DHANDLE.ByValue handle);
 	/**
@@ -725,7 +726,7 @@ public interface INotesNativeAPI extends Library {
 	 * @param handle the handle for which to get the size
 	 * @param retSize the size return value
 	 * @return the result status
-	 * @deprecated use {@link Mem#OSMemGetSize(DHANDLE.ByValue, IntByReference)} instead
+	 * @deprecated use {@link Mem#OSMemGetSize(DHANDLE, IntByReference)} instead
 	 */
 	@Deprecated short OSMemGetSize(DHANDLE.ByValue handle, IntByReference retSize);
 
@@ -813,5 +814,18 @@ public interface INotesNativeAPI extends Library {
 	
 	short ACLCreate(DHANDLE.ByReference rethACL);
 
+	short NSFDbGetSpecialNoteID(
+			HANDLE.ByValue hDB,
+			short Index,
+			IntByReference retNoteID);
+
+	short NSFDbClassGet(
+			HANDLE.ByValue hDB,
+			ShortByReference retClass);
+	
+	short IDTableIntersect(DHANDLE.ByValue hSrc1Table, DHANDLE.ByValue hSrc2Table, DHANDLE.ByReference rethDstTable);
+	int IDEntries (DHANDLE.ByValue hTable);
+	short IDDestroyTable(DHANDLE.ByValue hTable);
+	short IDDeleteTable  (DHANDLE.ByValue hTable, DHANDLE.ByValue hIDsToDelete);
 
 }

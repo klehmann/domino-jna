@@ -212,7 +212,7 @@ public class PlatformUtils {
 	 * @param <T> result type
 	 * @param action action to run
 	 * @return result
-	 * @throws PrivilegedActionException
+	 * @throws PrivilegedActionException in case of execution errors
 	 */
 	public static <T> T runPrivileged(PrivilegedExceptionAction<T> action) throws PrivilegedActionException {
 		return AccessController.doPrivileged(action);

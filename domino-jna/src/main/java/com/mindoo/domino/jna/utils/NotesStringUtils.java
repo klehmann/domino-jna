@@ -20,6 +20,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.SizeLimitedLRUCache;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 
@@ -390,6 +391,24 @@ public class NotesStringUtils {
 		}
 		else {
 			return StringUtil.join(lines, "\n");
+		}
+	}
+
+	/**
+	 * Converts an LMBCS string to a Java String
+	 * 
+	 * @param data string data
+	 * @param textLen length of text, use -1 to let the method search for a terminating \0
+	 * @return decoded String
+	 */
+	public static String fromLMBCS(byte[] data, int textLen) {
+		DisposableMemory mem = new DisposableMemory(data.length);
+		try {
+			mem.write(0, data, 0, data.length);
+			return fromLMBCS(mem, textLen);
+		}
+		finally {
+			mem.dispose();
 		}
 	}
 	
@@ -959,4 +978,17 @@ public class NotesStringUtils {
 
 		return chunks;
 	}
+	
+	public static String fromLMBCS(ByteBuffer buf, int offset) {
+		// Check if it's a native pointer and use it directly
+		try {
+			Pointer ptr = Native.getDirectBufferPointer(buf);
+			return fromLMBCS(ptr.share(offset), buf.remaining()-offset);
+		} catch(IllegalArgumentException e) {
+			byte[] data = new byte[buf.remaining()-offset];
+			buf.get(data);
+			return fromLMBCS(data);
+		}
+	}
+
 }

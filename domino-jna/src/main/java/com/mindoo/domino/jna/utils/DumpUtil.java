@@ -11,7 +11,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.EnumSet;
 import java.util.Set;
 
 import com.mindoo.domino.jna.constants.CDRecordType;
@@ -89,6 +88,17 @@ public class DumpUtil {
 	}
 	
 	/**
+	 * Produces a String with hex codes for the specified byte array and
+	 * character data in case the memory contains bytes in ascii range.
+	 * 
+	 * @param data byte array
+	 * @return memory dump
+	 */
+	public static String dumpAsAscii(byte[] data) {
+		return dumpAsAscii(ByteBuffer.wrap(data), data.length);
+	}
+	
+	/**
 	 * Reads memory content at the specified pointer and produces a String with hex codes and
 	 * character data in case the memory contains bytes in ascii range. Calls {@link #dumpAsAscii(Pointer, int, int)}
 	 * with cols = 8.
@@ -162,9 +172,22 @@ public class DumpUtil {
 		}
 		return sb.toString();
 	}
-	
+
 	/**
-	 * Reads memory content at the specified pointer and produces a String with hex codes and
+	 * Reads content of the {@link ByteBuffer} and produces a String with hex codes and
+	 * character data in case the memory contains bytes in ascii range. Calls {@link #dumpAsAscii(ByteBuffer, int, int)}
+	 * with cols = 8 and size = buf.limit().
+	 * 
+	 * @param buf byte buffer
+	 * @return memory dump
+	 * @since 1.0.32
+	 */
+	public static String dumpAsAscii(ByteBuffer buf) {
+		return dumpAsAscii(buf, buf.limit());
+	}
+
+	/**
+	 * Reads content of the {@link ByteBuffer} and produces a String with hex codes and
 	 * character data in case the memory contains bytes in ascii range. Calls {@link #dumpAsAscii(Pointer, int, int)}
 	 * with cols = 8.
 	 * 
@@ -177,7 +200,7 @@ public class DumpUtil {
 	}
 
 	/**
-	 * Reads memory content at the specified pointer and produces a String with hex codes and
+	 * Reads content of the {@link ByteBuffer} and produces a String with hex codes and
 	 * character data in case the memory contains bytes in ascii range.
 	 * 
 	 * @param buf byte buffer

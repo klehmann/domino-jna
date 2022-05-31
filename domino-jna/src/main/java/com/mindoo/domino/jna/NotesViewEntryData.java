@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import com.mindoo.domino.jna.constants.ReadMask;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.utils.LMBCSString;
@@ -44,7 +45,7 @@ public class NotesViewEntryData implements INoteSummary {
 	private Map<String, Object> m_summaryData;
 	private SoftReference<Map<String, Object>> m_convertedDataRef;
 	private String m_singleColumnLookupName;
-	private boolean m_preferNotesTimeDates;
+	private Boolean m_preferNotesTimeDates;
 	
 	/**
 	 * Creates a new instance
@@ -641,6 +642,9 @@ public class NotesViewEntryData implements INoteSummary {
 	 * @return true to prefer NotesTimeDate
 	 */
 	public boolean isPreferNotesTimeDates() {
+		if (m_preferNotesTimeDates==null) {
+			return NotesGC.isPreferNotesTimeDate();
+		}
 		return m_preferNotesTimeDates;
 	}
 	

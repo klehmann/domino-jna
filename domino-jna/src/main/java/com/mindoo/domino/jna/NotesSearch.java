@@ -26,6 +26,7 @@ import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.formula.FormulaExecution;
+import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -421,15 +422,17 @@ public class NotesSearch {
 						boolean isMatch = formula==null || searchMatch.matchesFormula();
 						
 						if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
+							boolean isPreferNotesTimeDate = true;
+							
 							if (searchMatch.isLargeSummary()) {
 								//getting summary data for large summary docs is unsupported <=V11,
 								//so open the note instead and create a fake IItemTableData
 								note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
 								itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+								itemTableData.setPreferNotesTimeDates(isPreferNotesTimeDate);
 							}
 							else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 								boolean convertStringsLazily = true;
-								boolean convertNotesTimeDateToCalendar = false;
 								
 								if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 									//flag to just return the column values is used; so the
@@ -437,11 +440,11 @@ public class NotesSearch {
 									//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 									//pairs
 									//create an ItemTableData by adding the column names to make this invisible to callers
-									itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
+									itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, !isPreferNotesTimeDate, false);
 								}
 								else {
 									itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
-											convertStringsLazily, convertNotesTimeDateToCalendar, false);
+											convertStringsLazily, !isPreferNotesTimeDate, false);
 								}
 							}
 						}
@@ -628,15 +631,17 @@ public class NotesSearch {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
+								boolean isPreferNotesTimeDate = true;
+
 								if (searchMatch.isLargeSummary()) {
 									//getting summary data for large summary docs is unsupported <=V11,
 									//so open the note instead and create a fake IItemTableData
 									note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
 									itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+									itemTableData.setPreferNotesTimeDates(isPreferNotesTimeDate);
 								}
 								else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
-									boolean convertNotesTimeDateToCalendar = false;
 									
 									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
@@ -644,11 +649,11 @@ public class NotesSearch {
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, !isPreferNotesTimeDate, false);
 									}
 									else {
 										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr, 
-												convertStringsLazily, convertNotesTimeDateToCalendar, false);
+												convertStringsLazily, !isPreferNotesTimeDate, false);
 									}
 								}
 							}
@@ -703,15 +708,17 @@ public class NotesSearch {
 							boolean isMatch = formula==null || searchMatch.matchesFormula();
 							
 							if (isMatch && useSearchFlags.contains(Search.SUMMARY)) {
+								boolean isPreferNotesTimeDate = true;
+
 								if (searchMatch.isLargeSummary()) {
 									//getting summary data for large summary docs is unsupported <=V11,
 									//so open the note instead and create a fake IItemTableData
 									note = db.openNoteById(searchMatch.getNoteId(), EnumSet.of(OpenNote.SUMMARY, OpenNote.NOOBJECTS));
 									itemTableData = new ItemTableDataDocAdapter(note, columnFormulasFixedOrder);
+									itemTableData.setPreferNotesTimeDates(isPreferNotesTimeDate);
 								}
 								else if (summaryBufferPtr!=null && Pointer.nativeValue(summaryBufferPtr)!=0) {
 									boolean convertStringsLazily = true;
-									boolean convertNotesTimeDateToCalendar = false;
 									
 									if (useSearchFlags.contains(Search.NOITEMNAMES)) {
 										//flag to just return the column values is used; so the
@@ -719,11 +726,11 @@ public class NotesSearch {
 										//in the column order instead of an ITEM_TABLE with columnname/columnvalue
 										//pairs
 										//create an ItemTableData by adding the column names to make this invisible to callers
-										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, convertNotesTimeDateToCalendar, false);
+										itemTableData = NotesLookupResultBufferDecoder.decodeItemValueTableWithColumnNames(columnItemNames, summaryBufferPtr, convertStringsLazily, !isPreferNotesTimeDate, false);
 									}
 									else {
 										itemTableData = NotesLookupResultBufferDecoder.decodeItemTable(summaryBufferPtr,
-												convertStringsLazily, convertNotesTimeDateToCalendar, false);
+												convertStringsLazily, !isPreferNotesTimeDate, false);
 									}
 								}
 							}
@@ -1137,8 +1144,7 @@ public class NotesSearch {
 	private static class ItemTableDataDocAdapter implements IItemTableData {
 		private NotesNote m_doc;
 		private LinkedHashMap<String,String> m_columnValues;
-		private boolean m_preferTimeDate = true;
-		private Map<String,List<Object>> m_docValues;
+		private Boolean m_preferTimeDate;
 		private TypedItemAccess m_typedItems;
 		private Map<String,FormulaExecution> m_compiledFormulas;
 		private Map<String,List<Object>> m_compiledFormulaValues;
@@ -1146,7 +1152,6 @@ public class NotesSearch {
 		
 		public ItemTableDataDocAdapter(NotesNote doc, LinkedHashMap<String,String> columnValues) {
 			m_doc = doc;
-			m_docValues = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 			m_compiledFormulas = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 			m_compiledFormulaValues  = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 			
@@ -1326,6 +1331,9 @@ public class NotesSearch {
 
 		@Override
 		public boolean isPreferNotesTimeDates() {
+			if (m_preferTimeDate==null) {
+				return NotesGC.isPreferNotesTimeDate();
+			}
 			return m_preferTimeDate;
 		}
 

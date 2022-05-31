@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import com.mindoo.domino.jna.constants.OpenNote;
+import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
@@ -15,6 +16,7 @@ import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
@@ -45,16 +47,28 @@ public class NotesAgent implements IRecyclableNotesObject {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB32 = hAgent;
+		
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	NotesAgent(NotesDatabase parentDb, int hNoteId, long hAgent) {
 		m_parentDb = parentDb;
 		m_hNoteId = hNoteId;
 		m_hAgentB64 = hAgent;
+		
+		RecycleHierarchy.addChild(m_parentDb, this);
 	}
 
 	public NotesDatabase getParent() {
 		return m_parentDb;
+	}
+	
+	public int getNoteId() {
+		return m_hNoteId;
+	}
+	
+	public String getUNID() {
+		return getParent().toUnid(m_hNoteId);
 	}
 	
 	/**
@@ -93,11 +107,22 @@ public class NotesAgent implements IRecyclableNotesObject {
 		return m_comment;
 	}
 
+	/**
+	 * Returns a signer of the agent
+	 * 
+	 * @return signer
+	 */
+	public String getSigner() {
+		return getAgentNote().getSigner();
+	}
+	
 	@Override
 	public void recycle() {
 		if (isRecycled())
 			return;
 
+		RecycleHierarchy.removeChild(m_parentDb, this);
+		
 		if (PlatformUtils.is64Bit()) {
 			NotesNativeAPI64.get().AgentClose(m_hAgentB64);
 			NotesGC.__objectBeeingBeRecycled(NotesAgent.class, this);
@@ -322,6 +347,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 				}
 				
 				result = NotesNativeAPI64.get().AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
+				handleAgentTimeoutError(result, timeoutSeconds);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
@@ -397,6 +423,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 				}
 
 				result = NotesNativeAPI32.get().AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
+				handleAgentTimeoutError(result, timeoutSeconds);
 				NotesErrorUtils.checkResult(result);
 				
 				if (stdOut!=null) {
@@ -428,6 +455,41 @@ public class NotesAgent implements IRecyclableNotesObject {
 		}
 	}
 
+	/**
+	 * Improves Exception error message for an agent execution timeout
+	 * 
+	 * @param err C API error code
+	 * @param timeoutSec timeout in seconds
+	 * @throws NotesError if a timeout occurred
+	 */
+	private void handleAgentTimeoutError(short err, int timeoutSec) throws NotesError {
+		short status = (short) (err & NotesConstants.ERR_MASK);
+		
+		if (status == INotesErrorConstants.ERR_ASSISTANT_TIMEOUT) {
+			// Execution time limit exceeded by Agent '%s' in database '%p'. Agent signer '%a'.
+			String errMsg = NotesErrorUtils.errToString(status);
+
+			errMsg = errMsg.replace("%s", getTitle());
+
+			String signer = getSigner();
+			errMsg = errMsg.replace("%a", signer);
+			
+			String dbServer = m_parentDb.getServer();
+			String dbFilePath = m_parentDb.getRelativeFilePath();
+			if (StringUtil.isEmpty(dbServer)) {
+				errMsg = errMsg.replace("%p", dbFilePath);
+			}
+			else {
+				errMsg = errMsg.replace("%p", dbServer+"!!"+dbFilePath);
+			}
+			
+			//add current timeout to error text
+			errMsg += " (Timeout: "+timeoutSec+"s)";
+			
+			throw new NotesError(err, errMsg);
+		}
+	}
+	
 	/**
 	 * Runs the agent on the server
 	 * 

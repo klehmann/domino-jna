@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -260,6 +261,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 			m_hMIMEStream = rethMIMEStream.getValue();
 		}
 		NotesGC.__objectCreated(MIMEStream.class, this);
+		RecycleHierarchy.addChild(note, this);
 	}
 
 	private void checkRecycled() {
@@ -296,6 +298,8 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 		if (isRecycled()) {
 			return;
 		}
+		
+		RecycleHierarchy.removeChild(m_note, this);
 		
 		NotesGC.__objectBeeingBeRecycled(MIMEStream.class, this);
 		NotesNativeAPI.get().MIMEStreamClose(m_hMIMEStream);

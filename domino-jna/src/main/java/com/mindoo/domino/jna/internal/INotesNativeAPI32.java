@@ -94,7 +94,7 @@ public interface INotesNativeAPI32 extends Library {
 	@Deprecated
 	void OSMemoryFree(int handle);
 	/**
-	 * @deprecated use {@link Mem32#OSMemoryAllocate(int, int, IntByReference)} instead
+	 * @deprecated use {@link Mem#OSMemoryAllocate(int, int, IntByReference)} instead
 	 */
 	@Deprecated
 	short OSMemoryAllocate(int dwtype, int size, IntByReference retHandle);
@@ -505,7 +505,8 @@ public interface INotesNativeAPI32 extends Library {
 	short NSFDbReplicaInfoSet(
 			int  hDB,
 			NotesDbReplicaInfoStruct ReplicationInfo);
-	short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since, NotesTimeDateStruct retUntil, IntByReference rethTable);
+	short NSFDbGetModifiedNoteTable(int hDB, short NoteClassMask, NotesTimeDateStruct.ByValue Since,
+			NotesTimeDateStruct.ByReference retUntil, IntByReference rethTable);
 	short NSFDbGetNotes(
 			int hDB,
 			int NumNotes,
@@ -804,6 +805,19 @@ public interface INotesNativeAPI32 extends Library {
 			IntByReference retNoteMatchesFormula,
 			IntByReference retNoteShouldBeDeleted,
 			IntByReference retNoteModified);
+
+	@UndocumentedAPI
+	short NSFComputeEvaluateExt(int hCompute,
+			int hNote,
+			IntByReference rethResult,
+			IntByReference retResultLength,
+			int allowDWordResults,
+			IntByReference retNoteMatchesFormula,
+			IntByReference retNoteShouldBeDeleted,
+			IntByReference retNoteModified);
+
+	@UndocumentedAPI
+	void NSFComputeSetDisallowFlags (int vc, int dwFlags);
 
 	@UndocumentedAPI
 	short CESCreateCTXFromNote(int hNote, IntByReference rethCESCTX);
