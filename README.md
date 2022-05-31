@@ -35,7 +35,7 @@ The project provides functionality that is not available in the classic Java API
 * clearing the replication history
 * fast noteid / UNID bulk conversion with lookup of "modified in this file" property (part of the note OID - originator id)
 * compute @Usernameslist values for any Notes user on local and remote server
-* faster **formula execution on documents** with document modified/selected/deleted by formula check
+* faster **formula execution on documents** with document modified/selected/deleted info, **more than 64K of result data and applied security** (e.g. no changes to Notes.ini)
 * **SSO token computation** (with tokens also working on Websphere)
 * APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
 * APIs to **read extended busytime information** like UNID/start/end of busytime entries (not just the freetime search that HCL provides)
@@ -48,7 +48,8 @@ The project provides functionality that is not available in the classic Java API
 * **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
 * creation of **ghost notes** (documents that do not appear in any views)
 * API to **read the remote server console** and send commands.
-* **read/write access for the Notes Client workspace** (desktop8.nsk), e.g. read/write tab and chicklet infos (titles, server, filename, tabindex, x, y, classic and modern iicon)
+* **read/write access for the Notes Client workspace** (desktop8.nsk), e.g. read/write page and chicklet infos (titles, server, filename, tabindex, x, y, classic and modern icon), move pages with their icons, move replicas on top
+* **QueryResultsProcessor API to create JSON And QRP views**
 
 **Please note:**
 
