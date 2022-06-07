@@ -9,7 +9,6 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -37,15 +36,16 @@ public class NotesNamesList implements IAllocatedMemory {
 	private boolean m_noRecycle;
 
 	public NotesNamesList(IAdaptable adaptable) {
-		Handle hdl = adaptable.getAdapter(Handle.class);
+		DHANDLE hdl = adaptable.getAdapter(DHANDLE.class);
 		if (hdl!=null) {
-			if (PlatformUtils.is64Bit()) {
-				m_handle64 = hdl.getHandle64();
+			if (PlatformUtils.is64Bit() && hdl instanceof DHANDLE64) {
+				m_handle64 = ((DHANDLE64)hdl).hdl;
+				return;
 			}
-			else {
-				m_handle32 = hdl.getHandle32();
+			else if (hdl instanceof DHANDLE32) {
+				m_handle32 = ((DHANDLE32)hdl).hdl;
+				return;
 			}
-			return;
 		}
 		throw new NotesError(0, "Unsupported adaptable parameter");
 	}

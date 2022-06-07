@@ -11,12 +11,13 @@ import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.ScheduleOptions;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
@@ -264,7 +265,7 @@ public class NotesBusyTimeUtils {
 				
 				long hCntnr = rethCntnr.getValue();
 				
-				NotesScheduleContainer scheduleContainer = new NotesScheduleContainer(new Handle(hCntnr));
+				NotesScheduleContainer scheduleContainer = new NotesScheduleContainer(DHANDLE64.newInstance(hCntnr));
 				NotesGC.__objectCreated(NotesScheduleContainer.class, scheduleContainer);
 				return scheduleContainer;
 			}
@@ -306,7 +307,7 @@ public class NotesBusyTimeUtils {
 				
 				int hCntnr = rethCntnr.getValue();
 				
-				NotesScheduleContainer scheduleContainer = new NotesScheduleContainer(new Handle(hCntnr));
+				NotesScheduleContainer scheduleContainer = new NotesScheduleContainer(DHANDLE32.newInstance(hCntnr));
 				NotesGC.__objectCreated(NotesScheduleContainer.class, scheduleContainer);
 				return scheduleContainer;
 			}

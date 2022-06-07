@@ -73,7 +73,6 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.INotesNativeAPI32;
 import com.mindoo.domino.jna.internal.INotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Mem32;
@@ -90,6 +89,8 @@ import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE32;
 import com.mindoo.domino.jna.internal.handles.HANDLE64;
@@ -8117,20 +8118,20 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 
 			// non-views, and v3 servers
 			// first get all the public design notes
-			Handle hIDTable;
+			DHANDLE hIDTable;
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethIDTable = new LongByReference();
 				result = NotesNativeAPI64.get().DesignGetNoteTable(m_hDB64,
 						(short) (noteClass.getValue() & 0xffff), rethIDTable);
 				NotesErrorUtils.checkResult(result);
-				hIDTable = new Handle(rethIDTable.getValue());
+				hIDTable = DHANDLE64.newInstance(rethIDTable.getValue());
 			}
 			else {
 				IntByReference rethIDTable = new IntByReference();
 				result = NotesNativeAPI32.get().DesignGetNoteTable(m_hDB32,
 						(short) (noteClass.getValue() & 0xffff), rethIDTable);
 				NotesErrorUtils.checkResult(result);
-				hIDTable = new Handle(rethIDTable.getValue());
+				hIDTable = DHANDLE32.newInstance(rethIDTable.getValue());
 			}
 
 			idTable.set(new NotesIDTable(hIDTable, false));
@@ -8424,7 +8425,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 * This cached table is reused if the username on subsequent calls is the same
 	 * and recycled if it is different.
 	 *
-	 * @param userName name if user in abbreviated or canonical format; if null, we
+	 * @param userNameParam name if user in abbreviated or canonical format; if null, we
 	 *                 use the {@link NotesDatabase} opener
 	 * @param noteId   note id of document
 	 * @return true if unread
@@ -8487,7 +8488,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 * desktop.dsk
 	 * file propagates to the replica database.<br>
 	 *
-	 * @param userName             user for which to check unread marks (abbreviated
+	 * @param userNameParam             user for which to check unread marks (abbreviated
 	 *                             or canonical format); use {@code null} for
 	 *                             current {@link NotesDatabase} opener
 	 * @param createIfNotAvailable {code true}: If the unread list for this user
@@ -8535,14 +8536,14 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	/**
 	 * Method to apply changes to the unread note table
 	 *
-	 * @param userName            user for which to update unread marks (abbreviated
+	 * @param userNameParam       user for which to update unread marks (abbreviated
 	 *                            or canonical format); use {@code null} for current
 	 *                            {@link NotesDatabase} opener
 	 * @param noteIdToMarkRead    note ids to mark read (=remove from the unread
 	 *                            table)
 	 * @param noteIdsToMarkUnread note ids to mark unread (=add to the unread table)
 	 */
-	void updateUnreadNoteTable(String userNameParam, Set<Integer> noteIdToMarkRead,
+	public void updateUnreadNoteTable(String userNameParam, Set<Integer> noteIdToMarkRead,
 			Set<Integer> noteIdsToMarkUnread) {
 
 		checkHandle();

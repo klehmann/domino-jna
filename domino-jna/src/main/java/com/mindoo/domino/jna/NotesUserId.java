@@ -3,10 +3,12 @@ package com.mindoo.domino.jna;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -21,15 +23,16 @@ public class NotesUserId  {
 	private int m_hKFC32;
 	
 	public NotesUserId(IAdaptable adaptable) {
-		Handle hdl = adaptable.getAdapter(Handle.class);
+		DHANDLE hdl = adaptable.getAdapter(DHANDLE.class);
 		if (hdl!=null) {
-			if (PlatformUtils.is64Bit()) {
-				m_hKFC64 = hdl.getHandle64();
+			if (PlatformUtils.is64Bit() && hdl instanceof DHANDLE64) {
+				m_hKFC64 = ((DHANDLE64)hdl).hdl;
+				return;
 			}
-			else {
-				m_hKFC32 = hdl.getHandle32();
+			else if (hdl instanceof DHANDLE32) {
+				m_hKFC32 = ((DHANDLE32)hdl).hdl;
+				return;
 			}
-			return;
 		}
 		throw new NotesError(0, "Unsupported adaptable parameter");
 	}

@@ -15,7 +15,6 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.LMBCSStringArray;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
@@ -23,6 +22,8 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.LinuxNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
@@ -474,13 +475,13 @@ public class NotesNamingUtils {
 	public static NotesNamesList writeNewNamesList(List<String> names) {
 		if (PlatformUtils.is64Bit()) {
 			long handle64 = b64_writeUserNamesList(names);
-			NotesNamesList namesList = new NotesNamesList(new Handle(handle64));
+			NotesNamesList namesList = new NotesNamesList(DHANDLE64.newInstance(handle64));
 			NotesGC.__memoryAllocated(namesList);
 			return namesList;
 		}
 		else {
 			int handle32 = b32_writeUserNamesList(names);
-			NotesNamesList namesList = new NotesNamesList(new Handle(handle32));
+			NotesNamesList namesList = new NotesNamesList(DHANDLE32.newInstance(handle32));
 			NotesGC.__memoryAllocated(namesList);
 			return namesList;
 		}
@@ -521,7 +522,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			long hUserNamesList64 = rethNamesList.getValue();
 			
-			NotesNamesList newList =  new NotesNamesList(new Handle(hUserNamesList64));
+			NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -532,7 +533,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			int hUserNamesList32 = rethNamesList.getValue();
 			
-			NotesNamesList newList = new NotesNamesList(new Handle(hUserNamesList32));
+			NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -570,7 +571,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			long hUserNamesList64 = rethNamesList.getValue();
 			
-			NotesNamesList newList =  new NotesNamesList(new Handle(hUserNamesList64));
+			NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -580,7 +581,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			int hUserNamesList32 = rethNamesList.getValue();
 			
-			NotesNamesList newList = new NotesNamesList(new Handle(hUserNamesList32));
+			NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -606,7 +607,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			long hUserNamesList64 = rethNamesList.getValue();
 			
-			NotesNamesList newList =  new NotesNamesList(new Handle(hUserNamesList64));
+			NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -616,7 +617,7 @@ public class NotesNamingUtils {
 			NotesErrorUtils.checkResult(result);
 			int hUserNamesList32 = rethNamesList.getValue();
 			
-			NotesNamesList newList = new NotesNamesList(new Handle(hUserNamesList32));
+			NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -648,7 +649,7 @@ public class NotesNamingUtils {
 			}
 			long hUserNamesList64 = rethNamesList.getValue();
 
-			NotesNamesList newList =  new NotesNamesList(new Handle(hUserNamesList64));
+			NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}
@@ -662,7 +663,7 @@ public class NotesNamingUtils {
 			}
 			int hUserNamesList32 = rethNamesList.getValue();
 
-			NotesNamesList newList = new NotesNamesList(new Handle(hUserNamesList32));
+			NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
 			NotesGC.__memoryAllocated(newList);
 			return newList;
 		}

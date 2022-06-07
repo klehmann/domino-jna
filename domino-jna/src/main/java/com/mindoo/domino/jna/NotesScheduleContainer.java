@@ -5,10 +5,12 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleStruct;
 import com.mindoo.domino.jna.utils.NotesBusyTimeUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
@@ -30,15 +32,16 @@ public class NotesScheduleContainer implements IRecyclableNotesObject {
 	private boolean m_noRecycle;
 	
 	public NotesScheduleContainer(IAdaptable adaptable) {
-		Handle hdl = adaptable.getAdapter(Handle.class);
+		DHANDLE hdl = adaptable.getAdapter(DHANDLE.class);
 		if (hdl!=null) {
-			if (PlatformUtils.is64Bit()) {
-				m_hCntnr64 = hdl.getHandle64();
+			if (PlatformUtils.is64Bit() && hdl instanceof DHANDLE64) {
+				m_hCntnr64 = ((DHANDLE64)hdl).hdl;
+				return;
 			}
-			else {
-				m_hCntnr32 = hdl.getHandle32();
+			else if (hdl instanceof DHANDLE32) {
+				m_hCntnr32 = ((DHANDLE32)hdl).hdl;
+				return;
 			}
-			return;
 		}
 		throw new NotesError(0, "Unsupported adaptable parameter");
 	}
