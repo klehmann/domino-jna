@@ -7568,4 +7568,27 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				})
 				.collect(Collectors.toList());
 	}
+
+	/**
+	 * Checks if the note is unread for the {@link NotesDatabase} opener.<br>
+	 * Uses {@link NotesDatabase#isNoteUnread(String, int)} internally.
+	 *
+	 * @return true if unread
+	 */
+	public boolean isUnread() {
+		return getParent().isNoteUnread(null, getNoteId());
+	}
+
+	/**
+	 * Checks if the note is unread for the specified user.<br>
+	 * Uses {@link NotesDatabase#isNoteUnread(String, int)} internally.
+	 *
+	 * @param userName username in abbreviated or canonical format, if null, we use the
+	 *                 {@link NotesDatabase} opener
+	 * @return true if unread
+	 */
+	public boolean isUnread(String userName) {
+		return getParent().isNoteUnread(userName, getNoteId());
+	}
+
 }

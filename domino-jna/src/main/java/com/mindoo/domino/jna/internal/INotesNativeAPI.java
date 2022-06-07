@@ -828,4 +828,24 @@ public interface INotesNativeAPI extends Library {
 	short IDDestroyTable(DHANDLE.ByValue hTable);
 	short IDDeleteTable  (DHANDLE.ByValue hTable, DHANDLE.ByValue hIDsToDelete);
 
+	short NSFDbGetUnreadNoteTable2(
+			HANDLE.ByValue hDB,
+			Memory userName,
+			short userNameLength,
+			boolean fCreateIfNotAvailable,
+			boolean fUpdateUnread,
+			DHANDLE.ByReference rethUnreadList);
+
+	short NSFDbSetUnreadNoteTable(
+			HANDLE.ByValue hDB,
+			Memory UserName,
+			short UserNameLength,
+			boolean fFlushToDisk,
+			DHANDLE.ByValue hOriginalUnreadList,
+			DHANDLE.ByValue hUnreadUnreadList);
+	
+	short NSFDbUpdateUnread(
+			HANDLE.ByValue hDataDB,
+			DHANDLE.ByValue hUnreadList);
+
 }

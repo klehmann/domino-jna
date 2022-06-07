@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -8408,7 +8409,193 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		ShortByReference retClass = new ShortByReference();
 		short result = NotesNativeAPI.get().NSFDbClassGet(hDb, retClass);
 		NotesErrorUtils.checkResult(result);
-		
+
 		return DBClass.toType(retClass.getValue() & 0xffff);
+	}
+
+	private String m_cachedUnreadTableUsernameCanonical;
+	private NotesIDTable m_cachedUnreadTable;
+
+	/**
+	 * Checks if a NotesNote is in the unread table for the specified user.<br>
+	 * <br>
+	 * For performance reasons we internally cache the unread table and store the
+	 * username.
+	 * This cached table is reused if the username on subsequent calls is the same
+	 * and recycled if it is different.
+	 *
+	 * @param userName name if user in abbreviated or canonical format; if null, we
+	 *                 use the {@link NotesDatabase} opener
+	 * @param noteId   note id of document
+	 * @return true if unread
+	 */
+	public boolean isNoteUnread(String userNameParam, int noteId) {
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		if (
+				StringUtil.isEmpty(m_cachedUnreadTableUsernameCanonical) ||
+				m_cachedUnreadTable==null ||
+				m_cachedUnreadTable.isRecycled() ||
+				!NotesNamingUtils.equalNames(userNameCanonical, m_cachedUnreadTableUsernameCanonical)) {
+
+			if (m_cachedUnreadTable!=null) {
+				m_cachedUnreadTable.recycle();
+				m_cachedUnreadTable = null;
+			}
+
+			m_cachedUnreadTable = getUnreadNoteTable(userNameCanonical, true, true).orElse(null);
+			m_cachedUnreadTableUsernameCanonical = userNameCanonical;
+		}
+
+		return m_cachedUnreadTable != null && m_cachedUnreadTable.contains(noteId);
+	}
+
+	/**
+	 * An ID Table is created containing the list of unread notes in the
+	 * database for the specified user.<br>
+	 * <br>
+	 * The argument {@code createIfNotAvailable} controls what action is to be
+	 * performed
+	 * if there is no list of unread notes for the specified user in the
+	 * database.<br>
+	 * <br>
+	 * If no list is found and this flag is set to {@code false}, the method will
+	 * return an empty {@link Optional}.<br>
+	 * If this flag is set to {code true}, the list of unread notes will be
+	 * created and all
+	 * notes in the database will be added to the list.<br>
+	 * <br>
+	 * No coordination is performed between different users of the same
+	 * database.<br>
+	 * <br>
+	 * If an application obtains a list of unread notes while another user is
+	 * modifying the
+	 * list, the changes made may not be visible to the application.<br>
+	 * <br>
+	 * Unread marks for each user are stored in the client desktop.dsk file and in
+	 * the database.<br>
+	 * <br>
+	 * When a user closes a database (either through the Notes user interface or
+	 * through an API program),
+	 * the unread marks in the desktop.dsk file and in the database are synchronized
+	 * so that
+	 * they match.<br>
+	 * Unread marks are not replicated when a database is replicated.<br>
+	 * <br>
+	 * Instead, when a user opens a replica of a database, the unread marks from the
+	 * desktop.dsk
+	 * file propagates to the replica database.<br>
+	 *
+	 * @param userName             user for which to check unread marks (abbreviated
+	 *                             or canonical format); use {@code null} for
+	 *                             current {@link NotesDatabase} opener
+	 * @param createIfNotAvailable {code true}: If the unread list for this user
+	 *                             cannot be found on disk, return all note IDs.
+	 *                             {@code false}: If the list cannot be found,
+	 *                             return an empty {@link Optional}
+	 * @param updateUnread         {@code true} to update unread marks,
+	 *                             {@code false} to not update unread marks.
+	 * @return an {@link Optional} describing the table of unread documents, or an
+	 *         empty one if there is no table
+	 */
+	public Optional<NotesIDTable> getUnreadNoteTable(String userNameParam, boolean createIfNotAvailable, boolean updateUnread) {
+		checkHandle();
+
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, false);
+		if (userNameCanonicalMem.size() > 65535) {
+			throw new IllegalArgumentException("Username exceeds max length of 65535 bytes");
+		}
+		short userNameLength = (short) (userNameCanonicalMem.size() & 0xffff);
+
+		DHANDLE.ByReference rethUnreadList = DHANDLE.newInstanceByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPI.get().NSFDbGetUnreadNoteTable2(hDb.getByValue(), userNameCanonicalMem, userNameLength,
+				createIfNotAvailable, updateUnread, rethUnreadList);
+
+		NotesErrorUtils.checkResult(result);
+
+		if (rethUnreadList.isNull()) {
+			return Optional.empty();
+		}
+		else {
+			//make the cached ID table reflect the latest DB changes
+			result = NotesNativeAPI.get().NSFDbUpdateUnread(hDb.getByValue(), rethUnreadList.getByValue());
+			NotesErrorUtils.checkResult(result);
+
+			return Optional.of(new NotesIDTable(rethUnreadList, false));
+		}
+	}
+
+	/**
+	 * Method to apply changes to the unread note table
+	 *
+	 * @param userName            user for which to update unread marks (abbreviated
+	 *                            or canonical format); use {@code null} for current
+	 *                            {@link NotesDatabase} opener
+	 * @param noteIdToMarkRead    note ids to mark read (=remove from the unread
+	 *                            table)
+	 * @param noteIdsToMarkUnread note ids to mark unread (=add to the unread table)
+	 */
+	void updateUnreadNoteTable(String userNameParam, Set<Integer> noteIdToMarkRead,
+			Set<Integer> noteIdsToMarkUnread) {
+
+		checkHandle();
+
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, false);
+		if (userNameCanonicalMem.size() > 65535) {
+			throw new IllegalArgumentException("Username exceeds max length of 65535 bytes");
+		}
+		short userNameLength = (short) (userNameCanonicalMem.size() & 0xffff);
+
+		NotesIDTable unreadTable = getUnreadNoteTable(userNameCanonical, true, true).orElse(null);
+		NotesIDTable unreadTableOrig;
+
+		HANDLE hDb = getHandle();
+
+		if (unreadTable != null) {
+			//make the cached ID table reflect the latest DB changes
+			short result = NotesNativeAPI.get().NSFDbUpdateUnread(hDb.getByValue(), unreadTable.getHandle().getByValue());
+			NotesErrorUtils.checkResult(result);
+
+			unreadTableOrig = (NotesIDTable) unreadTable.clone();
+		}
+		else {
+			unreadTable = new NotesIDTable();
+
+			unreadTableOrig = new NotesIDTable();
+		}
+
+		if (noteIdToMarkRead != null && !noteIdToMarkRead.isEmpty()) {
+			unreadTable.asSet().removeAll(noteIdToMarkRead);
+		}
+
+		if (noteIdsToMarkUnread != null && !noteIdsToMarkUnread.isEmpty()) {
+			unreadTable.asSet().addAll(noteIdsToMarkUnread);
+		}
+
+		short result = NotesNativeAPI.get().NSFDbSetUnreadNoteTable(hDb.getByValue(), userNameCanonicalMem, userNameLength,
+				true, unreadTableOrig.getHandle().getByValue(), unreadTable.getHandle().getByValue());
+		NotesErrorUtils.checkResult(result);
+
+		unreadTable.recycle();
+		unreadTableOrig.recycle();
+
+		//remove cached unread table for this user that is used by isNoteUnread
+		if (m_cachedUnreadTable!=null &&
+				NotesNamingUtils.equalNames(userNameCanonical, m_cachedUnreadTableUsernameCanonical)) {
+			m_cachedUnreadTable.recycle();
+			m_cachedUnreadTable = null;
+			m_cachedUnreadTableUsernameCanonical = null;
+		}
+
 	}
 }
