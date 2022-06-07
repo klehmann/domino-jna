@@ -7591,4 +7591,22 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		return getParent().isNoteUnread(userName, getNoteId());
 	}
 
+	/**
+	 * Method to change the unread state of the note
+	 *
+	 * @param userName username in abbreviated or canonical format, if null, we use the
+	 *                 {@link NotesDatabase} opener
+	 * @param unread   true to mark unread, false to mark read
+	 * @return this note
+	 */
+	public NotesNote setUnread(String userName, boolean unread) {
+		if (unread) {
+			getParent().updateUnreadNoteTable(userName, null, Collections.singleton(getNoteId()));
+		}
+		else {
+			getParent().updateUnreadNoteTable(userName, Collections.singleton(getNoteId()), null);
+		}
+		return this;
+
+	}
 }
