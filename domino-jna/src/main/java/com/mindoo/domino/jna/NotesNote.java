@@ -3398,16 +3398,16 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				value instanceof TemporalAccessor) {
 			return true;
 		}
-		else if (value instanceof List && ((List)value).isEmpty()) {
+		else if (value instanceof Iterable && !((Iterable)value).iterator().hasNext()) {
 			return true;
 		}
-		else if (value instanceof List && isStringList((List) value)) {
+		else if (value instanceof Iterable && isStringList((Iterable) value)) {
 			return true;
 		}
-		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
+		else if (value instanceof Iterable && isNumberOrNumberArrayList((Iterable) value)) {
 			return true;
 		}
-		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+		else if (value instanceof Iterable && isCalendarOrCalendarArrayList((Iterable) value)) {
 			return true;
 		}
 		else if (value instanceof Calendar[] && ((Calendar[])value).length==2) {
@@ -3417,6 +3417,9 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			return true;
 		}
 		else if (value instanceof Date[] && ((Date[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof TemporalAccessor[] && ((TemporalAccessor[])value).length==2) {
 			return true;
 		}
 		else if (value instanceof Number[] && ((Number[])value).length==2) {
@@ -3684,11 +3687,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 			}			
 		}
-		else if (value instanceof List && (((List)value).isEmpty() || isStringList((List) value))) {
-			List<String> strList = (List<String>) value;
+		else if (value instanceof Iterable && (!((Iterable<?>)value).iterator().hasNext() || isStringList((Iterable<?>) value))) {
+			List<String> strList = StreamSupport.stream(((Iterable<String>) value).spliterator(), false)
+					  .collect(Collectors.toList());
 			
 			if (strList.size()> 65535) {
-				throw new IllegalArgumentException("String list size must fit in a WORD ("+strList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("String list size must fit in a WORD ({0}>65535)", strList.size()));
 			}
 			
 			short result;
@@ -3705,13 +3709,15 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				long hList = rethList.getValue();
 				Mem64.OSUnlockObject(hList);
 				
-				for (int i=0; i<strList.size(); i++) {
-					String currStr = strList.get(i);
+				int i = 0;
+				for (String currStr : strList) {
 					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
 					result = NotesNativeAPI64.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
 							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
 					NotesErrorUtils.checkResult(result);
+					
+					i++;
 				}
 				
 				int listSize = retListSize.getValue() & 0xffff;
@@ -3739,13 +3745,15 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				int hList = rethList.getValue();
 				Mem32.OSUnlockObject(hList);
 				
-				for (int i=0; i<strList.size(); i++) {
-					String currStr = strList.get(i);
+				int i = 0;
+				for (String currStr : strList) {
 					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
 					result = NotesNativeAPI32.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
 							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
 					NotesErrorUtils.checkResult(result);
+					
+					i++;
 				}
 				
 				int listSize = retListSize.getValue() & 0xffff;
@@ -3761,8 +3769,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 			}
 		}
-		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
-			List<?> numberOrNumberArrList = toNumberOrNumberArrayList((List<?>) value);
+		else if (value instanceof Iterable && isNumberOrNumberArrayList((Iterable<?>) value)) {
+			List<?> numberOrNumberArrList = toNumberOrNumberArrayList((Iterable<?>) value);
 			
 			List<Number> numberList = new ArrayList<Number>();
 			List<double[]> numberArrList = new ArrayList<double[]>();
@@ -3778,11 +3786,11 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			}
 			
 			if (numberList.size()> 65535) {
-				throw new IllegalArgumentException("Number list size must fit in a WORD ("+numberList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("Number list size must fit in a WORD ({0}>65535)", numberList.size()));
 			}
 
 			if (numberArrList.size()> 65535) {
-				throw new IllegalArgumentException("Number range list size must fit in a WORD ("+numberList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("Number range list size must fit in a WORD ({0}>65535)", numberList.size()));
 			}
 
 			int valueSize = 2 + NotesConstants.rangeSize + 
@@ -3889,7 +3897,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		else if (value instanceof NotesTimeDate[]) {
 			return appendItemValue(itemName, flags, Arrays.asList(value));
 		}
-		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+		else if (value instanceof NotesDateRange) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Iterable && isCalendarOrCalendarArrayList((Iterable<?>) value)) {
 			List<?> dateOrDateTimeRangeList = toDateTimeOrDateTimeRangeList((Iterable<?>) value);
 			
 			List<NotesTimeDate> dateTimeList = new ArrayList<>();
@@ -4168,33 +4179,29 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 	}
 
-	private List<?> toNumberOrNumberArrayList(List<?> list) {
-		boolean allNumbers = true;
-		for (int i=0; i<list.size(); i++) {
-			if (!(list.get(i) instanceof double[]) && !(list.get(i) instanceof Double)) {
-				allNumbers = false;
-				break;
-			}
+	private List<?> toNumberOrNumberArrayList(Iterable<?> list) {
+		boolean allNumbers = StreamSupport.stream(list.spliterator(), false)
+				.allMatch(i -> i instanceof double[] || i instanceof Double);
+
+		if (allNumbers) {
+			return StreamSupport.stream(list.spliterator(), false).collect(Collectors.toList());
 		}
 		
-		if (allNumbers)
-			return (List<?>) list;
-		
 		List<Object> convertedList = new ArrayList<>();
-		for (int i=0; i<list.size(); i++) {
-			if (list.get(i) instanceof Number) {
+		for (Object currObj : list) {
+			if (currObj instanceof Number) {
 				//ok
-				convertedList.add(((Number)list.get(i)).doubleValue());
+				convertedList.add(((Number)currObj).doubleValue());
 			}
-			else if (list.get(i) instanceof double[]) {
-				if (((double[])list.get(i)).length!=2) {
+			else if (currObj instanceof double[]) {
+				if (((double[])currObj).length!=2) {
 					throw new IllegalArgumentException("Length of double array entry must be 2 for number ranges");
 				}
 				//ok
-				convertedList.add((double[]) list.get(i));
+				convertedList.add((double[]) currObj);
 			}
-			else if (list.get(i) instanceof Number[]) {
-				Number[] numberArr = (Number[]) list.get(i);
+			else if (currObj instanceof Number[]) {
+				Number[] numberArr = (Number[]) currObj;
 				if (numberArr.length!=2) {
 					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
 				}
@@ -4204,8 +4211,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						numberArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Double[]) {
-				Double[] doubleArr = (Double[]) list.get(i);
+			else if (currObj instanceof Double[]) {
+				Double[] doubleArr = (Double[]) currObj;
 				if (doubleArr.length!=2) {
 					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
 				}
@@ -4215,8 +4222,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						doubleArr[1]
 				});
 			}
-			else if (list.get(i) instanceof Integer[]) {
-				Integer[] integerArr = (Integer[]) list.get(i);
+			else if (currObj instanceof Integer[]) {
+				Integer[] integerArr = (Integer[]) currObj;
 				if (integerArr.length!=2) {
 					throw new IllegalArgumentException("Length of Integer array entry must be 2 for number ranges");
 				}
@@ -4226,8 +4233,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						integerArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Long[]) {
-				Long[] longArr = (Long[]) list.get(i);
+			else if (currObj instanceof Long[]) {
+				Long[] longArr = (Long[]) currObj;
 				if (longArr.length!=2) {
 					throw new IllegalArgumentException("Length of Long array entry must be 2 for number ranges");
 				}
@@ -4237,8 +4244,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						longArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Float[]) {
-				Float[] floatArr = (Float[]) list.get(i);
+			else if (currObj instanceof Float[]) {
+				Float[] floatArr = (Float[]) currObj;
 				if (floatArr.length!=2) {
 					throw new IllegalArgumentException("Length of Float array entry must be 2 for number ranges");
 				}
@@ -4248,8 +4255,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						floatArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof int[]) {
-				int[] intArr = (int[]) list.get(i);
+			else if (currObj instanceof int[]) {
+				int[] intArr = (int[]) currObj;
 				if (intArr.length!=2) {
 					throw new IllegalArgumentException("Length of int array entry must be 2 for number ranges");
 				}
@@ -4259,8 +4266,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						intArr[1]
 				});
 			}
-			else if (list.get(i) instanceof long[]) {
-				long[] longArr = (long[]) list.get(i);
+			else if (currObj instanceof long[]) {
+				long[] longArr = (long[]) currObj;
 				if (longArr.length!=2) {
 					throw new IllegalArgumentException("Length of long array entry must be 2 for number ranges");
 				}
@@ -4270,8 +4277,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						longArr[1]
 				});
 			}
-			else if (list.get(i) instanceof float[]) {
-				float[] floatArr = (float[]) list.get(i);
+			else if (currObj instanceof float[]) {
+				float[] floatArr = (float[]) currObj;
 				if (floatArr.length!=2) {
 					throw new IllegalArgumentException("Length of float array entry must be 2 for number ranges");
 				}
@@ -4282,7 +4289,7 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				});
 			}
 			else {
-				throw new IllegalArgumentException("Unsupported date format found in list: "+(list.get(i)==null ? "null" : list.get(i).getClass().getName()));
+				throw new IllegalArgumentException("Unsupported date format found in list: "+(currObj==null ? "null" : currObj.getClass().getName()));
 			}
 		}
 		return convertedList;
@@ -4333,9 +4340,21 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 				convertedList.add(new NotesDateRange(ntdArr[0], ntdArr[1]));
 			}
+			else if (obj instanceof TemporalAccessor[]) {
+				TemporalAccessor[] taArr = (TemporalAccessor[]) obj;
+				if (taArr.length!=2) {
+					throw new IllegalArgumentException("Length of TemporalAccessor array entry must be 2 for date ranges");
+				}
+				NotesTimeDate start = new NotesTimeDate(taArr[0]);
+				NotesTimeDate end = new NotesTimeDate(taArr[1]);
+				convertedList.add(new NotesDateRange(start, end));
+			}
 			else if(obj instanceof NotesDateRange) {
 				NotesDateRange range = (NotesDateRange)obj;
 				convertedList.add(new NotesDateRange(range.getStartDateTime(), range.getEndDateTime()));
+			}
+			else if(obj instanceof TemporalAccessor) {
+				convertedList.add(new NotesTimeDate((TemporalAccessor) obj));
 			}
 			else {
 				throw new IllegalArgumentException(MessageFormat.format("Unsupported date format found in list: {0}", (obj==null ? "null" : obj.getClass().getName()))); //$NON-NLS-2$
@@ -4344,19 +4363,19 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		return convertedList;
 	}
 	
-	private boolean isStringList(List<?> list) {
-		if (list==null || list.isEmpty()) {
+	private boolean isStringList(Iterable<?> list) {
+		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
-		for (int i=0; i<list.size(); i++) {
-			if (!(list.get(i) instanceof String)) {
+		for (Object currObj : list) {
+			if (!(currObj instanceof String)) {
 				return false;
 			}
 		}
 		return true;
 	}
 	
-	private boolean isCalendarOrCalendarArrayList(List<?> list) {
+	private boolean isCalendarOrCalendarArrayList(Iterable<?> list) {
 		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
@@ -4382,7 +4401,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 			}
 			else if (currObj instanceof TemporalAccessor[]) {
-				isAccepted = true;
+				TemporalAccessor[] taArr = (TemporalAccessor[]) currObj;
+				if (taArr.length==2) {
+					isAccepted = true;
+				}
 			}
 			else if (currObj instanceof Calendar) {
 				isAccepted = true;
@@ -4407,14 +4429,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		return true;
 	}
 	
-	private boolean isNumberOrNumberArrayList(List<?> list) {
-		if (list==null || list.isEmpty()) {
+	private boolean isNumberOrNumberArrayList(Iterable<?> list) {
+		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
-		for (int i=0; i<list.size(); i++) {
+		for (Object currObj : list) {
 			boolean isAccepted=false;
-			
-			Object currObj = list.get(i);
 			
 			if (currObj instanceof double[]) {
 				double[] valArr = (double[]) currObj;
