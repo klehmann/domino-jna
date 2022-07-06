@@ -848,4 +848,37 @@ public interface INotesNativeAPI extends Library {
 			HANDLE.ByValue hDataDB,
 			DHANDLE.ByValue hUnreadList);
 
+	short SECVerifyPassword(
+			short wPasswordLen,
+			Pointer Password,
+			short wDigestLen,
+			Pointer Digest,
+			int ReservedFlags,
+			Pointer pReserved);
+
+	short SECHashPassword3(
+			short wPasswordLen,
+			Pointer Password,
+			short wVersion,
+			short wHashType,
+			Pointer Param1,
+			int dwParam1,
+			Pointer Param2,
+			int dwParam2,
+			short wMaxDigestLen,
+			ShortByReference retDigestLen,
+			Pointer retDigest,
+			int ReservedFlags,
+			Pointer pReserved
+		);
+
+	short NAMEGetAddressBooks(
+			Memory pszServer,
+			short wOptions,
+			ShortByReference pwReturnCount,
+			ShortByReference pwReturnLength,
+			DHANDLE.ByReference phReturn);
+
+	void OSLocalFree (Pointer ptr);
+
 }
