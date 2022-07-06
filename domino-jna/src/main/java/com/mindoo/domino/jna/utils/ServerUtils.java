@@ -8,6 +8,7 @@ import java.util.List;
 import com.mindoo.domino.jna.constants.ClusterLookup;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.ConsoleLine;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
@@ -336,5 +337,121 @@ public class ServerUtils {
 			NotesNativeAPI.get().QueueDelete(hAsyncQueue.getByValue());
 		}
 		
+	}
+	
+	public enum PasswordDigestType {
+		/** Compatible with 4.5+ */ 
+		V1(1),
+		/** More secure, compatible with R4.6+ */
+		V2(2),
+		/** Even more secure compatible with 8.01+ */
+		V3(3);
+		
+		private int val;
+		
+		private PasswordDigestType(int val) {
+			this.val = val;
+		}
+		
+		public int getVal() {
+			return val;
+		}
+	}
+	
+	/**
+	 * This function takes an unencoded password and returns the more secure version of the digest.
+	 * The Internet Password is in this "more secure" format.
+	 * 
+	 * @param pwd password
+	 * @param type digest type to produce
+	 * @return hashed password
+	 */
+	public static String hashPassword(String pwd, PasswordDigestType type) {
+		if (pwd==null) {
+			throw new IllegalArgumentException("Password is null");
+		}
+		if (StringUtil.isEmpty(pwd)) {
+			throw new IllegalArgumentException("Password is empty");
+		}
+
+		Memory pwdMem = NotesStringUtils.toLMBCS(pwd, false);
+		if (pwdMem.size() > 65535) {
+			throw new IllegalArgumentException("Password exceed max size of 0xffff bytes");
+		}
+		short wPasswordLen = (short) (pwdMem.size() & 0xffff);
+
+		DisposableMemory retDigest = new DisposableMemory(Short.toUnsignedInt(NotesConstants.MAXWORD) - 128);
+		try {
+			short wVersion = (short) (type.getVal() & 0xffff);
+			short wHashType = NotesConstants.SEC_ai_HMAC_SHA1;
+			ShortByReference retDigestLen = new ShortByReference();
+
+			short result = NotesNativeAPI.get().SECHashPassword3(
+					wPasswordLen,
+					pwdMem,
+					wVersion,
+					wHashType,
+					(Pointer) null,
+					12345, // not sure about this one, copied from example hashpwd.c
+					(Pointer) null,
+					0,
+					(short) (retDigest.size() & 0xffff),
+					retDigestLen,
+					retDigest,
+					0,
+					(Pointer) null
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			String retDigestStr = NotesStringUtils.fromLMBCS(retDigest, Short.toUnsignedInt(retDigestLen.getValue()));
+			return retDigestStr;
+		}
+		finally {
+			retDigest.dispose();
+		}
+
+	}
+	
+	/**
+	 * This function verifies an unencoded password against a digest password value. The unencoded password
+	 * can be either an unencoded Internet Password or Notes ID Password. The digest password value can be
+	 * either an Internet Password (more secure digest value) or a Password Digest. The unencoded Internet
+	 * Password is verified against the Internet Password. The Notes ID Password is verified against
+	 * the Password Digest.
+	 * 
+	 * @param pwd Unencoded password to be verified.
+	 * @param digest Digest to be compared against.
+	 */
+	public static void verifyPassword(String pwd, String digest) {
+		if (pwd==null) {
+			throw new IllegalArgumentException("Password is null");
+		}
+		if (StringUtil.isEmpty(pwd)) {
+			throw new IllegalArgumentException("Password is empty");
+		}
+		
+		Memory pwdMem = NotesStringUtils.toLMBCS(pwd, false);
+		if (pwdMem.size() > 65535) {
+			throw new IllegalArgumentException("Password exceed max size of 0xffff bytes");
+		}
+
+		if (digest==null) {
+			throw new IllegalArgumentException("Digest is null");
+		}
+		if (StringUtil.isEmpty(digest)) {
+			throw new IllegalArgumentException("Digest is empty");
+		}
+		
+		Memory digestMem = NotesStringUtils.toLMBCS(digest, false);
+		if (digestMem.size() > 65535) {
+			throw new IllegalArgumentException("Digest exceed max size of 0xffff bytes");
+		}
+		
+		short pwdLen = (short) (pwdMem.size() & 0xffff);
+		short digestLen = (short) (digestMem.size() & 0xffff);
+		
+		short result = NotesNativeAPI.get().SECVerifyPassword(pwdLen, pwdMem,
+				digestLen, digestMem, 0, null);
+		NotesErrorUtils.checkResult(result);
 	}
 }
