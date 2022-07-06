@@ -4,7 +4,7 @@
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-base</artifactId>
 	<version>0.9.49-SNAPSHOT</version>
-	<packaging>jar</packaging>
+	<packaging>pom</packaging>
 
 	<name>Domino JNA Base project</name>
 	<description>Java project to access the HCL Domino C API using Java Native Access (JNA)</description>
