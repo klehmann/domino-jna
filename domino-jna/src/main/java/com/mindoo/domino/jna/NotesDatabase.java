@@ -20,6 +20,7 @@ import java.util.Formatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -75,6 +76,7 @@ import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
 import com.mindoo.domino.jna.internal.INotesNativeAPI32;
 import com.mindoo.domino.jna.internal.INotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -341,7 +343,13 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		if (filePath==null)
 			throw new NullPointerException("filePath is null");
 
-		server = NotesNamingUtils.toCanonicalName(server);
+		if (NotesGC.isFixupLocalServerNames() && StringUtil.isEmpty(server) && IDUtils.isOnServer()) {
+			//switch to full server name, prevents "database is in use" errors when running side-by-side with Domino
+			server = IDUtils.getIdUsername();
+		}
+		else {
+			server = NotesNamingUtils.toCanonicalName(server);
+		}
 		
 		boolean isOnServer = IDUtils.isOnServer();
 		
@@ -8598,5 +8606,67 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 			m_cachedUnreadTableUsernameCanonical = null;
 		}
 
+	}
+	
+	/**
+	 * This function gets the list of Address books in use locally or Domino Directories on a server.<br>
+	 * <br>
+	 * If a server is specified, and that server is configured to have a Directory Assistance database 
+	 * (formerly referred to as the Master Address Book), then this function gets the list of Domino
+	 * Directories (Server Address books)  from this database.<br>
+	 * <br>
+	 * In Domino and Notes Releases 4.6.x, it only includes Domino Name & Address books and not any of
+	 * the LDAP directories in the list.<br>
+	 * <br>
+	 * If no server is specified or if no Directory Assistance database is configured on the specified server,
+	 * then this function uses the NAMES variable in the notes.ini file to construct the list of Address books.<br>
+	 * <br>
+	 * The NAMES variable defines the list of Domino Directories and Address books in use by Domino and Notes.<br>
+	 * If the NAMES variable is missing, the default is "NAMES.NSF".<br>
+	 * <br>
+	 * For each name in the NAMES list, the used C API method checks that the database exists.
+	 * If the databases exists, it adds the database path to the return list. If no named databases exists,
+	 * we return an empty list.<br>
+	 * 
+	 * @param serverName Name of server. Specify NULL to get the list of Address books used on the local system.
+	 * @return paths
+	 */
+	public static Set<String> getAddressBookPaths(String serverName) {
+		Memory server = NotesStringUtils.toLMBCS(serverName, true);
+		ShortByReference returnCount = new ShortByReference();
+		ShortByReference returnLength = new ShortByReference();
+		
+		DHANDLE.ByReference hReturn = DHANDLE.newInstanceByReference();
+		short result = NotesNativeAPI.get().NAMEGetAddressBooks(
+			server,
+			(short)0,
+			returnCount,
+			returnLength,
+			hReturn
+		);
+		NotesErrorUtils.checkResult(result);
+		
+		Pointer ptr = Mem.OSLockObject(hReturn);
+		try {
+			int count = returnCount.getValue();
+			Set<String> retList = new LinkedHashSet<>(count);
+			
+			Pointer strPtr = ptr.share(0);
+			for(int i = 0; i < count; i++) {
+				int strlen = NotesStringUtils.getNullTerminatedLength(strPtr);
+				String path = NotesStringUtils.fromLMBCS(strPtr, strlen);
+				if(StringUtil.isNotEmpty(path)) {
+					retList.add(path);
+				}
+				
+				strPtr = strPtr.share(strlen);
+			}
+			
+			return retList;
+		}
+		finally {
+			Mem.OSUnlockObject(hReturn);
+			Mem.OSMemFree(hReturn.getByValue());
+		}
 	}
 }
