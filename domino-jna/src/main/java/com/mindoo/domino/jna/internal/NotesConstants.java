@@ -4633,4 +4633,13 @@ This allows an Editor to assume some Designer-level access */
 	  /**	Unsafe is any @func that creates/modifies anything (i.e. not "read only") */
 	  int COMPUTE_CAPABILITY_UNSAFE = 0x0000002F;
 
+	  short SEC_ai_HMAC_SHA1 = 32;
+	  
+	  /** Compatible with 4.5+						*/ 
+	  short SEC_pwddigest_V1 = 1;
+	  /** More secure, compatible with R4.6+		*/
+	  short SEC_pwddigest_V2 = 2;
+	  /** Even more secure compatible with 8.01+	*/
+	  short SEC_pwddigest_V3 = 3;
+
 }
