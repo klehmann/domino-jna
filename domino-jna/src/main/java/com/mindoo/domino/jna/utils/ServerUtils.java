@@ -341,11 +341,11 @@ public class ServerUtils {
 	
 	public enum PasswordDigestType {
 		/** Compatible with 4.5+ */ 
-		V1(1),
+		V1(NotesConstants.SEC_pwddigest_V1),
 		/** More secure, compatible with R4.6+ */
-		V2(2),
+		V2(NotesConstants.SEC_pwddigest_V2),
 		/** Even more secure compatible with 8.01+ */
-		V3(3);
+		V3(NotesConstants.SEC_pwddigest_V3);
 		
 		private int val;
 		
