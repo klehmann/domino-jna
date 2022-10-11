@@ -137,6 +137,15 @@ public class MIMEData {
 	}
 	
 	/**
+	 * Method to check if this object contains embedded MIME resources
+	 * 
+	 * @return true if we have embeds
+	 */
+	public boolean hasEmbeds() {
+		return !m_embeds.isEmpty();
+	}
+	
+	/**
 	 * Returns the content ids for all inline files.
 	 * 
 	 * @return content ids
@@ -164,6 +173,10 @@ public class MIMEData {
 		return Collections.unmodifiableList(m_attachments);
 	}
 
+	public boolean hasAttachments() {
+		return !m_attachments.isEmpty();
+	}
+	
 	/**
 	 * Removes an attachment from the MIME data
 	 * 
