@@ -515,27 +515,32 @@ public class NotesNamingUtils {
 		short fDontLookupAlternateNames = (short) (bDontLookupAlternateNames ? 1 : 0);
 		Pointer pLookupFlags = null;
 		
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethNamesList = new LongByReference();
-			short result = NotesNativeAPI64.get().CreateNamesListFromSingleName(serverNameLMBCS,
-					fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
-			NotesErrorUtils.checkResult(result);
-			long hUserNamesList64 = rethNamesList.getValue();
-			
-			NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
-			NotesGC.__memoryAllocated(newList);
-			return newList;
+		try {
+			if (PlatformUtils.is64Bit()) {
+				LongByReference rethNamesList = new LongByReference();
+				short result = NotesNativeAPI64.get().CreateNamesListFromSingleName(serverNameLMBCS,
+						fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
+				NotesErrorUtils.checkResult(result);
+				long hUserNamesList64 = rethNamesList.getValue();
+
+				NotesNamesList newList =  new NotesNamesList(DHANDLE64.newInstance(hUserNamesList64));
+				NotesGC.__memoryAllocated(newList);
+				return newList;
+			}
+			else {
+				IntByReference rethNamesList = new IntByReference();
+				short result = NotesNativeAPI32.get().CreateNamesListFromSingleName(serverNameLMBCS,
+						fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
+				NotesErrorUtils.checkResult(result);
+				int hUserNamesList32 = rethNamesList.getValue();
+
+				NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
+				NotesGC.__memoryAllocated(newList);
+				return newList;
+			}
 		}
-		else {
-			IntByReference rethNamesList = new IntByReference();
-			short result = NotesNativeAPI32.get().CreateNamesListFromSingleName(serverNameLMBCS,
-					fDontLookupAlternateNames, pLookupFlags, userNameLMBCS, rethNamesList);
-			NotesErrorUtils.checkResult(result);
-			int hUserNamesList32 = rethNamesList.getValue();
-			
-			NotesNamesList newList = new NotesNamesList(DHANDLE32.newInstance(hUserNamesList32));
-			NotesGC.__memoryAllocated(newList);
-			return newList;
+		catch (NotesError e) {
+			throw new NotesError(e.getId(), "Could not build nameslist for user "+userName+" on server "+server, e);
 		}
 	}
 	
