@@ -785,7 +785,10 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		Simple(NotesConstants.DBCREATE_ENCRYPT_SIMPLE),
 		Medium(NotesConstants.DBCREATE_ENCRYPT_MEDIUM),
 		Strong(NotesConstants.DBCREATE_ENCRYPT_STRONG),
-		AES128(NotesConstants.DBCREATE_ENCRYPT_AES128);
+		/** added in 12.0.1 */
+		AES128(NotesConstants.DBCREATE_ENCRYPT_AES128),
+		/** added in 12.0.2 */
+		AES256(NotesConstants.DBCREATE_ENCRYPT_AES256);
 
 		private final int value;
 

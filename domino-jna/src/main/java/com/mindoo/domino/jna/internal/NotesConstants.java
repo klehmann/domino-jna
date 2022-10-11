@@ -996,8 +996,8 @@ public byte DBCREATE_ENCRYPT_NONE = 0x00;
 public byte DBCREATE_ENCRYPT_SIMPLE	= 0x01;	
 public byte DBCREATE_ENCRYPT_MEDIUM	= 0x02;
 public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
-public byte DBCREATE_ENCRYPT_AES128 = 0x04;
-public byte DBCREATE_ENCRYPT_AES256 = 0x05;
+public byte DBCREATE_ENCRYPT_AES128 = 0x04; //added in 12.0.1
+public byte DBCREATE_ENCRYPT_AES256 = 0x05; //added in 12.0.2
 
 /** if setting up a new database */
 short LSECINFOSET_DBCREATE = 0x0001;
