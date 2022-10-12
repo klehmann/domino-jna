@@ -17,6 +17,10 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		
+		<!-- cannot use higher versions than 0.8.4 on Java 1.8 until this issue is
+		resolved AND merge into a release version: https://issues.apache.org/jira/browse/MIME4J-310
+		(not the case until 0.8.7, see https://github.com/apache/james-mime4j/pull/67#issuecomment-1105931075) -->
 		<mime4j.version>0.8.4</mime4j.version>
 	</properties>
 

@@ -26,7 +26,7 @@ import com.mindoo.domino.jna.mime.MIMEStream;
 public class MIME4JMailMIMEHelper {
 
 	/**
-	 * Reads the MIME content of a {@link NotesNote} and parses it as {@link MimeMessage}.<br>
+	 * Reads the MIME content of a {@link NotesNote} and parses it as {@link Message}.<br>
 	 * Please make sure to have sufficient memory so that the MIME data can fit into the Java heap.
 	 * Otherwise use {@link MIMEStream#readRawMIME(NotesNote, String, OutputStream, EnumSet)} instead which
 	 * allows streaming of the data.
@@ -96,7 +96,6 @@ public class MIME4JMailMIMEHelper {
 	 * @param message message containing the MIME data
 	 * @param itemizeFlags used to select which data should be written (MIME headers, body or both)
 	 * @throws IOException in case of I/O errors writing MIME
-	 * @throws MessagingException in case of errors reading the MIME message
 	 */
 	public static void writeMIMEMessage(NotesNote note, String itemName, Message message,
 			EnumSet<MimeStreamItemizeOptions> itemizeFlags) throws IOException {
