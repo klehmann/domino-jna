@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.NotesItem;
@@ -13,13 +14,16 @@ import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.LocalFileMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.UrlMimeAttachment;
+import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
  * Container for text and binary data of an item of type {@link NotesItem#TYPE_MIME_PART}.
  */
 public class MIMEData {
-	private String m_html;
-	private String m_text;
+	private static final String MIMETYPE_TEXT_PLAIN = "text/plain";
+	private static final String MIMETYPE_TEXT_HTML = "text/html";
+	
+	private Map<String,String> m_mailBodyByContentType;
 	private Map<String,IMimeAttachment> m_embeds;
 	private List<IMimeAttachment> m_attachments;
 	private int m_uniqueCidCounter=1;
@@ -32,8 +36,11 @@ public class MIMEData {
 	
 	public MIMEData(String html, String text,
 			Map<String,IMimeAttachment> embeds, List<IMimeAttachment> attachments) {
-		m_html = html;
-		m_text = text;
+		
+		m_mailBodyByContentType = new HashMap<>();
+		setHtml(html);
+		setPlainText(text);
+		
 		m_embeds = embeds==null ? new HashMap<>() : new HashMap<>(embeds);
 		m_attachments = attachments==null ? new ArrayList<>() : new ArrayList<>(attachments);
 	}
@@ -44,7 +51,7 @@ public class MIMEData {
 	 * @return HTML, not null
 	 */
 	public String getHtml() {
-		return m_html!=null ? m_html : "";
+		return m_mailBodyByContentType.getOrDefault(MIMETYPE_TEXT_HTML, "");
 	}
 	
 	/**
@@ -53,7 +60,12 @@ public class MIMEData {
 	 * @param html html
 	 */
 	public void setHtml(String html) {
-		m_html = html;
+		if (html==null) {
+			m_mailBodyByContentType.remove(MIMETYPE_TEXT_HTML);
+		}
+		else {
+			m_mailBodyByContentType.put(MIMETYPE_TEXT_HTML, html);
+		}
 		m_toString = null;
 	}
 
@@ -63,7 +75,7 @@ public class MIMEData {
 	 * @return plaintext content or empty string
 	 */
 	public String getPlainText() {
-		return m_text!=null ? m_text : "";
+		return m_mailBodyByContentType.getOrDefault(MIMETYPE_TEXT_PLAIN, "");
 	}
 	
 	/**
@@ -72,8 +84,53 @@ public class MIMEData {
 	 * @param text plaintext
 	 */
 	public void setPlainText(String text) {
-		m_text = text;
+		if (text==null) {
+			m_mailBodyByContentType.remove(MIMETYPE_TEXT_PLAIN);
+		}
+		else {
+			m_mailBodyByContentType.put(MIMETYPE_TEXT_PLAIN, text);
+		}
 		m_toString = null;
+	}
+	
+	/**
+	 * Sets mail body content of a specific type
+	 * 
+	 * @param contentType content type, e.g. "text/html" or "text/plain"
+	 * @param content body content
+	 */
+	public void setBodyContent(String contentType, String content) {
+		if (content==null) {
+			m_mailBodyByContentType.remove(contentType);
+		}
+		else {
+			m_mailBodyByContentType.put(contentType, content);
+		}
+		m_toString = null;
+	}
+	
+	/**
+	 * Returns mail body content of a specific type
+	 * 
+	 * @param contentType content type
+	 * @return mail body content
+	 */
+	public Optional<String> getBodyContent(String contentType) {
+		if (m_mailBodyByContentType.containsKey(contentType)) {
+			return Optional.of(m_mailBodyByContentType.get(contentType));
+		}
+		else {
+			return Optional.empty();
+		}
+	}
+	
+	/**
+	 * Returns all defined content types for the mail body
+	 * 
+	 * @return content types, e.g. "text/html" or "text/plain"
+	 */
+	public Iterable<String> getBodyContentTypes() {
+		return m_mailBodyByContentType.keySet();
 	}
 	
 	/**
@@ -189,8 +246,7 @@ public class MIMEData {
 
 	public String toString() {
 		if (m_toString==null) {
-			m_toString = "MimeData [hasHtml="+(m_html!=null && m_html.length()>0)
-					+", hasText=" + (m_text!=null && m_text.length()>0)
+			m_toString = "MimeData [contentTypes="+m_mailBodyByContentType.keySet().stream().collect(Collectors.toList())
 					+ ", embeds="+m_embeds.keySet()
 					+ ", attachments="+
 					m_attachments.stream().map((att) -> {
@@ -200,7 +256,6 @@ public class MIMEData {
 							return "-error-";
 						}
 					}).collect(Collectors.toList())+"]";
-			
 		}
 		return m_toString;
 	}
