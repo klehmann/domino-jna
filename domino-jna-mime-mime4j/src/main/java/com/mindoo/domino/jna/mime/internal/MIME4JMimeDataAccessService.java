@@ -4,13 +4,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.net.InetAddress;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.james.mime4j.Charsets;
 import org.apache.james.mime4j.dom.BinaryBody;
@@ -24,6 +27,7 @@ import org.apache.james.mime4j.dom.TextBody;
 import org.apache.james.mime4j.message.BodyPart;
 import org.apache.james.mime4j.message.BodyPartBuilder;
 import org.apache.james.mime4j.message.MultipartBuilder;
+import org.apache.james.mime4j.message.SingleBodyBuilder;
 import org.apache.james.mime4j.storage.Storage;
 import org.apache.james.mime4j.storage.StorageBodyFactory;
 import org.apache.james.mime4j.storage.StorageOutputStream;
@@ -80,11 +84,248 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 		}
 	}
 	
+	/**
+	 * Converts a {@link MIMEData} with HTML, plaintext, other text content, embedded images
+	 * or attachments to a MIME4J {@link Message}
+	 * 
+	 * @param mimeData MIME data
+	 * @return MIME message
+	 * @throws IOException in case of I/O errors
+	 */
+	public Message toMimeMessage(MIMEData mimeData) throws IOException {
+		StorageBodyFactory bodyFactory = new StorageBodyFactory();
+		Message mimeMsg;
+		
+		Optional<BodyPart> htmlBodyPart = computeHtmlBody(bodyFactory, mimeData);
+		Optional<BodyPart> plainTextPart = computePlaintextBody(bodyFactory, mimeData);
+		
+		//build body parts that are neither text/html nor text/plain
+		//e.g. application/embed+json
+		List<BodyPart> alternativeTextParts = StreamSupport
+		.stream(mimeData.getBodyContentTypes().spliterator(), false)
+		.filter((contentType) -> { return !"text/html".equals(contentType) && !"text/plain".equals(contentType); })
+		.filter((contentType) -> { return StringUtil.isNotEmpty(mimeData.getBodyContent(contentType).get()); })
+		.map((contentType) -> {
+			
+			try {
+				return BodyPartBuilder.create()
+						.use(bodyFactory)
+						.setBody(mimeData.getBodyContent(contentType).get(), Charsets.UTF_8)
+						.setContentType(contentType, new NameValuePair("charset", "utf-8"))
+						.setContentTransferEncoding("quoted-printable")
+						.build();
+			}
+			catch (IOException e) {
+				return null;
+			}
+		})
+		.filter((bodyPart) -> { return bodyPart!=null; })
+		.collect(Collectors.toList());
+		
+		if (mimeData.hasAttachments()) {
+			//we need multipart/mixed
+			MultipartBuilder multiPartMixedBuilder = MultipartBuilder.create("mixed")
+					.use(bodyFactory)
+					// a multipart may have a preamble
+					.setPreamble("This is a multi-part message in MIME format.");
+			
+			if (htmlBodyPart.isPresent() &&
+					(plainTextPart.isPresent() || !alternativeTextParts.isEmpty()) ) {
+				//we need multipart/alternative
+				MultipartBuilder multiPartAlternativeBuilder = MultipartBuilder.create("alternative")
+						.use(bodyFactory)
+						// a multipart may have a preamble
+						.setPreamble("This is a multi-part message in MIME format.");
+				
+				if (plainTextPart.isPresent()) {
+					//plaintext must be first
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(plainTextPart.get());
+				}
+
+				if (mimeData.hasEmbeds()) {
+					//html with images
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(
+									Message.Builder.of()
+									.setBody(
+											computeHtmlAndEmbeddedImages(bodyFactory, mimeData,
+											htmlBodyPart.get()))
+									.build());
+				}
+				else {
+					//html without images
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(htmlBodyPart.get());
+				}
+				
+				//add other parts
+				for (BodyPart currPart : alternativeTextParts) {
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(currPart);
+				}
+				
+				multiPartMixedBuilder = multiPartMixedBuilder
+						.addBodyPart(
+								Message.Builder.of()
+								.setBody(multiPartAlternativeBuilder.build())
+								.build());
+				
+				
+			}
+			else if (htmlBodyPart.isPresent()) {
+				//html only
+				if (mimeData.hasEmbeds()) {
+					//with images
+					multiPartMixedBuilder = multiPartMixedBuilder
+							.addBodyPart(
+									Message.Builder.of()
+									.setBody(
+											computeHtmlAndEmbeddedImages(bodyFactory, mimeData,
+											htmlBodyPart.get()))
+									.build());
+				}
+				else {
+					//without images
+					multiPartMixedBuilder = multiPartMixedBuilder
+							.addBodyPart(htmlBodyPart.get());
+				}
+				
+			}
+			else if (plainTextPart.isPresent()) {
+				//text only
+				multiPartMixedBuilder = multiPartMixedBuilder
+						.addBodyPart(plainTextPart.get());
+
+			}
+			else {
+				throw new IllegalArgumentException("Either HTML or plaintext must be set");
+			}
+			
+			//add attachments
+			for (IMimeAttachment currAtt : mimeData.getAttachments()) {
+				String fileName = currAtt.getFileName();
+				String contentType = currAtt.getContentType();
+				if (StringUtil.isEmpty(contentType)) {
+					contentType = URLConnection.guessContentTypeFromName(fileName);
+				}
+				
+				multiPartMixedBuilder = multiPartMixedBuilder.addBodyPart(
+						BodyPartBuilder.create()
+						.use(bodyFactory)
+						.setBody(createBodyFromMimeAttachment(bodyFactory, currAtt))
+						.setContentType(contentType)
+						.setContentTransferEncoding("base64")
+						.setContentDisposition("attachment", fileName)
+						.build());
+			}
+			
+			mimeMsg = Message.Builder.of()
+					.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
+					.setBody(multiPartMixedBuilder.build())
+					.build();
+			
+		}
+		else {
+			//no multipart/mixed necessary
+			
+			if (htmlBodyPart.isPresent() &&
+					(plainTextPart.isPresent() || !alternativeTextParts.isEmpty())) {
+				
+				//we need multipart/alternative
+				MultipartBuilder multiPartAlternativeBuilder = MultipartBuilder.create("alternative")
+						.use(bodyFactory)
+						// a multipart may have a preamble
+						.setPreamble("This is a multi-part message in MIME format.");
+				
+				if (plainTextPart.isPresent()) {
+					//plaintext must be first
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(plainTextPart.get());
+				}
+
+				if (mimeData.hasEmbeds()) {
+					//html with images
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(
+									Message.Builder.of()
+									.setBody(
+											computeHtmlAndEmbeddedImages(bodyFactory, mimeData,
+											htmlBodyPart.get()))
+									.build());
+
+				}
+				else {
+					//html without images
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(htmlBodyPart.get());
+				}
+				
+				//add other parts
+				for (BodyPart currPart : alternativeTextParts) {
+					multiPartAlternativeBuilder = multiPartAlternativeBuilder
+							.addBodyPart(currPart);
+				}
+				
+				mimeMsg = Message.Builder.of()
+						.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
+						.setBody(multiPartAlternativeBuilder.build())
+						.build();
+			}
+			else if (htmlBodyPart.isPresent()) {
+				//html only
+				if (mimeData.hasEmbeds()) {
+					//with images
+					Multipart multipartRelated = computeHtmlAndEmbeddedImages(bodyFactory, mimeData,
+							htmlBodyPart.get());
+					
+					mimeMsg = Message.Builder.of()
+							.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
+							.setBody(multipartRelated)
+//							.setContentType("text/html")
+							.build();
+					
+				}
+				else {
+					//without images
+					TextBody htmlBody = SingleBodyBuilder.create()
+							.setText(mimeData.getHtml())
+							.buildText();
+
+					mimeMsg = Message.Builder.of()
+							.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
+							.setBody(htmlBody)
+							.setContentType("text/html")
+							.build();
+				}
+				
+				
+			}
+			else if (plainTextPart.isPresent()) {
+				//text only
+				TextBody textBody = SingleBodyBuilder.create()
+                .setText(mimeData.getPlainText())
+                .buildText();
+				
+				mimeMsg = Message.Builder.of()
+						.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
+						.setBody(textBody)
+						.setContentType("text/plain")
+						.build();
+
+			}
+			else {
+				throw new IllegalArgumentException("Either HTML or plaintext must be set");
+			}
+		}
+		
+		return mimeMsg;
+	}
+	
 	@Override
 	public void setMimeData(NotesNote note, String itemName, MIMEData mimeData) {
 		AccessController.doPrivileged((PrivilegedAction<Object>) ()->{
-			//structure copied from: https://stackoverflow.com/a/23853079
-			
+			//structure copied from: https://stackoverflow.com/a/23853079 :
 //			mixed
 //				alternative
 //					text
@@ -94,121 +335,12 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 //						inline image
 //				attachment
 //				attachment
-			
-			String html = mimeData.getHtml();
-			if (html==null) {
-				html = "";
-			}
-			String text = mimeData.getPlainText();
-			boolean hasPlainText = StringUtil.isNotEmpty(text);
-			
-			StorageBodyFactory bodyFactory = new StorageBodyFactory();
+
+			//depending on the presence/absence of data we may skip creation of mixed,
+			//alternative and related mimeparts
 			
 			try {
-				//multipart/mixed of textual MIME content and attachments
-				MultipartBuilder multiPartMixedBuilder = MultipartBuilder.create("mixed")
-				.use(bodyFactory)
-				// a multipart may have a preamble
-				.setPreamble("This is a multi-part message in MIME format.");
-				
-				{
-					//multipart/alternative with text content and multipart/related
-					MultipartBuilder multiPartAlternativeBuilder = MultipartBuilder.create("alternative")
-							.use(bodyFactory)
-							// a multipart may have a preamble
-							.setPreamble("This is a multi-part message in MIME format.");
-					
-					{
-						//fill multipart/alternative
-						if (hasPlainText) {
-							BodyPart txtPart = BodyPartBuilder.create()
-							.use(bodyFactory)
-							.setBody(text, Charsets.UTF_8)
-							.setContentType("text/plain", new NameValuePair("charset", "utf-8"))
-							.setContentTransferEncoding("quoted-printable")
-							.build();
-							
-							multiPartAlternativeBuilder = multiPartAlternativeBuilder
-									.addBodyPart(txtPart);
-						}
-						
-						//multipart/related with HTML and embedded images
-						MultipartBuilder multiPartRelatedBuilder = MultipartBuilder.create("related")
-								.use(bodyFactory)
-								// a multipart may have a preamble
-								.setPreamble("This is a multi-part message in MIME format.");
-
-						{
-							//html part
-							BodyPart htmlPart = BodyPartBuilder.create()
-									.use(bodyFactory)
-									.setBody(html, Charsets.UTF_8)
-									.setContentType("text/html", new NameValuePair("charset", "utf-8"))
-									.setContentTransferEncoding("quoted-printable")
-									.build();
-							
-							multiPartRelatedBuilder = multiPartRelatedBuilder.addBodyPart(htmlPart);
-							
-							//embedded images
-							for (String currCID : mimeData.getContentIds()) {
-								IMimeAttachment currAtt = mimeData.getEmbed(currCID);
-								
-								String fileName = currAtt.getFileName();
-								String contentType = currAtt.getContentType();
-								if (StringUtil.isEmpty(contentType)) {
-									contentType = URLConnection.guessContentTypeFromName(fileName);
-								}
-
-								BodyPart attPart = BodyPartBuilder.create()
-								.use(bodyFactory)
-								.setBody(createBodyFromMimeAttachment(bodyFactory, currAtt))
-								.setContentType(contentType)
-								.setContentTransferEncoding("base64")
-								.setField(new RawField("Content-ID", currCID))
-								.build();
-								
-								multiPartRelatedBuilder = multiPartRelatedBuilder.addBodyPart(attPart);
-							}
-						}
-
-						multiPartAlternativeBuilder = multiPartAlternativeBuilder
-								.addBodyPart(
-										Message.Builder.of()
-										.setBody(multiPartRelatedBuilder.build())
-										.build());
-					}
-
-					multiPartMixedBuilder = multiPartMixedBuilder
-							.addBodyPart(
-									Message.Builder.of()
-									.setBody(multiPartAlternativeBuilder.build())
-									.build());
-					
-				}
-
-				//add attachments
-				for (IMimeAttachment currAtt : mimeData.getAttachments()) {
-					String fileName = currAtt.getFileName();
-					String contentType = currAtt.getContentType();
-					if (StringUtil.isEmpty(contentType)) {
-						contentType = URLConnection.guessContentTypeFromName(fileName);
-					}
-					
-					multiPartMixedBuilder = multiPartMixedBuilder.addBodyPart(
-							BodyPartBuilder.create()
-							.use(bodyFactory)
-							.setBody(createBodyFromMimeAttachment(bodyFactory, currAtt))
-							.setContentType(contentType)
-							.setContentTransferEncoding("base64")
-							.setContentDisposition("attachment", fileName)
-							.build());
-				}
-				
-				Message mimeMsg = Message.Builder.of()
-						.generateMessageId("acme.com")
-						.setBody(multiPartMixedBuilder.build())
-						.build();
-				
+				Message mimeMsg =toMimeMessage(mimeData);
 				
 				while (note.hasItem(itemName)) {
 					note.removeItem(itemName);
@@ -236,6 +368,70 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 	
 	}
 
+	private Optional<BodyPart> computeHtmlBody(StorageBodyFactory bodyFactory, MIMEData mimeData) throws IOException {
+		String html = mimeData.getHtml();
+		if (StringUtil.isEmpty(html)) {
+			return Optional.empty();
+		}
+		
+		return Optional.of(BodyPartBuilder.create()
+		.use(bodyFactory)
+		.setBody(mimeData.getHtml(), Charsets.UTF_8)
+		.setContentType("text/html", new NameValuePair("charset", "utf-8"))
+		.setContentTransferEncoding("quoted-printable")
+		.build());
+	}
+	
+	private Optional<BodyPart> computePlaintextBody(StorageBodyFactory bodyFactory, MIMEData mimeData) throws IOException {
+		String text = mimeData.getPlainText();
+		if (StringUtil.isEmpty(text)) {
+			return Optional.empty();
+		};
+		
+		return Optional.of(BodyPartBuilder.create()
+				.use(bodyFactory)
+				.setBody(text, Charsets.UTF_8)
+				.setContentType("text/plain", new NameValuePair("charset", "utf-8"))
+				.setContentTransferEncoding("quoted-printable")
+				.build());
+	}
+	
+	private Multipart computeHtmlAndEmbeddedImages(StorageBodyFactory bodyFactory, MIMEData mimeData,
+			BodyPart htmlBodyPart) throws IOException {
+
+		//multipart/related with HTML and embedded images
+		MultipartBuilder multiPartRelatedBuilder = MultipartBuilder.create("related")
+				.use(bodyFactory)
+				// a multipart may have a preamble
+				.setPreamble("This is a multi-part message in MIME format.");
+		
+		//html part
+		multiPartRelatedBuilder = multiPartRelatedBuilder.addBodyPart(htmlBodyPart);
+		
+		//embedded images
+		for (String currCID : mimeData.getContentIds()) {
+			IMimeAttachment currAtt = mimeData.getEmbed(currCID);
+			
+			String fileName = currAtt.getFileName();
+			String contentType = currAtt.getContentType();
+			if (StringUtil.isEmpty(contentType)) {
+				contentType = URLConnection.guessContentTypeFromName(fileName);
+			}
+
+			BodyPart attPart = BodyPartBuilder.create()
+			.use(bodyFactory)
+			.setBody(createBodyFromMimeAttachment(bodyFactory, currAtt))
+			.setContentType(contentType)
+			.setContentTransferEncoding("base64")
+			.setField(new RawField("Content-ID", currCID))
+			.build();
+			
+			multiPartRelatedBuilder = multiPartRelatedBuilder.addBodyPart(attPart);
+		}
+		
+		return multiPartRelatedBuilder.build();
+	}
+	
 	/**
 	 * Creates a binary part from the specified {@link IMimeAttachment}.
 	 * 
@@ -297,6 +493,7 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 			String contentId = contentIdField==null ? null : contentIdField.getBody();
 
 			String contentType = parentEntity.getMimeType();
+			String charset = parentEntity.getCharset();
 			
 			if (!StringUtil.isEmpty(fileName) || !StringUtil.isEmpty(contentId)) {
 				ByteArrayOutputStream binOut = new ByteArrayOutputStream();
@@ -314,17 +511,8 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 			}
 			else if (content instanceof TextBody) {
 				TextBody txtBody = (TextBody) content;
-				
-				Optional<Consumer<String>> consumer = Optional.empty();
 
-				if (contentType.startsWith("text/html")) {
-					consumer = Optional.of(retMimeData::setHtml);
-				}
-				else if (contentType.startsWith("text/plain")) {
-					consumer = Optional.of(retMimeData::setPlainText);
-				}
-				
-				if (consumer.isPresent()) {
+				if (!StringUtil.isEmpty(contentType)) {
 					StringBuilder sb = new StringBuilder();
 
 					try (Reader reader = txtBody.getReader()) {
@@ -338,10 +526,29 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 						}
 					}
 					
-					consumer.get().accept(sb.toString());
+					retMimeData.setBodyContent(contentType, sb.toString());
 				}
+				
 			}
-			
+			else if (content instanceof BinaryBody) {
+				BinaryBody binBody = (BinaryBody) content;
+				
+				if (!StringUtil.isEmpty(charset)) {
+					ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+					
+					try (InputStream in = binBody.getInputStream()) {
+						byte[] buf = new byte[16384];
+						int len;
+						
+						while ((len=in.read(buf))>=0) {
+							bOut.write(buf, 0, len);
+						}
+					}
+					
+					String strVal = new String(bOut.toByteArray(), Charset.forName(charset));
+					retMimeData.setBodyContent(contentType, strVal);
+				}
+			}			
 		}
 		else if (content instanceof BodyPart) {
 			BodyPart bodyPart = (BodyPart) content;
