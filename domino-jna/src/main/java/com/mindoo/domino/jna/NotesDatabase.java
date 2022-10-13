@@ -8618,7 +8618,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 * (formerly referred to as the Master Address Book), then this function gets the list of Domino
 	 * Directories (Server Address books)  from this database.<br>
 	 * <br>
-	 * In Domino and Notes Releases 4.6.x, it only includes Domino Name & Address books and not any of
+	 * In Domino and Notes Releases 4.6.x, it only includes Domino Name &amp; Address books and not any of
 	 * the LDAP directories in the list.<br>
 	 * <br>
 	 * If no server is specified or if no Directory Assistance database is configured on the specified server,
