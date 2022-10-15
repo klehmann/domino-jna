@@ -60,7 +60,6 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 	 */
 	public static InputStream getMIMEAsInputStream(NotesNote note, String itemName, EnumSet<MimeStreamOpenOptions> flags) {
 		MIMEStream stream = newStreamForRead(note, itemName, flags);
-//		return new MIMEStreamAsInputStream(stream, 2000);
 		return new MIMEStreamAsInputStream(stream, 3000000);
 	}
 
@@ -427,7 +426,7 @@ public class MIMEStream implements IRecyclableNotesObject, AutoCloseable {
 			NotesErrorUtils.checkResult(result);
 		}
 		else {
-			result = NotesNativeAPI64.get().MIMEStreamItemize(m_note.getHandle64(),
+			result = NotesNativeAPI32.get().MIMEStreamItemize(m_note.getHandle32(),
 					targetItemNameMem, (short) (targetItemNameMem.size() & 0xffff), dwFlags, m_hMIMEStream);
 			NotesErrorUtils.checkResult(result);
 		}
