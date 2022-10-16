@@ -14,7 +14,6 @@ import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.LocalFileMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.UrlMimeAttachment;
-import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
  * Container for text and binary data of an item of type {@link NotesItem#TYPE_MIME_PART}.
