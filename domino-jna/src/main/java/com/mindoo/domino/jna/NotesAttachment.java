@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna;
 
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -11,8 +12,6 @@ import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.Mem;
-import com.mindoo.domino.jna.internal.Mem32;
-import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
@@ -24,8 +23,6 @@ import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesBlockIdStruct;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
 
 /**
  * Data container to access metadata and binary data of a note attachment
@@ -339,5 +336,26 @@ public class NotesAttachment {
 		 * @return action, either Continue or Stop
 		 */
 		public Action read(byte[] data);
+	}
+	
+	/**
+	 * Transfers all attachment content into a direct {@link ByteBuffer}
+	 * 
+	 * @return byte buffer
+	 */
+	public ByteBuffer toByteBuffer() {
+		ByteBuffer buf = ByteBuffer.allocateDirect(m_fileSize);
+		
+		readData(new IDataCallback() {
+
+			@Override
+			public Action read(byte[] data) {
+				buf.put(data);
+				return Action.Continue;
+			}
+		});
+		
+		buf.position(0);
+		return buf;
 	}
 }
