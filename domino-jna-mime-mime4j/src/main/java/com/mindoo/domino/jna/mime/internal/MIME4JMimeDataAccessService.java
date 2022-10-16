@@ -96,8 +96,12 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 		StorageBodyFactory bodyFactory = new StorageBodyFactory();
 		Message mimeMsg;
 		
-		Optional<BodyPart> htmlBodyPart = computeHtmlBody(bodyFactory, mimeData);
+		Optional<BodyPart> htmlBodyPart = computeHtmlBody(bodyFactory, mimeData, true);
 		Optional<BodyPart> plainTextPart = computePlaintextBody(bodyFactory, mimeData);
+		
+		if (!htmlBodyPart.isPresent() && !plainTextPart.isPresent()) {
+			htmlBodyPart = computeHtmlBody(bodyFactory, mimeData, false);
+		}
 		
 		//build body parts that are neither text/html nor text/plain
 		//e.g. application/embed+json
@@ -368,9 +372,9 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 	
 	}
 
-	private Optional<BodyPart> computeHtmlBody(StorageBodyFactory bodyFactory, MIMEData mimeData) throws IOException {
+	private Optional<BodyPart> computeHtmlBody(StorageBodyFactory bodyFactory, MIMEData mimeData, boolean notEmpty) throws IOException {
 		String html = mimeData.getHtml();
-		if (StringUtil.isEmpty(html)) {
+		if (StringUtil.isEmpty(html) && notEmpty) {
 			return Optional.empty();
 		}
 		
