@@ -3,8 +3,8 @@
 	<target name="main">
 		<ac:var name="domino_jna_src_loc" value="${domino_jna_loc}${file.separator}src${file.separator}main${file.separator}java" />
 		<ac:var name="domino_jna_resources_loc" value="${domino_jna_loc}${file.separator}src${file.separator}main${file.separator}resources" />
-
 		<ac:var name="domino_jna_xsp_loc" value="${project_loc}${file.separator}jna-src" />
+		<ac:var name="domino_jna_mime_mime4j_src_loc" value="${domino_jna_mime_mime4j_loc}${file.separator}src${file.separator}main${file.separator}java" />
 		
 		<delete dir="${domino_jna_xsp_loc}" />
 		<mkdir dir="${domino_jna_xsp_loc}" />
@@ -16,6 +16,11 @@
 		</copy>
 		<copy todir="${domino_jna_xsp_loc}" includeEmptyDirs="yes" overwrite="true">
 			<fileset dir="${domino_jna_resources_loc}" casesensitive="yes" defaultexcludes="yes" erroronmissingdir="false">
+				<include name="*/**" />
+			</fileset>
+		</copy>
+		<copy todir="${domino_jna_xsp_loc}" includeEmptyDirs="yes" overwrite="true">
+			<fileset dir="${domino_jna_mime_mime4j_src_loc}" casesensitive="yes" defaultexcludes="yes" erroronmissingdir="false">
 				<include name="*/**" />
 			</fileset>
 		</copy>

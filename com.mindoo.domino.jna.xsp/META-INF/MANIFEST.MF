@@ -39,6 +39,10 @@ Bundle-ClassPath: lib/metadata-extractor-2.11.0.jar,
  lib/asm-6.0.jar,
  lib/cglib-3.2.6.jar,
  lib/concurrentlinkedhashmap-lru-1.4.2.jar,
+ lib/apache-mime4j-core-0.8.4.jar,
+ lib/apache-mime4j-dom-0.8.4.jar,
+ lib/apache-mime4j-storage-0.8.4.jar,
+ lib/commons-io-2.6.jar,
  .
 Bundle-Activator: com.mindoo.domino.jna.xsp.internal.DominoJNAActivator
 Eclipse-BundleShape: dir

@@ -15,5 +15,9 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="/Applications/HCL Notes.app/Contents/Resources/jvm/lib/ext/Notes.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="lib" path="lib/apache-mime4j-core-0.8.4.jar"/>
+	<classpathentry kind="lib" path="lib/apache-mime4j-dom-0.8.4.jar"/>
+	<classpathentry kind="lib" path="lib/apache-mime4j-storage-0.8.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-2.6.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

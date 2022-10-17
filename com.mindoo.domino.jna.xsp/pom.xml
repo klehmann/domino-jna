@@ -33,7 +33,7 @@
 									inheritAll="true">
 									<property name="maven_plugin_classpath" refid="maven.plugin.classpath" />
 									<property name="domino_jna_loc" value="${basedir}${file.separator}..${file.separator}domino-jna" />
-									<property name="domino_jna_javaxmail_loc" value="${basedir}${file.separator}..${file.separator}domino-jna-mime-javaxmail" />
+									<property name="domino_jna_mime_mime4j_loc" value="${basedir}${file.separator}..${file.separator}domino-jna-mime-mime4j" />
 									<property name="project_loc" value="${basedir}" />
 									<property name="workspace_loc" value="${basedir}${file.separator}.." />
 								</ant>
