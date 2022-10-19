@@ -12,7 +12,6 @@ import lotus.domino.Document;
  */
 public class NotesAgentRunContext {
 	private boolean m_checkSecurity;
-	private boolean m_reopenDbAsSigner;
 	private Writer m_stdOut;
 	private int m_timeoutSeconds;
 	private NotesNote m_documentContextAsNote;
@@ -60,32 +59,6 @@ public class NotesAgentRunContext {
 	 */
 	public NotesAgentRunContext setCheckSecurity(boolean checkSecurity) {
 		this.m_checkSecurity = checkSecurity;
-		return this;
-	}
-
-	/**
-	 * Returns whether the DB should be reopened as agent signer
-	 * 
-	 * @return true to reopen
-	 */
-	public boolean isReopenDbAsSigner() {
-		return m_reopenDbAsSigner;
-	}
-
-	/**
-	 * Use this method to set the AGENT_REOPEN_DB flag:<br>
-	 * <br>
-	 * AGENT_REOPEN_DB:<br>
-	 *  If AGENT_REOPEN_DB is set, the AgentRun call will reopen the agent's
-	 *  database with the privileges of the signer of the agent.
-	 *  If the flag is not set, the agent's "context" database will be open
-	 *  with the privileges of the current user (the current Notes id or the current Domino web user).
-	 *  
-	 * @param reopenAsSigner true to reopen database, false by default
-	 * @return this context object (for chained calls)
-	 */
-	public NotesAgentRunContext setReopenDbAsSigner(boolean reopenAsSigner) {
-		this.m_reopenDbAsSigner = reopenAsSigner;
 		return this;
 	}
 
