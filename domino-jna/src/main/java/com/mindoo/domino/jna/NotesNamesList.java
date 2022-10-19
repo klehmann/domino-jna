@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.internal.structs.MacNotesNamesListHeader64Struct;
 import com.mindoo.domino.jna.internal.structs.NotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader32Struct;
 import com.mindoo.domino.jna.internal.structs.WinNotesNamesListHeader64Struct;
+import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -124,7 +125,7 @@ public class NotesNamesList implements IAllocatedMemory {
 			return "NotesNamesList [freed]";
 		}
 		else {
-			return "NotesNamesList [handle="+(PlatformUtils.is64Bit() ? m_handle64 : m_handle32)+", values="+getNames()+"]";
+			return "NotesNamesList [handle="+(PlatformUtils.is64Bit() ? m_handle64 : m_handle32)+", values="+getNames()+", privileged="+NotesNamingUtils.getPrivileges(this)+"]";
 		}
 	}
 	
