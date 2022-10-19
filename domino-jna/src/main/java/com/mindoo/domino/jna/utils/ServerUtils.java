@@ -472,7 +472,7 @@ public class ServerUtils {
 	 * 
 	 * @param messageText message text
 	 */
-	public static void addInLogMessage(String messageText) {
+	public static void writeLogMessage(String messageText) {
 		Memory lmbcs = NotesStringUtils.toLMBCS(messageText, true);
 		NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
 	}
