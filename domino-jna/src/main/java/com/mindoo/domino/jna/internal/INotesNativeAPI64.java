@@ -725,8 +725,6 @@ public interface INotesNativeAPI64 extends Library {
 			 Pointer pReserved,
 			 int dwFlags,
 			 LongByReference rethContext);
-	@UndocumentedAPI
-	short AgentCreateRunContextExt (long hAgent, Pointer pReserved, long pOldContext, int dwFlags, LongByReference rethContext);
 	short AgentSetDocumentContext(long hAgentCtx, long hNote);
 	short AgentSetTimeExecutionLimit(long hAgentCtx, int timeLimit);
 	boolean AgentIsEnabled(long hAgent);
@@ -743,7 +741,7 @@ public interface INotesNativeAPI64 extends Library {
 	short AgentSetHttpStatusCode(long hAgentCtx, int httpStatus);
 	short ClientRunServerAgent(long hdb, int nidAgent, int nidParamDoc,
 			int bForeignServer, int bSuppressPrintToConsole);
-
+	
 	short FTIndex(long hDB, short options, Memory stopFile, NotesFTIndexStatsStruct retStats);
 	@UndocumentedAPI
 	short ClientFTIndexRequest(long hDB);
