@@ -109,7 +109,7 @@ public class NotesAgent implements IRecyclableNotesObject {
 	}
 
 	/**
-	 * Returns a signer of the agent
+	 * Returns the signer of the agent
 	 * 
 	 * @return signer
 	 */
@@ -307,8 +307,9 @@ public class NotesAgent implements IRecyclableNotesObject {
 			short result = NotesNativeAPI64.get().AgentCreateRunContext(m_hAgentB64, null, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
-			NotesNamesList namesListToFree = null;
-
+			NotesNamesList namesListForAgentExecution = null;
+			boolean freeNamesListAfterAgentRun = false;
+			
 			try {
 				if (stdOut!=null) {
 					//redirect stdout to in memory buffer
@@ -331,47 +332,46 @@ public class NotesAgent implements IRecyclableNotesObject {
 				if (paramDocId!=0) {
 					NotesNativeAPI64.get().SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
-				
-				if (effectiveUserNameAsNamesList!=null || effectiveUserNameAsStringList!=null ||
-						effectiveUserNameAsString!=null) {
-					//agent should run with the specified identity (e.g. name of current web user)
-					
-					if (effectiveUserNameAsNamesList!=null) {
-						result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle64());
-						NotesErrorUtils.checkResult(result);
-					}
-					else if (effectiveUserNameAsStringList!=null) {
-						namesListToFree = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
-						NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-						result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
-						NotesErrorUtils.checkResult(result);
-					}
-					else if (effectiveUserNameAsString!=null) {
-						namesListToFree = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
-						NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-						result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
-						NotesErrorUtils.checkResult(result);
-					}
+
+				//agent should run with the specified identity (e.g. name of current web user);
+				//if no user has been specified, we use the "run as web user" flag to decide what to do
+				if (effectiveUserNameAsNamesList!=null) {
+					namesListForAgentExecution = effectiveUserNameAsNamesList;
+					freeNamesListAfterAgentRun = false;
+				}
+				else if (effectiveUserNameAsStringList!=null) {
+					namesListForAgentExecution = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
+					freeNamesListAfterAgentRun = true;
+				}
+				else if (effectiveUserNameAsString!=null) {
+					namesListForAgentExecution = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
+					freeNamesListAfterAgentRun = true;
+				}
+				else if (isRunAsWebUser()) {
+					//inherit name of DB opener
+					namesListForAgentExecution = m_parentDb.m_namesList;
+					freeNamesListAfterAgentRun = false;
 				}
 				else {
-					//if no user has been specified, we use the "run as web user" flag to decide what to do
-					if (isRunAsWebUser()) {
-						//inherit name of DB opener
-						if (m_parentDb.m_namesList!=null) { // should never be null
-							result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), m_parentDb.m_namesList.getHandle64());
-							NotesErrorUtils.checkResult(result);
-						}
+					String signer = getSigner();
+					if (!StringUtil.isEmpty(signer)) {
+						//run agent as signer
+						namesListForAgentExecution = NotesNamingUtils.buildNamesList(signer);
+						freeNamesListAfterAgentRun = true;
+					}
+				}
+				
+				if (namesListForAgentExecution!=null && effectiveUserNameAsNamesList==null) { // don't overwrite privileges if we got a NAMES_LIST
+					//set proper access privileges for NAMES_LIST
+					if (m_parentDb.hasFullAccess()) {
+						NotesNamingUtils.setPrivileges(namesListForAgentExecution, EnumSet.of(Privileges.Authenticated, Privileges.FullAdminAccess));
 					}
 					else {
-						String signer = getSigner();
-						if (!StringUtil.isEmpty(signer)) {
-							//run agent as signer
-							namesListToFree = NotesNamingUtils.buildNamesList(signer);
-							NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-							result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle64());
-							NotesErrorUtils.checkResult(result);
-						}
+						NotesNamingUtils.setPrivileges(namesListForAgentExecution, EnumSet.of(Privileges.Authenticated));
 					}
+					
+					result = NotesNativeAPI64.get().AgentSetUserName(rethContext.getValue(), namesListForAgentExecution.getHandle64());
+					NotesErrorUtils.checkResult(result);
 				}
 				
 				result = NotesNativeAPI64.get().AgentRun(m_hAgentB64, rethContext.getValue(), 0, runFlags);
@@ -400,8 +400,8 @@ public class NotesAgent implements IRecyclableNotesObject {
 			finally {
 				NotesNativeAPI64.get().AgentDestroyRunContext(rethContext.getValue());
 				
-				if (namesListToFree!=null) {
-					namesListToFree.free();
+				if (freeNamesListAfterAgentRun && namesListForAgentExecution!=null) {
+					namesListForAgentExecution.free();
 				}
 			}
 		}
@@ -410,7 +410,8 @@ public class NotesAgent implements IRecyclableNotesObject {
 			short result = NotesNativeAPI32.get().AgentCreateRunContext(m_hAgentB32, null, ctxFlags, rethContext);
 			NotesErrorUtils.checkResult(result);
 
-			NotesNamesList namesListToFree = null;
+			NotesNamesList namesListForAgentExecution = null;
+			boolean freeNamesListAfterAgentRun = false;
 
 			try {
 				if (stdOut!=null) {
@@ -435,46 +436,45 @@ public class NotesAgent implements IRecyclableNotesObject {
 					NotesNativeAPI32.get().SetParamNoteID(rethContext.getValue(), paramDocId);
 				}
 				
-				if (effectiveUserNameAsNamesList!=null || effectiveUserNameAsStringList!=null ||
-						effectiveUserNameAsString!=null) {
-					//agent should run with the specified identity (e.g. name of current web user)
-					
-					if (effectiveUserNameAsNamesList!=null) {
-						result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), effectiveUserNameAsNamesList.getHandle32());
-						NotesErrorUtils.checkResult(result);
-					}
-					else if (effectiveUserNameAsStringList!=null) {
-						namesListToFree = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
-						NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-						result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle32());
-						NotesErrorUtils.checkResult(result);
-					}
-					else if (effectiveUserNameAsString!=null) {
-						namesListToFree = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
-						NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-						result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle32());
-						NotesErrorUtils.checkResult(result);
-					}
+				//agent should run with the specified identity (e.g. name of current web user);
+				//if no user has been specified, we use the "run as web user" flag to decide what to do
+				if (effectiveUserNameAsNamesList!=null) {
+					namesListForAgentExecution = effectiveUserNameAsNamesList;
+					freeNamesListAfterAgentRun = false;
+				}
+				else if (effectiveUserNameAsStringList!=null) {
+					namesListForAgentExecution = NotesNamingUtils.writeNewNamesList(effectiveUserNameAsStringList);
+					freeNamesListAfterAgentRun = true;
+				}
+				else if (effectiveUserNameAsString!=null) {
+					namesListForAgentExecution = NotesNamingUtils.buildNamesList(effectiveUserNameAsString);
+					freeNamesListAfterAgentRun = true;
+				}
+				else if (isRunAsWebUser()) {
+					//inherit name of DB opener
+					namesListForAgentExecution = m_parentDb.m_namesList;
+					freeNamesListAfterAgentRun = false;
 				}
 				else {
-					//if no user has been specified, we use the "run as web user" flag to decide what to do
-					if (isRunAsWebUser()) {
-						//inherit name of DB opener
-						if (m_parentDb.m_namesList!=null) { // should never be null
-							result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), m_parentDb.m_namesList.getHandle32());
-							NotesErrorUtils.checkResult(result);
-						}
+					String signer = getSigner();
+					if (!StringUtil.isEmpty(signer)) {
+						//run agent as signer
+						namesListForAgentExecution = NotesNamingUtils.buildNamesList(signer);
+						freeNamesListAfterAgentRun = true;
+					}
+				}
+				
+				if (namesListForAgentExecution!=null && effectiveUserNameAsNamesList==null) { // don't overwrite privileges if we got a NAMES_LIST
+					//set proper access privileges for NAMES_LIST
+					if (m_parentDb.hasFullAccess()) {
+						NotesNamingUtils.setPrivileges(namesListForAgentExecution, EnumSet.of(Privileges.Authenticated, Privileges.FullAdminAccess));
 					}
 					else {
-						String signer = getSigner();
-						if (!StringUtil.isEmpty(signer)) {
-							//run agent as signer
-							namesListToFree = NotesNamingUtils.buildNamesList(signer);
-							NotesNamingUtils.setPrivileges(namesListToFree, EnumSet.of(Privileges.Authenticated));
-							result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListToFree.getHandle32());
-							NotesErrorUtils.checkResult(result);
-						}
+						NotesNamingUtils.setPrivileges(namesListForAgentExecution, EnumSet.of(Privileges.Authenticated));
 					}
+					
+					result = NotesNativeAPI32.get().AgentSetUserName(rethContext.getValue(), namesListForAgentExecution.getHandle32());
+					NotesErrorUtils.checkResult(result);
 				}
 
 				result = NotesNativeAPI32.get().AgentRun(m_hAgentB32, rethContext.getValue(), 0, runFlags);
@@ -503,8 +503,8 @@ public class NotesAgent implements IRecyclableNotesObject {
 			finally {
 				NotesNativeAPI32.get().AgentDestroyRunContext(rethContext.getValue());
 				
-				if (namesListToFree!=null) {
-					namesListToFree.free();
+				if (freeNamesListAfterAgentRun && namesListForAgentExecution!=null) {
+					namesListForAgentExecution.free();
 				}
 			}
 		}
