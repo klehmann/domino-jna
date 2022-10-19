@@ -454,4 +454,27 @@ public class ServerUtils {
 				digestLen, digestMem, 0, null);
 		NotesErrorUtils.checkResult(result);
 	}
+	
+	/**
+	 * Format and write a message to the log file. <br>
+	 * <br>
+	 * This function formats a message, displays it on the standard output, and appends the message as
+	 * new line to the "Events" field in a Miscellaneous Events document in the Domino server or Notes client log.<br>
+	 * <br>
+	 * The generated message has the form:<br>
+	 * <br>
+	 * <code>&lt;DATE&gt;  &lt;TIME&gt; &lt;Primary status message&gt;</code><br>
+	 * <br>
+	 * Using this method instead of a simple <code>System.out.println()</code> has the benefit that
+	 * the message will be directly visible on the server console, while in other cases Domino might
+	 * buffer the messages written by Java (e.g. when an OSGi command is registered via the Eclipse
+	 * CommandInterpreter) until Java execution is done.
+	 * 
+	 * @param messageText message text
+	 */
+	public static void addInLogMessage(String messageText) {
+		Memory lmbcs = NotesStringUtils.toLMBCS(messageText, true);
+		NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
+	}
+	
 }

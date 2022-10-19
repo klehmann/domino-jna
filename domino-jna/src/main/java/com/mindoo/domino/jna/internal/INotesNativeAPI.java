@@ -881,4 +881,6 @@ public interface INotesNativeAPI extends Library {
 
 	void OSLocalFree (Pointer ptr);
 
+	void AddInLogMessageText(Memory string, short AdditionalErrorCode, Object... args);
+
 }
