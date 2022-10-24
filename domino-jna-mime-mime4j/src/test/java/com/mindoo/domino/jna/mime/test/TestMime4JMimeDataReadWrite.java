@@ -2,6 +2,9 @@ package com.mindoo.domino.jna.mime.test;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -11,11 +14,17 @@ import java.util.StringTokenizer;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
+import com.mindoo.domino.jna.NotesNote.IAttachmentProducer;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.errors.NotesError;
+import com.mindoo.domino.jna.html.HtmlConvertProperties;
+import com.mindoo.domino.jna.html.IHtmlAttachmentRef;
+import com.mindoo.domino.jna.html.IHtmlConversionResult;
+import com.mindoo.domino.jna.html.IHtmlImageRef;
 import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
 import com.mindoo.domino.jna.mime.MimeConversionControl.MessageContentEncoding;
@@ -390,5 +399,73 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 			}
 		});
 	}
-	
+
+	@Test
+	public void testRichTextRenderingAsMIME() throws Exception {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				NotesDatabase db = getFakeNamesDb();
+				NotesNote note = db.createNote();
+				
+				String attachmentName = "test.txt";
+				
+				NotesAttachment newAtt = note.attachFile(new IAttachmentProducer() {
+
+					@Override
+					public int getSizeEstimation() {
+						return -1;
+					}
+
+					@Override
+					public void produceAttachment(OutputStream out) throws IOException {
+						out.write("HELLO WORLD!".getBytes(StandardCharsets.UTF_8));
+					}
+					
+				}, attachmentName, new NotesTimeDate(), new NotesTimeDate());
+				
+				URL url = getClass().getResource(TEST_IMAGE_PATH);
+				Assert.assertNotNull("Test image can be found: "+TEST_IMAGE_PATH, url);
+
+				try (RichTextBuilder rtBuilder = note.createRichTextItem("Body")) {
+					
+					rtBuilder.addText("This is a ",  new TextStyle("default"), new FontStyle(), false);
+					rtBuilder.addText("great",
+							null, new FontStyle().setBold(true).setUnderline(true).setPointSize(16), false);
+					rtBuilder.addText(" sample text.\n", null, new FontStyle(), false);
+					
+					//add link icon to note attachment
+					rtBuilder.addFileHotspot(newAtt, newAtt.getFileName());
+					
+					try (InputStream imageIn = url.openStream();) {
+						rtBuilder.addImage(imageIn);
+					}
+				}
+				
+				IHtmlConversionResult convResult =
+						note.convertItemToHtml("Body", HtmlConvertProperties.modernDefaults());
+				
+				assertTrue(convResult.getText().contains("font-size: 16pt"));
+				
+				//2 embedded image: our test image and the attachment icon
+				List<IHtmlImageRef> embeddedImages = convResult.getImages();
+				assertEquals(2, embeddedImages.size());
+				
+				//1 attachment 
+				List<IHtmlAttachmentRef> attachmentLinks = convResult.getAttachments();
+				assertEquals(1, attachmentLinks.size());
+				assertEquals(attachmentName, attachmentLinks.get(0).getFileName());
+
+				MIMEData mime = convResult.toMIME();
+				assertTrue(!StringUtil.isEmpty(mime.getHtml()));
+
+				note.replaceItemValue("BodyMIME", mime);
+				assertTrue(note.hasItem("BodyMIME"));
+				assertEquals(NotesItem.TYPE_MIME_PART, note.getFirstItem("BodyMIME").getType());
+				
+				return null;
+			}
+		});
+	}
 }
