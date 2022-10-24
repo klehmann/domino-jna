@@ -6836,10 +6836,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	}
 	
 	/**
-	 * This function converts the all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
+	 * This function converts all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
 	 * to {@link NotesItem#TYPE_MIME_PART} items.<br>
 	 * It does not update the Domino database; to update the database, call {@link #update()}. If
-	 * you want to render a single richtext item as MIME, use {@link NotesMimeUtils#renderItemAsMime(NotesNote, String)}.
+	 * you want to render a single richtext item as MIME, use
+	 * {@link #convertItemToHtml(String, HtmlConvertProperties)} followed by
+	 * {@link IHtmlConversionResult#toMIME()} instead.
 	 * 
 	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
 	 */
