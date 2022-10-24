@@ -2114,9 +2114,27 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	 * @param fileCreated file creation date
 	 * @param fileModified file modified date
 	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
+	 * @deprecated will be removed, use {@link #attachFile(IAttachmentProducer, String, NotesTimeDate, NotesTimeDate)} instead
 	 */
 	public NotesAttachment attachFile(IAttachmentProducer producer, String uniqueFileNameInNote, 
 			Date fileCreated, Date fileModified) {
+		return attachFile(producer, uniqueFileNameInNote, new NotesTimeDate(fileCreated), new NotesTimeDate(fileModified));
+	}
+	
+	/**
+	 * Creates a new attachment with streamed data. This method does not require the
+	 * file to be written to disk first like {@link #attachFile(String, String, Compression)},
+	 * but creates and auto-resizes an NSF binary object based on the data written in
+	 * {@link IAttachmentProducer#produceAttachment(OutputStream)}.
+	 * 
+	 * @param producer attachment producer
+	 * @param uniqueFileNameInNote filename that will be stored internally with the attachment, displayed when the attachment is not part of any richtext item (called "V2 attachment" in the Domino help), and subsequently used when selecting which attachment to extract or detach.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible. This function will be sure that the filename is really unique by appending _2, _3 etc. to the base filename, followed by the extension; use the returned NotesAttachment to get the filename we picked
+	 * @param fileCreated file creation date
+	 * @param fileModified file modified date
+	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
+	 */
+	public NotesAttachment attachFile(IAttachmentProducer producer, String uniqueFileNameInNote, 
+			NotesTimeDate fileCreated, NotesTimeDate fileModified) {
 		checkHandle();
 
 		//currently we do not support compression, because we could not find a Java OutputStream
@@ -2169,8 +2187,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
 				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
 				fileObjectStruct.FileAttributes = 0;
-				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
-				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated.getInnards());
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified.getInnards());
 				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
 				fileObjectStruct.FileSize = currFileSize.get();
 				fileObjectStruct.Flags = 0;
@@ -2216,8 +2234,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
 				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
 				fileObjectStruct.FileAttributes = 0;
-				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
-				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated.getInnards());
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified.getInnards());
 				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
 				fileObjectStruct.FileSize = currFileSize.get();
 				fileObjectStruct.Flags = 0;
