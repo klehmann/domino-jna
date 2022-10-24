@@ -6,7 +6,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.security.AccessController;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -25,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
@@ -59,6 +63,7 @@ import com.mindoo.domino.jna.html.HtmlConvertProperties;
 import com.mindoo.domino.jna.html.HtmlConvertProperties.HtmlLinkHandling;
 import com.mindoo.domino.jna.html.IHtmlApiReference;
 import com.mindoo.domino.jna.html.IHtmlApiUrlTargetComponent;
+import com.mindoo.domino.jna.html.IHtmlAttachmentRef;
 import com.mindoo.domino.jna.html.IHtmlConversionResult;
 import com.mindoo.domino.jna.html.IHtmlImageRef;
 import com.mindoo.domino.jna.html.ReferenceType;
@@ -105,6 +110,8 @@ import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStr
 import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
 import com.mindoo.domino.jna.mime.NotesMimeUtils;
+import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
+import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -4980,6 +4987,98 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 
 		@Override
+		public MIMEData toMIME() {
+			MIMEData data = new MIMEData();
+			data.setHtml(getText());
+			
+			List<IHtmlImageRef> bodyImages = getImages();
+			
+			AtomicInteger imageCount = new AtomicInteger();
+			
+			//inline all embedded images
+			bodyImages.forEach((currImage) -> {
+				String imgSrc = currImage.getReferenceText();
+				String imgFormat = currImage.getFormat();
+				
+				ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+				
+				//produce a stable content ID for the image based on a hash of its content
+				AtomicReference<MessageDigest> digest = new AtomicReference<>();
+				try {
+					digest.set(MessageDigest.getInstance("SHA-256"));
+				} catch (NoSuchAlgorithmException e1) {
+					digest.set(null);
+				}
+			    
+				currImage.readImage(new IHtmlItemImageConversionCallback() {
+
+					@Override
+					public int setSize(int size) {
+						return 0;
+					}
+
+					@Override
+					public Action read(byte[] data) {
+						try {
+							bOut.write(data);
+							
+							if (digest.get()!=null) {
+								digest.get().update(data, 0, data.length);
+							}
+							
+						} catch (IOException e) {
+							throw new UncheckedIOException("Error reading image '"+imgSrc+
+									"' from document with UNID "+getUNID(), e);
+						}
+						return Action.Continue;
+					}
+					
+				});
+				
+				String contentId;
+				
+				if (digest.get()!=null) {
+				    byte[] digestVal = digest.get().digest();
+				    contentId = digestToString(digestVal);
+				}
+				else {
+					contentId = "img_"+imageCount.incrementAndGet();
+				}
+				
+				if (data.getEmbed(contentId)==null) {
+					IMimeAttachment imgAtt = new ByteArrayMimeAttachment(bOut.toByteArray(), contentId+"."+imgFormat);
+					data.embed(contentId, imgAtt);
+					
+					data.setHtml(data.getHtml().replace(imgSrc, "cid:" + contentId));
+				}
+				
+			});
+
+			return data;
+		}
+
+		/**
+		 * Converts a hash digest to a hex string
+		 * 
+		 * @param digest hash digest
+		 * @return hash as String
+		 */
+		private String digestToString(byte[] digest) {
+			StringBuilder hexString = new StringBuilder();
+
+			for (int i = 0; i < digest.length; i++) {
+				if ((0xff & digest[i]) < 0x10) {
+					hexString.append("0"
+							+ Integer.toHexString((0xFF & digest[i])));
+				} else {
+					hexString.append(Integer.toHexString(0xFF & digest[i]));
+				}
+			}
+
+			return hexString.toString();
+		}
+
+		@Override
 		public List<IHtmlApiReference> getReferences() {
 			return m_references;
 		}
@@ -4987,6 +5086,11 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		private IHtmlImageRef createImageRef(final String refText, final String fieldName, final int itemIndex,
 				final int itemOffset, final String format) {
 			return new IHtmlImageRef() {
+				
+				@Override
+				public String toString() {
+					return "IHtmlImageRef [format="+getFormat()+", itemName="+getItemName()+", itemIndex="+getItemIndex()+", itemOffset="+getItemOffset()+"]";
+				}
 				
 				@Override
 				public void readImage(IHtmlItemImageConversionCallback callback) {
@@ -5089,8 +5193,59 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			};
 		}
 		
-		public java.util.List<com.mindoo.domino.jna.html.IHtmlImageRef> getImages() {
-			List<IHtmlImageRef> imageRefs = new ArrayList<IHtmlImageRef>();
+		@Override
+		public List<IHtmlAttachmentRef> getAttachments() {
+			return m_references
+			.stream()
+			.filter((ref) -> {
+				return ref.getCommandId() == CommandId.OPENELEMENT;
+			})
+			.filter((ref) -> {
+				IHtmlApiUrlTargetComponent<?> docTarget = ref.getTargetByType(TargetType.DOCUMENT);
+				IHtmlApiUrlTargetComponent<?> fileNameTarget = ref.getTargetByType(TargetType.FILENAME);
+				return fileNameTarget!=null && docTarget!=null && getUNID().equals(docTarget.getValue());
+				
+			})
+			.map((ref) -> {
+				String refText = ref.getReferenceText();
+				IHtmlApiUrlTargetComponent<?> fileNameTarget = ref.getTargetByType(TargetType.FILENAME);
+				String fileName = (String) fileNameTarget.getValue();
+				
+				return new IHtmlAttachmentRef() {
+
+					@Override
+					public String getReferenceText() {
+						return refText;
+					}
+
+					@Override
+					public String getFileName() {
+						return fileName;
+					}
+					
+					@Override
+					public Optional<NotesAttachment> findAttachment() {
+						return Optional.ofNullable(getAttachment(fileName));
+					}
+					
+					@Override
+					public HtmlConvertProperties getProperties() {
+						return m_props;
+					}
+					
+					@Override
+					public String toString() {
+						return "IHtmlAttachmentRef [filename="+getFileName()+"]";
+					}
+
+				};
+			})
+			.collect(Collectors.toList());
+		}
+		
+		@Override
+		public List<IHtmlImageRef> getImages() {
+			List<IHtmlImageRef> imageRefs = new ArrayList<>();
 			
 			for (IHtmlApiReference currRef : m_references) {
 				if (currRef.getType() == ReferenceType.IMG) {
@@ -5475,6 +5630,43 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		
 	}
 	
+	private static String simpleHtmlEscape(String txt) {
+		final StringBuilder sb = new StringBuilder();
+
+		for (int i=0; i<txt.length(); i++) {
+			char c = txt.charAt(i);
+			
+			if (c == '<') {
+				sb.append("&lt;");
+			}
+			else if (c == '>') {
+				sb.append("&gt;");
+			}
+			else if (c == '\"') {
+				sb.append("&quot;");
+			}
+			else if (c == '\'') {
+				sb.append("&#039;");
+			}
+			else if (c == '\\') {
+				sb.append("&#092;");
+			}
+			else if (c == '&') {
+				sb.append("&amp;");
+			}
+			else if (c == '\r') {
+				//skip
+			}
+			else if (c == '\n') {
+				sb.append("<br>");
+			}
+			else {
+				sb.append(c);
+			}
+		}
+		return sb.toString();
+	}
+	
 	/**
 	 * Internal method doing the HTML conversion work
 	 * 
@@ -5489,6 +5681,17 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
 		
 		checkHandle();
+		
+		if (itemName!=null) {
+			//fix to handle text items
+			NotesItem itm = getFirstItem(itemName);
+			if (itm!=null) {
+				if (itm.getType() == NotesItem.TYPE_TEXT || itm.getType() == NotesItem.TYPE_TEXT_LIST) {
+					String txtContentAsHtml = simpleHtmlEscape(getItemValueAsText(itemName, '\n'));
+					return new HtmlConversionResult(txtContentAsHtml, Collections.emptyList(), props);
+				}
+			}
+		}
 		
 		HtmlConverter htmlConverter = setupHtmlConverter(props);
 		
@@ -6617,7 +6820,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	/**
 	 * This function converts the all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
 	 * to {@link NotesItem#TYPE_MIME_PART} items.<br>
-	 * It does not update the Domino database; to update the database, call {@link #update()}.
+	 * It does not update the Domino database; to update the database, call {@link #update()}. If
+	 * you want to render a single richtext item as MIME, use {@link NotesMimeUtils#renderItemAsMime(NotesNote, String)}.
 	 * 
 	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
 	 */
@@ -6639,6 +6843,105 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 		else {
 			result = NotesNativeAPI32.get().MIMEConvertCDParts(getHandle32(), isCanonical, isMime, ccPtr);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function converts the input {@link NotesItem#TYPE_MIME_PART} item in an open note to a
+	 * {@link NotesItem#TYPE_COMPOSITE} item.<br>
+	 * <br>
+	 * It does not update the Domino database; to update the database, call {@link #update()}.<br>
+	 * <br>
+	 * You may specify Conversion Controls settings for the conversion process.<br>
+	 * For the named {@link NotesItem#TYPE_MIME_PART} item (which may actually be several items -- e.g., 'Body'),
+	 * the conversion function performs a conversion to Composite Document (CD) / richtext format.<br>
+	 * <br>
+	 * (R7.x/R8) Note that the conversion is not performed with 100% fidelity.  The function supports HTML font effects
+	 * specified as separate elements (e.g., &lt;b&gt; to set bold face), but it does not support styles, whether
+	 * specified as a CSS document, a &lt;style&gt; element, or as a 'style=' parameter to other elements
+	 * (e.g., &lt;div&gt; or &lt;span&gt;).  The rendering of tables and lists also may be somewhat different
+	 * in the converted document.  The conversion also does not convert "active content"; for example, Javascript
+	 * contained in an application/x-javascript part.<br>
+	 * Such parts are retained as attachments in the converted document.<br>
+	 * If this function is called on the Domino server, its actions are affected by its configuration as
+	 * specified in the Domino Server Configuration; see the MIME pages of the Server Configuration for details.<br>
+	 * <br>
+	 * If this function is called on the Notes client, its actions are affected by its configuration as specified
+	 * in the Personal Name and Address book; see the International MIME Settings document for details.
+	 * 
+	 * @param itemName item to convert
+	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
+	 */
+	public void convertToRichtext(String itemName, MimeConversionControl concCtrl) {
+		checkHandle();
+		
+		if (concCtrl!=null && concCtrl.isRecycled()) {
+			throw new NotesError(0, "The conversion control object is recycled");
+		}
+		
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
+		
+		Pointer ccPtr = concCtrl==null ? null : concCtrl.getAdapter(Pointer.class);
+
+		boolean isCanonical = (getFlags() & NotesConstants.NOTE_FLAG_CANONICAL) == NotesConstants.NOTE_FLAG_CANONICAL;
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertMIMEPartCC(getHandle64(), itemNameMem,
+					(short) (itemNameMem.size() & 0xffff), isCanonical, ccPtr);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertMIMEPartCC(getHandle32(), itemNameMem,
+					(short) (itemNameMem.size() & 0xffff), isCanonical, ccPtr);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function converts all {@link NotesItem#TYPE_MIME_PART} items in an open note to
+	 * {@link NotesItem#TYPE_COMPOSITE} items.<br>
+	 * <br>
+	 * It does not update the Domino database; to update the database, call {@link #update()}.<br>
+	 * <br>
+	 * You may specify Conversion Controls settings for the conversion process.<br>
+	 * The Conversion Controls settings may be changed to override aspects of server-side or client-side configuration;
+	 * see {@link MimeConversionControl}.  If the hCC handle is NULL, this function uses its internal default settings
+	 * (same as those set by {@link MimeConversionControl#setDefaults()}).<br>
+	 * <br>
+	 * For each {@link NotesItem#TYPE_MIME_PART} item (which may actually be several items -- e.g., 'Body'),
+	 * this function performs a conversion to Composite Document (CD) format.<br>
+	 * <br>
+	 * (R7.x/R8) Note that the conversion is not performed with 100% fidelity.  The function supports HTML font effects
+	 * specified as separate elements (e.g., &lt;b&gt; to set bold face), but it does not support styles, whether
+	 * specified as a CSS document, a &lt;style&gt; element, or as a 'style=' parameter to other elements
+	 * (e.g., &lt;div&gt; or &lt;span&gt;).  The rendering of tables and lists also may be somewhat different
+	 * in the converted document.  The conversion also does not convert "active content"; for example, Javascript
+	 * contained in an application/x-javascript part.<br>
+	 * Such parts are retained as attachments in the converted document.<br>
+	 * If this function is called on the Domino server, its actions are affected by its configuration as
+	 * specified in the Domino Server Configuration; see the MIME pages of the Server Configuration for details.<br>
+	 * <br>
+	 * If this function is called on the Notes client, its actions are affected by its configuration as specified
+	 * in the Personal Name and Address book; see the International MIME Settings document for details.
+	 *  
+	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
+	 */
+	public void convertToRichtext(MimeConversionControl concCtrl) {
+		checkHandle();
+		
+		if (concCtrl!=null && concCtrl.isRecycled()) {
+			throw new NotesError(0, "The conversion control object is recycled");
+		}
+		
+		Pointer ccPtr = concCtrl==null ? null : concCtrl.getAdapter(Pointer.class);
+
+		boolean isCanonical = (getFlags() & NotesConstants.NOTE_FLAG_CANONICAL) == NotesConstants.NOTE_FLAG_CANONICAL;
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertMIMEPartsCC(getHandle64(), isCanonical, ccPtr);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertMIMEPartsCC(getHandle32(), isCanonical, ccPtr);
 		}
 		NotesErrorUtils.checkResult(result);
 	}

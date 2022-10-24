@@ -9,11 +9,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
+import com.mindoo.domino.jna.mime.attachments.ByteBufferMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.LocalFileMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.UrlMimeAttachment;
+import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
  * Container for text and binary data of an item of type {@link NotesItem#TYPE_MIME_PART}.
@@ -149,20 +152,42 @@ public class MIMEData {
 	 * @return unique content id
 	 */
 	public String embed(IMimeAttachment attachment) {
+		return embed((String) null, attachment);
+	}
+	
+	/**
+	 * Adds an inline file
+	 * 
+	 * @param attachment attachment
+	 * @return unique content id
+	 */
+	public String embed(NotesAttachment attachment) {
+		return embed((String) null, attachment);
+	}
+	
+	/**
+	 * Adds/changes an inline file with a given content id
+	 * 
+	 * @param cid content id
+	 * @param attachment attachment
+	 * @return unique content id
+	 */
+	public String embed(String cid, IMimeAttachment attachment) {
+		if (StringUtil.isEmpty(cid)) {
+			//find a unique content id
+			do {
+				cid = "att_"+(m_uniqueCidCounter++)+"@jnadoc";
+			}
+			while (m_embeds.containsKey(cid));
+		}
+
 		if (attachment==null) {
-			throw new IllegalArgumentException("Attachment cannot be null");
+			m_embeds.remove(cid);
 		}
-
-		//find a unique content id
-		String cid;
-		do {
-			cid = "att_"+(m_uniqueCidCounter++)+"@jnxdoc";
+		else {
+			m_embeds.put(cid, attachment);
 		}
-		while (m_embeds.containsKey(cid));
-		
-		m_embeds.put(cid, attachment);
 		m_toString = null;
-
 		return cid;
 	}
 	
@@ -171,15 +196,10 @@ public class MIMEData {
 	 * 
 	 * @param cid content id
 	 * @param attachment attachment
+	 * @return unique content id
 	 */
-	public void embed(String cid, IMimeAttachment attachment) {
-		if (attachment==null) {
-			m_embeds.remove(cid);
-		}
-		else {
-			m_embeds.put(cid, attachment);
-		}
-		m_toString = null;
+	public String embed(String cid, NotesAttachment attachment) {
+		return embed(cid, new ByteBufferMimeAttachment(attachment.toByteBuffer(), attachment.getFileName()));
 	}
 	
 	/**
@@ -223,6 +243,16 @@ public class MIMEData {
 	public void attach(IMimeAttachment attachment) {
 		m_attachments.add(attachment);
 		m_toString = null;
+	}
+	
+	/**
+	 * Attaches a {@link NotesAttachment} by converting it into an {@link ByteBufferMimeAttachment}
+	 * internally.
+	 * 
+	 * @param attachment attachment
+	 */
+	public void attach(NotesAttachment attachment) {
+		attach(new ByteBufferMimeAttachment(attachment.toByteBuffer(), attachment.getFileName()));
 	}
 	
 	public List<IMimeAttachment> getAttachments() {

@@ -1624,6 +1624,11 @@ public interface INotesNativeAPI64 extends Library {
 			int dwFlags,
 			Pointer hMIMEStream);
 	
+	short MIMEConvertMIMEPartsCC(
+			long hNote,
+			boolean bCanonical,
+			Pointer hCC);
+
 	short MIMEStreamOpen(
 			long hNote,
 			Memory pchItemName,
@@ -1635,6 +1640,13 @@ public interface INotesNativeAPI64 extends Library {
 			long hNote,
 			boolean bCanonical,
 			boolean bIsMIME,
+			Pointer hCC);
+	
+	short MIMEConvertMIMEPartCC(
+			long hNote,
+			Memory pszItemName,
+			short wItemNameLen,
+			boolean bCanonical,
 			Pointer hCC);
 	
 	@UndocumentedAPI

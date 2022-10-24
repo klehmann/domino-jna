@@ -9,6 +9,32 @@ import java.util.Map;
  * Properties to control the fidality of the richtext-html conversion
  */
 public class HtmlConvertProperties {
+	/**
+	 * Convenience function that enables richtext to HTML conversion with
+	 * expanded outlines/sections, all visible rows of tabbed tables, Notes URLs
+	 * in doclinks and font conversion where stylesheets are used instead of old
+	 * font HTML Tags.
+	 * 
+	 * @return conversion properties
+	 */
+	public static HtmlConvertProperties modernDefaults() {
+		return new HtmlConvertProperties()
+				//expand outlines and sections
+				.option(HtmlConvertOption.ForceOutlineExpand)
+				.option(HtmlConvertOption.ForceSectionExpand)
+				//display all tabs of tabbed tables
+				.option(HtmlConvertOption.RowAtATimeTableAlt)
+				.option(HtmlConvertOption.ListFidelity)
+				.option(HtmlConvertOption.TextExactSpacing)
+				//use Notes URLs in links instead of web URLs
+				.option(HtmlConvertOption.OfferNotesURLInLink)
+				//enable the font conversion master option so that we
+				//can set "specs" and "tags" options to produce modern HTML
+				.option(HtmlConvertOption.FontConversion)
+				.options(HtmlConvertOption.allSpecs(), "2")
+				.options(HtmlConvertOption.allTags(), "0");
+	}
+	
 	private String userAgent;
 	private HtmlLinkHandling linkHandling;
 	private Map<String,String> options;
