@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
@@ -7910,6 +7912,18 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 					return !StringUtil.isEmpty(val);
 				})
 				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Returns a stream of note attachments
+	 * 
+	 * @return attachments
+	 */
+	public Stream<NotesAttachment> getAttachments() {
+		return getAttachmentNames()
+				.stream()
+				.map(this::getAttachment)
+				.filter(Objects::nonNull);
 	}
 
 	/**
