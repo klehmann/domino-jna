@@ -883,4 +883,13 @@ public interface INotesNativeAPI extends Library {
 
 	void AddInLogMessageText(Memory string, short AdditionalErrorCode, Object... args);
 
+	@UndocumentedAPI
+	short NSFGetNamedObjects(HANDLE.ByValue hDb, short Namespace, IntByReference rethBuffer, IntByReference retBufferLength);
+
+	@UndocumentedAPI
+	short NSFDbGetNamedObjectID(HANDLE.ByValue hDB, short NameSpace,
+            Memory Name, short NameLength,
+            IntByReference rtnObjectID);
+
+
 }

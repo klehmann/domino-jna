@@ -3237,6 +3237,13 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 	}
 	
+	/**
+	 * Creates an in-memory copy of this note with an empty note id, a new OID (so a new UNID as well)
+	 * and with the parent database handle set to the specified target database
+	 * 
+	 * @param targetDb target database
+	 * @return note copy in target database
+	 */
 	public NotesNote copyToDatabase(NotesDatabase targetDb) {
 		checkHandle();
 
@@ -7038,6 +7045,42 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			String[] parsedParts = NotesDatabase.parseApplicationNamedNoteName(name);
 			if (parsedParts!=null) {
 				return parsedParts[0];
+			}
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * For named notes (created via {@link NotesDatabase#openNamedNote(String, String, boolean)},
+	 * this method returns the name value.
+	 * 
+	 * @return name or empty string
+	 */
+	public String getNamedNoteName() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseLegacyAPINamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[0];
+			}
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * For named notes (created via {@link NotesDatabase#openNamedNote(String, String, boolean)},
+	 * this method returns the username value.
+	 * 
+	 * @return username or empty string
+	 */
+	public String getNamedNoteUsername() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseLegacyAPINamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[1];
 			}
 		}
 		

@@ -1652,11 +1652,6 @@ public interface INotesNativeAPI64 extends Library {
 	@UndocumentedAPI
 	short NSFDbNamedObjectEnum(long hDB, NotesCallbacks.b64_NSFDbNamedObjectEnumPROC callback, Pointer param);
 
-	@UndocumentedAPI
-	short NSFDbGetNamedObjectID(long hDB, short NameSpace,
-            Memory Name, short NameLength,
-            IntByReference rtnObjectID);
-
 	short NSFDbCreateAndCopyExtended(
 			Memory srcDb,
 			Memory dstDb,

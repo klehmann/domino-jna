@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.test;
 
+import static org.junit.Assert.*;
+
 import java.util.Map;
 
 import org.junit.Test;
@@ -33,6 +35,8 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 				String pkObjectId = "configuration_"+System.currentTimeMillis();
 
 				NotesNote note = dbJNA.createNote();
+				assertFalse(note.isGhost());
+				
 				//this adds a $name item to the note with a format similar to profile documents,
 				//e.g. $app_012testcategory_myobjectid (where 012 is the length of the following
 				//category name)
@@ -138,6 +142,8 @@ public class TestNotePrimaryKey extends BaseJNATestClass {
 				String pkObjectId = "configuration_"+System.currentTimeMillis();
 
 				NotesNote note = dbJNA.createGhostNote();
+				assertTrue(note.isGhost());
+				
 				//this adds a $name item to the note with a format similar to profile documents,
 				//e.g. $app_012testcategory_myobjectid (where 012 is the length of the following
 				//category name)
