@@ -44,7 +44,7 @@ public class TestNamedNotesCompatibility extends BaseJNATestClass {
 				//check name/username
 				assertEquals("testname", createdNote.getNamedNoteName());
 				assertEquals(uuid, createdNote.getNamedNoteUsername());
-				//sate note
+				//save note
 				createdNote.update();
 				assertFalse(createdNote.isNewNote());
 				
