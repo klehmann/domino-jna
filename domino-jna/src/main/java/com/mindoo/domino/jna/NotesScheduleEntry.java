@@ -17,7 +17,7 @@ public class NotesScheduleEntry {
 	/** UNID of the entry */
 	private String m_unid;
 	/** Interval of the entry */	
-	private Calendar[] m_interval;
+	private NotesTimeDate[] m_interval;
 	/** {@link ScheduleAttr} attributes defined by Notes */
 	private EnumSet<ScheduleAttr> m_attr;
 	/** Application specific attributes */
@@ -38,9 +38,9 @@ public class NotesScheduleEntry {
 				this.m_unid = entry.Unid==null ? null : entry.Unid.toString();
 				NotesTimeDatePairStruct intervalTDPair = entry.Interval;
 				if (intervalTDPair!=null && intervalTDPair.Lower!=null && intervalTDPair.Upper!=null) {
-					this.m_interval = new Calendar[] {
-							intervalTDPair.Lower.toCalendar(),
-							intervalTDPair.Upper.toCalendar()
+					this.m_interval = new NotesTimeDate[] {
+							new NotesTimeDate(intervalTDPair.Lower.Innards),
+							new NotesTimeDate(intervalTDPair.Upper.Innards)
 					};
 				}
 				int attrAsInt = (int) (entry.Attr & 0xff);
@@ -59,9 +59,9 @@ public class NotesScheduleEntry {
 				this.m_unid = entryExt.Unid==null ? null : entryExt.Unid.toString();
 				NotesTimeDatePairStruct intervalTDPair = entryExt.Interval;
 				if (intervalTDPair!=null && intervalTDPair.Lower!=null && intervalTDPair.Upper!=null) {
-					this.m_interval = new Calendar[] {
-							intervalTDPair.Lower.toCalendar(),
-							intervalTDPair.Upper.toCalendar()
+					this.m_interval = new NotesTimeDate[] {
+							new NotesTimeDate(intervalTDPair.Lower.Innards),
+							new NotesTimeDate(intervalTDPair.Upper.Innards)
 					};
 				}
 				int attrAsInt = (int) (entryExt.Attr & 0xff);
@@ -84,14 +84,24 @@ public class NotesScheduleEntry {
 		return m_unid;
 	}
 
+	@Deprecated
 	public Calendar getFrom() {
+		return m_interval==null ? null : m_interval[0].toCalendar();
+	}
+	
+	public NotesTimeDate getFromAsTimeDate() {
 		return m_interval==null ? null : m_interval[0];
 	}
 	
+	@Deprecated
 	public Calendar getUntil() {
-		return m_interval==null ? null : m_interval[1];
+		return m_interval==null ? null : m_interval[1].toCalendar();
 	}
 
+	public NotesTimeDate getUntilAsTimeDate() {
+		return m_interval==null ? null : m_interval[1];
+	}
+	
 	public EnumSet<ScheduleAttr> getAttributes() {
 		return m_attr;
 	}
@@ -126,6 +136,6 @@ public class NotesScheduleEntry {
 	
 	@Override
 	public String toString() {
-		return "NotesScheduleEntry [UNID="+m_unid+", from="+(m_interval==null ? "null" : m_interval[0].getTime())+", until="+(m_interval==null ? "null" : m_interval[1].getTime())+"]";
+		return "NotesScheduleEntry [UNID="+m_unid+", from="+(m_interval==null ? "null" : m_interval[0])+", until="+(m_interval==null ? "null" : m_interval[1])+"]";
 	}
 }

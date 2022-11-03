@@ -9,11 +9,10 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.ItemDecoder;
-import com.mindoo.domino.jna.internal.Mem32;
-import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.NotesConstants;
-import com.mindoo.domino.jna.internal.NotesNativeAPI32;
-import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryExtStruct;
 import com.mindoo.domino.jna.internal.structs.NotesSchedEntryStruct;
 import com.mindoo.domino.jna.internal.structs.NotesScheduleListStruct;
@@ -25,7 +24,6 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
 
 /**
  * Schedule object to read busy and free time info for a single Domino user
@@ -34,26 +32,14 @@ import com.sun.jna.ptr.LongByReference;
  */
 public class NotesSchedule implements IRecyclableNotesObject {
 	private NotesScheduleContainer m_parent;
-	private long m_hSched64;
-	private int m_hSched32;
+	private int m_hSched;
 	private boolean m_noRecycle;
 	private NotesScheduleStruct m_scheduleData;
 	private String m_owner;
 	
-	NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, long hSchedule64) {
-		if (!PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 64bit only");
+	NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, int hSchedule) {
 		m_parent = parent;
-		m_hSched64 = hSchedule64;
-		m_scheduleData = scheduleData.getAdapter(NotesScheduleStruct.class);
-		m_owner = owner;
-	}
-
-	NotesSchedule(NotesScheduleContainer parent, IAdaptable scheduleData, String owner, int hSchedule32) {
-		if (PlatformUtils.is64Bit())
-			throw new IllegalStateException("Constructor is 32bit only");
-		m_parent = parent;
-		m_hSched32 = hSchedule32;
+		m_hSched = hSchedule;
 		m_scheduleData = scheduleData.getAdapter(NotesScheduleStruct.class);
 		m_owner = owner;
 	}
@@ -72,52 +58,44 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		if (m_noRecycle || isRecycled())
 			return;
 
-		if (PlatformUtils.is64Bit()) {
-			NotesNativeAPI64.get().Schedule_Free(m_parent.getHandle64(), (int) m_hSched64);
-			NotesGC.__objectBeeingBeRecycled(NotesSchedule.class, this);
-			m_hSched64=0;
-		}
-		else {
-			NotesNativeAPI32.get().Schedule_Free(m_parent.getHandle32(), m_hSched32);
-			NotesGC.__objectBeeingBeRecycled(NotesSchedule.class, this);
-			m_hSched32=0;
-		}
+		NotesNativeAPI.get().Schedule_Free(m_parent.getHandle().getByValue(), (int) m_hSched);
+		NotesGC.__objectBeeingBeRecycled(NotesSchedule.class, this);
+		m_hSched=0;
 	}
 
 	void checkHandle() {
 		if (m_parent.isRecycled())
 			throw new NotesError(0, "Parent schedule container already recycled");
 		
+		if (m_hSched==0)
+			throw new NotesError(0, "Schedule already recycled");
+		
 		if (PlatformUtils.is64Bit()) {
-			if (m_hSched64==0)
-				throw new NotesError(0, "Schedule already recycled");
-			NotesGC.__b64_checkValidObjectHandle(NotesSchedule.class, m_hSched64);
+			NotesGC.__b64_checkValidObjectHandle(NotesSchedule.class, m_hSched);
 		}
 		else {
-			if (m_hSched32==0)
-				throw new NotesError(0, "Schedule already recycled");
-			NotesGC.__b32_checkValidObjectHandle(NotesSchedule.class, m_hSched32);
+			NotesGC.__b32_checkValidObjectHandle(NotesSchedule.class, m_hSched);
 		}
 	}
 	
 	@Override
 	public boolean isRecycled() {
 		if (PlatformUtils.is64Bit()) {
-			return m_hSched64==0;
+			return m_hSched==0;
 		}
 		else {
-			return m_hSched32==0;
+			return m_hSched==0;
 		}
 	}
 
 	@Override
 	public int getHandle32() {
-		return m_hSched32;
+		return m_hSched;
 	}
 
 	@Override
 	public long getHandle64() {
-		return m_hSched64;
+		return m_hSched;
 	}
 
 	/**
@@ -207,110 +185,58 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		boolean hasMoreData;
 		
 		//read first piece of busy time
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethRange = new LongByReference();
-			result = NotesNativeAPI64.get().Schedule_ExtractBusyTimeRange(m_parent.getHandle64(), (int) m_hSched64,
-					unidStruct, intervalPair,
-					retdwSize, rethRange, rethMoreCtx);
-			NotesErrorUtils.checkResult(result);
-			
-			hasMoreData = rethMoreCtx.getValue()!=0;
-			long hRange = rethRange.getValue();
-			if (hRange!=0) {
-				Pointer rangePtr = Mem64.OSLockObject(hRange);
-				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-					for (Object currObj : currentRange) {
-						if (currObj instanceof Calendar[]) {
-							allRanges.add((Calendar[]) currObj);
-						}
+
+		DHANDLE.ByReference rethRange = DHANDLE.newInstanceByReference();
+		result = NotesNativeAPI.get().Schedule_ExtractBusyTimeRange(m_parent.getHandle().getByValue(),
+				(int) m_hSched,
+				unidStruct, intervalPair,
+				retdwSize, rethRange, rethMoreCtx);
+		NotesErrorUtils.checkResult(result);
+		
+		hasMoreData = rethMoreCtx.getValue()!=0;
+
+		if (!rethRange.isNull()) {
+			Pointer rangePtr = Mem.OSLockObject(rethRange);
+			try {
+				List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
+				for (Object currObj : currentRange) {
+					if (currObj instanceof Calendar[]) {
+						allRanges.add((Calendar[]) currObj);
 					}
-				}
-				finally {
-					Mem64.OSUnlockObject(hRange);
-					result = Mem64.OSMemFree(hRange);
-					NotesErrorUtils.checkResult(result);
 				}
 			}
-		}
-		else {
-			IntByReference rethRange = new IntByReference();
-			result = NotesNativeAPI32.get().Schedule_ExtractBusyTimeRange(m_parent.getHandle32(), (int) m_hSched32,
-					unidStruct, intervalPair,
-					retdwSize, rethRange, rethMoreCtx);
-			NotesErrorUtils.checkResult(result);
-			
-			hasMoreData = rethMoreCtx.getValue()!=0;
-			int hRange = rethRange.getValue();
-			if (hRange!=0) {
-				Pointer rangePtr = Mem32.OSLockObject(hRange);
-				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-					for (Object currObj : currentRange) {
-						if (currObj instanceof Calendar[]) {
-							allRanges.add((Calendar[]) currObj);
-						}
-					}
-				}
-				finally {
-					Mem32.OSUnlockObject(hRange);
-					result = Mem32.OSMemFree(hRange);
-					NotesErrorUtils.checkResult(result);
-				}
+			finally {
+				Mem.OSUnlockObject(rethRange);
+				result = Mem.OSMemFree(rethRange.getByValue());
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		
 		while (hasMoreData) {
 			//read more data
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethRange = new LongByReference();
-				result = NotesNativeAPI64.get().Schedule_ExtractMoreBusyTimeRange(m_parent.getHandle64(), rethMoreCtx.getValue(), unidStruct,
-						intervalPair,
-						retdwSize, rethRange, rethMoreCtx);
-				NotesErrorUtils.checkResult(result);
-				
-				hasMoreData = rethMoreCtx.getValue()!=0;
-				long hRange = rethRange.getValue();
-				if (hRange!=0) {
-					Pointer rangePtr = Mem64.OSLockObject(hRange);
-					try {
-						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-						for (Object currObj : currentRange) {
-							if (currObj instanceof Calendar[]) {
-								allRanges.add((Calendar[]) currObj);
-							}
+			rethRange = DHANDLE.newInstanceByReference();
+			result = NotesNativeAPI.get().Schedule_ExtractMoreBusyTimeRange(m_parent.getHandle().getByValue(),
+					rethMoreCtx.getValue(), unidStruct,
+					intervalPair,
+					retdwSize, rethRange, rethMoreCtx);
+			NotesErrorUtils.checkResult(result);
+			
+			hasMoreData = rethMoreCtx.getValue()!=0;
+
+			if (!rethRange.isNull()) {
+				Pointer rangePtr = Mem.OSLockObject(rethRange);
+				try {
+					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
+					for (Object currObj : currentRange) {
+						if (currObj instanceof Calendar[]) {
+							allRanges.add((Calendar[]) currObj);
 						}
-					}
-					finally {
-						Mem64.OSUnlockObject(hRange);
-						result = Mem64.OSMemFree(hRange);
-						NotesErrorUtils.checkResult(result);
 					}
 				}
-			}
-			else {
-				IntByReference rethRange = new IntByReference();
-				result = NotesNativeAPI32.get().Schedule_ExtractMoreBusyTimeRange(m_parent.getHandle32(), rethMoreCtx.getValue(), unidStruct,
-						intervalPair, retdwSize, rethRange, rethMoreCtx);
-				NotesErrorUtils.checkResult(result);
-				
-				hasMoreData = rethMoreCtx.getValue()!=0;
-				int hRange = rethRange.getValue();
-				if (hRange!=0) {
-					Pointer rangePtr = Mem32.OSLockObject(hRange);
-					try {
-						List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-						for (Object currObj : currentRange) {
-							if (currObj instanceof Calendar[]) {
-								allRanges.add((Calendar[]) currObj);
-							}
-						}
-					}
-					finally {
-						Mem32.OSUnlockObject(hRange);
-						result = Mem32.OSMemFree(hRange);
-						NotesErrorUtils.checkResult(result);
-					}
+				finally {
+					Mem.OSUnlockObject(rethRange);
+					result = Mem.OSMemFree(rethRange.getByValue());
+					NotesErrorUtils.checkResult(result);
 				}
 			}
 		}
@@ -360,57 +286,31 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		IntByReference retdwSize = new IntByReference();
 		
 		//read first piece of busy time
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethRange = new LongByReference();
-			result = NotesNativeAPI64.get().Schedule_ExtractFreeTimeRange(m_parent.getHandle64(), (int) m_hSched64,
-					unidStruct, (short) (findFirstFit ? 1 : 0), (short) (duration & 0xffff),
-					intervalPair, retdwSize, rethRange);
-			NotesErrorUtils.checkResult(result);
-			
-			long hRange = rethRange.getValue();
-			if (hRange!=0) {
-				Pointer rangePtr = Mem64.OSLockObject(hRange);
-				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-					for (Object currObj : currentRange) {
-						if (currObj instanceof Calendar[]) {
-							allRanges.add((Calendar[]) currObj);
-						}
+
+		DHANDLE.ByReference rethRange = DHANDLE.newInstanceByReference();
+		result = NotesNativeAPI.get().Schedule_ExtractFreeTimeRange(m_parent.getHandle().getByValue(),
+				m_hSched,
+				unidStruct, (short) (findFirstFit ? 1 : 0), (short) (duration & 0xffff),
+				intervalPair, retdwSize, rethRange);
+		NotesErrorUtils.checkResult(result);
+
+		if (!rethRange.isNull()) {
+			Pointer rangePtr = Mem.OSLockObject(rethRange);
+			try {
+				List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
+				for (Object currObj : currentRange) {
+					if (currObj instanceof Calendar[]) {
+						allRanges.add((Calendar[]) currObj);
 					}
 				}
-				finally {
-					Mem64.OSUnlockObject(hRange);
-					result = Mem64.OSMemFree(hRange);
-					NotesErrorUtils.checkResult(result);
-				}
+			}
+			finally {
+				Mem.OSUnlockObject(rethRange);
+				result = Mem.OSMemFree(rethRange.getByValue());
+				NotesErrorUtils.checkResult(result);
 			}
 		}
-		else {
-			IntByReference rethRange = new IntByReference();
-			result = NotesNativeAPI32.get().Schedule_ExtractFreeTimeRange(m_parent.getHandle32(), (int) m_hSched32,
-					unidStruct, (short) (findFirstFit ? 1 : 0), (short) (duration & 0xffff),
-					intervalPair, retdwSize, rethRange);
-			NotesErrorUtils.checkResult(result);
-			
-			int hRange = rethRange.getValue();
-			if (hRange!=0) {
-				Pointer rangePtr = Mem32.OSLockObject(hRange);
-				try {
-					List<Object> currentRange = ItemDecoder.decodeTimeDateList(rangePtr);
-					for (Object currObj : currentRange) {
-						if (currObj instanceof Calendar[]) {
-							allRanges.add((Calendar[]) currObj);
-						}
-					}
-				}
-				finally {
-					Mem32.OSUnlockObject(hRange);
-					result = Mem32.OSMemFree(hRange);
-					NotesErrorUtils.checkResult(result);
-				}
-			}
-		}
-		
+	
 		return allRanges;
 	}
 	
@@ -488,93 +388,50 @@ public class NotesSchedule implements IRecyclableNotesObject {
 		boolean hasMoreData;
 		
 		//read first piece of busy time
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethSchedList = new LongByReference();
-			result = NotesNativeAPI64.get().Schedule_ExtractSchedList(m_parent.getHandle64(), (int) m_hSched64,
-					intervalPair, retdwSize, rethSchedList, rethMore);
-			NotesErrorUtils.checkResult(result);
-			
-			hasMoreData = rethMore.getValue()!=0;
-			long hSchedList = rethSchedList.getValue();
-			if (hSchedList!=0) {
-				Pointer schedListPtr = Mem64.OSLockObject(hSchedList);
-				try {
-					List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
-					allSchedEntries.addAll(currSchedList);
-				}
-				finally {
-					Mem64.OSUnlockObject(hSchedList);
-					result = Mem64.OSMemFree(hSchedList);
-					NotesErrorUtils.checkResult(result);
-				}
+		DHANDLE.ByReference rethSchedList = DHANDLE.newInstanceByReference();
+		result = NotesNativeAPI.get().Schedule_ExtractSchedList(m_parent.getHandle().getByValue(),
+				m_hSched,
+				intervalPair, retdwSize, rethSchedList, rethMore);
+		NotesErrorUtils.checkResult(result);
+		
+		hasMoreData = rethMore.getValue()!=0;
+
+		if (!rethSchedList.isNull()) {
+			Pointer schedListPtr = Mem.OSLockObject(rethSchedList);
+			try {
+				List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
+				allSchedEntries.addAll(currSchedList);
 			}
-		}
-		else {
-			IntByReference rethSchedList = new IntByReference();
-			result = NotesNativeAPI32.get().Schedule_ExtractSchedList(m_parent.getHandle32(), (int) m_hSched32,
-					intervalPair, retdwSize, rethSchedList, rethMore);
-			NotesErrorUtils.checkResult(result);
-			
-			hasMoreData = rethMore.getValue()!=0;
-			int hSchedList = rethSchedList.getValue();
-			if (hSchedList!=0) {
-				Pointer schedListPtr = Mem32.OSLockObject(hSchedList);
-				try {
-					List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
-					allSchedEntries.addAll(currSchedList);
-				}
-				finally {
-					Mem32.OSUnlockObject(hSchedList);
-					result = Mem32.OSMemFree(hSchedList);
-					NotesErrorUtils.checkResult(result);
-				}
+			finally {
+				Mem.OSUnlockObject(rethSchedList);
+				result = Mem.OSMemFree(rethSchedList.getByValue());
+				NotesErrorUtils.checkResult(result);
 			}
 		}
 		
 		while (hasMoreData) {
 			//read more data
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethSchedList = new LongByReference();
-				result = NotesNativeAPI64.get().Schedule_ExtractMoreSchedList(m_parent.getHandle64(), rethMore.getValue(),
-						intervalPair, retdwSize, rethSchedList, rethMore);
-				NotesErrorUtils.checkResult(result);
-				
-				hasMoreData = rethMore.getValue()!=0;
-				long hSchedList = rethSchedList.getValue();
-				if (hSchedList!=0) {
-					Pointer schedListPtr = Mem64.OSLockObject(hSchedList);
-					try {
-						List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
-						allSchedEntries.addAll(currSchedList);
-					}
-					finally {
-						Mem64.OSUnlockObject(hSchedList);
-						result = Mem64.OSMemFree(hSchedList);
-						NotesErrorUtils.checkResult(result);
-					}
+			rethSchedList = DHANDLE.newInstanceByReference();
+			result = NotesNativeAPI.get().Schedule_ExtractMoreSchedList(m_parent.getHandle().getByValue(),
+					rethMore.getValue(),
+					intervalPair, retdwSize, rethSchedList, rethMore);
+			NotesErrorUtils.checkResult(result);
+			
+			hasMoreData = rethMore.getValue()!=0;
+
+			if (!rethSchedList.isNull()) {
+				Pointer schedListPtr = Mem.OSLockObject(rethSchedList);
+				try {
+					List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
+					allSchedEntries.addAll(currSchedList);
+				}
+				finally {
+					Mem.OSUnlockObject(rethSchedList);
+					result = Mem.OSMemFree(rethSchedList.getByValue());
+					NotesErrorUtils.checkResult(result);
 				}
 			}
-			else {
-				IntByReference rethSchedList = new IntByReference();
-				result = NotesNativeAPI32.get().Schedule_ExtractMoreSchedList(m_parent.getHandle32(), rethMore.getValue(),
-						intervalPair, retdwSize, rethSchedList, rethMore);
-				NotesErrorUtils.checkResult(result);
-				
-				hasMoreData = rethMore.getValue()!=0;
-				int hSchedList = rethSchedList.getValue();
-				if (hSchedList!=0) {
-					Pointer schedListPtr = Mem32.OSLockObject(hSchedList);
-					try {
-						List<NotesScheduleEntry> currSchedList = readSchedList(schedListPtr);
-						allSchedEntries.addAll(currSchedList);
-					}
-					finally {
-						Mem32.OSUnlockObject(hSchedList);
-						result = Mem32.OSMemFree(hSchedList);
-						NotesErrorUtils.checkResult(result);
-					}
-				}
-			}
+		
 		}
 		
 		return allSchedEntries;
@@ -586,7 +443,7 @@ public class NotesSchedule implements IRecyclableNotesObject {
 			return "NotesSchedule [recycled]";
 		}
 		else {
-			return "NotesSchedule [handle="+(PlatformUtils.is64Bit() ? m_hSched64 : m_hSched32)+", owner="+m_owner+"]";
+			return "NotesSchedule [handle="+m_hSched+", owner="+m_owner+"]";
 		}
 	}
 }

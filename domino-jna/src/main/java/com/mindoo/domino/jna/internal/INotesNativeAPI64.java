@@ -15,7 +15,6 @@ import com.mindoo.domino.jna.internal.structs.NotesFTIndexStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableExt;
 import com.mindoo.domino.jna.internal.structs.NotesItemDefinitionTableLock;
 import com.mindoo.domino.jna.internal.structs.NotesOriginatorIdStruct;
-import com.mindoo.domino.jna.internal.structs.NotesTimeDatePairStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.internal.structs.compoundtext.NotesCompoundStyleStruct;
@@ -129,27 +128,6 @@ public interface INotesNativeAPI64 extends Library {
 			Memory item_text,
 			short text_len);
 
-	short ListAllocate(
-			short ListEntries,
-			short TextSize,
-			int fPrefixDataType,
-			LongByReference rethList,
-			Memory retpList,
-			ShortByReference retListSize);
-	
-	short ListAddEntry(
-			long hList,
-			int fPrefixDataType,
-			ShortByReference pListSize,
-			short EntryNumber,
-			Memory Text,
-			short TextSize);
-	
-	short ListRemoveAllEntries(
-			long hList,
-			int fPrefixDataType,
-			ShortByReference pListSize);
-
 	short NSFItemInfo(
 			long note_handle,
 			Memory item_name,
@@ -187,7 +165,7 @@ public interface INotesNativeAPI64 extends Library {
 			ShortByReference name_len_ptr,
 			ShortByReference item_flags_ptr,
 			ShortByReference value_datatype_ptr,
-			NotesBlockIdStruct value_bid_ptr,
+			NotesBlockIdStruct.ByReference value_bid_ptr,
 			IntByReference value_len_ptr,
 			ByteByReference retSeqByte,
 			ByteByReference retDupItemID);
@@ -271,14 +249,6 @@ public interface INotesNativeAPI64 extends Library {
 			short  item_type,
 			Pointer item_value,
 			int value_len);
-	short NSFItemAppendByBLOCKID(
-			long note_handle,
-			short item_flags,
-			Memory item_name,
-			short name_len,
-			NotesBlockIdStruct.ByValue value_bid,
-			int value_len,
-			NotesBlockIdStruct item_bid_ptr);
 
 	void NSFNoteGetInfo(long hNote, short type, Pointer retValue);
 	void NSFNoteSetInfo(long hNote, short type, Pointer value);
@@ -1001,106 +971,7 @@ public interface INotesNativeAPI64 extends Library {
 			int dwReserved,
 			Pointer vpReserved);
 	void SECTokenFree(LongByReference mhToken);
-
-	short SchFreeTimeSearch(
-			NotesUniversalNoteIdStruct pApptUnid,
-			NotesTimeDateStruct pApptOrigDate,
-			short fFindFirstFit,
-			int dwReserved,
-			NotesTimeDatePairStruct pInterval,
-			short Duration,
-			Pointer pNames,
-			LongByReference rethRange);
-
-	short SchRetrieve(
-			NotesUniversalNoteIdStruct pApptUnid,
-			NotesTimeDateStruct pApptOrigDate,
-			int dwOptions,
-			NotesTimeDatePairStruct pInterval,
-			Pointer pNames,
-			LongByReference rethCntnr,
-			Pointer mustBeNull1,
-			Pointer mustBeNull2,
-			Pointer mustBeNull3);
-
-	short SchSrvRetrieveExt(
-			Pointer pClientNames,
-			NotesUniversalNoteIdStruct pApptUnid,
-			NotesTimeDateStruct pApptOrigDate,
-			int dwOptions,
-			NotesTimeDatePairStruct pInterval,
-			Pointer pNames,
-			Pointer pDetails,
-			Pointer piCalList,
-			Memory pszProxyUserName,
-			Memory pszProxyPassword,
-			LongByReference rethCntnr);
 	
-	void SchContainer_Free(long hCntnr);
-	short SchContainer_GetFirstSchedule(
-			long hCntnr,
-			IntByReference rethObj,
-			Memory retpSchedule);
-	short Schedule_Free(long hCntnr, int hSched);
-	short SchContainer_GetNextSchedule(
-			long hCntnr,
-			int hCurSchedule,
-			IntByReference rethNextSchedule,
-			Memory retpNextSchedule);
-	short Schedule_ExtractFreeTimeRange(
-			long hCntnr,
-			int hSchedObj,
-			NotesUniversalNoteIdStruct punidIgnore,
-			short fFindFirstFit,
-			short wDuration,
-			NotesTimeDatePairStruct pInterval,
-			IntByReference retdwSize,
-			LongByReference rethRange);
-	short Schedule_ExtractBusyTimeRange(
-			long hCntnr,
-			int hSchedObj,
-			NotesUniversalNoteIdStruct punidIgnore,
-			NotesTimeDatePairStruct pInterval,
-			IntByReference retdwSize,
-			LongByReference rethRange,
-			IntByReference rethMoreCtx);
-	short Schedule_ExtractMoreBusyTimeRange(
-			long hCntnr,
-			int hMoreCtx,
-			NotesUniversalNoteIdStruct punidIgnore,
-			NotesTimeDatePairStruct pInterval,
-			IntByReference retdwSize,
-			LongByReference rethRange,
-			IntByReference rethMore);
-	short Schedule_ExtractSchedList(
-			long hCntnr,
-			int hSchedObj,
-			NotesTimeDatePairStruct pInterval,
-			IntByReference retdwSize,
-			LongByReference rethSchedList,
-			IntByReference rethMore);
-	short Schedule_ExtractMoreSchedList(
-			long hCntnr,
-			int hMoreCtx,
-			NotesTimeDatePairStruct pInterval,
-			IntByReference retdwSize,
-			LongByReference rethSchedList,
-			IntByReference rethMore);
-	short Schedule_Access(
-			long hCntnr,
-			int hSched,
-			PointerByReference pretSched);
-	short Schedule_GetFirstDetails(
-			long hCntnr,
-			int hSchedObj,
-			IntByReference rethDetailObj,
-			PointerByReference retpDetail);
-	
-	short Schedule_GetNextDetails(
-			long hCntnr,
-			int hDetailObj,
-			IntByReference rethNextDetailObj,
-			PointerByReference retpNextDetail);
 	short NSGetServerClusterMates(
 			Memory pServerName,
 			int dwFlags,

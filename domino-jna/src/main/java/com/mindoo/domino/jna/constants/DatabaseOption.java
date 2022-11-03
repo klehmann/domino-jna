@@ -292,7 +292,27 @@ public enum DatabaseOption {
 	IMAP_FOLDERSYNC(NotesConstants.DBOPTBIT_IMAP_FOLDERSYNC),
 	
 	/** Large Summary Support (LSS) */
-	LARGE_BUCKETS_ENABLED(NotesConstants.DBOPTBIT_LARGE_BUCKETS_ENABLED);
+	LARGE_BUCKETS_ENABLED(NotesConstants.DBOPTBIT_LARGE_BUCKETS_ENABLED),
+
+	/** Pair1 primary db mathced tds filled */
+	SOLR_PAIR1PRIMARY(NotesConstants.DBOPTBIT_SOLR_PAIR1PRIMARY),
+
+	/** Pair2 init solr index done */
+	SOLR_SEARCH_INIT_DONE2(NotesConstants.DBOPTBIT_SOLR_SEARCH_INIT_DONE2),
+
+	/** Pair1 secondary db mathced tds filled */
+	SOLR_PAIR1SECONDARY(NotesConstants.DBOPTBIT_SOLR_PAIR1SECONDARY),
+
+	/** Pair2 primary db mathced tds filled */
+	SOLR_PAIR2PRIMARY(NotesConstants.DBOPTBIT_SOLR_PAIR2PRIMARY),
+
+	/** Pair2 secondary db mathced tds filled */
+	SOLR_PAIR2SECONDARY(NotesConstants.DBOPTBIT_SOLR_PAIR2SECONDARY),
+
+	/** ODS 54 + large buckets + compact -c */
+	LARGE_ITEMS_ENABLED(NotesConstants.DBOPTBIT_LARGE_ITEMS_ENABLED),
+
+	DELETE_LOGGING(NotesConstants.DBOPTBIT_DELETE_LOGGING);
 
 	private int m_val;
 

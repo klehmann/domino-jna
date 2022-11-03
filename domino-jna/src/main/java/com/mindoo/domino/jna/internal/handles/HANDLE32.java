@@ -29,6 +29,10 @@ public class HANDLE32 extends BaseStructure implements HANDLE {
 		setAlignType(ALIGN_DEFAULT);
 	}
 
+	public int getValue() {
+		return hdl;
+	}
+
 	public static HANDLE32 newInstance(int hdl) {
 		return AccessController.doPrivileged((PrivilegedAction<HANDLE32>) () -> new HANDLE32(hdl));
 	}

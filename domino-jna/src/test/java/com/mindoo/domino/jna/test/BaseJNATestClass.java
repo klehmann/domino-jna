@@ -10,6 +10,8 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,6 +47,9 @@ import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.constants.CreateDatabase;
 import com.mindoo.domino.jna.constants.DBClass;
+import com.mindoo.domino.jna.constants.DBCompact;
+import com.mindoo.domino.jna.constants.DBCompact2;
+import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.dxl.DXLImporter;
@@ -72,6 +77,13 @@ public class BaseJNATestClass {
 
 	public static final String DBPATH_FAKENAMES_VIEWS_NSF = "fakenames-views.nsf";
 	public static final String DBPATH_FAKENAMES_NSF = "fakenames.nsf";
+
+	public enum LargeDataLevel {
+		/** R10/R11 ODS supporting up to 16MB of summary data */
+		R11,
+		/** R12 ODS supporting large text items and search results */
+		R12
+	}
 
 	private ThreadLocal<Session> m_threadSession = new ThreadLocal<Session>();
 	private static boolean m_notesInitExtendedCalled = false;
@@ -565,6 +577,55 @@ public class BaseJNATestClass {
 			throw deleteDbError;
 		}
 	}
+
+	/**
+	 * Creates a R10 compatible temp db where the R11 C API can write
+	 * up to 16 MB of summary data per document or a R12 compatible
+	 * temp db with large item support
+	 * 
+	 * @param level type of database to return
+	 * @param c     consumer
+	 * @throws Exception
+	 */
+	protected void withLargeDataEnabledTempDb(final LargeDataLevel level, final DatabaseConsumer c) throws Exception {
+		final Path tempDest = Files.createTempFile(this.getClass().getName(), ".nsf"); //$NON-NLS-1$
+		Files.delete(tempDest);
+
+		final DBClass dbClass = level == LargeDataLevel.R11 ? DBClass.V10NOTEFILE : DBClass.V12NOTEFILE;
+
+		NotesDatabase.createDatabase("", tempDest.toString(), dbClass, true,
+				EnumSet.of(CreateDatabase.LARGE_UNKTABLE), Encryption.None, 0, "Temp Db", 
+				AclLevel.MANAGER, IDUtils.getIdUsername(), true);
+
+		NotesDatabase db = new NotesDatabase("", tempDest.toString(), "");
+		// activate large summary support; on R12 databases, this auto-enables large
+		// item support as well
+		db.setOption(DatabaseOption.LARGE_BUCKETS_ENABLED, true);
+		db.recycle();
+
+		// compact database to activate the large bucket / item support
+		NotesDatabase.compact(tempDest.toString(), EnumSet.of(DBCompact.NO_INPLACE), EnumSet.noneOf(DBCompact2.class));
+		db = new NotesDatabase("", tempDest.toString(), "");
+
+		NotesError deleteDbError = null;
+		try {
+			c.accept(db);
+		} finally {
+			db.recycle();
+
+			try {
+				NotesDatabase.deleteDatabase("", tempDest.toString());
+			}
+			catch (NotesError e) {
+				deleteDbError = e;
+			}
+		}
+
+		if (deleteDbError!=null) {
+			throw deleteDbError;
+		}
+	}
+
 
 	public void withImportedDXL(NotesDatabase db, String resDirPath, DatabaseConsumer consumer) throws Exception {
 		DXLImporter dxlImporter = new DXLImporter();

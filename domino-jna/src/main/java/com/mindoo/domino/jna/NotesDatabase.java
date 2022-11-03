@@ -166,6 +166,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	boolean m_passNamesListToDbOpen;
 	private boolean m_passNamesListToViewOpen;
 	private DbMode m_dbMode;
+	private Boolean m_hasLargeItemSupport;
 	
 	private final RecycleHierarchy m_recycleHierarchy = new RecycleHierarchy();
 	
@@ -7130,7 +7131,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 				NamedObjectInfo objInfo = new NamedObjectInfo();
 				objInfos[i] = objInfo;
 				
-				NamedObjectEntryStruct namedObjStruct = new NamedObjectEntryStruct(ptr);
+				NamedObjectEntryStruct namedObjStruct = NamedObjectEntryStruct.newInstance(ptr);
 				namedObjStruct.read();
 				int structSize = namedObjStruct.size();
 				
@@ -8562,5 +8563,136 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 			Mem.OSUnlockObject(hReturn);
 			Mem.OSMemFree(hReturn.getByValue());
 		}
+	}
+	
+	/**
+	 * Caches the database option LARGE_ITEMS_ENABLED internally to improve performance
+	 * 
+	 * @return true if large items are supported
+	 */
+	boolean hasLargeItemSupport() {
+		if (m_hasLargeItemSupport==null) {
+			m_hasLargeItemSupport = getOption(DatabaseOption.LARGE_ITEMS_ENABLED);
+		}
+		return m_hasLargeItemSupport;
+	}
+
+	public interface NSFVersionInfo {
+
+		/**
+		 * The major version number indicates which releases of Domino and Notes
+		 * software
+		 * are able to access that database.<br>
+		 * The major verson number of a database is the same as the ODS version number
+		 * that
+		 * is displayed in the Notes Client File/Database/Properties/second information
+		 * tab.
+		 *
+		 * @return major version
+		 */
+		int getMajorVersion();
+
+		/**
+		 * The minor version number indicates small changes to the internal format of a
+		 * database,
+		 * and is generally of little interest to a C API program.
+		 *
+		 * @return minor version
+		 */
+		int getMinorVersion();
+	}
+
+
+	/**
+	 * Reads information about the On-Disk-Structure (ODS) of the database.
+	 * Each release of Domino or Notes software can access databases that have a
+	 * major version
+	 * number that is less than or equal to a particular value associated with that
+	 * release.<br>
+	 * <br>
+	 * A Domino database that has a major version number that is greater than the
+	 * major version
+	 * number associated with a particular Domino or Notes release cannot be
+	 * accessed by that release.<br>
+	 * <br>
+	 * The following table shows which major version numbers can be accessed by
+	 * particular
+	 * releases of Domino or Notes:<br>
+	 * <br>
+	 * <table>
+	 * <caption>The table ODS levels corresponding to Domino releases</caption>
+	 * <tr>
+	 * <th>Domino or Notes Software Releases</th>
+	 * <th>Major Version Numbers That Can Be Accessed</th>
+	 * </tr>
+	 * <tr>
+	 * <td>1.x</td>
+	 * <td>16</td>
+	 * </tr>
+	 * <tr>
+	 * <td>2.x</td>
+	 * <td>16</td>
+	 * </tr>
+	 * <tr>
+	 * <td>3.x</td>
+	 * <td>17</td>
+	 * </tr>
+	 * <tr>
+	 * <td>4.0, 4.1, 4.5.x, 4.6.x</td>
+	 * <td>20 or less</td>
+	 * </tr>
+	 * <tr>
+	 * <td>5.0 - 5.0.12, 6 - 6.0.3, 6.5, 7.0</td>
+	 * <td>43 or less</td>
+	 * </tr>
+	 * <tr>
+	 * <td>9.0</td>
+	 * <td>52</td>
+	 * </tr>
+	 * <tr>
+	 * <td>10.x - 11.x</td>
+	 * <td>53</td>
+	 * </tr>
+	 * <tr>
+	 * <td>12.0.0</td>
+	 * <td>54</td>
+	 * </tr>
+	 * </table>
+	 *
+	 * @return ODS info
+	 */
+	public NSFVersionInfo getNSFVersionInfo() {
+		checkHandle();
+
+		HANDLE hDb = getHandle();
+
+		ShortByReference retMajorVersion = new ShortByReference();
+		ShortByReference retMinorVersion = new ShortByReference();
+
+		short result = NotesNativeAPI.get().NSFDbMajorMinorVersionGet(hDb.getByValue(), retMajorVersion, retMinorVersion);
+
+		NotesErrorUtils.checkResult(result);
+
+		int majorVersion = Short.toUnsignedInt(retMajorVersion.getValue());
+		int minorVersion = Short.toUnsignedInt(retMinorVersion.getValue());
+
+		return new NSFVersionInfo() {
+
+			@Override
+			public int getMajorVersion() {
+				return majorVersion;
+			}
+
+			@Override
+			public int getMinorVersion() {
+				return minorVersion;
+			}
+			
+			@Override
+			public String toString() {
+				return "NSFVersionInfo [majorVersion="+getMajorVersion()+", minorVersion="+getMinorVersion()+"]";
+			}
+			
+		};
 	}
 }
