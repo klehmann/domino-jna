@@ -21,6 +21,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesConsoleEntryStruct;
+import com.mindoo.domino.jna.utils.NotesStringUtils.LineBreakConversion;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -473,7 +474,7 @@ public class ServerUtils {
 	 * @param messageText message text
 	 */
 	public static void writeLogMessage(String messageText) {
-		Memory lmbcs = NotesStringUtils.toLMBCS(messageText, true);
+		Memory lmbcs = NotesStringUtils.toLMBCSNoCache(messageText, true, LineBreakConversion.ORIGINAL);
 		NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
 	}
 	
