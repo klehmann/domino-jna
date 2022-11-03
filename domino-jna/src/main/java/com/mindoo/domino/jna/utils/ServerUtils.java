@@ -474,8 +474,11 @@ public class ServerUtils {
 	 * @param messageText message text
 	 */
 	public static void writeLogMessage(String messageText) {
-		Memory lmbcs = NotesStringUtils.toLMBCSNoCache(messageText, true, LineBreakConversion.ORIGINAL);
-		NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
+	    String[] lines = messageText.split("\\r?\\n", -1);
+	    for (String line : lines) {
+	      Memory lmbcs = NotesStringUtils.toLMBCS(line, true);
+	      NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
+	    }
 	}
 	
 }
