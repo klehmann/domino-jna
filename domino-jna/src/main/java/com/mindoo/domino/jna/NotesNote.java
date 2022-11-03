@@ -5108,6 +5108,7 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 
 				};
 			})
+			.map(IHtmlAttachmentRef.class::cast)
 			.collect(Collectors.toList());
 		}
 		
