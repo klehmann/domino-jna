@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.net.InetAddress;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
@@ -27,7 +28,6 @@ import org.apache.james.mime4j.dom.TextBody;
 import org.apache.james.mime4j.message.BodyPart;
 import org.apache.james.mime4j.message.BodyPartBuilder;
 import org.apache.james.mime4j.message.MultipartBuilder;
-import org.apache.james.mime4j.message.SingleBodyBuilder;
 import org.apache.james.mime4j.storage.Storage;
 import org.apache.james.mime4j.storage.StorageBodyFactory;
 import org.apache.james.mime4j.storage.StorageOutputStream;
@@ -286,20 +286,14 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 					mimeMsg = Message.Builder.of()
 							.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
 							.setBody(multipartRelated)
-//							.setContentType("text/html")
 							.build();
 					
 				}
 				else {
 					//without images
-					TextBody htmlBody = SingleBodyBuilder.create()
-							.setText(mimeData.getHtml())
-							.buildText();
-
 					mimeMsg = Message.Builder.of()
 							.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
-							.setBody(htmlBody)
-							.setContentType("text/html")
+							.setBody(mimeData.getHtml(), "html", StandardCharsets.UTF_8)
 							.build();
 				}
 				
@@ -307,14 +301,9 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 			}
 			else if (plainTextPart.isPresent()) {
 				//text only
-				TextBody textBody = SingleBodyBuilder.create()
-                .setText(mimeData.getPlainText())
-                .buildText();
-				
 				mimeMsg = Message.Builder.of()
 						.generateMessageId(InetAddress.getLocalHost().getCanonicalHostName())
-						.setBody(textBody)
-						.setContentType("text/plain")
+						.setBody(mimeData.getPlainText(), "plain", StandardCharsets.UTF_8)
 						.build();
 
 			}
@@ -378,12 +367,13 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 			return Optional.empty();
 		}
 		
-		return Optional.of(BodyPartBuilder.create()
-		.use(bodyFactory)
-		.setBody(mimeData.getHtml(), Charsets.UTF_8)
-		.setContentType("text/html", new NameValuePair("charset", "utf-8"))
-		.setContentTransferEncoding("quoted-printable")
-		.build());
+		BodyPartBuilder builder = BodyPartBuilder.create()
+				.use(bodyFactory)
+				.setBody(mimeData.getHtml(), "html", Charsets.UTF_8)
+				.setContentTransferEncoding("quoted-printable");
+		
+		BodyPart bodyPart = builder.build();
+		return Optional.of(bodyPart);
 	}
 	
 	private Optional<BodyPart> computePlaintextBody(StorageBodyFactory bodyFactory, MIMEData mimeData) throws IOException {
@@ -394,8 +384,7 @@ public class MIME4JMimeDataAccessService implements IMimeDataAccessService {
 		
 		return Optional.of(BodyPartBuilder.create()
 				.use(bodyFactory)
-				.setBody(text, Charsets.UTF_8)
-				.setContentType("text/plain", new NameValuePair("charset", "utf-8"))
+				.setBody(text, "plain", Charsets.UTF_8)
 				.setContentTransferEncoding("quoted-printable")
 				.build());
 	}

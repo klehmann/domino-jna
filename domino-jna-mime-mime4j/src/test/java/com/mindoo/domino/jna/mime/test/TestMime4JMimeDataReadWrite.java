@@ -159,7 +159,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "Only text "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					note.replaceItemValue("Body", mimeData);
@@ -177,7 +177,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "Only text with attachment "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					mimeData.attach(new ByteArrayMimeAttachment(
@@ -199,7 +199,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "Only HTML "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String html = "This is <b><u>HTML!</u><b>";
+					String html = "This is <b><u>HTML! äöü</u><b>";
 					mimeData.setHtml(html);
 					
 					note.replaceItemValue("Body", mimeData);
@@ -217,7 +217,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					
 					MIMEData mimeData = new MIMEData();
 					String cid = mimeData.embed(new UrlMimeAttachment(url));
-					String html = "This is <b><u>HTML!</u><b><br><img src=\"cid:"+cid+"\">";
+					String html = "This is <b><u>HTML! äöü</u><b><br><img src=\"cid:"+cid+"\">";
 					mimeData.setHtml(html);
 					
 					note.replaceItemValue("Body", mimeData);
@@ -235,7 +235,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "Only HTML with attachment "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String html = "This is <b><u>HTML!</u><b>";
+					String html = "This is <b><u>HTML! äöü</u><b>";
 					mimeData.setHtml(html);
 					
 					mimeData.attach(new ByteArrayMimeAttachment(
@@ -258,7 +258,7 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					
 					MIMEData mimeData = new MIMEData();
 					String cid = mimeData.embed(new UrlMimeAttachment(url));
-					String html = "This is <b><u>HTML!</u><b><br><img src=\"cid:"+cid+"\">";
+					String html = "This is <b><u>HTML! äöü</u><b><br><img src=\"cid:"+cid+"\">";
 					mimeData.setHtml(html);
 					
 					mimeData.attach(new ByteArrayMimeAttachment(
@@ -280,9 +280,9 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "HTML and plaintext "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String html = "<b>This is <b><u>HTML!</u><b></b>";
+					String html = "<b>This is <b><u>HTML! äöü</u><b></b>";
 					mimeData.setHtml(html);
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					note.replaceItemValue("Body", mimeData);
@@ -301,9 +301,9 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					
 					MIMEData mimeData = new MIMEData();
 					String cid = mimeData.embed(new UrlMimeAttachment(url));
-					String html = "This is <b><u>HTML!</u><b><br><img src=\"cid:"+cid+"\">";
+					String html = "This is <b><u>HTML! äöü</u><b><br><img src=\"cid:"+cid+"\">";
 					mimeData.setHtml(html);
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					note.replaceItemValue("Body", mimeData);
@@ -321,9 +321,9 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					note.replaceItemValue("Subject", "HTML and plaintext with attachment "+timestamp);
 					
 					MIMEData mimeData = new MIMEData();
-					String html = "<b>This is <b><u>HTML!</u><b></b>";
+					String html = "<b>This is <b><u>HTML! äöü</u><b></b>";
 					mimeData.setHtml(html);
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					mimeData.attach(new ByteArrayMimeAttachment(
@@ -347,9 +347,9 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 					
 					MIMEData mimeData = new MIMEData();
 					String cid = mimeData.embed(new UrlMimeAttachment(url));
-					String html = "This is <b><u>HTML!</u><b><br><img src=\"cid:"+cid+"\">";
+					String html = "This is <b><u>HTML! äöü</u><b><br><img src=\"cid:"+cid+"\">";
 					mimeData.setHtml(html);
-					String txt = "This is plaintext";
+					String txt = "This is plaintext äöü";
 					mimeData.setPlainText(txt);
 					
 					mimeData.attach(new ByteArrayMimeAttachment(
@@ -373,9 +373,9 @@ public class TestMime4JMimeDataReadWrite extends BaseJNATestClass {
 				note.replaceItemValue("Subject", "HTML, plaintext and embedded json "+timestamp);
 				
 				MIMEData mimeData = new MIMEData();
-				String html = "<b>This is <b><u>HTML!</u><b></b>";
+				String html = "<b>This is <b><u>HTML! äöü</u><b></b>";
 				mimeData.setHtml(html);
-				String txt = "This is plaintext";
+				String txt = "This is plaintext äöü";
 				mimeData.setPlainText(txt);
 				String json = "{\r\n"
 						+ "  \"gadget\" : \"http://www.socialnetwork.com/embedded/commentgadget.xml\",\r\n"
