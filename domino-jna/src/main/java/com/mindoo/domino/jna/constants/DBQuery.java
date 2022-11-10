@@ -21,7 +21,13 @@ public enum DBQuery {
 	/** Governs producing Explain output */
 	EXPLAIN(0x00000010),
 	/** NSF scans only */
-	NOVIEWS(0x00000020);
+	NOVIEWS(0x00000020),
+	/** For the 1st FT search, update the index */
+	FT_REFRESH(0x00000040),
+	/** before running the query, build/refresh the design catalog */
+	DESIGN_CATALOG_REFRESH(0x00000080),
+	/** before running the query, rebuild the design catalog */
+	DESIGN_CATALOG_REBUILD(0x00000100);
 
 	private int m_val;
 	
