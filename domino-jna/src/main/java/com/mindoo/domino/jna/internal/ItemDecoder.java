@@ -74,7 +74,7 @@ public class ItemDecoder {
 					listValues.add(lmbcsString);
 				}
 				else {
-					String currListEntry = NotesStringUtils.fromLMBCS(pointerToTextInMem, (short) retTextLengthAsInt);
+					String currListEntry = NotesStringUtils.fromLMBCS(pointerToTextInMem, retTextLengthAsInt);
 					listValues.add(currListEntry);
 				}
 			}
