@@ -89,6 +89,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32V1000;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
+import com.mindoo.domino.jna.internal.NotesNativeAPIV1201;
 import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
@@ -8695,4 +8696,237 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 			
 		};
 	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param field the name of the fields to be indexed
+	 */
+	public void createIndex(String name, String field) {
+		createIndex(name, Arrays.asList(field), false, false);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param field the name of the fields to be indexed
+	 * @param isvisible Makes the view visible. If not specified, a hidden view is created using parentheses. For example, "myindex" becomes "(myindex)". If set to true, all users see the view created by the call when they open the database.
+	 * @param nobuild Doesn't build the view, allowing for normal view processing to do so. All views created by createIndex are created with refresh options set to "Automatic". If not specified, the view created is built as part of the createIndex operation.
+	 */
+	public void createIndex(String name, String field, boolean isvisible, boolean nobuild) {
+		createIndex(name, Arrays.asList(field), isvisible, nobuild);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If the view already exists, the method does nothing.
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param fields the names of the fields to be indexed
+	 */
+	public void createIndex(String name, Collection<String> fields) {
+		createIndex(name, fields, false, false);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param fields the names of the fields to be indexed
+	 * @param isvisible Makes the view visible. If not specified, a hidden view is created using parentheses. For example, "myindex" becomes "(myindex)". If set to true, all users see the view created by the call when they open the database.
+	 * @param nobuild Doesn't build the view, allowing for normal view processing to do so. All views created by createIndex are created with refresh options set to "Automatic". If not specified, the view created is built as part of the createIndex operation.
+	 */
+	public void createIndex(String name, Collection<String> fields, boolean isvisible, boolean nobuild) {
+		checkHandle();
+
+		if (StringUtil.isEmpty(name)) {
+			throw new IllegalArgumentException("Index name cannot be empty");
+		}
+
+		List<Memory> fieldsMem = new ArrayList<>();
+
+		for (String currField : fields) {
+			if (StringUtil.isEmpty(currField)) {
+				throw new IllegalArgumentException(MessageFormat.format("Method does not support empty field names: {0}", fields));
+			}
+
+			Memory currFieldMem = NotesStringUtils.toLMBCS(currField, true);
+			if (currFieldMem.size() > (NotesConstants.DESIGN_NAME_MAX-1)) {
+				throw new IllegalArgumentException(MessageFormat.format("Field exceeds max length of {0}: {1}", NotesConstants.DESIGN_NAME_MAX-1, currField));
+			}
+			fieldsMem.add(currFieldMem);
+		}
+
+		IntByReference hdsgncmd = new IntByReference();
+
+		for (Memory currFieldMem : fieldsMem) {
+			short result = NotesNativeAPIV1201.get().NSFDesignCommandAddComponent(currFieldMem,
+					NotesConstants.DESIGN_COMPONENT_ATTR.VALS_ASCENDING.getValue(),
+					hdsgncmd);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		Memory nameMem = NotesStringUtils.toLMBCS(name, true);
+
+		IntByReference hretval = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		int dwFlags = 0;
+		if (isvisible) {
+			dwFlags |= NotesConstants.CREATE_INDEX_NOHIDE;
+		}
+
+		if (nobuild) {
+			dwFlags |= NotesConstants.CREATE_INDEX_NOBUILD;
+		}
+
+		int dwFlagsFinal = dwFlags;
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.CREATE_INDEX.getValue(),
+				dwFlagsFinal, nameMem,
+				hretval, hreterror, hdsgncmd.getValue());
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+	}
+
+
+	/**
+	 * Removes an index (Domino view) that is optimized for DQL query terms.<br>
+	 * removeIndex is very powerful and can remove production views.<br>
+	 * Take care in choosing what indexes (views) to remove.<br>
+	 * <br>
+	 * Removes a hidden view if you omit the parentheses in the index name and there is no
+	 * visible view with the same name.<br>
+	 * For example, if "myview" and "(myview)" exist, "myview" deletes only "myview.".<br>
+	 * But if only "(myview)" exists, "myview" deletes "(myview)".<br>
+	 * Naming your index views differently than the other views in the database is recommended.<br>
+	 * <br>
+	 * If no view could be found, the method does nothing.
+	 * 
+	 * @param name the name of the index to remove
+	 */
+	public void removeIndex(String name) {
+		checkHandle();
+
+		if (StringUtil.isEmpty(name)) {
+			throw new IllegalArgumentException("Index name cannot be empty");
+		}
+
+		Memory nameMem = NotesStringUtils.toLMBCS(name, true);
+
+		IntByReference hidx = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.DELETE_INDEX.getValue(), 0, nameMem,
+				hidx, hreterror, 0);
+
+		if (hidx.getValue()!=0) {
+			Mem.OSMemoryFree(hidx.getValue());
+		}
+
+		if ((result & NotesConstants.ERR_MASK)==1028) { //index view not found
+			if (hreterror.getValue()!=0) {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+			return;
+		}
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+	}
+
+
+	/**
+	 * Lists the indexes that are optimized for Domino DQL query terms.
+	 * 
+	 * @return string in JSON format
+	 */
+	public String listIndexes() {
+		checkHandle();
+
+		IntByReference hret = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.LIST_INDEXES.getValue(), 0, null,
+				hret, hreterror, 0);
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+		String retTxt = "";
+		if (hret.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hret.getValue())) {
+				retTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hret.getValue());
+			}
+		}
+
+		return retTxt;
+	}
+
 }

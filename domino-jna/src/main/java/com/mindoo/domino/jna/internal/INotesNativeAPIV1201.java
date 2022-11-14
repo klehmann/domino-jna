@@ -51,4 +51,14 @@ public interface INotesNativeAPIV1201 extends Library {
 			  short TextSize,
 			  boolean bAllowLarge);
 
+	  @UndocumentedAPI
+	  /* to issue  design command */
+	  short NSFDesignCommand(HANDLE.ByValue hDb, int cmd, int dwFlags, 
+			  Memory pObjectName, IntByReference phReturnVal, IntByReference phErrorText, int hDsgnCmd);
+
+	  @UndocumentedAPI
+	  /* to prep for design command - add fields for create index */
+	  short NSFDesignCommandAddComponent(Memory name, int attr,
+			  IntByReference phDsgnCmd);
+
 }
