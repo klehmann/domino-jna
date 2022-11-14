@@ -3720,14 +3720,11 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 
 				try {
-					Mem.OSMemoryUnlock(hList);
-
 					int i=0;
 					for (String currStr : strList) {
 						Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
-						if (currStrMem.size() > 32767) {
-							//according to core dev, the max length of one entry should be 0xffff bytes; needs clarification
-							throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 32767 bytes", i));
+						if (currStrMem.size() > 65535) {
+							throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
 						}
 
 						short addResult = capi1201.ListAddEntry2Ext(hList,

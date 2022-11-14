@@ -24,7 +24,6 @@ import com.mindoo.domino.jna.constants.DatabaseOption;
 import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
-import com.mindoo.domino.jna.utils.LegacyAPIUtils;
 
 import lotus.domino.Database;
 import lotus.domino.Document;
@@ -150,7 +149,7 @@ public class TestLargeSummarySupport extends BaseJNATestClass {
 					NotesNote noteLarge = db.createNote();
 					
 					final StringWriter summaryTextWriter = new StringWriter();
-					produceTestData(32767, summaryTextWriter);
+					produceTestData(60000, summaryTextWriter);
 					final String summaryText = summaryTextWriter.toString();
 
 					List<String> largeList = new ArrayList<>();
@@ -165,10 +164,6 @@ public class TestLargeSummarySupport extends BaseJNATestClass {
 					final int noteId = noteLarge.getNoteId();
 					noteLarge.recycle();
 					noteLarge = db.openNoteById(noteId);
-
-					Database dbLegacy = session.getDatabase("", db.getAbsoluteFilePathOnLocal(), false);
-					Document doc = noteLarge.toDocument(dbLegacy);
-					Item itm = doc.getFirstItem("textlistitem");
 					
 					List<String> testLargeList = noteLarge.getItemValueStringList("textlistitem");
 					assertNotNull(testLargeList);
