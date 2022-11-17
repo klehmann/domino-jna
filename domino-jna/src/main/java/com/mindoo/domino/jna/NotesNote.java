@@ -7675,10 +7675,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	 * 
 	 * @return size
 	 */
-	public int size() {
+	public long size() {
 		checkHandle();
 		
-		int[] totalSize = new int[1];
+		long[] totalSize = new long[1];
 		
 		getItems(null, (item) -> {
 			totalSize[0] += item.getValueLength();
