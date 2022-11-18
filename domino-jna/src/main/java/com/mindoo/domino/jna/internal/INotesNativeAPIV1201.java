@@ -48,7 +48,7 @@ public interface INotesNativeAPIV1201 extends Library {
 			  IntByReference pListSize,
 			  short EntryNumber,
 			  Memory Text,
-			  short TextSize,
+			  char TextSize,
 			  boolean bAllowLarge);
 
 	  @UndocumentedAPI

@@ -3727,12 +3727,16 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 							throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
 						}
 
+						//somehow these two lines produce different results for the ListAddEntry2Ext call with text lengths >32767 bytes
+						//short textSize = (short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff));
+						char textSize = (char) currStrMem.size();
+
 						short addResult = capi1201.ListAddEntry2Ext(hList,
 								false,
 								retListSize,
 								(short) (i & 0xffff),
 								currStrMem,
-								(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)),
+								textSize,
 								true);
 						NotesErrorUtils.checkResult(addResult);
 
