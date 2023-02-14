@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -22,6 +23,7 @@ import com.mindoo.domino.jna.errors.UnsupportedItemValueError;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks.NSFFORMCMDSPROC;
@@ -30,6 +32,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.ViewFormulaCompiler;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.NSFFORMCMDSPROCWin32;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.NSFFORMFUNCPROCWin32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
@@ -82,7 +85,8 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	}
 	
 	private String m_formula;
-	
+	private LinkedHashMap<String, String> m_columnFormulas;
+
 	private long m_hFormula64;
 	private long m_hCompute64;
 	
@@ -105,6 +109,7 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	 */
 	public FormulaExecution(String formula) throws FormulaCompilationError {
 		m_formula = formula;
+		m_columnFormulas = new LinkedHashMap<>();
 		
 		Memory formulaName = null;
 		short formulaNameLength = 0;
@@ -195,6 +200,62 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 		}
 	}
 	
+
+	/**
+	 * Creates a new instance. The constructor compiles a view selection formula and merges compiled column formulas.
+	 * It throws a {@link FormulaCompilationError}, if there are any compilation errors
+	 * 
+	 * @param formula formula
+	 * @param columnValuesAsOrderedMap map with column item name / formula from left to right
+	 * @param addConflict true to add special column for $Conflict at the end of the compiled formula (required for $Formula item of views)
+	 * @param addRef true to add the special column $REF at the end of the compiled formula (required for $Formula item of views)
+	 * @throws FormulaCompilationError if formula has wrong syntax
+	 */
+	public FormulaExecution(String formula, LinkedHashMap<String,String> columnValuesAsOrderedMap,
+			boolean addConflict, boolean addRef) throws FormulaCompilationError {
+		m_formula = formula;
+		m_columnFormulas = columnValuesAsOrderedMap;
+		short computeFlags = 0;
+
+		if (PlatformUtils.is64Bit()) {
+			m_hFormula64 = ViewFormulaCompiler.b64_compile(formula, columnValuesAsOrderedMap, addConflict, addRef);
+			IntByReference retSize = new IntByReference();
+			short result = Mem.OSMemGetSize(DHANDLE64.newInstance(m_hFormula64), retSize);
+			NotesErrorUtils.checkResult(result);
+			m_compiledFormulaLength = retSize.getValue();
+			
+			LongByReference rethCompute = new LongByReference();
+			
+			m_ptrCompiledFormula = Mem64.OSLockObject(m_hFormula64);
+			
+			result = NotesNativeAPI64.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
+			NotesErrorUtils.checkResult(result);
+			
+			m_hCompute64 = rethCompute.getValue();
+			
+			NotesGC.__objectCreated(FormulaExecution.class, this);
+		}
+		else {
+			m_hFormula32 = ViewFormulaCompiler.b32_compile(formula, columnValuesAsOrderedMap, addConflict, addRef);
+			IntByReference retSize = new IntByReference();
+			short result = Mem.OSMemGetSize(DHANDLE32.newInstance(m_hFormula32), retSize);
+			NotesErrorUtils.checkResult(result);
+			m_compiledFormulaLength = retSize.getValue();
+			
+			IntByReference rethCompute = new IntByReference();
+			
+			m_ptrCompiledFormula = Mem32.OSLockObject(m_hFormula32);
+			
+			result = NotesNativeAPI32.get().NSFComputeStart(computeFlags, m_ptrCompiledFormula, rethCompute);
+			NotesErrorUtils.checkResult(result);
+			
+			m_hCompute32 = rethCompute.getValue();
+			
+			NotesGC.__objectCreated(FormulaExecution.class, this);
+		}
+		
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getAdapter(Class<T> clazz) {
@@ -255,10 +316,10 @@ public class FormulaExecution implements IRecyclableNotesObject, IAdaptable {
 	
 	public String toString() {
 		if (isRecycled()) {
-			return "Compiled formula [recycled, formula="+m_formula+"]";
+			return "Compiled formula [recycled, formula="+m_formula+(m_columnFormulas.isEmpty() ? "" : ", columns="+m_columnFormulas)+"]";
 		}
 		else {
-			return "Compiled formula [formula="+m_formula+"]";
+			return "Compiled formula [formula="+m_formula+(m_columnFormulas.isEmpty() ? "" : ", columns="+m_columnFormulas)+"]";
 		}
 	}
 	

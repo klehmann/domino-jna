@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -26,6 +27,7 @@ import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesViewEntryData.CacheableViewEntryData;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.Find;
+import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.ReadMask;
@@ -34,6 +36,7 @@ import com.mindoo.domino.jna.constants.UpdateCollectionFilters;
 import com.mindoo.domino.jna.errors.INotesErrorConstants;
 import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.formula.FormulaExecution;
 import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
@@ -183,7 +186,34 @@ public class NotesCollection implements IRecyclableNotesObject {
 		String formula = formulaObj!=null && !formulaObj.isEmpty() ? formulaObj.get(0).toString() : "";
 		return formula;
 	}
-	
+
+	/**
+	 * Changes the collection's selection formula and signs/saved the underlying design note
+	 * 
+	 * @param selectionFormula new selection formula
+	 */
+	public void setSelectionFormula(String selectionFormula) {
+		checkHandle();
+		
+		LinkedHashMap<String,String> columnsAsOrderedMap = new LinkedHashMap<>();
+		List<NotesViewColumn> columns = getColumns();
+		for (NotesViewColumn currCol : columns) {
+			String itemId = currCol.getItemName();
+			String formula = currCol.getFormula();
+			columnsAsOrderedMap.put(itemId, formula);
+		}
+		
+		//add special columns to $Formula item if enabled for the view
+		boolean addConflict = isConflict();
+		boolean addRef = isHierarchical();
+		
+		FormulaExecution formula = new FormulaExecution(selectionFormula, columnsAsOrderedMap, addConflict, addRef);
+		NotesNote viewNote = getViewNote();
+		viewNote.replaceItemValue("$Formula", EnumSet.of(ItemType.SIGN, ItemType.SUMMARY), formula);
+		viewNote.sign();
+		viewNote.update();
+	}
+
 	/**
 	 * Returns the alias names of the collection
 	 * 
@@ -3371,7 +3401,12 @@ public class NotesCollection implements IRecyclableNotesObject {
 		return getColumn(columnIndex).getTitle();
 	}
 
-	private NotesNote getViewNote() {
+	/**
+	 * Returns the note that stores the collection design
+	 * 
+	 * @return note
+	 */
+	public NotesNote getViewNote() {
 		if (m_viewNote==null || m_viewNote.isRecycled()) {
 			m_viewNote = m_parentDb.openNoteByUnid(m_viewUNID);
 		}
