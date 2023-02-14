@@ -30,6 +30,7 @@ import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
+import com.mindoo.domino.jna.utils.PointerWithBounds;
 import com.sun.jna.Pointer;
 
 /**
@@ -222,13 +223,13 @@ public class NotesLookupResultBufferDecoder {
 
 					bufferPos+=4;
 				}
-				if (returnMask.contains(ReadMask.INDEXCHILDREN)) {
+				if (returnMask.contains(ReadMask.INDEXCHILDREN) || returnMask.contains(ReadMask.INDEXCHILDREN_NOCATS)) {
 					int childCount = bufferPtr.getInt(bufferPos);
 					newData.setChildCount(childCount);
 
 					bufferPos+=4;
 				}
-				if (returnMask.contains(ReadMask.INDEXDESCENDANTS)) {
+				if (returnMask.contains(ReadMask.INDEXDESCENDANTS) || returnMask.contains(ReadMask.INDEXDESCENDANTS_NOCATS)) {
 					int descendantCount = bufferPtr.getInt(bufferPos);
 					newData.setDescendantCount(descendantCount);
 
@@ -300,7 +301,7 @@ public class NotesLookupResultBufferDecoder {
 					//add some statistical information to the data object to be able to see which columns "pollute" the summary buffer
 					newData.setColumnValueSizesInBytes(itemTableData.getItemValueLengthsInBytes());
 				}
-				if (returnMask.contains(ReadMask.SUMMARY)) {
+				if (returnMask.contains(ReadMask.SUMMARY) || returnMask.contains(ReadMask.SUMMARY_PERMUTED)) {
 					int startBufferPosOfSummaryValues = bufferPos;
 
 					Pointer itemTablePtr = bufferPtr.share(bufferPos);
@@ -391,7 +392,9 @@ public class NotesLookupResultBufferDecoder {
 		data.m_itemsCount = itemsCount;
 
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths, data,
+		PointerWithBounds itemValuePtrWithBounds = new PointerWithBounds(itemValuePtr, data.m_totalBufferLength);
+		
+		populateItemValueTableData(itemValuePtrWithBounds, itemsCount, itemNameLengths, itemValueLengths, data,
 				convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 
 		return data;
@@ -544,7 +547,9 @@ public class NotesLookupResultBufferDecoder {
 		data.m_itemsCount = itemsCount;
 		
 		Pointer itemValuePtr = bufferPtr.share(bufferPos);
-		populateItemValueTableData(itemValuePtr, itemsCount, itemNameLengths, itemValueLengths,
+	    PointerWithBounds itemValuePtrWithBounds = new PointerWithBounds(itemValuePtr, data.m_totalBufferLength);
+	    
+		populateItemValueTableData(itemValuePtrWithBounds, itemsCount, itemNameLengths, itemValueLengths,
 				data, convertStringsLazily, convertNotesTimeDateToCalendar, decodeAllValues);
 		
 		return data;
