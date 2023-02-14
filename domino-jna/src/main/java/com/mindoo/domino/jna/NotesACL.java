@@ -225,7 +225,7 @@ public class NotesACL implements IAllocatedMemory {
 					int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pPrivNames, 0) & 0xffff);
 					roles = new ArrayList<String>(numEntriesAsInt);
 					for (int i=0; i<numEntriesAsInt; i++) {
-						result = NotesNativeAPI.get().ListGetText(pPrivNames, false, (short) (i & 0xffff), retTextPointer, retTextLength);
+						result = NotesNativeAPI.get().ListGetText(pPrivNames, false, (char) i, retTextPointer, retTextLength);
 						NotesErrorUtils.checkResult(result);
 						
 						String currRole = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);

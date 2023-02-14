@@ -1,6 +1,6 @@
 package com.mindoo.domino.jna.utils;
 
-import java.util.ArrayList;
+import java.text.MessageFormat;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.NotesDateRange;
 import com.mindoo.domino.jna.NotesScheduleContainer;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.ScheduleOptions;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.ItemDecoder;
@@ -87,12 +88,17 @@ public class NotesBusyTimeUtils {
 		if (duration > 65535) {
 			throw new IllegalArgumentException("Duration can only have a short value ("+duration+">65535)");
 		}
-		
-		List<String> namesCanonical = new ArrayList<String>();
-		for (String currName : names) {
-			namesCanonical.add(NotesNamingUtils.toCanonicalName(currName));
+
+		List<String> namesCanonical = names
+				.stream()
+				.filter(StringUtil::isNotEmpty)
+				.map(NotesNamingUtils::toCanonicalName)
+				.collect(Collectors.toList());
+
+		if (namesCanonical.isEmpty()) {
+			throw new IllegalArgumentException("No usernames specified to retrieve schedules.");
 		}
-		
+
 		List<Object> decodedTimeListAsObj = null;
 		
 		DHANDLE.ByReference rethList = DHANDLE.newInstanceByReference();
@@ -109,9 +115,14 @@ public class NotesBusyTimeUtils {
 		for (int i=0; i<namesCanonical.size(); i++) {
 			String currName = namesCanonical.get(i);
 			Memory currNameMem = NotesStringUtils.toLMBCS(currName, false);
+			if (currNameMem!=null && currNameMem.size() > 65535) {
+				throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+			}
 
-			result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 0, retListSize, (short) (i & 0xffff), currNameMem,
-					(short) (currNameMem==null ? 0 : (currNameMem.size() & 0xffff)));
+			char textSize = currNameMem==null ? 0 : (char) currNameMem.size();
+
+			result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 0, retListSize, (char) i, currNameMem,
+					textSize);
 			NotesErrorUtils.checkResult(result);
 		}
 		
@@ -181,9 +192,14 @@ public class NotesBusyTimeUtils {
 		intervalPair.Upper = NotesTimeDateStruct.newInstance(until.getInnards());
 		intervalPair.write();
 
-		List<String> namesCanonical = new ArrayList<String>();
-		for (String currName : names) {
-			namesCanonical.add(NotesNamingUtils.toCanonicalName(currName));
+		List<String> namesCanonical = names
+				.stream()
+				.filter(StringUtil::isNotEmpty)
+				.map(NotesNamingUtils::toCanonicalName)
+				.collect(Collectors.toList());
+
+		if (namesCanonical.isEmpty()) {
+			throw new IllegalArgumentException("No usernames specified to retrieve schedules.");
 		}
 		
 		//make sure we always get the extended schedule container
@@ -207,9 +223,14 @@ public class NotesBusyTimeUtils {
 		for (int i=0; i<namesCanonical.size(); i++) {
 			String currName = namesCanonical.get(i);
 			Memory currNameMem = NotesStringUtils.toLMBCS(currName, false);
+			if (currNameMem!=null && currNameMem.size() > 65535) {
+				throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+			}
 
-			result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 0, retListSize, (short) (i & 0xffff), currNameMem,
-					(short) (currNameMem==null ? 0 : (currNameMem.size() & 0xffff)));
+			char textSize = currNameMem==null ? 0 : (char) currNameMem.size();
+
+			result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 0, retListSize, (char) i, currNameMem,
+					textSize);
 			NotesErrorUtils.checkResult(result);
 		}
 		

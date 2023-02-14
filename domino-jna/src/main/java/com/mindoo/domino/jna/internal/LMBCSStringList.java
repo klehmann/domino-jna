@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -126,11 +127,18 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 		for (int i=0; i<newValues.size(); i++) {
 			String currStr = newValues.get(i);
 			Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+			if (currStrMem!=null && currStrMem.size() > 65535) {
+				throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+			}
 
-			short entryNo = (short) (m_values.size() & 0xffff);
-			
-			result = NotesNativeAPI.get().ListAddEntry(m_handle.getByValue(), m_prefixDataType ? 1 : 0, retListSize, entryNo, currStrMem,
-					(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
+			char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
+
+			result = NotesNativeAPI.get().ListAddEntry(m_handle.getByValue(),
+					m_prefixDataType ? 1 : 0,
+							retListSize,
+							(char) i,
+							currStrMem,
+							textSize);
 			NotesErrorUtils.checkResult(result);
 		}
 		

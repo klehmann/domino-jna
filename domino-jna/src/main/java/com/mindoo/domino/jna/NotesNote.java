@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -1513,9 +1514,7 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			List<String> strList = new ArrayList<String>(docValues.size());
 			for (int i = 0; i < docValues.size(); i++) {
 				String currStr = docValues.get(i).toString();
-				if (!"".equals(currStr)) {
-					strList.add(currStr);
-				}
+				strList.add(currStr);
 			}
 			return strList;
 		}
@@ -3683,9 +3682,14 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				int i = 0;
 				for (String currStr : strList) {
 					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+					if (currStrMem!=null && currStrMem.size() > 65535) {
+						throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+					}
 
-					result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 1, retListSize, (short) (i & 0xffff), currStrMem,
-							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
+					char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
+
+					result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 1, retListSize, (char) i, currStrMem,
+							textSize);
 					NotesErrorUtils.checkResult(result);
 
 					i++;
@@ -3723,13 +3727,13 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 					int i=0;
 					for (String currStr : strList) {
 						Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
-						if (currStrMem.size() > 65535) {
+						if (currStrMem!=null && currStrMem.size() > 65535) {
 							throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
 						}
 
 						//somehow these two lines produce different results for the ListAddEntry2Ext call with text lengths >32767 bytes
 						//short textSize = (short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff));
-						char textSize = (char) currStrMem.size();
+						char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
 
 						short addResult = capi1201.ListAddEntry2Ext(hList,
 								false,
@@ -4005,6 +4009,31 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
 
 				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_FORMULA, rethItem, valueSize);
+				return item;
+			}
+			finally {
+				Mem.OSUnlockObject(rethItem);
+			}
+		}
+		else if (value instanceof ByteBuffer) {
+			ByteBuffer byteBufValue = (ByteBuffer) value;
+			int valueSize = byteBufValue.remaining();
+			//byte array with a datatype WORD and the raw value
+			byte[] rawDataWithType = new byte[valueSize];
+			byteBufValue.get(rawDataWithType);
+			
+			//date type + compiled formula
+
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.write(0, rawDataWithType, 0, rawDataWithType.length);
+				short dataType = valuePtr.getShort(0);
+				NotesItem item = appendItemValue(itemName, flags, dataType, rethItem, valueSize);
 				return item;
 			}
 			finally {

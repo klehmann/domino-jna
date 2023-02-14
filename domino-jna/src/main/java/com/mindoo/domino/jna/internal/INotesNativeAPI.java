@@ -164,7 +164,7 @@ public interface INotesNativeAPI extends Library {
 
 	short ListGetText (Pointer pList,
 			boolean fPrefixDataType,
-			short entryNumber,
+			char entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 
@@ -921,9 +921,9 @@ public interface INotesNativeAPI extends Library {
 			DHANDLE.ByValue hList,
 			int fPrefixDataType,
 			ShortByReference pListSize,
-			short EntryNumber,
+			char EntryNumber,
 			Memory Text,
-			short TextSize);
+			char TextSize);
 	
 	short ListRemoveAllEntries(
 			DHANDLE.ByValue hList,
