@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -329,6 +330,15 @@ public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 		addNotes(noteIds, addToEnd);
 	}
 
+	private final Comparator<Integer> unsignedIntComparator = new Comparator<Integer>() {
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			long l1 = o1.longValue() & 0xFFFFFFFFL;
+			long l2 = o2.longValue() & 0xFFFFFFFFL;
+			return Long.compare(l1, l2);
+		}
+	};
+	
 	/**
 	 * Method to add a list of note ids. Method is private to prevent
 	 * wrong usage by setting <i>addToEnd</i> to true when it's not ok.
@@ -339,81 +349,85 @@ public class NotesIDTable implements IRecyclableNotesObject, Iterable<Integer> {
 	private void addNotes(Collection<Integer> noteIds, boolean addToEnd) {
 		checkHandle();
 		
-		//check if Set is already sorted
-		boolean isSorted = true;
-		if (noteIds instanceof SortedSet && ((SortedSet<Integer>)noteIds).comparator()==null) {
-			//set is already sorted by natural ordering, we can skip the following loop to verify ordering
-		}
-		else {
-			Integer lastVal = null;
-			Iterator<Integer> idsIt = noteIds.iterator();
-			while (idsIt.hasNext()) {
-				Integer currVal = idsIt.next();
-				if (lastVal!=null && currVal!=null) {
-					if (lastVal.intValue() > currVal.intValue()) {
-						isSorted = false;
-						break;
-					}
-
-				}
-				lastVal = currVal;
-			}
-		}
-		
 		Integer[] noteIdsArr = noteIds.toArray(new Integer[noteIds.size()]);
-		if (!isSorted) {
-			Arrays.sort(noteIdsArr);
-		}
+		//sorts category note ids to the end of the list (with NOTEID_CATEGORY bit set)
+		Arrays.sort(noteIdsArr, unsignedIntComparator);
 		
-		LinkedList<Integer> currIdRange = new LinkedList<Integer>();
+		LinkedList<Long> currIdRange = new LinkedList<>();
 		
 		//find consecutive id ranges to reduce number of insert operations (insert ranges)
 		for (int i=0; i<noteIdsArr.length; i++) {
 			int currNoteId = noteIdsArr[i];
+			long currNoteIdUnsigned = Integer.toUnsignedLong(currNoteId);
+			
 			if (currIdRange.isEmpty()) {
-				currIdRange.add(currNoteId);
+				currIdRange.add(currNoteIdUnsigned);
 			}
 			else {
-				Integer highestRangeId = currIdRange.getLast();
-				if (currNoteId == (highestRangeId.intValue() + 4)) {
-					currIdRange.add(currNoteId);
+				Long highestRangeId = currIdRange.getLast();
+				if (currNoteIdUnsigned == (highestRangeId.longValue() + 4)) {
+					currIdRange.add(currNoteIdUnsigned);
 				}
 				else {
+					long first = currIdRange.getFirst();
+					//convert to signed int
+					int firstAsInt = (int) first;
+
 					if (currIdRange.size()==1) {
-						addNote(currIdRange.getFirst());
+						addNote(firstAsInt);
 					}
 					else {
 						short result;
+						long last = currIdRange.getLast();
+						
+						//convert to signed int
+						int lastAsInt = (int) last;
 						
 						if (PlatformUtils.is64Bit()) {
-							result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+							result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64,
+									firstAsInt,
+									lastAsInt, addToEnd);
 						}
 						else {
-							result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+							result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32,
+									firstAsInt,
+									lastAsInt, addToEnd);
 						}
 						
 						NotesErrorUtils.checkResult(result);
 					}
 					//flush range list
 					currIdRange.clear();
-					currIdRange.add(currNoteId);
+					currIdRange.add(currNoteIdUnsigned);
 				}
 			}
 			
 		}
 		
 		if (!currIdRange.isEmpty()) {
+			long first = currIdRange.getFirst();
+			//convert to signed int
+			int firstAsInt = (int) first;
+			
 			if (currIdRange.size()==1) {
-				addNote(currIdRange.getFirst());
+				addNote(firstAsInt);
 			}
 			else {
 				short result;
+				long last = currIdRange.getLast();
 				
+				//convert to signed int
+				int lastAsInt = (int) last;
+
 				if (PlatformUtils.is64Bit()) {
-					result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+					result = NotesNativeAPI64.get().IDInsertRange(m_idTableHandle64, 
+							firstAsInt,
+							lastAsInt, addToEnd);
 				}
 				else {
-					result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32, currIdRange.getFirst(), currIdRange.getLast(), addToEnd);
+					result = NotesNativeAPI32.get().IDInsertRange(m_idTableHandle32,
+							firstAsInt, 
+							lastAsInt, addToEnd);
 				}
 				
 				NotesErrorUtils.checkResult(result);
