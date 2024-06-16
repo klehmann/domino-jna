@@ -188,4 +188,9 @@ public interface Win32NotesCallbacks {
 		short invoke(Pointer ptr, short code, IntByReference stopFlag);
 	}
 
+	interface b32_NSFGetAllFolderChangesCallbackWin32 extends NotesCallbacks.b32_NSFGetAllFolderChangesCallback, StdCallCallback {
+		@Override
+		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable, int hRemovedNoteTable);
+	}
+
 }

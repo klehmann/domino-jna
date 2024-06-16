@@ -8929,4 +8929,199 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		return retTxt;
 	}
 
+	public static interface IFolderChangesCallback {
+		
+		Action processFolderChanges(String folderUnid, NotesIDTable addedNoteTable, NotesIDTable removedNoteTable);
+	}
+	
+	/**
+	 * This function will get all folder changes for a specific time period and call the callback routine for each change.
+	 * 
+	 * @param since TIMEDATE structure containing a time/date value specifying the earliest time the folder was modified.
+	 * @param callback This function is called for each folder change
+	 * @return TIMEDATE value containing a time/date value specifying the latest time the folder was modified (for the next call)
+	 */
+	public NotesTimeDate getAllFolderChanges(NotesTimeDate since, IFolderChangesCallback callback) {
+		checkHandle();
+
+		if (since == null) {
+			throw new IllegalArgumentException("Since value cannot be null");
+		}
+		
+		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+
+		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance();
+
+		//we don't recycle the IDTable handles returned in the callback because we got crashes when doing so
+		//(the debug code in NotesGC crashed, which dumps object data like the IDTable size before recycling to stdout, because
+		//the handle was already invalid)
+		if (PlatformUtils.is64Bit()) {
+			NotesCallbacks.b64_NSFGetAllFolderChangesCallback cCallback = new NotesCallbacks.b64_NSFGetAllFolderChangesCallback() {
+
+				@Override
+				public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable,
+						long hRemovedNoteTable) {
+					NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+					NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+					
+					NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+					NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+					
+					String folderUnid = noteUnid.toString();
+					
+					Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+					if (action == Action.Continue) {
+						return 0;
+					}
+					else {
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+				}
+				
+			};
+			
+			short result = NotesNativeAPI64.get().NSFGetAllFolderChanges(getHandle64(), getHandle64(),
+					sinceStruct, 0, cCallback, null, retUntilStruct);
+			if (result == INotesErrorConstants.ERR_CANCEL) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			retUntilStruct.read();
+			return new NotesTimeDate(retUntilStruct.Innards);
+		}
+		else {
+			NotesCallbacks.b32_NSFGetAllFolderChangesCallback cCallback;
+			
+			if (PlatformUtils.isWin32()) {
+				cCallback = new Win32NotesCallbacks.b32_NSFGetAllFolderChangesCallbackWin32() {
+
+					@Override
+					public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable,
+							int hRemovedNoteTable) {
+						NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+						NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+						
+						NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+						NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+						
+						String folderUnid = noteUnid.toString();
+						
+						Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+						if (action == Action.Continue) {
+							return 0;
+						}
+						else {
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+					}
+					
+				};
+			}
+			else {
+				cCallback = new NotesCallbacks.b32_NSFGetAllFolderChangesCallback() {
+
+					@Override
+					public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable,
+							int hRemovedNoteTable) {
+						NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+						NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+						
+						NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+						NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+						
+						String folderUnid = noteUnid.toString();
+						
+						Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+						if (action == Action.Continue) {
+							return 0;
+						}
+						else {
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+					}
+					
+				};
+			}
+			
+			short result = NotesNativeAPI32.get().NSFGetAllFolderChanges(getHandle32(), getHandle32(),
+					sinceStruct, 0, cCallback, null, retUntilStruct);
+			if (result == INotesErrorConstants.ERR_CANCEL) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			retUntilStruct.read();
+			return new NotesTimeDate(retUntilStruct.Innards);
+
+		}
+	}
+	
+	/**
+	 * This function gets the Note IDs of notes added to or removed, not deleted, from a folder and returns
+	 * the respective ID Tables.<br>
+	 * <br>
+	 * This function works on folders only and is not supported for remote databases.
+	 * 
+	 * @param folderNoteId The ID of the folder note in the database
+	 * @param since TIMEDATE structure containing the starting date used to determine which notes have been added or removed, not deleted, from the folder and added to the ID Tables returned by this function. Passing a cleared TIMEDATE structure (TimeDateClear), will return all changes since the start of the database.
+	 * @return pair of IDTables for added and removed notes
+	 */
+	public Pair<NotesIDTable,NotesIDTable> getFolderChanges(int folderNoteId, NotesTimeDate since) {
+		checkHandle();
+		
+		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+
+		if (PlatformUtils.is64Bit()) {
+			LongByReference hAddedNoteTable = new LongByReference();
+			LongByReference hRemovedNoteTable = new LongByReference();
+			
+			short result = NotesNativeAPI64.get().NSFGetFolderChanges(
+					getHandle64(), getHandle64(),
+					folderNoteId,
+					sinceStruct,
+					0,
+					hAddedNoteTable,
+					hRemovedNoteTable
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesIDTable addedNoteTable = null;
+			if (hAddedNoteTable.getValue() != 0) {
+				addedNoteTable = new NotesIDTable(hAddedNoteTable.getValue(), false);
+			}
+			NotesIDTable removedNoteTable = null;
+			if (hRemovedNoteTable.getValue() != 0) {
+				removedNoteTable = new NotesIDTable(hRemovedNoteTable.getValue(), false);
+			}
+			
+			return new Pair<>(addedNoteTable, removedNoteTable);
+		}
+		else {
+			IntByReference hAddedNoteTable = new IntByReference();
+			IntByReference hRemovedNoteTable = new IntByReference();
+			
+			short result = NotesNativeAPI32.get().NSFGetFolderChanges(
+					getHandle32(), getHandle32(),
+					folderNoteId,
+					sinceStruct,
+					0,
+					hAddedNoteTable,
+					hRemovedNoteTable
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesIDTable addedNoteTable = null;
+			if (hAddedNoteTable.getValue() != 0) {
+				addedNoteTable = new NotesIDTable(hAddedNoteTable.getValue(), false);
+			}
+			NotesIDTable removedNoteTable = null;
+			if (hRemovedNoteTable.getValue() != 0) {
+				removedNoteTable = new NotesIDTable(hRemovedNoteTable.getValue(), false);
+			}
+			
+			return new Pair<>(addedNoteTable, removedNoteTable);
+		}
+		
+	}
 }
