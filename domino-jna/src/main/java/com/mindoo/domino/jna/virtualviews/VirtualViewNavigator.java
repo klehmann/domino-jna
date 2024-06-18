@@ -41,8 +41,9 @@ public class VirtualViewNavigator {
 	private boolean withDocuments;
 	private ViewEntryAccessCheck viewEntryAccessCheck;
 	
-	/** the selected entries */
-	private Set<ScopedNoteId> selectedEntries = new ConcurrentSkipListSet<>();
+	/** if selectAll==true, this set is treated as deselected list */
+	private Set<ScopedNoteId> selectedOrDeselectedEntries = new ConcurrentSkipListSet<>();
+	private boolean selectAll = false;
 	
 	/** if expandAll==true, this set is treated as collapsed list */
 	private Set<ScopedNoteId> expandedOrCollapsedEntries = new ConcurrentSkipListSet<>();
@@ -228,6 +229,40 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
+	 * Navigates to the next selected entry in the view, taking the expand states into account
+	 * 
+	 * @return true if successful
+	 * @see #select(String, int, boolean)
+	 */
+	public boolean gotoNextSelected() {
+		while (gotoNext()) {
+			VirtualViewEntry currEntry = getCurrentEntry();
+
+			if (isSelected(currEntry.getOrigin(), currEntry.getNoteId())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Navigates to the previous selected entry in the view, taking the expand states into account
+	 * 
+	 * @return true if successful
+	 * @see #select(String, int, boolean)
+	 */
+	public boolean gotoPrevSelected() {
+		while (gotoPrev()) {
+			VirtualViewEntry currEntry = getCurrentEntry();
+
+			if (isSelected(currEntry.getOrigin(), currEntry.getNoteId())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
 	 * Navigates to the next entry in the view, taking the expand states into account
 	 * 
 	 * @return true if successful
@@ -386,13 +421,6 @@ public class VirtualViewNavigator {
 	}
 
 	/**
-	 * Clears the set of selection entries
-	 */
-	public void clearSelection() {
-		selectedEntries.clear();
-	}
-	
-	/**
 	 * Selects a view entry and optionally all parent categories
 	 * 
 	 * @param origin origin of the entry
@@ -403,7 +431,13 @@ public class VirtualViewNavigator {
 		VirtualViewEntry rootEntry = view.getRoot();
 		
 		ScopedNoteId scopedNoteId = new ScopedNoteId(origin, noteId);
-		selectedEntries.add(scopedNoteId);
+		if (selectAll) {
+			//make sure this entry is not deselected
+			selectedOrDeselectedEntries.remove(scopedNoteId);			
+		}
+		else {
+			selectedOrDeselectedEntries.add(scopedNoteId);
+		}
 		
 		if (selectParentCategories) {
 			List<VirtualViewEntry> entries = view.findEntries(origin, noteId);
@@ -411,12 +445,34 @@ public class VirtualViewNavigator {
 				for (VirtualViewEntry currEntry : entries) {
 					VirtualViewEntry parent = currEntry.getParent();
 					while (parent != null && !rootEntry.equals(parent)) {
-						selectedEntries.add(new ScopedNoteId(parent.getOrigin(), parent.getNoteId()));
+						if (selectAll) {
+							selectedOrDeselectedEntries.remove(new ScopedNoteId(parent.getOrigin(), parent.getNoteId()));
+						}
+						else {
+							selectedOrDeselectedEntries.add(new ScopedNoteId(parent.getOrigin(), parent.getNoteId()));
+						}
 						parent = parent.getParent();
 					}
 				}
 			}
 		}
+	}
+	
+	/**
+	 * Selects all view entries. Use {@link #deselect(String, int)} to remove
+	 * entries from the selection
+	 */
+	public void selectAll() {
+		selectedOrDeselectedEntries.clear();
+		selectAll = true;
+	}
+	
+	/**
+	 * Clears the set of selection entries
+	 */
+	public void deselectAll() {
+		selectedOrDeselectedEntries.clear();
+		selectAll = false;	
 	}
 	
 	/**
@@ -426,7 +482,12 @@ public class VirtualViewNavigator {
 	 * @param noteId note id of the entry
 	 */
 	public void deselect(String origin, int noteId) {
-        selectedEntries.remove(new ScopedNoteId(origin, noteId));
+		if (selectAll) {
+			selectedOrDeselectedEntries.add(new ScopedNoteId(origin, noteId));			
+		}
+		else {
+			selectedOrDeselectedEntries.remove(new ScopedNoteId(origin, noteId));
+		}
     }
 	
 	/**
@@ -437,7 +498,11 @@ public class VirtualViewNavigator {
 	 * @return true if selected
 	 */
 	public boolean isSelected(String origin, int noteId) {
-		return selectedEntries.contains(new ScopedNoteId(origin, noteId));
+		if (selectAll) {
+			return !selectedOrDeselectedEntries.contains(new ScopedNoteId(origin, noteId));
+		} else {
+			return selectedOrDeselectedEntries.contains(new ScopedNoteId(origin, noteId));
+		}
 	}
 	
 	/**
@@ -521,6 +586,10 @@ public class VirtualViewNavigator {
 		if (!expandAll) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));			
 		}
+		else {
+			// make sure this entry is not collapsed
+			expandedOrCollapsedEntries.remove(new ScopedNoteId(origin, noteId));
+		}
 	}
 	
 	/**
@@ -532,6 +601,10 @@ public class VirtualViewNavigator {
 	public void collapse(String origin, int noteId) {
 		if (expandAll) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));
+		}
+		else {
+			//make sure this entry is not expanded
+			expandedOrCollapsedEntries.remove(new ScopedNoteId(origin, noteId));
 		}
 	}
 	
@@ -570,22 +643,6 @@ public class VirtualViewNavigator {
 		}
 	}
 
-	/**
-	 * Checks whether a view entry is visible (all its parent entries are expanded)
-	 * 
-	 * @param entry entry to check
-	 * @return true if visible
-	 */
-	public boolean isVisible(VirtualViewEntry entry) {
-		VirtualViewEntry parentEntry = entry.getParent();
-		while (parentEntry != null) {
-			if (!isExpanded(parentEntry)) {
-				return false;
-			}
-		}
-		return true;
-	}
-	
 	/**
 	 * Utility class to navigate within the child entries of a parent entry
 	 */
@@ -631,7 +688,7 @@ public class VirtualViewNavigator {
 				}
 			}
 			
-			return gotoNext();
+			return gotoNextSibling();
 		}
 		
 		private boolean gotoFirstUnchecked() {
@@ -715,6 +772,7 @@ public class VirtualViewNavigator {
 		 * @return true if successful, false if no more siblings are available (then we don't change the cursor position)
 		 */
 		public boolean gotoNextSibling() {
+			//repeat until we find an entry that we are allowed to see
 			while (gotoNextSiblingUnchecked()) {
 				VirtualViewEntry entry = getCurrentEntry();
 				if (entry != null) {
@@ -765,6 +823,7 @@ public class VirtualViewNavigator {
 		}
 
 		public boolean gotoPrevSibling() {
+			//repeat until we find an entry that we are allowed to see
 			while (gotoPrevSiblingUnchecked()) {
 				VirtualViewEntry entry = getCurrentEntry();
 				if (entry != null) {
