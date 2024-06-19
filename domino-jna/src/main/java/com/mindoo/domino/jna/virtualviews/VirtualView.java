@@ -107,7 +107,8 @@ public class VirtualView {
 	}
 	
 	/**
-	 * Modiies the view structure based on data changes
+	 * Modifies the view structure based on data changes. The method uses
+	 * a write lock to ensure that it is not called concurrently.
 	 * 
 	 * @param change data change
 	 */
@@ -412,7 +413,8 @@ public class VirtualView {
 	}
 	
 	/**
-	 * Access the view structure with a read lock
+	 * Access the view structure with a read lock to ensure that it is not modified
+	 * while the code is running.
 	 * 
 	 * @param runnable code to run
 	 */
