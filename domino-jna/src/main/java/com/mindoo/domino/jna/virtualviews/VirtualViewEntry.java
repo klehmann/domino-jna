@@ -314,11 +314,13 @@ public class VirtualViewEntry {
 	}
 	
 	public int getLevel() {
+		if (parentView.getRoot().equals(this)) {
+			return 0;
+		}
+		
 		if (level == 0) {
 			VirtualViewEntry parentEntry = getParent();
 			while (parentEntry != null) {
-				int parentSiblingIdx = parentEntry.getSiblingIndex();
-				
 				parentEntry = parentEntry.getParent();
 				if (parentEntry != null) {
 					//ignore root sibling position
@@ -330,6 +332,10 @@ public class VirtualViewEntry {
 	}
 
 	public int[] getPosition() {
+		if (parentView.getRoot().equals(this)) {
+			return new int[] { 0 };
+		}
+		
 		LinkedList<Integer> pos = new LinkedList<>();
 		pos.add(getSiblingIndex());
 		
@@ -354,7 +360,7 @@ public class VirtualViewEntry {
 	
 	@Override
 	public String toString() {
-		return "VirtualViewEntry [pos=" + Arrays.toString(getPosition())+", type=" + (isDocument() ? "document" : isCategory() ? "category" : "") +
+		return "VirtualViewEntry [pos=" + Arrays.toString(getPosition())+", siblingIndex=" + getSiblingIndex() + ", type=" + (isDocument() ? "document" : isCategory() ? "category" : "") +
 				", sortKey=" + sortKey +
 				", origin=" + origin + ", noteId=" + noteId + ", unid=" + unid +
 				", columnValues=" + columnValues + ", childCount=" + childCount + "]";

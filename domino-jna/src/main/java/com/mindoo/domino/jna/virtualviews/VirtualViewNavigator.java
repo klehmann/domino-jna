@@ -6,7 +6,8 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.virtualviews.VirtualView.ScopedNoteId;
@@ -42,11 +43,11 @@ public class VirtualViewNavigator {
 	private ViewEntryAccessCheck viewEntryAccessCheck;
 	
 	/** if selectAll==true, this set is treated as deselected list */
-	private Set<ScopedNoteId> selectedOrDeselectedEntries = new ConcurrentSkipListSet<>();
+	private Set<ScopedNoteId> selectedOrDeselectedEntries = ConcurrentHashMap.newKeySet();
 	private boolean selectAll = false;
 	
 	/** if expandAll==true, this set is treated as collapsed list */
-	private Set<ScopedNoteId> expandedOrCollapsedEntries = new ConcurrentSkipListSet<>();
+	private Set<ScopedNoteId> expandedOrCollapsedEntries = ConcurrentHashMap.newKeySet();
 	private boolean expandAll = false;
 
 	private Stack<TraversalInfo> currentEntryStack;
@@ -522,7 +523,7 @@ public class VirtualViewNavigator {
 	}
 	
 	private int[] toPositionArray(String posStr, char delimiter) {
-		String[] parts = posStr.split(String.valueOf(delimiter));
+		String[] parts = posStr.split(Pattern.quote(String.valueOf(delimiter)));
 		int[] pos = new int[parts.length];
 		for (int i = 0; i < parts.length; i++) {
 			pos[i] = Integer.parseInt(parts[i]);
@@ -712,13 +713,9 @@ public class VirtualViewNavigator {
 				
 				currentChildEntrySortKey = currChildEntry.getKey();
 				currentChildEntry = currChildEntry.getValue();
-				
 				return true;
 			}
 			else {
-				currentChildEntrySortKey = null;
-				currentChildEntry = null;
-				
 				return false;
 			}
 		}
@@ -856,7 +853,7 @@ public class VirtualViewNavigator {
 				if (this.currentChildEntrySortKey == null) {
 					return false;
 				}
-				this.childIterator = this.parentEntry.getChildEntries().headMap(currentChildEntrySortKey, true)
+				this.childIterator = this.parentEntry.getChildEntries().headMap(currentChildEntrySortKey, false)
 						.descendingMap().entrySet().iterator();
 				childIteratorHasDirectionDown = false;
 				if (this.childIterator.hasNext()) {

@@ -7,9 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -40,7 +38,7 @@ public class VirtualView {
 	private Map<ScopedNoteId,List<VirtualViewEntry>> entriesByNoteId;
 	
 	/** during a view update, we use this map to remember which sibiling indexes to recompute */
-	private Map<ViewEntrySortKey,VirtualViewEntry> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
+	private Map<ScopedNoteId,List<VirtualViewEntry>> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
 	/** lock to coordinate r/w access on the view */
 	private ReadWriteLock viewChangeLock = new ReentrantReadWriteLock();
 	
@@ -91,6 +89,7 @@ public class VirtualView {
 		this.rootEntryNoteId = createNewCategoryNoteId();
 		this.rootEntry = new VirtualViewEntry(this, null, ORIGIN_VIRTUALVIEW,
 				rootEntryNoteId, "", rootSortKey, rootChildEntryComparator);
+		this.rootEntry.setSiblingIndex(0);
 		
 		this.entriesByNoteId = new ConcurrentHashMap<>();
 	}
@@ -128,7 +127,7 @@ public class VirtualView {
 						if (parentEntry.getChildEntries().remove(currEntry.getSortKey()) != null) {
 						    parentEntry.childCount.decrementAndGet();
 						    //remember to assign new sibling indexes
-						    pendingSiblingIndexFlush.put(parentEntry.getSortKey(), parentEntry);
+						    markEntryForSiblingIndexFlush(parentEntry);
 						}
 						
 						if (parentEntry.isCategory()) {
@@ -161,14 +160,42 @@ public class VirtualView {
 			}
 			
 			//assign new sibling indexes
-			for (Entry<ViewEntrySortKey,VirtualViewEntry> currEntry : pendingSiblingIndexFlush.entrySet()) {
-				assignChildSiblingIndexes(currEntry.getValue());
-			}
-			pendingSiblingIndexFlush.clear();
+			processPendingSiblingIndexUpdates();
 			
 		} finally {
 			viewChangeLock.writeLock().unlock();
 		}
+	}
+	
+	/**
+	 * Marks an entry to be reprocessed for sibling index assignment so that its children have an ascending sibling index
+	 * starting from 1
+	 * 
+	 * @param ve entry to reprocess
+	 */
+	private void markEntryForSiblingIndexFlush(VirtualViewEntry ve) {
+		List<VirtualViewEntry> entries = pendingSiblingIndexFlush.get(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()));
+		if (entries == null) {
+			entries = new ArrayList<>();
+			pendingSiblingIndexFlush.put(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()), entries);
+		}
+		entries.add(ve);
+	}
+
+	/**
+	 * Assigns new sibling indexes to entries that were marked for reprocessing
+	 */
+	private void processPendingSiblingIndexUpdates() {
+		for (Entry<ScopedNoteId, List<VirtualViewEntry>> currMapEntry : pendingSiblingIndexFlush.entrySet()) {
+			for (VirtualViewEntry currViewEntry : currMapEntry.getValue()) {
+				int[] pos = new int[] {1};
+				
+				currViewEntry.getChildEntries().entrySet().forEach((currChild) -> {
+					currChild.getValue().setSiblingIndex(pos[0]++);
+				});
+			}
+		}
+		pendingSiblingIndexFlush.clear();		
 	}
 	
 	private Object getFirstListValue(Object value) {
@@ -190,7 +217,7 @@ public class VirtualView {
 	 * @param origin       origin of the data change (ID of the data provider)
 	 * @param noteId       note id of the document
 	 * @param unid         UNID of the document
-	 * @param columnValues column values of the document
+	 * @param columnValues column values of the document, value types: String, Number, NotesTimeDate, List&lt;String&gt;, List&lt;Number&gt, List&lt;NotesTimeDate&gt
 	 * @param targetParent parent entry under which the new entry should be added (changed during recursion)
 	 * @param remainingCategoryColumns remaining category columns to process (changed during recursion)
 	 * @return list of created view entries for the document
@@ -230,7 +257,7 @@ public class VirtualView {
 				targetParent.childCount.incrementAndGet();
 			}
 		    //remember to assign new sibling indexes
-		    pendingSiblingIndexFlush.put(targetParent.getSortKey(), targetParent);
+			markEntryForSiblingIndexFlush(targetParent);
 
 			
 			//compute additional values provided via function
@@ -296,7 +323,7 @@ public class VirtualView {
 					VirtualViewEntry entryWithSortKey = currentSubCatParent.getChildEntries().get(categorySortKey);
 					if (entryWithSortKey == null) {
 						int newCategoryNoteId = createNewCategoryNoteId();
-						entryWithSortKey = new VirtualViewEntry(this, targetParent, ORIGIN_VIRTUALVIEW,
+						entryWithSortKey = new VirtualViewEntry(this, currentSubCatParent, ORIGIN_VIRTUALVIEW,
 								newCategoryNoteId, "", categorySortKey,
 								childEntryComparator);
 						if (currentSubCatParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
@@ -305,7 +332,7 @@ public class VirtualView {
 						entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 						
 					    //remember to assign new sibling indexes
-					    pendingSiblingIndexFlush.put(currentSubCatParent.getSortKey(), currentSubCatParent);
+						markEntryForSiblingIndexFlush(currentSubCatParent);
 					}
 					
 					currentSubCatParent = entryWithSortKey;
@@ -333,9 +360,9 @@ public class VirtualView {
 					entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 					
 				    //remember to assign new sibling indexes
-				    pendingSiblingIndexFlush.put(targetParent.getSortKey(), targetParent);
+					markEntryForSiblingIndexFlush(targetParent);
 				}
-				
+
 				//go on with the remaining categories
 				List<VirtualViewEntry> addedEntries = addEntry(origin, noteId, unid, columnValues,
 						entryWithSortKey,
@@ -359,7 +386,7 @@ public class VirtualView {
 			if (parentEntry.getChildEntries().remove(entry.getSortKey()) != null) {
 				parentEntry.childCount.decrementAndGet();
 			    //remember to assign new sibling indexes
-			    pendingSiblingIndexFlush.put(parentEntry.getSortKey(), parentEntry);
+				markEntryForSiblingIndexFlush(parentEntry);
 
 			    //cleanup entry from selected and expanded entries
 			    ScopedNoteId scopedNoteId = new ScopedNoteId(entry.getOrigin(), entry.getNoteId());
@@ -389,7 +416,9 @@ public class VirtualView {
 	}
 
 	/**
-	 * Returns the root entry of the view
+	 * Returns the root entry of the view. The root is an artifical entry that
+	 * is automatically expanded and contains the top level of the view as
+	 * children.
 	 * 
 	 * @return root entry
 	 */
@@ -441,19 +470,6 @@ public class VirtualView {
 			return origin + ":" + noteId;
 		}
 		
-	}
-	
-	/**
-	 * Method to recompute the sibling indexes of all children of a parent entry
-	 * 
-	 * @param ve parent entry
-	 */
-	private void assignChildSiblingIndexes(VirtualViewEntry ve) {
-		int[] pos = new int[] {1};
-		
-		ve.getChildEntries().entrySet().forEach((currEntry) -> {
-			currEntry.getValue().setSiblingIndex(pos[0]++);
-		});
 	}
 	
 	/**
