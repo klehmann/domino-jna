@@ -107,6 +107,20 @@ public class VirtualView {
 	}
 	
 	/**
+	 * Override this method to not add certain entries to the view
+	 * 
+	 * @param origin origin of entry
+	 * @param noteId note id of the document
+	 * @param unid UNID of the document
+	 * @param columnValues column values of the document
+	 * @return true to add the entry, false to skip it (true by default)
+	 */
+	protected boolean isAccepted(String origin, int noteId, String unid,
+			Map<String, Object> columnValues) {
+		return true;
+	}
+	
+	/**
 	 * Modifies the view structure based on data changes. The method uses
 	 * a write lock to ensure that it is not called concurrently.
 	 * 
@@ -148,7 +162,8 @@ public class VirtualView {
 				String unid = currData.getUnid();
 				Map<String,Object> columnValues = currData.getValues();
 
-				List<VirtualViewEntry> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues, rootEntry, this.categoryColumns);
+				List<VirtualViewEntry> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
+						rootEntry, this.categoryColumns, true);
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
                 entriesByNoteId.put(scopedNoteId, addedViewEntries);
 			}
@@ -230,7 +245,7 @@ public class VirtualView {
 	 */
 	private List<VirtualViewEntry> addEntry(String origin, int noteId, String unid,
 			Map<String, Object> columnValues, VirtualViewEntry targetParent,
-			List<VirtualViewColumn> remainingCategoryColumns) {
+			List<VirtualViewColumn> remainingCategoryColumns, boolean firstCall) {
 		
 		List<VirtualViewEntry> createdChildEntriesForDocument = new ArrayList<>();
 		
@@ -248,6 +263,10 @@ public class VirtualView {
 			columnValues.put(itemName, value);
 		}
 
+		if (firstCall && !isAccepted(origin, noteId, unid, columnValues)) {
+			return Collections.emptyList();
+		}
+		
 		if (remainingCategoryColumns.isEmpty()) {
 			//insert as document entry at the right position under targetParent
 			List<Object> docSortValues = new ArrayList<>();
@@ -351,7 +370,7 @@ public class VirtualView {
 				
 				//go on with the remaining categories
 				List<VirtualViewEntry> addedEntries = addEntry(origin, noteId, unid, columnValues, currentSubCatParent,
-						remainingColumnsForNextIteration);
+						remainingColumnsForNextIteration, false);
 				createdChildEntriesForDocument.addAll(addedEntries);
 			}
 			else {
@@ -377,7 +396,7 @@ public class VirtualView {
 				//go on with the remaining categories
 				List<VirtualViewEntry> addedEntries = addEntry(origin, noteId, unid, columnValues,
 						entryWithSortKey,
-						remainingColumnsForNextIteration);
+						remainingColumnsForNextIteration, false);
 				createdChildEntriesForDocument.addAll(addedEntries);
 			}			
 		}
