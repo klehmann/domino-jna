@@ -14,7 +14,7 @@ public class VirtualViewColumn {
 	private ColumnSort sorting;
 	
 	private String valueFormula;
-	private Function<VirtualViewEntry,Object> valueFunction;
+	private VirtualViewColumnValueFunction valueFunction;
 	
 	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting, String formula) {
 		this.title = title;
@@ -26,11 +26,14 @@ public class VirtualViewColumn {
 		this.valueFormula = formula;
 	}
 
-	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting, Function<VirtualViewEntry,Object> valueFunction) {
+	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting, VirtualViewColumnValueFunction valueFunction) {
 		this.title = title;
 		this.itemName = itemName;
 		this.isCategory = isCategory;
 		this.isHidden = isHidden;
+		if (isCategory == Category.YES && sorting == ColumnSort.NONE) {
+			throw new IllegalArgumentException("Category columns must be sorted");
+		}
 		this.sorting = sorting;
 
 		this.valueFunction = valueFunction;
@@ -48,7 +51,7 @@ public class VirtualViewColumn {
 		return valueFormula;
 	}
 	
-	public Function<VirtualViewEntry,Object> getValueFunction() {
+	public VirtualViewColumnValueFunction getValueFunction() {
 		return valueFunction;
 	}
 	

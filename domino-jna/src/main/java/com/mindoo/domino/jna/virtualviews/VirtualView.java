@@ -13,6 +13,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 
@@ -228,6 +229,20 @@ public class VirtualView {
 		
 		List<VirtualViewEntry> createdChildEntriesForDocument = new ArrayList<>();
 		
+		//compute additional values provided via function
+		for (VirtualViewColumn currValueFunctionColumn : this.valueFunctionColumns) {
+			String itemName = currValueFunctionColumn.getItemName();
+			Object value = currValueFunctionColumn.getValueFunction().getValue(origin, itemName, new TypedItemAccess() {
+
+				@Override
+				public Object get(String itemName) {
+					return columnValues.get(itemName);
+				}				
+			});
+			
+			columnValues.put(itemName, value);
+		}
+
 		if (remainingCategoryColumns.isEmpty()) {
 			//insert as document entry at the right position under targetParent
 			List<Object> docSortValues = new ArrayList<>();
@@ -259,16 +274,7 @@ public class VirtualView {
 		    //remember to assign new sibling indexes
 			markEntryForSiblingIndexFlush(targetParent);
 
-			
-			//compute additional values provided via function
-			for (VirtualViewColumn currValueFunctionColumn : this.valueFunctionColumns) {
-				String itemName = currValueFunctionColumn.getItemName();
-				Object value = currValueFunctionColumn.getValueFunction().apply(newChild);
-				newChild.getColumnValues().put(itemName, value);
-			}
-			
-			createdChildEntriesForDocument.add(newChild);
-			
+			createdChildEntriesForDocument.add(newChild);			
 			return createdChildEntriesForDocument;
 		}
 		
@@ -278,9 +284,9 @@ public class VirtualView {
 		ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
 				currCategoryColumn.getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
 		
-
 		String itemName = currCategoryColumn.getItemName();
 		Object valuesForColumn = columnValues.get(itemName);
+		
 		List<Object> multipleCategoryValues;
 		
 		//special case: empty or null category value
