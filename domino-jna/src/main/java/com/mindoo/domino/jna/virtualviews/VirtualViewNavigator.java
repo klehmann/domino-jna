@@ -708,10 +708,10 @@ public class VirtualViewNavigator {
 				this.childIterator = this.parentEntry.getChildEntries().entrySet().iterator();
 			}
 			else if (withCategories) {
-				this.childIterator = this.parentEntry.getCategories().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildCategories().entrySet().iterator();
 			}
 			else if (withDocuments) {
-				this.childIterator = this.parentEntry.getDocuments().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildDocuments().entrySet().iterator();
 			}
 			else {
 				this.childIterator = new EmptyIterator<>();
@@ -747,10 +747,10 @@ public class VirtualViewNavigator {
 				this.childIterator = this.parentEntry.getChildEntries().descendingMap().entrySet().iterator();
 			}
 			else if (withCategories) {
-				this.childIterator = this.parentEntry.getCategories().descendingMap().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildCategories().descendingMap().entrySet().iterator();
 			}
 			else if (withDocuments) {
-				this.childIterator = this.parentEntry.getDocuments().descendingMap().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildDocuments().descendingMap().entrySet().iterator();
 			}
 			else {
 				this.childIterator = new EmptyIterator<>();

@@ -1,23 +1,24 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.TypedItemAccess;
 
 /**
  * Entry in a {@link VirtualView}, representing a document or category.
  */
-public class VirtualViewEntry {
+public class VirtualViewEntry extends TypedItemAccess {
 	//properties for the position in the view
 	private VirtualView parentView;
 	private VirtualViewEntry parent;
@@ -28,11 +29,11 @@ public class VirtualViewEntry {
 	private int siblingIndex;
 	private int level;
 	
-	private ViewEntrySortKey sortKey;
-	
+	private ViewEntrySortKey sortKey;	
 	private Map<String,Object> columnValues;
 	
 	private ConcurrentSkipListMap<ViewEntrySortKey,VirtualViewEntry> childEntriesBySortKey;
+	/** this is updated by the VirtualView when child elements are added/removed */
 	AtomicInteger childCount;
 	
 	public VirtualViewEntry(VirtualView parentView, VirtualViewEntry parent, String origin, int noteId, String unid,
@@ -84,11 +85,39 @@ public class VirtualViewEntry {
 		return unid;
 	}
 	
+	public Object getCategoryValue() {
+		if (isCategory()) {
+			return getSortKey().getValues().get(0);
+		}
+		else {
+			return null;
+		}
+	}
+	
+	@Override
+	public Object get(String itemName) {
+		return columnValues==null ? null : columnValues.get(itemName);
+	}
+	
+	/**
+	 * Returns the item names of the column values
+	 * 
+	 * @return item names
+	 */
+	public Iterator<String> getItemNames() {
+		return columnValues == null ? Collections.emptyIterator() : columnValues.keySet().iterator();
+	}
+	
+	/**
+	 * Returns the column values of the entry as a map. Use
+	 * 
+	 * @return column values
+	 */
 	public Map<String,Object> getColumnValues() {
 		return columnValues;
 	}
 	
-	public void setColumnValues(Map<String,Object> columnValues) {
+	void setColumnValues(Map<String,Object> columnValues) {
 		this.columnValues = columnValues;
 	}
 	
@@ -119,7 +148,12 @@ public class VirtualViewEntry {
 	final static String LOW_ORIGIN = "~~LOW~";
 	final static String HIGH_ORIGIN = "~~HIGH~";
 	
-	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getCategories() {
+	/**
+	 * Returns the child categories of this entry
+	 * 
+	 * @return child categories
+	 */
+	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getChildCategories() {
 		ViewEntrySortKey lowCategorySearchKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {LOW_SORTVAL}),
 				LOW_ORIGIN,
 				0);
@@ -130,7 +164,16 @@ public class VirtualViewEntry {
 		return childEntriesBySortKey.subMap(lowCategorySearchKey, false, highCategorySearchKey, false);
 	}
 	
-	public ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntry> getCategories(Object startKey, boolean startInclusive, Object endKey, boolean endInclusive) {
+	/**
+	 * Returns the child categories of this entry in a specific range
+	 * 
+	 * @param startKey the start key
+	 * @param startInclusive whether to include the start key
+	 * @param endKey the end key
+	 * @param endInclusive whether to include the end key
+	 * @return child categories
+	 */
+	public ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntry> getChildCategories(Object startKey, boolean startInclusive, Object endKey, boolean endInclusive) {
 		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {startKey, LOW_SORTVAL}),
 				LOW_ORIGIN,
 				0);
@@ -141,7 +184,12 @@ public class VirtualViewEntry {
 		return childEntriesBySortKey.subMap(lowCategorySortKey, startInclusive, highCategorySortKey, endInclusive);
 	}
 	
-	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getDocuments() {
+	/**
+	 * Returns the child documents of this entry
+	 * 
+	 * @return child documents
+	 */
+	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getChildDocuments() {
 		ViewEntrySortKey lowCategorySearchKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {LOW_SORTVAL}),
 				LOW_ORIGIN,
 				0);
@@ -152,7 +200,16 @@ public class VirtualViewEntry {
 		return childEntriesBySortKey.subMap(lowCategorySearchKey, false, highCategorySearchKey, false);		
 	}
 
-	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getDocuments(Object startKey, boolean startInclusive, Object endKey, boolean endInclusive) {
+	/**
+	 * Returns the child documents of this entry in a specific range
+	 * 
+	 * @param startKey the start key
+	 * @param startInclusive whether to include the start key
+	 * @param endKey the end key
+	 * @param endInclusive whether to include the end key
+	 * @return child documents
+	 */
+	public ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntry> getChildDocuments(Object startKey, boolean startInclusive, Object endKey, boolean endInclusive) {
 		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {startKey, LOW_SORTVAL}),
 				LOW_ORIGIN,
 				0);
@@ -169,127 +226,7 @@ public class VirtualViewEntry {
 	 * @return readers list or null if the entry is visible to everyone
 	 */
 	public List<String> getReadersList() {
-	    return getAsStringList("$C1$").orElse(null);
-	}
-	
-	/**
-	 * Returns a column value as string
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<String> getAsString(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof String) {
-				return Optional.of((String) value);
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
-	}
-	
-	/**
-	 * Returns a column value as number
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<Number> getAsNumber(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof Number) {
-				return Optional.of((Number) value);
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
-	}
-	
-	/**
-	 * Returns a column value as string list
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<List<String>> getAsStringList(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof List && !((List)value).isEmpty() && ((List)value).get(0) instanceof String) {
-				return Optional.of((List<String>) value);
-			} else if (value instanceof String) {
-				return Optional.of(Arrays.asList((String) value));
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
-	}
-	
-	/**
-	 * Returns a column value as number list
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<List<Number>> getAsNumberList(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof List && !((List) value).isEmpty() && ((List) value).get(0) instanceof Number) {
-				return Optional.of((List<Number>) value);
-			} else if (value instanceof Number) {
-				return Optional.of(Arrays.asList((Number) value));
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
-	}
-	
-	/**
-	 * Returns a column value as {@link NotesTimeDate}
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<NotesTimeDate> getAsTimeDate(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof NotesTimeDate) {
-				return Optional.of((NotesTimeDate) value);
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
-	}
-	
-	/**
-	 * Returns a column value as {@link NotesTimeDate} list
-	 * 
-	 * @param itemName item name
-	 * @return value or empty
-	 */
-	public Optional<List<NotesTimeDate>> getAsTimeDateList(String itemName) {
-		if (columnValues.containsKey(itemName)) {
-			Object value = columnValues.get(itemName);
-			if (value instanceof List && !((List) value).isEmpty() && ((List) value).get(0) instanceof NotesTimeDate) {
-				return Optional.of((List<NotesTimeDate>) value);
-			} else if (value instanceof NotesTimeDate) {
-				return Optional.of(Arrays.asList((NotesTimeDate) value));
-			} else {
-				return Optional.empty();
-			}
-		} else {
-			return Optional.empty();
-		}
+	    return getAsStringList("$C1$", null);
 	}
 	
 	int getSiblingIndex() {
@@ -300,6 +237,12 @@ public class VirtualViewEntry {
 		siblingIndex = idx;
 	}
 	
+	/**
+	 * Returns the position of the entry in the view
+	 * 
+	 * @param c separator character
+	 * @return position string, e.g. "1.2.3"
+	 */
 	public String getPosition(char c) {
 		int[] pos = getPosition();
 		StringBuilder sb = new StringBuilder();
@@ -313,6 +256,11 @@ public class VirtualViewEntry {
 		return sb.toString();
 	}
 	
+	/**
+	 * Returns the level of the entry in the view (0 for root of virtual view, 1 for first level, ...)
+	 * 
+	 * @return level
+	 */
 	public int getLevel() {
 		if (parentView.getRoot().equals(this)) {
 			return 0;
@@ -331,6 +279,11 @@ public class VirtualViewEntry {
 		return level;
 	}
 
+	/**
+	 * Returns the position of the entry in the view
+	 * 
+	 * @return position array, e.g. [1,2,3]
+	 */
 	public int[] getPosition() {
 		if (parentView.getRoot().equals(this)) {
 			return new int[] { 0 };
@@ -365,6 +318,5 @@ public class VirtualViewEntry {
 				", origin=" + origin + ", noteId=" + noteId + ", unid=" + unid +
 				", columnValues=" + columnValues + ", childCount=" + childCount + "]";
 	}
-	
 	
 }
