@@ -5,9 +5,14 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.virtualviews.VirtualView.ScopedNoteId;
@@ -37,6 +42,8 @@ import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 public class VirtualViewNavigator {
 	public enum WithCategories { YES, NO };
 	public enum WithDocuments { YES, NO };
+	public enum SelectedOnly { YES, NO };
+	
 	private VirtualView view;
 	private boolean withCategories;
 	private boolean withDocuments;
@@ -263,6 +270,61 @@ public class VirtualViewNavigator {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Moves the cursor to the top of the view ({@link #gotoFirst()}) and
+	 * then navigates through the view with {@link #gotoNext()}, returning
+	 * the entries as a stream. Takes the expand states into account.
+	 * 
+	 * @param selectedOnly true to return only selected entries
+	 * @return stream of entries
+	 * @see #select(String, int, boolean)
+	 */
+	public Stream<VirtualViewEntry> entriesForward(SelectedOnly selectedOnly) {
+		if (!gotoFirst()) {
+			return Stream.empty();
+		}
+		
+		return StreamSupport
+				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntry>(Long.MAX_VALUE, Spliterator.ORDERED) {
+					@Override
+					public boolean tryAdvance(Consumer<? super VirtualViewEntry> action) {
+						VirtualViewEntry entry = getCurrentEntry();
+						if (selectedOnly == SelectedOnly.NO ||
+								(selectedOnly == SelectedOnly.YES && isSelected(entry.getOrigin(), entry.getNoteId()))) {
+							action.accept(getCurrentEntry());
+						}
+						return selectedOnly == SelectedOnly.YES ? gotoNextSelected() : gotoNext();
+					}
+				}, false);
+	}
+	
+	/**
+	 * Moves the cursor to the end of the view ({@link #gotoLast()}) and
+	 * then navigates through the view with {@link #gotoPrev()}, returning
+	 * the entries as a stream. Takes the expand states into account.
+	 * 
+	 * @param selectedOnly true to return only selected entries
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntry> entriesBackward(SelectedOnly selectedOnly) {
+		if (!gotoLast()) {
+			return Stream.empty();
+		}
+		
+		return StreamSupport
+				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntry>(Long.MAX_VALUE, Spliterator.ORDERED) {
+					@Override
+					public boolean tryAdvance(Consumer<? super VirtualViewEntry> action) {
+						VirtualViewEntry entry = getCurrentEntry();
+						if (selectedOnly == SelectedOnly.NO ||
+								(selectedOnly == SelectedOnly.YES && isSelected(entry.getOrigin(), entry.getNoteId()))) {
+							action.accept(getCurrentEntry());
+						}
+						return selectedOnly == SelectedOnly.YES ? gotoPrevSelected() : gotoNext();
+					}
+				}, false);
 	}
 	
 	/**
