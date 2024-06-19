@@ -180,7 +180,9 @@ public class VirtualView {
 			entries = new ArrayList<>();
 			pendingSiblingIndexFlush.put(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()), entries);
 		}
-		entries.add(ve);
+		if (!entries.contains(ve)) {
+			entries.add(ve);
+		}
 	}
 
 	/**
@@ -191,12 +193,14 @@ public class VirtualView {
 			for (VirtualViewEntry currViewEntry : currMapEntry.getValue()) {
 				int[] pos = new int[] {1};
 				
-				currViewEntry.getChildEntries().entrySet().forEach((currChild) -> {
-					currChild.getValue().setSiblingIndex(pos[0]++);
-				});
+				if (currViewEntry.getChildCount() > 0) {
+					currViewEntry.getChildEntries().entrySet().forEach((currChild) -> {
+						currChild.getValue().setSiblingIndex(pos[0]++);
+					});					
+				}
 			}
 		}
-		pendingSiblingIndexFlush.clear();		
+		pendingSiblingIndexFlush.clear();
 	}
 	
 	private Object getFirstListValue(Object value) {

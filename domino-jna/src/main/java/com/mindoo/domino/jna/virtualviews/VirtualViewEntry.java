@@ -270,10 +270,10 @@ public class VirtualViewEntry extends TypedItemAccess {
 			VirtualViewEntry parentEntry = getParent();
 			while (parentEntry != null) {
 				parentEntry = parentEntry.getParent();
-				if (parentEntry != null) {
-					//ignore root sibling position
-					level++;
-				}
+//				if (parentEntry != null) {
+//					//ignore root sibling position
+//				}
+				level++;
 			}
 		}
 		return level;
@@ -313,7 +313,7 @@ public class VirtualViewEntry extends TypedItemAccess {
 	
 	@Override
 	public String toString() {
-		return "VirtualViewEntry [pos=" + Arrays.toString(getPosition())+", siblingIndex=" + getSiblingIndex() + ", type=" + (isDocument() ? "document" : isCategory() ? "category" : "") +
+		return "VirtualViewEntry [pos=" + Arrays.toString(getPosition())+", level="+getLevel()+", siblingIndex=" + getSiblingIndex() + ", type=" + (isDocument() ? "document" : isCategory() ? "category" : "") +
 				", sortKey=" + sortKey +
 				", origin=" + origin + ", noteId=" + noteId + ", unid=" + unid +
 				", columnValues=" + columnValues + ", childCount=" + childCount + "]";

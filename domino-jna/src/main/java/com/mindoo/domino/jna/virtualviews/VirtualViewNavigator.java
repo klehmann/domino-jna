@@ -49,7 +49,8 @@ public class VirtualViewNavigator {
 	/** if expandAll==true, this set is treated as collapsed list */
 	private Set<ScopedNoteId> expandedOrCollapsedEntries = ConcurrentHashMap.newKeySet();
 	private boolean expandAll = false;
-
+	private int expandLevel;
+	
 	private Stack<TraversalInfo> currentEntryStack;
 	
 	/**
@@ -433,8 +434,9 @@ public class VirtualViewNavigator {
 	 * @param origin origin of the entry
 	 * @param noteId note id of the entry
 	 * @param selectParentCategories true to select all parent categories
+	 * @return this navigator
 	 */
-	public void select(String origin, int noteId, boolean selectParentCategories) {
+	public VirtualViewNavigator select(String origin, int noteId, boolean selectParentCategories) {
 		VirtualViewEntry rootEntry = view.getRoot();
 		
 		ScopedNoteId scopedNoteId = new ScopedNoteId(origin, noteId);
@@ -463,23 +465,30 @@ public class VirtualViewNavigator {
 				}
 			}
 		}
+		return this;
 	}
 	
 	/**
 	 * Selects all view entries. Use {@link #deselect(String, int)} to remove
 	 * entries from the selection
+	 * 
+	 * @return this navigator
 	 */
-	public void selectAll() {
+	public VirtualViewNavigator selectAll() {
 		selectedOrDeselectedEntries.clear();
 		selectAll = true;
+		return this;
 	}
 	
 	/**
 	 * Clears the set of selection entries
+	 * 
+	 * @return this navigator
 	 */
-	public void deselectAll() {
+	public VirtualViewNavigator deselectAll() {
 		selectedOrDeselectedEntries.clear();
-		selectAll = false;	
+		selectAll = false;
+		return this;
 	}
 	
 	/**
@@ -487,14 +496,16 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param origin origin of the entry
 	 * @param noteId note id of the entry
+	 * @return this navigator
 	 */
-	public void deselect(String origin, int noteId) {
+	public VirtualViewNavigator deselect(String origin, int noteId) {
 		if (selectAll) {
 			selectedOrDeselectedEntries.add(new ScopedNoteId(origin, noteId));			
 		}
 		else {
 			selectedOrDeselectedEntries.remove(new ScopedNoteId(origin, noteId));
 		}
+		return this;
     }
 	
 	/**
@@ -515,17 +526,30 @@ public class VirtualViewNavigator {
 	/**
 	 * Collapse all entries
 	 */
-	public void collapseAll() {
+	public VirtualViewNavigator collapseAll() {
 		expandedOrCollapsedEntries.clear();
 		expandAll = false;
+		return this;
 	}
 	
 	/**
 	 * Expand all entries
 	 */
-	public void expandAll() {
+	public VirtualViewNavigator expandAll() {
 		expandedOrCollapsedEntries.clear();
 		expandAll = true;
+		return this;
+	}
+	
+	/**
+	 * Expand all entries up to a specific level
+	 * 
+	 * @param level level to expand (0 to show top level only, 1 to expand the top level)
+	 * @return this navigator
+	 */
+	public VirtualViewNavigator expandLevel(int level) {
+		this.expandLevel = level;
+		return this;
 	}
 	
 	private int[] toPositionArray(String posStr, char delimiter) {
@@ -542,10 +566,12 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param posStr position string like "1.2.3"
 	 * @param delimiter delimiter used in the position string like '.'
+	 * @return this navigator
 	 */
-	public void expand(String posStr, char delimiter) {
+	public VirtualViewNavigator expand(String posStr, char delimiter) {
 		int[] pos = toPositionArray(posStr, delimiter);
 		expand(pos);
+		return this;
 	}
 	
 	/**
@@ -553,34 +579,40 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param posStr position string like "1.2.3"
 	 * @param delimiter delimiter used in the position string like '.'
+	 * @return this navigator
 	 */
-	public void collapse(String posStr, char delimiter) {
+	public VirtualViewNavigator collapse(String posStr, char delimiter) {
 		int[] pos = toPositionArray(posStr, delimiter);
 		collapse(pos);
+		return this;
 	}
 	
 	/**
 	 * Expand a view entry at a position
 	 * 
 	 * @param pos position, e.g. [1,2,3]
+	 * @return this navigator
 	 */
-	public void expand(int[] pos) {
+	public VirtualViewNavigator expand(int[] pos) {
 		Optional<VirtualViewEntry> entry = getPos(pos, false);
 		if (entry.isPresent()) {
 			expand(entry.get().getOrigin(), entry.get().getNoteId());
 		}
+		return this;
 	}
 	
 	/**
 	 * Collapse a view entry at a position
 	 * 
 	 * @param pos position, e.g. [1,2,3]
+	 * @return this navigator
 	 */
-	public void collapse(int[] pos) {
+	public VirtualViewNavigator collapse(int[] pos) {
 		Optional<VirtualViewEntry> entry = getPos(pos, false);
 		if (entry.isPresent()) {
 			collapse(entry.get().getOrigin(), entry.get().getNoteId());
 		}
+		return this;
 	}
 	
 	/**
@@ -588,8 +620,9 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param origin origin of the entry
 	 * @param noteId note id of the entry
+	 * @return this navigator
 	 */
-	public void expand(String origin, int noteId) {
+	public VirtualViewNavigator expand(String origin, int noteId) {
 		if (!expandAll) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));			
 		}
@@ -597,6 +630,7 @@ public class VirtualViewNavigator {
 			// make sure this entry is not collapsed
 			expandedOrCollapsedEntries.remove(new ScopedNoteId(origin, noteId));
 		}
+		return this;
 	}
 	
 	/**
@@ -604,8 +638,9 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param origin origin of the entry
 	 * @param noteId note id of the entry
+	 * @return this navigator
 	 */
-	public void collapse(String origin, int noteId) {
+	public VirtualViewNavigator collapse(String origin, int noteId) {
 		if (expandAll) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));
 		}
@@ -613,6 +648,7 @@ public class VirtualViewNavigator {
 			//make sure this entry is not expanded
 			expandedOrCollapsedEntries.remove(new ScopedNoteId(origin, noteId));
 		}
+		return this;
 	}
 	
 	/**
@@ -622,11 +658,17 @@ public class VirtualViewNavigator {
 	 * @return true if expanded
 	 */
 	public boolean isExpanded(VirtualViewEntry entry) {
-		return isExpanded(entry.getOrigin(), entry.getNoteId());
+		if (isExpanded(entry.getOrigin(), entry.getNoteId())) {
+			return true;
+		}
+		if (expandLevel > 0 && entry.getLevel() <= expandLevel) {
+			return true;
+		}
+		return false;
 	}
 	
 	/**
-	 * Checks if an entry is expanded
+	 * Checks if an entry is expanded based on its origin/noteId (does not check if expandLevel is set)
 	 * 
 	 * @param origin origin of the entry
 	 * @param noteId note id of the entry
@@ -881,6 +923,5 @@ public class VirtualViewNavigator {
 		}
 		
 	}
-	
 
 }
