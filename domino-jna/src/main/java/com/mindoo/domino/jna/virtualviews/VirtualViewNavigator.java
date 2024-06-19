@@ -222,11 +222,12 @@ public class VirtualViewNavigator {
 	 * @return true if successful, false if the cursor is already at the top of the view (then we don't change the cursor position)
 	 */
 	public boolean gotoParent() {
-		if (!view.getRoot().equals(currentEntryStack.peek().parentEntry)) {
+		if (currentEntryStack.size() > 1) {
 			currentEntryStack.pop();
 			return true;
-		}
-		return false;
+		} else {
+			return false;
+        }
 	}
 	
 	/**
@@ -291,11 +292,18 @@ public class VirtualViewNavigator {
 			return true;
 		}
 		
-		if (gotoParent()) {
+		while (gotoParent()) {
 			// go up one level, go to next sibling
 			if (gotoNextSibling()) {
-				return true;
+				return true;			
 			}
+			
+			//repeat for cases where we are deeper in the tree
+			//Entry #1
+			//  Entry #1.1
+			//    Entry #1.1.1
+			//      Entry #1.1.1.1   <--
+			//Entry #2
 		}
 		
 		//no more entries in the view
@@ -320,10 +328,8 @@ public class VirtualViewNavigator {
 			return true;
 		}
 
+		//navigate to parent
 		if (gotoParent()) {
-			//navigate to parent
-			VirtualViewEntry parentEntry = getCurrentEntry();
-			gotoDeepestExpandedDescendant(parentEntry);
 			return true;
 		}
 		
@@ -664,6 +670,11 @@ public class VirtualViewNavigator {
 			this.withDocuments = withDocuments;
 		}
 
+		@Override
+		public String toString() {
+			return "TraversalInfo [parentEntry=" + parentEntry + ", entryAtCursor=" + currentChildEntry + ", iteratorDirectionDown=" + childIteratorHasDirectionDown + "]";
+		}
+		
 		/**
 		 * Returns the view entry at the cursor position
 		 * 
