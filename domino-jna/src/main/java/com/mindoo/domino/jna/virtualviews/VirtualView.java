@@ -139,9 +139,20 @@ public class VirtualView {
 				List<VirtualViewEntry> entries = entriesByNoteId.remove(scopedNoteId);
 				if (entries != null) {
 					for (VirtualViewEntry currEntry : entries) {
+						if (ORIGIN_VIRTUALVIEW.equals(currEntry.getOrigin())) {
+							// don't remove our own entries
+							continue;
+						}
+						
 						VirtualViewEntry parentEntry = currEntry.getParent();
 						if (parentEntry.getChildEntries().remove(currEntry.getSortKey()) != null) {
 						    parentEntry.childCount.decrementAndGet();
+						    if (currEntry.isCategory()) {
+						    	parentEntry.childCategoryCount.decrementAndGet();
+						    }
+						    else if (currEntry.isDocument()) {
+						    	parentEntry.childDocumentCount.decrementAndGet();
+						    }
 						    //remember to assign new sibling indexes
 						    markEntryForSiblingIndexFlush(parentEntry);
 						}
@@ -294,6 +305,7 @@ public class VirtualView {
 			newChild.setColumnValues(columnValues);
 			if (targetParent.getChildEntries().put(sortKey, newChild) == null) {
 				targetParent.childCount.incrementAndGet();
+				targetParent.childDocumentCount.incrementAndGet();
 			}
 		    //remember to assign new sibling indexes
 			markEntryForSiblingIndexFlush(targetParent);
@@ -358,6 +370,7 @@ public class VirtualView {
 								childEntryComparator);
 						if (currentSubCatParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
 							currentSubCatParent.childCount.incrementAndGet();
+							currentSubCatParent.childCategoryCount.incrementAndGet();
 						}
 						entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 						
@@ -386,6 +399,7 @@ public class VirtualView {
 							childEntryComparator);
 					if (targetParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
 						targetParent.childCount.incrementAndGet();
+						targetParent.childCategoryCount.incrementAndGet();
 					}
 					entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 					

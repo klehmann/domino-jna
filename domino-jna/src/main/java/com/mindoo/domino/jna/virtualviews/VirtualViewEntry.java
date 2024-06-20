@@ -35,6 +35,8 @@ public class VirtualViewEntry extends TypedItemAccess {
 	private ConcurrentSkipListMap<ViewEntrySortKey,VirtualViewEntry> childEntriesBySortKey;
 	/** this is updated by the VirtualView when child elements are added/removed */
 	AtomicInteger childCount;
+	AtomicInteger childCategoryCount;
+	AtomicInteger childDocumentCount;
 	
 	public VirtualViewEntry(VirtualView parentView, VirtualViewEntry parent, String origin, int noteId, String unid,
 			ViewEntrySortKey sortKey, Comparator<ViewEntrySortKey> childrenComparator) {
@@ -44,7 +46,11 @@ public class VirtualViewEntry extends TypedItemAccess {
 		this.noteId = noteId;
 		this.unid = unid;
 		this.sortKey = sortKey;
+		
 		this.childCount = new AtomicInteger();
+		this.childCategoryCount = new AtomicInteger();
+		this.childDocumentCount = new AtomicInteger();
+		
 		Objects.requireNonNull(childrenComparator);
 		this.childEntriesBySortKey = new ConcurrentSkipListMap<>(childrenComparator);
 	}
@@ -59,6 +65,14 @@ public class VirtualViewEntry extends TypedItemAccess {
 
 	public int getChildCount() {
 		return childCount.get();
+	}
+	
+	public int getChildCategoryCount() {
+		return childCategoryCount.get();
+	}
+	
+	public int getChildDocumentCount() {
+		return childDocumentCount.get();
 	}
 	
 	public int getDescendantCount() {
@@ -269,11 +283,8 @@ public class VirtualViewEntry extends TypedItemAccess {
 		if (level == 0) {
 			VirtualViewEntry parentEntry = getParent();
 			while (parentEntry != null) {
-				parentEntry = parentEntry.getParent();
-//				if (parentEntry != null) {
-//					//ignore root sibling position
-//				}
 				level++;
+				parentEntry = parentEntry.getParent();
 			}
 		}
 		return level;
@@ -313,10 +324,22 @@ public class VirtualViewEntry extends TypedItemAccess {
 	
 	@Override
 	public String toString() {
-		return "VirtualViewEntry [pos=" + Arrays.toString(getPosition())+", level="+getLevel()+", siblingIndex=" + getSiblingIndex() + ", type=" + (isDocument() ? "document" : isCategory() ? "category" : "") +
-				", sortKey=" + sortKey +
-				", origin=" + origin + ", noteId=" + noteId + ", unid=" + unid +
-				", columnValues=" + columnValues + ", childCount=" + childCount + "]";
+		StringBuilder sb = new StringBuilder();
+		sb.append("VirtualViewEntry [");
+		sb.append("pos=").append(Arrays.toString(getPosition()));
+		sb.append(", level=").append(getLevel());
+		sb.append(", siblingIndex=").append(getSiblingIndex());
+		sb.append(", type=").append(isDocument() ? "document" : isCategory() ? "category" : isTotal() ? "total" : "unknown");
+		sb.append(", sortKey=").append(sortKey);
+		sb.append(", origin=").append(origin);
+		sb.append(", noteId=").append(noteId);
+	    sb.append(", unid=").append(unid);
+	    sb.append(", columnValues=").append(columnValues);
+	    sb.append(", childCount=").append(childCount);
+	    sb.append(", childDocCount=").append(childDocumentCount);
+	    sb.append(", childCatCount=").append(childCategoryCount);
+	    sb.append("]");
+	    return sb.toString();
 	}
 	
 }
