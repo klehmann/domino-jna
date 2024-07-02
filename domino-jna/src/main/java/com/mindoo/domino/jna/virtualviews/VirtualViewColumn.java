@@ -1,32 +1,35 @@
 package com.mindoo.domino.jna.virtualviews;
 
-import java.util.function.Function;
-
 public class VirtualViewColumn {
 	public static enum ColumnSort { ASCENDING, DESCENDING, NONE }
 	public static enum Category { YES, NO }
 	public static enum Hidden { YES, NO }
+	public static enum Total { NONE, SUM, AVERAGE }
 	
 	private String title;
 	private String itemName;
 	private Category isCategory;
 	private Hidden isHidden;
 	private ColumnSort sorting;
+	private Total totalMode;
 	
 	private String valueFormula;
-	private VirtualViewColumnValueFunction valueFunction;
+	private VirtualViewColumnValueFunction<?> valueFunction;
 	
-	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting, String formula) {
+	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting,
+			Total totalMode, String formula) {
 		this.title = title;
 		this.itemName = itemName;
 		this.isCategory = isCategory;
 		this.isHidden = isHidden;
 		this.sorting = sorting;
-
+		this.totalMode = totalMode;
+		
 		this.valueFormula = formula;
 	}
 
-	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting, VirtualViewColumnValueFunction valueFunction) {
+	public VirtualViewColumn(String title, String itemName, Category isCategory, Hidden isHidden, ColumnSort sorting,
+			Total totalMode, VirtualViewColumnValueFunction<?> valueFunction) {
 		this.title = title;
 		this.itemName = itemName;
 		this.isCategory = isCategory;
@@ -35,7 +38,8 @@ public class VirtualViewColumn {
 			throw new IllegalArgumentException("Category columns must be sorted");
 		}
 		this.sorting = sorting;
-
+		this.totalMode = totalMode;
+		
 		this.valueFunction = valueFunction;
 	}
 	
@@ -51,8 +55,12 @@ public class VirtualViewColumn {
 		return valueFormula;
 	}
 	
-	public VirtualViewColumnValueFunction getValueFunction() {
+	public VirtualViewColumnValueFunction<?> getValueFunction() {
 		return valueFunction;
+	}
+	
+	public Total getTotalMode() {
+		return totalMode;
 	}
 	
 	public boolean isCategory() {

@@ -66,7 +66,7 @@ public class VirtualViewNavigator {
 	 * @param view view
 	 * @param cats whether to include category entries
 	 * @param docs whether to include document entries
-	 * @param userNamesListByOrigin map with user names, groups and roles for each origin (each {@link VirtualViewEntry} is checked against the ACL of the origin database)
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 */
 	public VirtualViewNavigator(VirtualView view, WithCategories cats, WithDocuments docs,
 			ViewEntryAccessCheck viewEntryAccessCheck) {
@@ -80,6 +80,10 @@ public class VirtualViewNavigator {
 		TraversalInfo traversalInfo = new TraversalInfo(view.getRoot(), withCategories, withDocuments);
 		this.currentEntryStack = new Stack<>();
 		this.currentEntryStack.push(traversalInfo);
+	}
+	
+	public VirtualView getView() {
+		return view;
 	}
 	
 	/**
@@ -101,7 +105,7 @@ public class VirtualViewNavigator {
 	 * @return true if position could be found
 	 */
 	public boolean gotoPos(int[] pos) {
-		Optional<VirtualViewEntry> entry = getPos(pos, true);
+		Optional<VirtualViewEntryData> entry = getPos(pos, true);
 		return entry.isPresent();
 	}
 	
@@ -112,7 +116,7 @@ public class VirtualViewNavigator {
 	 * @param delimiter delimiter in position string
 	 * @return entry if found or empty
 	 */
-	public Optional<VirtualViewEntry> getPos(String posStr, char delimiter) {
+	public Optional<VirtualViewEntryData> getPos(String posStr, char delimiter) {
 		int[] pos = toPositionArray(posStr, delimiter);
 		return getPos(pos);
 	}
@@ -123,7 +127,7 @@ public class VirtualViewNavigator {
 	 * @param pos new position, e.g. [1,2,3]
 	 * @return entry if found or empty
 	 */
-	public Optional<VirtualViewEntry> getPos(int[] pos) {
+	public Optional<VirtualViewEntryData> getPos(int[] pos) {
 		return getPos(pos, false);
 	}
 	
@@ -134,18 +138,18 @@ public class VirtualViewNavigator {
 	 * @param moveCursor true to move the cursor to the new position
 	 * @return entry if found
 	 */
-	private Optional<VirtualViewEntry> getPos(int[] pos, boolean moveCursor) {
+	private Optional<VirtualViewEntryData> getPos(int[] pos, boolean moveCursor) {
 		Stack<TraversalInfo> newCurrentEntryStack = new Stack<>();
 		
-		VirtualViewEntry parentEntry = view.getRoot();
+		VirtualViewEntryData parentEntry = view.getRoot();
 		TraversalInfo traversalInfo = new TraversalInfo(parentEntry, withCategories, withDocuments);
 		newCurrentEntryStack.push(traversalInfo);
 		
 		for (int i=0; i<pos.length; i++) {						
 			if (traversalInfo.gotoFirst()) {
-				VirtualViewEntry matchingEntry = null;
+				VirtualViewEntryData matchingEntry = null;
 				do {
-					VirtualViewEntry currSearchEntry = traversalInfo.getCurrentEntry();
+					VirtualViewEntryData currSearchEntry = traversalInfo.getCurrentEntry();
 					if (currSearchEntry.getSiblingIndex() == pos[i]) {
 						matchingEntry = currSearchEntry;
 						break;
@@ -189,7 +193,7 @@ public class VirtualViewNavigator {
 	 * @return true if successful, false if the current entry has no children (then we don't change the cursor position)
 	 */
 	public boolean gotoFirstChild() {
-		VirtualViewEntry currEntry = getCurrentEntry();
+		VirtualViewEntryData currEntry = getCurrentEntry();
 		if (currEntry == null) {
 			return false;
 		}
@@ -210,7 +214,7 @@ public class VirtualViewNavigator {
 	 * @return true if successful, false if the current entry has no children (then we don't change the cursor position)
 	 */
 	public boolean gotoLastChild() {
-		VirtualViewEntry currEntry = getCurrentEntry();
+		VirtualViewEntryData currEntry = getCurrentEntry();
 		if (currEntry == null) {
 			return false;
 		}
@@ -246,7 +250,7 @@ public class VirtualViewNavigator {
 	 */
 	public boolean gotoNextSelected() {
 		while (gotoNext()) {
-			VirtualViewEntry currEntry = getCurrentEntry();
+			VirtualViewEntryData currEntry = getCurrentEntry();
 
 			if (isSelected(currEntry.getOrigin(), currEntry.getNoteId())) {
 				return true;
@@ -263,7 +267,7 @@ public class VirtualViewNavigator {
 	 */
 	public boolean gotoPrevSelected() {
 		while (gotoPrev()) {
-			VirtualViewEntry currEntry = getCurrentEntry();
+			VirtualViewEntryData currEntry = getCurrentEntry();
 
 			if (isSelected(currEntry.getOrigin(), currEntry.getNoteId())) {
 				return true;
@@ -281,16 +285,16 @@ public class VirtualViewNavigator {
 	 * @return stream of entries
 	 * @see #select(String, int, boolean)
 	 */
-	public Stream<VirtualViewEntry> entriesForward(SelectedOnly selectedOnly) {
+	public Stream<VirtualViewEntryData> entriesForward(SelectedOnly selectedOnly) {
 		if (!gotoFirst()) {
 			return Stream.empty();
 		}
 		
 		return StreamSupport
-				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntry>(Long.MAX_VALUE, Spliterator.ORDERED) {
+				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntryData>(Long.MAX_VALUE, Spliterator.ORDERED) {
 					@Override
-					public boolean tryAdvance(Consumer<? super VirtualViewEntry> action) {
-						VirtualViewEntry entry = getCurrentEntry();
+					public boolean tryAdvance(Consumer<? super VirtualViewEntryData> action) {
+						VirtualViewEntryData entry = getCurrentEntry();
 						if (selectedOnly == SelectedOnly.NO ||
 								(selectedOnly == SelectedOnly.YES && isSelected(entry.getOrigin(), entry.getNoteId()))) {
 							action.accept(getCurrentEntry());
@@ -308,16 +312,16 @@ public class VirtualViewNavigator {
 	 * @param selectedOnly true to return only selected entries
 	 * @return stream of entries
 	 */
-	public Stream<VirtualViewEntry> entriesBackward(SelectedOnly selectedOnly) {
+	public Stream<VirtualViewEntryData> entriesBackward(SelectedOnly selectedOnly) {
 		if (!gotoLast()) {
 			return Stream.empty();
 		}
 		
 		return StreamSupport
-				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntry>(Long.MAX_VALUE, Spliterator.ORDERED) {
+				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntryData>(Long.MAX_VALUE, Spliterator.ORDERED) {
 					@Override
-					public boolean tryAdvance(Consumer<? super VirtualViewEntry> action) {
-						VirtualViewEntry entry = getCurrentEntry();
+					public boolean tryAdvance(Consumer<? super VirtualViewEntryData> action) {
+						VirtualViewEntryData entry = getCurrentEntry();
 						if (selectedOnly == SelectedOnly.NO ||
 								(selectedOnly == SelectedOnly.YES && isSelected(entry.getOrigin(), entry.getNoteId()))) {
 							action.accept(getCurrentEntry());
@@ -333,7 +337,7 @@ public class VirtualViewNavigator {
 	 * @return true if successful
 	 */
 	public boolean gotoNext() {
-		VirtualViewEntry currEntry = getCurrentEntry();
+		VirtualViewEntryData currEntry = getCurrentEntry();
 		if (currEntry == null) {
 			return false;
 		}
@@ -379,14 +383,14 @@ public class VirtualViewNavigator {
 	 * @return true if successful
 	 */
 	public boolean gotoPrev() {
-		VirtualViewEntry currEntry = getCurrentEntry();
+		VirtualViewEntryData currEntry = getCurrentEntry();
 		if (currEntry == null) {
 			return false;
 		}
 		
 		if (gotoPrevSibling()) {
 			//navigate to the deepest expanded descendant entry of the prev sibling
-			VirtualViewEntry prevSiblingEntry = getCurrentEntry();
+			VirtualViewEntryData prevSiblingEntry = getCurrentEntry();
 			gotoDeepestExpandedDescendant(prevSiblingEntry);
 			return true;
 		}
@@ -404,7 +408,7 @@ public class VirtualViewNavigator {
 	 * 
 	 * @param entry parent entry
 	 */
-	private void gotoDeepestExpandedDescendant(VirtualViewEntry entry) {
+	private void gotoDeepestExpandedDescendant(VirtualViewEntryData entry) {
 		if (entry.getChildCount() > 0 && isExpanded(entry)) {
 			TraversalInfo traversalInfo = new TraversalInfo(entry, withCategories, withDocuments);
             if (traversalInfo.gotoLast()) {
@@ -457,7 +461,7 @@ public class VirtualViewNavigator {
 		}
 		
 		if (currentEntryStack.peek().gotoLast()) {
-			VirtualViewEntry lastTopLevelEntry = getCurrentEntry();
+			VirtualViewEntryData lastTopLevelEntry = getCurrentEntry();
 			gotoDeepestExpandedDescendant(lastTopLevelEntry);
 
 			return true;
@@ -471,12 +475,12 @@ public class VirtualViewNavigator {
 	 * 
 	 * @return view entry or null if the cursor is offroad
 	 */
-	public VirtualViewEntry getCurrentEntry() {
+	public VirtualViewEntryData getCurrentEntry() {
 		if (currentEntryStack.isEmpty()) {
 			return null;
 		}
 		else {
-			VirtualViewEntry currEntry = currentEntryStack.peek().getCurrentEntry();
+			VirtualViewEntryData currEntry = currentEntryStack.peek().getCurrentEntry();
 			if (currEntry != null) {
 				if (currEntry.isCategory() && withCategories) {
 					return currEntry;
@@ -499,7 +503,7 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator select(String origin, int noteId, boolean selectParentCategories) {
-		VirtualViewEntry rootEntry = view.getRoot();
+		VirtualViewEntryData rootEntry = view.getRoot();
 		
 		ScopedNoteId scopedNoteId = new ScopedNoteId(origin, noteId);
 		if (selectAll) {
@@ -511,10 +515,10 @@ public class VirtualViewNavigator {
 		}
 		
 		if (selectParentCategories) {
-			List<VirtualViewEntry> entries = view.findEntries(origin, noteId);
+			List<VirtualViewEntryData> entries = view.findEntries(origin, noteId);
 			if (entries != null) {
-				for (VirtualViewEntry currEntry : entries) {
-					VirtualViewEntry parent = currEntry.getParent();
+				for (VirtualViewEntryData currEntry : entries) {
+					VirtualViewEntryData parent = currEntry.getParent();
 					while (parent != null && !rootEntry.equals(parent)) {
 						if (selectAll) {
 							selectedOrDeselectedEntries.remove(new ScopedNoteId(parent.getOrigin(), parent.getNoteId()));
@@ -656,7 +660,7 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator expand(int[] pos) {
-		Optional<VirtualViewEntry> entry = getPos(pos, false);
+		Optional<VirtualViewEntryData> entry = getPos(pos, false);
 		if (entry.isPresent()) {
 			expand(entry.get().getOrigin(), entry.get().getNoteId());
 		}
@@ -670,7 +674,7 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator collapse(int[] pos) {
-		Optional<VirtualViewEntry> entry = getPos(pos, false);
+		Optional<VirtualViewEntryData> entry = getPos(pos, false);
 		if (entry.isPresent()) {
 			collapse(entry.get().getOrigin(), entry.get().getNoteId());
 		}
@@ -719,7 +723,7 @@ public class VirtualViewNavigator {
 	 * @param entry entry to check
 	 * @return true if expanded
 	 */
-	public boolean isExpanded(VirtualViewEntry entry) {
+	public boolean isExpanded(VirtualViewEntryData entry) {
 		if (isExpanded(entry.getOrigin(), entry.getNoteId())) {
 			return true;
 		}
@@ -758,17 +762,17 @@ public class VirtualViewNavigator {
 	 * Utility class to navigate within the child entries of a parent entry
 	 */
 	private class TraversalInfo {
-		private VirtualViewEntry parentEntry;
+		private VirtualViewEntryData parentEntry;
 		private boolean withCategories;
 		private boolean withDocuments;
 		
-		private Iterator<Entry<ViewEntrySortKey,VirtualViewEntry>> childIterator;
+		private Iterator<Entry<ViewEntrySortKey,VirtualViewEntryData>> childIterator;
 		private Boolean childIteratorHasDirectionDown;
 		
 		private ViewEntrySortKey currentChildEntrySortKey;
-		private VirtualViewEntry currentChildEntry;
+		private VirtualViewEntryData currentChildEntry;
 		
-		public TraversalInfo(VirtualViewEntry parentEntry, boolean withCategories, boolean withDocuments) {
+		public TraversalInfo(VirtualViewEntryData parentEntry, boolean withCategories, boolean withDocuments) {
 			this.parentEntry = parentEntry;
 			this.withCategories = withCategories;
 			this.withDocuments = withDocuments;
@@ -784,21 +788,21 @@ public class VirtualViewNavigator {
 		 * 
 		 * @return view entry or null if the cursor is offroad
 		 */
-		public VirtualViewEntry getCurrentEntry() {
-			VirtualViewEntry entry = getCurrentEntryUnchecked();
+		public VirtualViewEntryData getCurrentEntry() {
+			VirtualViewEntryData entry = getCurrentEntryUnchecked();
 			if (viewEntryAccessCheck.isVisible(entry)) {
 				return entry;
 			}
 			return null;
 		}
 		
-		private VirtualViewEntry getCurrentEntryUnchecked() {
+		private VirtualViewEntryData getCurrentEntryUnchecked() {
 			return currentChildEntry;
 		}
 		
 		public boolean gotoFirst() {
 			if (gotoFirstUnchecked()) {
-				VirtualViewEntry entry = getCurrentEntry();
+				VirtualViewEntryData entry = getCurrentEntry();
 				if (entry != null) {
 					return true;
 				}
@@ -824,7 +828,7 @@ public class VirtualViewNavigator {
 			childIteratorHasDirectionDown = true;
 			
 			if (this.childIterator.hasNext()) {
-				Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+				Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 				
 				currentChildEntrySortKey = currChildEntry.getKey();
 				currentChildEntry = currChildEntry.getValue();
@@ -837,7 +841,7 @@ public class VirtualViewNavigator {
 		
 		public boolean gotoLast() {
 			if (gotoLastUnchecked()) {
-				VirtualViewEntry entry = getCurrentEntry();
+				VirtualViewEntryData entry = getCurrentEntry();
 				if (entry != null) {
 					return true;
 				}
@@ -863,7 +867,7 @@ public class VirtualViewNavigator {
 			childIteratorHasDirectionDown = false;
 			
 			if (this.childIterator.hasNext()) {
-				Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+				Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 				
 				currentChildEntrySortKey = currChildEntry.getKey();
 				currentChildEntry = currChildEntry.getValue();
@@ -886,7 +890,7 @@ public class VirtualViewNavigator {
 		public boolean gotoNextSibling() {
 			//repeat until we find an entry that we are allowed to see
 			while (gotoNextSiblingUnchecked()) {
-				VirtualViewEntry entry = getCurrentEntry();
+				VirtualViewEntryData entry = getCurrentEntry();
 				if (entry != null) {
 					return true;
 				}
@@ -903,7 +907,7 @@ public class VirtualViewNavigator {
 			if (childIteratorHasDirectionDown) {
 				//already moving down
 				if (this.childIterator.hasNext()) {
-					Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+					Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 					
 					currentChildEntrySortKey = currChildEntry.getKey();
 					currentChildEntry = currChildEntry.getValue();
@@ -921,7 +925,7 @@ public class VirtualViewNavigator {
 				this.childIterator = this.parentEntry.getChildEntries().tailMap(currentChildEntrySortKey, false).entrySet().iterator();
 				childIteratorHasDirectionDown = true;
 				if (this.childIterator.hasNext()) {
-					Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+					Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 					
 					currentChildEntrySortKey = currChildEntry.getKey();
 					currentChildEntry = currChildEntry.getValue();
@@ -937,7 +941,7 @@ public class VirtualViewNavigator {
 		public boolean gotoPrevSibling() {
 			//repeat until we find an entry that we are allowed to see
 			while (gotoPrevSiblingUnchecked()) {
-				VirtualViewEntry entry = getCurrentEntry();
+				VirtualViewEntryData entry = getCurrentEntry();
 				if (entry != null) {
 					return true;
 				}
@@ -954,7 +958,7 @@ public class VirtualViewNavigator {
 			if (!childIteratorHasDirectionDown) {
 				// already moving up
 				if (this.childIterator.hasNext()) {
-					Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+					Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 					
 					currentChildEntrySortKey = currChildEntry.getKey();
 					currentChildEntry = currChildEntry.getValue();
@@ -972,7 +976,7 @@ public class VirtualViewNavigator {
 						.descendingMap().entrySet().iterator();
 				childIteratorHasDirectionDown = false;
 				if (this.childIterator.hasNext()) {
-					Entry<ViewEntrySortKey,VirtualViewEntry> currChildEntry = this.childIterator.next();
+					Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
 					
 					currentChildEntrySortKey = currChildEntry.getKey();
 					currentChildEntry = currChildEntry.getValue();

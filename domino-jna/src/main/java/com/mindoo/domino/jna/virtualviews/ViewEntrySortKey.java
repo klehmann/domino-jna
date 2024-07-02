@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * This sort key is used to sort {@link VirtualViewEntry} objects within one level of the
+ * This sort key is used to sort {@link VirtualViewEntryData} objects within one level of the
  * {@link VirtualView} tree structure. It sorts category elements at the top followed by documents and
  * contains the values of the columns that are used for sorting, followed by the origin and note id.
  */

@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.virtualviews;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -15,6 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
+import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 
 /**
@@ -26,20 +28,22 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 public class VirtualView {
 	static final String ORIGIN_VIRTUALVIEW = "virtualview";
 	
-	private VirtualViewEntry rootEntry;
+	private VirtualViewEntryData rootEntry;
 	private int rootEntryNoteId;
 	
 	private List<VirtualViewColumn> columns;
 	private List<VirtualViewColumn> categoryColumns;
 	private List<VirtualViewColumn> sortColumns;
+	private List<VirtualViewColumn> totalColumns;
 	private List<VirtualViewColumn> valueFunctionColumns;
 	private boolean[] docOrderDescending;
+	private boolean viewHasTotalColumns;
 	
 	/** contains the occurences of a note id in the view */
-	private Map<ScopedNoteId,List<VirtualViewEntry>> entriesByNoteId;
+	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
 	
 	/** during a view update, we use this map to remember which sibiling indexes to recompute */
-	private Map<ScopedNoteId,List<VirtualViewEntry>> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
+	private Map<ScopedNoteId,List<VirtualViewEntryData>> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
 	/** lock to coordinate r/w access on the view */
 	private ReadWriteLock viewChangeLock = new ReentrantReadWriteLock();
 	
@@ -52,6 +56,7 @@ public class VirtualView {
 		this.columns = new ArrayList<>();
 		this.categoryColumns = new ArrayList<>();
 		this.sortColumns = new ArrayList<>();
+		this.totalColumns = new ArrayList<>();
 		this.valueFunctionColumns = new ArrayList<>();
 		
 		//split columns into category and sort columns
@@ -68,6 +73,11 @@ public class VirtualView {
 
 			if (currColumn.getValueFunction() != null) {
 				this.valueFunctionColumns.add(currColumn);
+			}
+			
+			if (currColumn.getTotalMode() != VirtualViewColumn.Total.NONE) {
+				this.totalColumns.add(currColumn);
+				viewHasTotalColumns = true;
 			}
 		}
 
@@ -88,8 +98,9 @@ public class VirtualView {
 		
 		ViewEntrySortKey rootSortKey = ViewEntrySortKey.createSortKey(true, Collections.emptyList(), ORIGIN_VIRTUALVIEW, 0);
 		this.rootEntryNoteId = createNewCategoryNoteId();
-		this.rootEntry = new VirtualViewEntry(this, null, ORIGIN_VIRTUALVIEW,
+		this.rootEntry = new VirtualViewEntryData(this, null, ORIGIN_VIRTUALVIEW,
 				rootEntryNoteId, "", rootSortKey, rootChildEntryComparator);
+		this.rootEntry.setColumnValues(new ConcurrentHashMap<>());
 		this.rootEntry.setSiblingIndex(0);
 		
 		this.entriesByNoteId = new ConcurrentHashMap<>();
@@ -130,29 +141,27 @@ public class VirtualView {
 		viewChangeLock.writeLock().lock();
 		try {
 			String origin = change.getOrigin();
-			List<VirtualViewEntry> categoryEntriesToCheck = new ArrayList<>();
+			List<VirtualViewEntryData> categoryEntriesToCheck = new ArrayList<>();
 			
 			//apply removals
 			
 			for (int currNoteId : change.getRemovals()) {
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
-				List<VirtualViewEntry> entries = entriesByNoteId.remove(scopedNoteId);
+				List<VirtualViewEntryData> entries = entriesByNoteId.remove(scopedNoteId);
 				if (entries != null) {
-					for (VirtualViewEntry currEntry : entries) {
-						if (ORIGIN_VIRTUALVIEW.equals(currEntry.getOrigin())) {
-							// don't remove our own entries
+					for (VirtualViewEntryData currEntry : entries) {
+						if (currEntry.isCategory() || ORIGIN_VIRTUALVIEW.equals(currEntry.getOrigin())) {
+							// don't remove our own entries or categories
 							continue;
 						}
 						
-						VirtualViewEntry parentEntry = currEntry.getParent();
+						VirtualViewEntryData parentEntry = currEntry.getParent();
 						if (parentEntry.getChildEntries().remove(currEntry.getSortKey()) != null) {
 						    parentEntry.childCount.decrementAndGet();
-						    if (currEntry.isCategory()) {
-						    	parentEntry.childCategoryCount.decrementAndGet();
-						    }
-						    else if (currEntry.isDocument()) {
-						    	parentEntry.childDocumentCount.decrementAndGet();
-						    }
+					    	parentEntry.childDocumentCount.decrementAndGet();
+
+						    reduceDescendantCountAndTotalValuesOfParents(currEntry);
+						    
 						    //remember to assign new sibling indexes
 						    markEntryForSiblingIndexFlush(parentEntry);
 						}
@@ -173,7 +182,7 @@ public class VirtualView {
 				String unid = currData.getUnid();
 				Map<String,Object> columnValues = currData.getValues();
 
-				List<VirtualViewEntry> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
+				List<VirtualViewEntryData> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
 						rootEntry, this.categoryColumns, true);
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
                 entriesByNoteId.put(scopedNoteId, addedViewEntries);
@@ -181,9 +190,9 @@ public class VirtualView {
 			
 			//clean up category entries that are now empty
 			
-			for (VirtualViewEntry currCategoryEntry : categoryEntriesToCheck) {
+			for (VirtualViewEntryData currCategoryEntry : categoryEntriesToCheck) {
 				if (currCategoryEntry.getChildEntries().isEmpty()) {
-					removeChildFromParent(currCategoryEntry);
+					removeCategoryFromParent(currCategoryEntry);
 				}
 			}
 			
@@ -201,8 +210,8 @@ public class VirtualView {
 	 * 
 	 * @param ve entry to reprocess
 	 */
-	private void markEntryForSiblingIndexFlush(VirtualViewEntry ve) {
-		List<VirtualViewEntry> entries = pendingSiblingIndexFlush.get(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()));
+	private void markEntryForSiblingIndexFlush(VirtualViewEntryData ve) {
+		List<VirtualViewEntryData> entries = pendingSiblingIndexFlush.get(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()));
 		if (entries == null) {
 			entries = new ArrayList<>();
 			pendingSiblingIndexFlush.put(new ScopedNoteId(ve.getOrigin(), ve.getNoteId()), entries);
@@ -216,8 +225,8 @@ public class VirtualView {
 	 * Assigns new sibling indexes to entries that were marked for reprocessing
 	 */
 	private void processPendingSiblingIndexUpdates() {
-		for (Entry<ScopedNoteId, List<VirtualViewEntry>> currMapEntry : pendingSiblingIndexFlush.entrySet()) {
-			for (VirtualViewEntry currViewEntry : currMapEntry.getValue()) {
+		for (Entry<ScopedNoteId, List<VirtualViewEntryData>> currMapEntry : pendingSiblingIndexFlush.entrySet()) {
+			for (VirtualViewEntryData currViewEntry : currMapEntry.getValue()) {
 				int[] pos = new int[] {1};
 				
 				if (currViewEntry.getChildCount() > 0) {
@@ -254,11 +263,11 @@ public class VirtualView {
 	 * @param remainingCategoryColumns remaining category columns to process (changed during recursion)
 	 * @return list of created view entries for the document
 	 */
-	private List<VirtualViewEntry> addEntry(String origin, int noteId, String unid,
-			Map<String, Object> columnValues, VirtualViewEntry targetParent,
+	private List<VirtualViewEntryData> addEntry(String origin, int noteId, String unid,
+			Map<String, Object> columnValues, VirtualViewEntryData targetParent,
 			List<VirtualViewColumn> remainingCategoryColumns, boolean firstCall) {
 		
-		List<VirtualViewEntry> createdChildEntriesForDocument = new ArrayList<>();
+		List<VirtualViewEntryData> createdChildEntriesForDocument = new ArrayList<>();
 		
 		//compute additional values provided via function
 		for (VirtualViewColumn currValueFunctionColumn : this.valueFunctionColumns) {
@@ -296,21 +305,22 @@ public class VirtualView {
 			ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
 					false, this.docOrderDescending);
 
-			VirtualViewEntry newChild = new VirtualViewEntry(this,
+			VirtualViewEntryData newDocChild = new VirtualViewEntryData(this,
 					targetParent, origin, noteId,
 					unid, sortKey,
 					childEntryComparator);
 			//TODO add support for permuted columns (multiple rows for one doc)
 
-			newChild.setColumnValues(columnValues);
-			if (targetParent.getChildEntries().put(sortKey, newChild) == null) {
+			newDocChild.setColumnValues(columnValues);
+			if (targetParent.getChildEntries().put(sortKey, newDocChild) == null) {
 				targetParent.childCount.incrementAndGet();
 				targetParent.childDocumentCount.incrementAndGet();
+				increaseDescendantCountAndTotalValuesOfParents(newDocChild);
 			}
 		    //remember to assign new sibling indexes
 			markEntryForSiblingIndexFlush(targetParent);
 
-			createdChildEntriesForDocument.add(newChild);			
+			createdChildEntriesForDocument.add(newDocChild);			
 			return createdChildEntriesForDocument;
 		}
 		
@@ -354,7 +364,7 @@ public class VirtualView {
 				//special case, span category value across multiple tree levels
 				String[] parts = ((String)currCategoryValue).split("\\\\", -1);
 				
-				VirtualViewEntry currentSubCatParent = targetParent;
+				VirtualViewEntryData currentSubCatParent = targetParent;
 				
 				for (String currSubCat : parts) {
 					Object currSubCatObj = "".equals(currSubCat) ? null : currSubCat;
@@ -362,15 +372,25 @@ public class VirtualView {
 					ViewEntrySortKey categorySortKey = ViewEntrySortKey.createSortKey(true, Arrays.asList(new Object[] { currSubCatObj }),
 							ORIGIN_VIRTUALVIEW, 0);
 					
-					VirtualViewEntry entryWithSortKey = currentSubCatParent.getChildEntries().get(categorySortKey);
+					VirtualViewEntryData entryWithSortKey = currentSubCatParent.getChildEntries().get(categorySortKey);
 					if (entryWithSortKey == null) {
 						int newCategoryNoteId = createNewCategoryNoteId();
-						entryWithSortKey = new VirtualViewEntry(this, currentSubCatParent, ORIGIN_VIRTUALVIEW,
+						entryWithSortKey = new VirtualViewEntryData(this, currentSubCatParent, ORIGIN_VIRTUALVIEW,
 								newCategoryNoteId, "", categorySortKey,
 								childEntryComparator);
+						entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
+						
 						if (currentSubCatParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
 							currentSubCatParent.childCount.incrementAndGet();
 							currentSubCatParent.childCategoryCount.incrementAndGet();
+							
+							//bubble up the descendant count
+							VirtualViewEntryData currParent = currentSubCatParent;
+							while (currParent != null) {
+								currParent.descendantCategoryCount.incrementAndGet();
+								currParent.descendantCount.incrementAndGet();
+								currParent = currParent.getParent();
+							}
 						}
 						entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 						
@@ -382,7 +402,7 @@ public class VirtualView {
 				}
 				
 				//go on with the remaining categories
-				List<VirtualViewEntry> addedEntries = addEntry(origin, noteId, unid, columnValues, currentSubCatParent,
+				List<VirtualViewEntryData> addedEntries = addEntry(origin, noteId, unid, columnValues, currentSubCatParent,
 						remainingColumnsForNextIteration, false);
 				createdChildEntriesForDocument.addAll(addedEntries);
 			}
@@ -391,15 +411,25 @@ public class VirtualView {
 						ORIGIN_VIRTUALVIEW,
 						0);
 				
-				VirtualViewEntry entryWithSortKey = targetParent.getChildEntries().get(categorySortKey);
+				VirtualViewEntryData entryWithSortKey = targetParent.getChildEntries().get(categorySortKey);
 				if (entryWithSortKey == null) {
 					int newCategoryNoteId = createNewCategoryNoteId();
-					entryWithSortKey = new VirtualViewEntry(this, targetParent, ORIGIN_VIRTUALVIEW,
+					entryWithSortKey = new VirtualViewEntryData(this, targetParent, ORIGIN_VIRTUALVIEW,
 							newCategoryNoteId, "", categorySortKey,
 							childEntryComparator);
+					entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
+
 					if (targetParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
 						targetParent.childCount.incrementAndGet();
 						targetParent.childCategoryCount.incrementAndGet();
+						
+						//bubble up the descendant count
+						VirtualViewEntryData currParent = targetParent;
+						while (currParent != null) {
+							currParent.descendantCategoryCount.incrementAndGet();
+							currParent.descendantCount.incrementAndGet();
+							currParent = currParent.getParent();
+						}
 					}
 					entriesByNoteId.put(new ScopedNoteId(ORIGIN_VIRTUALVIEW, newCategoryNoteId), Arrays.asList(entryWithSortKey));
 					
@@ -408,7 +438,7 @@ public class VirtualView {
 				}
 
 				//go on with the remaining categories
-				List<VirtualViewEntry> addedEntries = addEntry(origin, noteId, unid, columnValues,
+				List<VirtualViewEntryData> addedEntries = addEntry(origin, noteId, unid, columnValues,
 						entryWithSortKey,
 						remainingColumnsForNextIteration, false);
 				createdChildEntriesForDocument.addAll(addedEntries);
@@ -418,17 +448,124 @@ public class VirtualView {
 		return createdChildEntriesForDocument;
 	}
 
+	private void increaseDescendantCountAndTotalValuesOfParents(VirtualViewEntryData docEntry) {
+		Map<String,Double> docTotalValues = null;
+		if (viewHasTotalColumns) {
+			docTotalValues = new HashMap<>();
+			for (VirtualViewColumn currTotalColumn : totalColumns) {
+				String itemName = currTotalColumn.getItemName();
+				Double docVal = docEntry.getAsDouble(itemName, null);
+				if (docVal != null) {
+					docTotalValues.put(itemName, docVal);
+				}
+			}			
+		}
+		
+		VirtualViewEntryData currParent = docEntry.getParent();
+		while (currParent != null) {
+			currParent.descendantDocumentCount.incrementAndGet();
+			currParent.descendantCount.incrementAndGet();
+			
+			if (docTotalValues != null) {
+				for (Entry<String,Double> currDocTotalValue : docTotalValues.entrySet()) {
+	                String itemName = currDocTotalValue.getKey();
+	                Double dblVal = currDocTotalValue.getValue();
+	                
+	                currParent.addAndGetTotalValue(itemName, dblVal);
+	            }
+				
+				computeTotalColumnValues(currParent);				
+			}
+
+			currParent = currParent.getParent();
+		}
+	}
+	
+	private void reduceDescendantCountAndTotalValuesOfParents(VirtualViewEntryData docEntry) {
+		Map<String,Double> docTotalValues = null;
+		if (viewHasTotalColumns) {
+			docTotalValues = new HashMap<>();
+			for (VirtualViewColumn currTotalColumn : totalColumns) {
+				String itemName = currTotalColumn.getItemName();
+				Double docVal = docEntry.getAsDouble(itemName, null);
+				if (docVal != null) {
+					docTotalValues.put(itemName, docVal);
+				}
+			}			
+		}
+
+		VirtualViewEntryData currParent = docEntry.getParent();
+		while (currParent != null) {
+			currParent.descendantDocumentCount.decrementAndGet();
+			currParent.descendantCount.decrementAndGet();
+			
+			if (docTotalValues != null) {
+				for (Entry<String,Double> currDocTotalValue : docTotalValues.entrySet()) {
+	                String itemName = currDocTotalValue.getKey();
+	                Double dblVal = currDocTotalValue.getValue();
+	                
+	                currParent.addAndGetTotalValue(itemName, -1 * dblVal);
+	            }				
+				
+				computeTotalColumnValues(currParent);				
+			}
+			
+			currParent = currParent.getParent();
+		}
+	}
+	
+	private void computeTotalColumnValues(VirtualViewEntryData catEntry) {
+		for (VirtualViewColumn currTotalColumn : totalColumns) {
+			String itemName = currTotalColumn.getItemName();
+			Double dblVal = catEntry.getTotalValue(itemName);
+			
+			if (dblVal == null) {
+				catEntry.getColumnValues().remove(itemName);
+			}
+			
+			if (currTotalColumn.getTotalMode() == Total.SUM) {
+				catEntry.getColumnValues().put(itemName, dblVal);
+			}
+			else if (currTotalColumn.getTotalMode() == Total.AVERAGE) {
+				int docCount = catEntry.getDescendantDocumentCount(); // computeDescendantDocCount(catEntry);
+				if (docCount == 0) {
+					catEntry.getColumnValues().remove(itemName);
+				}
+				else {
+					catEntry.getColumnValues().put(itemName, dblVal / docCount);
+				}
+			}
+		}
+	}
+	
+//	private int computeDescendantDocCount(VirtualViewEntry catEntry) {
+//		int docCount = 0;
+//		for (VirtualViewEntry currChild : catEntry.getChildEntries().values()) {
+//			if (currChild.isCategory()) {
+//				docCount += currChild.getChildDocumentCount();
+//			} else {
+//				docCount++;
+//			}
+//		}
+//		return docCount;
+//	}
+	
 	/**
 	 * Removes an entry from the tree structure. If the parent of the entry is a category and
 	 * it has no more children, it will be removed too.
 	 * 
 	 * @param entry entry to remove
 	 */
-	private void removeChildFromParent(VirtualViewEntry entry) {
-		VirtualViewEntry parentEntry = entry.getParent();
+	private void removeCategoryFromParent(VirtualViewEntryData entry) {
+		VirtualViewEntryData parentEntry = entry.getParent();
 		if (parentEntry != null) {
 			if (parentEntry.getChildEntries().remove(entry.getSortKey()) != null) {
 				parentEntry.childCount.decrementAndGet();
+				if (entry.isCategory()) {
+					parentEntry.childCategoryCount.decrementAndGet();
+				} else if (entry.isDocument()) {
+					parentEntry.childDocumentCount.decrementAndGet();
+				}
 			    //remember to assign new sibling indexes
 				markEntryForSiblingIndexFlush(parentEntry);
 
@@ -439,7 +576,7 @@ public class VirtualView {
 			
 			if (parentEntry.isCategory()) {
 				if (parentEntry.getChildEntries().isEmpty()) {
-					removeChildFromParent(parentEntry);
+					removeCategoryFromParent(parentEntry);
 				}
 			}
 		}
@@ -467,7 +604,7 @@ public class VirtualView {
 	 * 
 	 * @return root entry
 	 */
-	public VirtualViewEntry getRoot() {
+	public VirtualViewEntryData getRoot() {
 		return rootEntry;
 	}
 
@@ -524,7 +661,7 @@ public class VirtualView {
 	 * @param noteId note id of the entry
 	 * @return list of entries
 	 */
-	public List<VirtualViewEntry> findEntries(String origin, int noteId) {
+	public List<VirtualViewEntryData> findEntries(String origin, int noteId) {
 		return Collections.unmodifiableList(entriesByNoteId.get(new ScopedNoteId(origin, noteId)));
 	}
 }

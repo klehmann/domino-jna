@@ -44,15 +44,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 					}
 					else {
 						//special case, LOW_SORTVAL always on top
-						if (VirtualViewEntry.LOW_SORTVAL.equals(catVal1)) {
-							if (VirtualViewEntry.LOW_SORTVAL.equals(catVal2)) {
+						if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal1)) {
+							if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal2)) {
 								throw new IllegalStateException("Unexpected to find this value twice");
 							}
 							
 							return -1;
 						}
-						else if (VirtualViewEntry.LOW_SORTVAL.equals(catVal2)) {
-							if (VirtualViewEntry.LOW_SORTVAL.equals(catVal1)) {
+						else if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal2)) {
+							if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal1)) {
 								throw new IllegalStateException("Unexpected to find this value twice");
 							}
 							
@@ -60,15 +60,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 						}
 						
 						//special case, HIGH_SORTVAL always on bottom
-						if (VirtualViewEntry.HIGH_SORTVAL.equals(catVal1)) {
-							if (VirtualViewEntry.HIGH_SORTVAL.equals(catVal2)) {
+						if (VirtualViewEntryData.HIGH_SORTVAL.equals(catVal1)) {
+							if (VirtualViewEntryData.HIGH_SORTVAL.equals(catVal2)) {
 								throw new IllegalStateException("Unexpected to find this value twice");
 							}
 							
 							return 1;
                         }
-						else if (VirtualViewEntry.HIGH_SORTVAL.equals(catVal2)) {
-							if (VirtualViewEntry.HIGH_SORTVAL.equals(catVal1)) {
+						else if (VirtualViewEntryData.HIGH_SORTVAL.equals(catVal2)) {
+							if (VirtualViewEntryData.HIGH_SORTVAL.equals(catVal1)) {
 								throw new IllegalStateException("Unexpected to find this value twice");
 							}
 							
@@ -122,15 +122,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 			Object currValue2 = values2.get(i);
 
 			//special case, LOW_SORTVAL always on top
-			if (VirtualViewEntry.LOW_SORTVAL.equals(currValue1)) {
-				if (VirtualViewEntry.LOW_SORTVAL.equals(currValue2)) {
+			if (VirtualViewEntryData.LOW_SORTVAL.equals(currValue1)) {
+				if (VirtualViewEntryData.LOW_SORTVAL.equals(currValue2)) {
 					throw new IllegalStateException("Unexpected to find this value twice");
 				}
 				
 				return -1;
 			}
-			else if (VirtualViewEntry.LOW_SORTVAL.equals(currValue2)) {
-				if (VirtualViewEntry.LOW_SORTVAL.equals(currValue1)) {
+			else if (VirtualViewEntryData.LOW_SORTVAL.equals(currValue2)) {
+				if (VirtualViewEntryData.LOW_SORTVAL.equals(currValue1)) {
 					throw new IllegalStateException("Unexpected to find this value twice");
 				}
 				
@@ -138,15 +138,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 			}
 			
 			//special case, HIGH_SORTVAL always on bottom
-			if (VirtualViewEntry.HIGH_SORTVAL.equals(currValue1)) {
-				if (VirtualViewEntry.HIGH_SORTVAL.equals(currValue2)) {
+			if (VirtualViewEntryData.HIGH_SORTVAL.equals(currValue1)) {
+				if (VirtualViewEntryData.HIGH_SORTVAL.equals(currValue2)) {
 					throw new IllegalStateException("Unexpected to find this value twice");
 				}
 				
 				return 1;
             }
-			else if (VirtualViewEntry.HIGH_SORTVAL.equals(currValue2)) {
-				if (VirtualViewEntry.HIGH_SORTVAL.equals(currValue1)) {
+			else if (VirtualViewEntryData.HIGH_SORTVAL.equals(currValue2)) {
+				if (VirtualViewEntryData.HIGH_SORTVAL.equals(currValue1)) {
 					throw new IllegalStateException("Unexpected to find this value twice");
 				}
 				
@@ -223,15 +223,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		String origin1 = o1.getOrigin();
 		String origin2 = o2.getOrigin();
 		
-		if (VirtualViewEntry.LOW_SORTVAL.equals(origin1)) {
-			if (VirtualViewEntry.LOW_SORTVAL.equals(origin2)) {
+		if (VirtualViewEntryData.LOW_SORTVAL.equals(origin1)) {
+			if (VirtualViewEntryData.LOW_SORTVAL.equals(origin2)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
 			
 			return -1;
 		}
-		else if (VirtualViewEntry.LOW_SORTVAL.equals(origin2)) {
-			if (VirtualViewEntry.LOW_SORTVAL.equals(origin1)) {
+		else if (VirtualViewEntryData.LOW_SORTVAL.equals(origin2)) {
+			if (VirtualViewEntryData.LOW_SORTVAL.equals(origin1)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
 			
@@ -239,15 +239,15 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		}
 		
 		//special case, HIGH_SORTVAL always on bottom
-		if (VirtualViewEntry.HIGH_SORTVAL.equals(origin1)) {
-			if (VirtualViewEntry.HIGH_SORTVAL.equals(origin2)) {
+		if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin1)) {
+			if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin2)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
 			
 			return 1;
         }
-		else if (VirtualViewEntry.HIGH_SORTVAL.equals(origin2)) {
-			if (VirtualViewEntry.HIGH_SORTVAL.equals(origin1)) {
+		else if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin2)) {
+			if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin1)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
 			

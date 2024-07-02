@@ -8,7 +8,7 @@ import java.util.TreeSet;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
-import com.mindoo.domino.jna.virtualviews.VirtualViewEntry;
+import com.mindoo.domino.jna.virtualviews.VirtualViewEntryData;
 
 public class ViewEntryAccessCheck {
 	private String userName;
@@ -33,7 +33,7 @@ public class ViewEntryAccessCheck {
 	 * @param entry entry to check
 	 * @return true if the user has read access
 	 */
-	public boolean isVisible(VirtualViewEntry entry) {
+	public boolean isVisible(VirtualViewEntryData entry) {
 		if (!entry.isDocument()) {
 			//categories are always visible
 			return true;
