@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.virtualviews;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -10,7 +11,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -148,11 +148,12 @@ public class VirtualView {
 		
 		VirtualViewEntryData currCategoryEntry = getRoot();
 		for (String currPart : categoryParts) {
-			ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
+			Collection<VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
 					currPart, true,
-					currPart, true);
+					currPart, true,
+					false);
 			
-			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.values().iterator();
+			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.iterator();
 			if (matchingSubCategoriesIt.hasNext()) {
 				currCategoryEntry = matchingSubCategoriesIt.next();
 			} else {
@@ -178,11 +179,12 @@ public class VirtualView {
 	public VirtualViewNavigator createViewNavFromCategory(List<Object> categoryLevels, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
 		VirtualViewEntryData currCategoryEntry = getRoot();
 		for (Object currPart : categoryLevels) {
-			ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
+			Collection<VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
 					currPart, true,
-					currPart, true);
+					currPart, true,
+					false);
 			
-			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.values().iterator();
+			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.iterator();
 			if (matchingSubCategoriesIt.hasNext()) {
 				currCategoryEntry = matchingSubCategoriesIt.next();
 			} else {
@@ -249,7 +251,7 @@ public class VirtualView {
 						}
 						
 						VirtualViewEntryData parentEntry = currEntry.getParent();
-						if (parentEntry.getChildEntries().remove(currEntry.getSortKey()) != null) {
+						if (parentEntry.getChildEntriesAsMap().remove(currEntry.getSortKey()) != null) {
 						    parentEntry.childCount.decrementAndGet();
 					    	parentEntry.childDocumentCount.decrementAndGet();
 
@@ -284,7 +286,7 @@ public class VirtualView {
 			//clean up category entries that are now empty
 			
 			for (VirtualViewEntryData currCategoryEntry : categoryEntriesToCheck) {
-				if (currCategoryEntry.getChildEntries().isEmpty()) {
+				if (currCategoryEntry.getChildEntriesAsMap().isEmpty()) {
 					removeCategoryFromParent(currCategoryEntry);
 				}
 			}
@@ -323,7 +325,7 @@ public class VirtualView {
 				int[] pos = new int[] {1};
 				
 				if (currViewEntry.getChildCount() > 0) {
-					currViewEntry.getChildEntries().entrySet().forEach((currChild) -> {
+					currViewEntry.getChildEntriesAsMap().entrySet().forEach((currChild) -> {
 						currChild.getValue().setSiblingIndex(pos[0]++);
 					});					
 				}
@@ -405,7 +407,7 @@ public class VirtualView {
 			//TODO add support for permuted columns (multiple rows for one doc)
 
 			newDocChild.setColumnValues(columnValues);
-			if (targetParent.getChildEntries().put(sortKey, newDocChild) == null) {
+			if (targetParent.getChildEntriesAsMap().put(sortKey, newDocChild) == null) {
 				targetParent.childCount.incrementAndGet();
 				targetParent.childDocumentCount.incrementAndGet();
 				increaseDescendantCountAndTotalValuesOfParents(newDocChild);
@@ -465,7 +467,7 @@ public class VirtualView {
 					ViewEntrySortKey categorySortKey = ViewEntrySortKey.createSortKey(true, Arrays.asList(new Object[] { currSubCatObj }),
 							ORIGIN_VIRTUALVIEW, 0);
 					
-					VirtualViewEntryData entryWithSortKey = currentSubCatParent.getChildEntries().get(categorySortKey);
+					VirtualViewEntryData entryWithSortKey = currentSubCatParent.getChildEntriesAsMap().get(categorySortKey);
 					if (entryWithSortKey == null) {
 						int newCategoryNoteId = createNewCategoryNoteId();
 						entryWithSortKey = new VirtualViewEntryData(this, currentSubCatParent, ORIGIN_VIRTUALVIEW,
@@ -473,7 +475,7 @@ public class VirtualView {
 								childEntryComparator);
 						entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
 						
-						if (currentSubCatParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
+						if (currentSubCatParent.getChildEntriesAsMap().put(categorySortKey, entryWithSortKey) == null) {
 							currentSubCatParent.childCount.incrementAndGet();
 							currentSubCatParent.childCategoryCount.incrementAndGet();
 							
@@ -504,7 +506,7 @@ public class VirtualView {
 						ORIGIN_VIRTUALVIEW,
 						0);
 				
-				VirtualViewEntryData entryWithSortKey = targetParent.getChildEntries().get(categorySortKey);
+				VirtualViewEntryData entryWithSortKey = targetParent.getChildEntriesAsMap().get(categorySortKey);
 				if (entryWithSortKey == null) {
 					int newCategoryNoteId = createNewCategoryNoteId();
 					entryWithSortKey = new VirtualViewEntryData(this, targetParent, ORIGIN_VIRTUALVIEW,
@@ -512,7 +514,7 @@ public class VirtualView {
 							childEntryComparator);
 					entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
 
-					if (targetParent.getChildEntries().put(categorySortKey, entryWithSortKey) == null) {
+					if (targetParent.getChildEntriesAsMap().put(categorySortKey, entryWithSortKey) == null) {
 						targetParent.childCount.incrementAndGet();
 						targetParent.childCategoryCount.incrementAndGet();
 						
@@ -652,7 +654,7 @@ public class VirtualView {
 	private void removeCategoryFromParent(VirtualViewEntryData entry) {
 		VirtualViewEntryData parentEntry = entry.getParent();
 		if (parentEntry != null) {
-			if (parentEntry.getChildEntries().remove(entry.getSortKey()) != null) {
+			if (parentEntry.getChildEntriesAsMap().remove(entry.getSortKey()) != null) {
 				parentEntry.childCount.decrementAndGet();
 				if (entry.isCategory()) {
 					parentEntry.childCategoryCount.decrementAndGet();
@@ -668,7 +670,7 @@ public class VirtualView {
 			}
 			
 			if (parentEntry.isCategory()) {
-				if (parentEntry.getChildEntries().isEmpty()) {
+				if (parentEntry.getChildEntriesAsMap().isEmpty()) {
 					removeCategoryFromParent(parentEntry);
 				}
 			}

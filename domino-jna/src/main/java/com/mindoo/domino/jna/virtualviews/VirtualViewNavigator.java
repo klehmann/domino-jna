@@ -852,13 +852,13 @@ public class VirtualViewNavigator {
 		
 		private boolean gotoFirstUnchecked() {
 			if (withCategories && withDocuments) {
-				this.childIterator = this.parentEntry.getChildEntries().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildEntriesAsMap().entrySet().iterator();
 			}
 			else if (withCategories) {
-				this.childIterator = this.parentEntry.getChildCategories().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildCategoriesAsMap().entrySet().iterator();
 			}
 			else if (withDocuments) {
-				this.childIterator = this.parentEntry.getChildDocuments().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildDocumentsAsMap().entrySet().iterator();
 			}
 			else {
 				this.childIterator = new EmptyIterator<>();
@@ -891,13 +891,13 @@ public class VirtualViewNavigator {
 		
 		private boolean gotoLastUnchecked() {
 			if (withCategories && withDocuments) {
-				this.childIterator = this.parentEntry.getChildEntries().descendingMap().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildEntriesAsMap().descendingMap().entrySet().iterator();
 			}
 			else if (withCategories) {
-				this.childIterator = this.parentEntry.getChildCategories().descendingMap().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildCategoriesAsMap().descendingMap().entrySet().iterator();
 			}
 			else if (withDocuments) {
-				this.childIterator = this.parentEntry.getChildDocuments().descendingMap().entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildDocumentsAsMap().descendingMap().entrySet().iterator();
 			}
 			else {
 				this.childIterator = new EmptyIterator<>();
@@ -961,7 +961,7 @@ public class VirtualViewNavigator {
 					return false;
 				}
 				
-				this.childIterator = this.parentEntry.getChildEntries().tailMap(currentChildEntrySortKey, false).entrySet().iterator();
+				this.childIterator = this.parentEntry.getChildEntriesAsMap().tailMap(currentChildEntrySortKey, false).entrySet().iterator();
 				childIteratorHasDirectionDown = true;
 				if (this.childIterator.hasNext()) {
 					Entry<ViewEntrySortKey,VirtualViewEntryData> currChildEntry = this.childIterator.next();
@@ -1011,7 +1011,7 @@ public class VirtualViewNavigator {
 				if (this.currentChildEntrySortKey == null) {
 					return false;
 				}
-				this.childIterator = this.parentEntry.getChildEntries().headMap(currentChildEntrySortKey, false)
+				this.childIterator = this.parentEntry.getChildEntriesAsMap().headMap(currentChildEntrySortKey, false)
 						.descendingMap().entrySet().iterator();
 				childIteratorHasDirectionDown = false;
 				if (this.childIterator.hasNext()) {
