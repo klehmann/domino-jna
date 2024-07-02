@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -18,6 +20,9 @@ import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
+import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithCategories;
+import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithDocuments;
+import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
  * This class represents a virtual view that is built from data changes
@@ -117,6 +122,94 @@ public class VirtualView {
 		return columns;
 	}
 	
+	/**
+	 * Creates a new view navigator of all view entries
+	 * 
+	 * @param cats whether to include category entries
+	 * @param docs whether to include document entries
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
+	 * @return navigator
+	 */
+	public VirtualViewNavigator createViewNav(WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
+		return new VirtualViewNavigator(this, cats, docs, viewEntryAccessCheck);
+	}
+
+	/**
+	 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
+	 * 
+	 * @param category category name (e.g. "Sales\\2017")
+	 * @param cats whether to include category entries
+	 * @param docs whether to include document entries
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
+	 * @return navigator
+	 */
+	public VirtualViewNavigator createViewNavFromCategory(String category, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
+		String[] categoryParts = category.split("\\\\", -1);
+		
+		VirtualViewEntryData currCategoryEntry = getRoot();
+		for (String currPart : categoryParts) {
+			ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
+					currPart, true,
+					currPart, true);
+			
+			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.values().iterator();
+			if (matchingSubCategoriesIt.hasNext()) {
+				currCategoryEntry = matchingSubCategoriesIt.next();
+			} else {
+				// category not found
+				currCategoryEntry = null;
+				break;
+			}
+		}
+		
+		VirtualViewNavigator nav = new VirtualViewNavigator(this, currCategoryEntry, cats, docs, viewEntryAccessCheck);
+		return nav;
+	}
+
+	/**
+	 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
+	 * 
+	 * @param categoryLevels category levels (e.g. Arrays.asList("Sales", "2017"))
+	 * @param cats whether to include category entries
+	 * @param docs whether to include document entries
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
+	 * @return navigator
+	 */
+	public VirtualViewNavigator createViewNavFromCategory(List<Object> categoryLevels, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
+		VirtualViewEntryData currCategoryEntry = getRoot();
+		for (Object currPart : categoryLevels) {
+			ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
+					currPart, true,
+					currPart, true);
+			
+			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.values().iterator();
+			if (matchingSubCategoriesIt.hasNext()) {
+				currCategoryEntry = matchingSubCategoriesIt.next();
+			} else {
+				// category not found
+				currCategoryEntry = null;
+				break;
+			}
+		}
+		
+		VirtualViewNavigator nav = new VirtualViewNavigator(this, currCategoryEntry, cats, docs, viewEntryAccessCheck);
+		return nav;
+	}
+
+	/**
+	 * Creates a new view navigator for a subtree of the view
+	 * 
+	 * @param topEntry top entry of the subtree (navigator contains all descendants of this entry)
+	 * @param cats whether to include category entries
+	 * @param docs whether to include document entries
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
+	 * @return navigator
+	 */
+	public VirtualViewNavigator createViewNavFromDescendants(VirtualViewEntryData topEntry, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
+		VirtualViewNavigator nav = new VirtualViewNavigator(this, topEntry, cats, docs, viewEntryAccessCheck);
+		return nav;
+	}
+
 	/**
 	 * Override this method to not add certain entries to the view
 	 * 

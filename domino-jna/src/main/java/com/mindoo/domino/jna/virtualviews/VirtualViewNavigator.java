@@ -70,6 +70,20 @@ public class VirtualViewNavigator {
 	 */
 	public VirtualViewNavigator(VirtualView view, WithCategories cats, WithDocuments docs,
 			ViewEntryAccessCheck viewEntryAccessCheck) {
+		this(view, view.getRoot(), cats, docs, viewEntryAccessCheck);
+	}
+	
+	/**
+	 * Creates a new view navigator
+	 * 
+	 * @param view view
+	 * @param topEntry top entry of the navigator (e.g. {@link VirtualView#getRoot()} or a different entry to reduce the view to a subtree)
+	 * @param cats whether to include category entries
+	 * @param docs whether to include document entries
+	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
+	 */
+	public VirtualViewNavigator(VirtualView view, VirtualViewEntryData topEntry, WithCategories cats, WithDocuments docs,
+			ViewEntryAccessCheck viewEntryAccessCheck) {
 		this.view = view;
 		this.withCategories = cats == WithCategories.YES;
 		this.withDocuments = docs == WithDocuments.YES;
@@ -77,13 +91,30 @@ public class VirtualViewNavigator {
 			throw new IllegalArgumentException("The view navigator must contain categories, documents or both");
 		}
 		this.viewEntryAccessCheck = viewEntryAccessCheck;
-		TraversalInfo traversalInfo = new TraversalInfo(view.getRoot(), withCategories, withDocuments);
+		
+		//set up the initial traversal info (top level if the accessible entries)
 		this.currentEntryStack = new Stack<>();
-		this.currentEntryStack.push(traversalInfo);
+		if (topEntry != null) {
+			TraversalInfo traversalInfo = new TraversalInfo(topEntry, withCategories, withDocuments);
+			this.currentEntryStack.push(traversalInfo);			
+		}
 	}
 	
 	public VirtualView getView() {
 		return view;
+	}
+	
+	/**
+	 * Moves the top element of this view navigator to the specified position, resulting in a subtree ("restrict to category")
+	 * 
+	 * @param newRoot new root element
+	 * @return this navigator
+	 */
+	public VirtualViewNavigator setRoot(VirtualViewEntryData newRoot) {
+		TraversalInfo traversalInfo = new TraversalInfo(newRoot, withCategories, withDocuments);
+		this.currentEntryStack = new Stack<>();
+		this.currentEntryStack.push(traversalInfo);
+		return this;
 	}
 	
 	/**
@@ -442,6 +473,10 @@ public class VirtualViewNavigator {
 	 * @return true if successful, false if the view is empty
 	 */
 	public boolean gotoFirst() {
+		if (currentEntryStack.isEmpty()) {
+			return false;
+		}
+		
 		//back to top level
 		while (currentEntryStack.size() > 1) {
 			currentEntryStack.pop();
@@ -455,6 +490,10 @@ public class VirtualViewNavigator {
 	 * @return true if successful, false if the view is empty
 	 */
 	public boolean gotoLast() {
+		if (currentEntryStack.isEmpty()) {
+			return false;
+		}
+		
 		//back to top level
 		while (currentEntryStack.size() > 1) {
 			currentEntryStack.pop();
@@ -503,8 +542,6 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator select(String origin, int noteId, boolean selectParentCategories) {
-		VirtualViewEntryData rootEntry = view.getRoot();
-		
 		ScopedNoteId scopedNoteId = new ScopedNoteId(origin, noteId);
 		if (selectAll) {
 			//make sure this entry is not deselected
@@ -517,6 +554,8 @@ public class VirtualViewNavigator {
 		if (selectParentCategories) {
 			List<VirtualViewEntryData> entries = view.findEntries(origin, noteId);
 			if (entries != null) {
+				VirtualViewEntryData rootEntry = view.getRoot();
+				
 				for (VirtualViewEntryData currEntry : entries) {
 					VirtualViewEntryData parent = currEntry.getParent();
 					while (parent != null && !rootEntry.equals(parent)) {
