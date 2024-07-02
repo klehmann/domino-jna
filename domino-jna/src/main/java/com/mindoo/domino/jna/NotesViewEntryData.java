@@ -24,7 +24,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
  * 
  * @author Karsten Lehmann
  */
-public class NotesViewEntryData implements INoteSummary {
+public class NotesViewEntryData implements IViewEntryData {
 	private NotesCollection m_parentCollection;
 	
 	private int[] m_pos;
@@ -203,6 +203,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return position or null
 	 */
+	@Override
 	public int[] getPosition() {
 		return m_pos;
 	}
@@ -222,6 +223,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return position string or empty string
 	 */
+	@Override
 	public String getPositionStr() {
 		if (m_posStr==null) {
 			if (m_pos==null || m_pos.length==0) {
@@ -254,6 +256,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return note id or 0
 	 */
+	@Override
 	public int getNoteId() {
 		return m_noteId!=null ? m_noteId.intValue() : 0;
 	}
@@ -282,6 +285,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if document
 	 */
+	@Override
 	public boolean isDocument() {
 		return !isCategory() && !isTotal();
 	}
@@ -292,6 +296,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if category
 	 */
+	@Override
 	public boolean isCategory()  {
 		if (m_noteId!=null) {
 			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY) == NotesConstants.NOTEID_CATEGORY;
@@ -305,6 +310,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if total
 	 */
+	@Override
 	public boolean isTotal() {
 		if (m_noteId!=null) {
 			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY_TOTAL) == NotesConstants.NOTEID_CATEGORY_TOTAL;
@@ -318,6 +324,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return UNID or null
 	 */
+	@Override
 	public String getUNID() {
 		if (m_unid==null) {
 			if (m_unidAsLongs!=null) {
@@ -370,6 +377,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getSiblingCount() {
 		return m_siblingCount!=null ? m_siblingCount.intValue() : 0;
 	}
@@ -389,6 +397,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getChildCount() {
 		return m_childCount!=null ? m_childCount.intValue() : 0;
 	}
@@ -408,6 +417,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getDescendantCount() {
 		return m_descendantCount!=null ? m_descendantCount.intValue() : 0;
 	}
