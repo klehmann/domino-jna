@@ -25,11 +25,11 @@ public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataPr
 	private VirtualView view;
 	private NotesDatabase db;
 	
+	//data for serialization
 	private String dbServer;
 	private String dbFilePath;
 	private String origin;
 	private Map<String,String> overrideFormula;
-
 	private Set<Integer> addedSinceLastUpdate;
 	private Set<Integer> removedSinceLastUpdate;
 	

@@ -25,9 +25,10 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  */
 public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private NotesDatabase db;
+	private NotesDatabase db;	
 	private int folderNoteId;
 
+	//data for serialization
 	private String dbServer;
 	private String dbFilePath;
 	private String origin;

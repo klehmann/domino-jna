@@ -36,6 +36,13 @@ import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 public class VirtualView {
 	static final String ORIGIN_VIRTUALVIEW = "virtualview";
 	
+	/** during a view update, we use this map to remember which sibiling indexes to recompute */
+	private Map<ScopedNoteId,List<VirtualViewEntryData>> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
+	/** lock to coordinate r/w access on the view */
+	private ReadWriteLock viewChangeLock = new ReentrantReadWriteLock();
+
+	//data for serialization
+
 	private VirtualViewEntryData rootEntry;
 	private int rootEntryNoteId;
 	
@@ -51,17 +58,22 @@ public class VirtualView {
 	/** contains the occurences of a note id in the view */
 	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
 	
-	/** during a view update, we use this map to remember which sibiling indexes to recompute */
-	private Map<ScopedNoteId,List<VirtualViewEntryData>> pendingSiblingIndexFlush = new ConcurrentHashMap<>();
-	/** lock to coordinate r/w access on the view */
-	private ReadWriteLock viewChangeLock = new ReentrantReadWriteLock();
-	
 	private LinkedHashMap<String, IVirtualViewDataProvider> dataProviderByOrigin;
 	
+	/**
+	 * Creates a new virtual view
+	 * 
+	 * @param columnsParam columns of the view
+	 */
 	public VirtualView(VirtualViewColumn...columnsParam ) {
 		this(Arrays.asList(columnsParam));
 	}
 	
+	/**
+	 * Creates a new virtual view
+	 * 
+	 * @param columnsParam columns of the view
+	 */
 	public VirtualView(List<VirtualViewColumn> columnsParam) {
 		this.dataProviderByOrigin = new LinkedHashMap<>();
 		this.columns = new ArrayList<>();
@@ -117,6 +129,11 @@ public class VirtualView {
 		this.entriesByNoteId = new ConcurrentHashMap<>();
 	}
 	
+	/**
+	 * Adds a data provider to the view
+	 * 
+	 * @param provider data provider
+	 */
 	public void addDataProvider(IVirtualViewDataProvider provider) {
 		String origin = provider.getOrigin();
 		if (this.dataProviderByOrigin.containsKey(origin)) {
@@ -125,6 +142,11 @@ public class VirtualView {
 		this.dataProviderByOrigin.put(origin, provider);
 	}
 	
+	/**
+	 * Returns the data providers
+	 * 
+	 * @return data providers
+	 */
 	public Iterator<IVirtualViewDataProvider> getDataProviders() {
 		return this.dataProviderByOrigin.values().iterator();
 	}

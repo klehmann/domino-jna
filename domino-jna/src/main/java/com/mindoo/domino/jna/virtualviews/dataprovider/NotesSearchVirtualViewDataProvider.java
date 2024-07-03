@@ -22,7 +22,9 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  */
 public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
+	private NotesDatabase db;
 
+	//data for serialization
 	private String origin;
 	private String selectionFormula;
 	private Set<Integer> noteIdFilter;
@@ -30,8 +32,6 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 	private NotesTimeDate since;
 	private String dbServer;
 	private String dbFilePath;
-	
-	private NotesDatabase db;
 
 	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String selectionFormula,
 			Map<String,String> overrideFormula, Set<Integer> noteIdFilter) {
