@@ -421,7 +421,9 @@ public class InnardsConverter {
 
     final long julianDay = dateInnard & 0x7FFFFF;
 
-    final LocalDate utcDate = LocalDate.now().with(JulianFields.JULIAN_DAY, julianDay);
+    //using 1970-01-01 for performance reasons, earlier implementation used LocalDate.now() which was slower
+    final LocalDate utcDate = LocalDate.of(1970,1,1).with(JulianFields.JULIAN_DAY, julianDay);
+
     if (hasTime) {
       final OffsetDateTime utc = OffsetDateTime.of(utcDate, utcTime, ZoneOffset.UTC);
 
