@@ -1,7 +1,6 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -114,7 +113,7 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		return origin;
 	}
 	
-	public ViewEntrySortKey getSortKey() {
+	ViewEntrySortKey getSortKey() {
 		return sortKey;
 	}
 	
@@ -192,20 +191,6 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	ConcurrentNavigableMap<ViewEntrySortKey,VirtualViewEntryData> getChildEntriesAsMap() {
 		return childEntriesBySortKey;
 	}
-
-	/**
-	 * Returns the child view entries in sorted order
-	 * 
-	 * @param descending whether to return the entries in descending order
-	 * @return child entries
-	 */
-	public Collection<VirtualViewEntryData> getChildEntries(boolean descending) {
-		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = childEntriesBySortKey;
-		if (descending) {
-			map = map.descendingMap();
-		}
-		return Collections.unmodifiableCollection(map.values());
-	}
 	
 	final static Object LOW_SORTVAL = new Object();
 	final static Object HIGH_SORTVAL = new Object();
@@ -229,47 +214,7 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		
 		return childEntriesBySortKey.subMap(lowCategorySearchKey, false, highCategorySearchKey, false);
 	}
-	
-	/**
-	 * Returns the child categories of this entry
-	 * 
-	 * @param descending whether to return the categories in descending order
-	 * @return child categories
-	 */
-	public Collection<VirtualViewEntryData> getChildCategories(boolean descending) {
-		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = getChildCategoriesAsMap();
-		if (descending) {
-			map = map.descendingMap();
-		}
-		return Collections.unmodifiableCollection(map.values());
-	}
-	
-	/**
-	 * Returns the child categories of this entry in a specific range
-	 * 
-	 * @param startKey the start key
-	 * @param startInclusive whether to include the start key
-	 * @param endKey the end key
-	 * @param endInclusive whether to include the end key
-	 * @param descending whether to return the categories in descending order
-	 * @return child categories
-	 */
-	public Collection<VirtualViewEntryData> getChildCategories(Object startKey, boolean startInclusive,
-			Object endKey, boolean endInclusive, boolean descending) {
-		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {startKey, LOW_SORTVAL}),
-				LOW_ORIGIN,
-				0);
-		ViewEntrySortKey highCategorySortKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {endKey, HIGH_SORTVAL}),
-				HIGH_ORIGIN,
-				Integer.MAX_VALUE);
-		
-		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = childEntriesBySortKey.subMap(lowCategorySortKey, startInclusive, highCategorySortKey, endInclusive);
-		if (descending) {
-			map = map.descendingMap();
-		}
-		return Collections.unmodifiableCollection(map.values());
-	}
-	
+
 	/**
 	 * Returns the child documents of this entry
 	 * 
@@ -285,47 +230,6 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 				Integer.MAX_VALUE);
 		
 		return childEntriesBySortKey.subMap(lowCategorySearchKey, false, highCategorySearchKey, false);
-	}
-	
-	/**
-	 * Returns the child documents of this entry
-	 * 
-	 * @param descending whether to return the documents in descending order
-	 * @return child documents
-	 */
-	public Collection<VirtualViewEntryData> getChildDocuments(boolean descending) {
-		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = getChildDocumentsAsMap();
-		if (descending) {
-			map = map.descendingMap();
-		}
-		return Collections.unmodifiableCollection(map.values());
-	}
-
-	/**
-	 * Returns the child documents of this entry in a specific range
-	 * 
-	 * @param startKey the start key
-	 * @param startInclusive whether to include the start key
-	 * @param endKey the end key
-	 * @param endInclusive whether to include the end key
-	 * @param descending whether to return the documents in descending order
-	 * @return child documents
-	 */
-	public Collection<VirtualViewEntryData> getChildDocuments(Object startKey, boolean startInclusive,
-			Object endKey, boolean endInclusive,
-			boolean descending) {
-		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {startKey, LOW_SORTVAL}),
-				LOW_ORIGIN,
-				0);
-		ViewEntrySortKey highCategorySortKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {endKey, HIGH_SORTVAL}),
-				HIGH_ORIGIN,
-				Integer.MAX_VALUE);
-		
-		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = childEntriesBySortKey.subMap(lowCategorySortKey, startInclusive, highCategorySortKey, endInclusive);
-		if (descending) {
-			map = map.descendingMap();
-		}
-		return Collections.unmodifiableCollection(map.values());
 	}
 	
 	/**

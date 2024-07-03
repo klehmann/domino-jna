@@ -1,5 +1,8 @@
 package com.mindoo.domino.jna.virtualviews;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -9,6 +12,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -16,6 +20,7 @@ import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.virtualviews.VirtualView.ScopedNoteId;
+import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
 import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
@@ -47,7 +52,7 @@ public class VirtualViewNavigator {
 	private VirtualView view;
 	private boolean withCategories;
 	private boolean withDocuments;
-	private ViewEntryAccessCheck viewEntryAccessCheck;
+	private IViewEntryAccessCheck viewEntryAccessCheck;
 	
 	/** if selectAll==true, this set is treated as deselected list */
 	private Set<ScopedNoteId> selectedOrDeselectedEntries = ConcurrentHashMap.newKeySet();
@@ -69,7 +74,7 @@ public class VirtualViewNavigator {
 	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 */
 	public VirtualViewNavigator(VirtualView view, WithCategories cats, WithDocuments docs,
-			ViewEntryAccessCheck viewEntryAccessCheck) {
+			IViewEntryAccessCheck viewEntryAccessCheck) {
 		this(view, view.getRoot(), cats, docs, viewEntryAccessCheck);
 	}
 	
@@ -83,7 +88,7 @@ public class VirtualViewNavigator {
 	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 */
 	public VirtualViewNavigator(VirtualView view, VirtualViewEntryData topEntry, WithCategories cats, WithDocuments docs,
-			ViewEntryAccessCheck viewEntryAccessCheck) {
+			IViewEntryAccessCheck viewEntryAccessCheck) {
 		this.view = view;
 		this.withCategories = cats == WithCategories.YES;
 		this.withDocuments = docs == WithDocuments.YES;
@@ -332,7 +337,8 @@ public class VirtualViewNavigator {
 						}
 						return selectedOnly == SelectedOnly.YES ? gotoNextSelected() : gotoNext();
 					}
-				}, false);
+				}, false);			
+	
 	}
 	
 	/**
@@ -360,6 +366,171 @@ public class VirtualViewNavigator {
 						return selectedOnly == SelectedOnly.YES ? gotoPrevSelected() : gotoNext();
 					}
 				}, false);
+	}
+	
+	/**
+	 * Returns the child documents of this entry in a specific range from the first lookup key
+	 * until the last lookup key (inclusive)
+	 * 
+	 * @param entry the parent entry
+	 * @param startKey the start key
+	 * @param endKey the end key
+	 * @param descending whether to return the documents in descending order
+	 * @return child documents as stream
+	 */
+	public Stream<VirtualViewEntryData> childDocumentsBetween(VirtualViewEntryData entry, Object startKey, Object endKey, boolean descending) {
+		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {startKey, VirtualViewEntryData.LOW_SORTVAL}),
+				VirtualViewEntryData.LOW_ORIGIN,
+				0);
+		ViewEntrySortKey highCategorySortKey = ViewEntrySortKey.createScanKey(false, Arrays.asList(new Object[] {endKey, VirtualViewEntryData.HIGH_SORTVAL}),
+				VirtualViewEntryData.HIGH_ORIGIN,
+				Integer.MAX_VALUE);
+		
+		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = entry.getChildEntriesAsMap()
+				.subMap(lowCategorySortKey, false, highCategorySortKey, false);
+		if (descending) {
+			map = map.descendingMap();
+		}
+		return map
+				.values()
+				.stream()
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+	
+	/**
+	 * Returns the child documents of this entry with a specific key
+	 * 
+	 * @param entry the parent entry
+	 * @param key key to search for
+	 * @param isExact whether to search for an exact match or prefix match
+	 * @param descending whether to return the documents in descending order
+	 * @return child documents as stream
+	 */
+	public Stream<VirtualViewEntryData> childDocumentsByKey(VirtualViewEntryData entry, String key, boolean isExact, boolean descending) {		
+		String startKey = key;
+		String endKey;
+		if (isExact) {
+			endKey = key;
+		}
+		else {
+			endKey = key + Character.MAX_VALUE;
+		}
+		
+		return childDocumentsBetween(entry, startKey, endKey, descending);		
+	}
+	
+
+	/**
+	 * Returns the child documents of this entry
+	 * 
+	 * @param descending whether to return the documents in descending order
+	 * @return child documents as stream
+	 */
+	public Stream<VirtualViewEntryData> childDocuments(VirtualViewEntryData entry, boolean descending) {
+		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = entry.getChildDocumentsAsMap();
+		if (descending) {
+			map = map.descendingMap();
+		}
+		return map
+				.values()
+				.stream()
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+	
+	
+	/**
+	 * Returns the child categories of this entry in a specific range from the first lookup key
+	 * until the last lookup key (inclusive)
+	 * 
+	 * @param startKey the start key
+	 * @param endKey the end key
+	 * @param descending whether to return the categories in descending order
+	 * @return child categories as stream
+	 */
+	public Stream<VirtualViewEntryData> childCategoriesBetween(VirtualViewEntryData entry, Object startKey, Object endKey, boolean descending) {
+		ViewEntrySortKey lowCategorySortKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {startKey, VirtualViewEntryData.LOW_SORTVAL}),
+				VirtualViewEntryData.LOW_ORIGIN,
+				0);
+		ViewEntrySortKey highCategorySortKey = ViewEntrySortKey.createScanKey(true, Arrays.asList(new Object[] {endKey, VirtualViewEntryData.HIGH_SORTVAL}),
+				VirtualViewEntryData.HIGH_ORIGIN,
+				Integer.MAX_VALUE);
+		
+		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = entry.getChildEntriesAsMap()
+				.subMap(lowCategorySortKey, false, highCategorySortKey, false);
+		if (descending) {
+			map = map.descendingMap();
+		}
+		return map
+				.values()
+				.stream()
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+	
+	/**
+	 * Returns the child documents of this entry with a specific key
+	 * 
+	 * @param entry the parent entry
+	 * @param key key to search for
+	 * @param isExact whether to search for an exact match or prefix match
+	 * @param descending whether to return the categories in descending order
+	 * @return child documents as stream
+	 */
+	public Stream<VirtualViewEntryData> childCategoriesByKey(VirtualViewEntryData entry, String key, boolean isExact, boolean descending) {		
+		String startKey = key;
+		String endKey;
+		if (isExact) {
+			endKey = key;
+		}
+		else {
+			endKey = key + Character.MAX_VALUE;
+		}
+		
+		return childCategoriesBetween(entry, startKey, endKey, descending);		
+	}
+	
+	/**
+	 * Returns the child categories of this entry
+	 * 
+	 * @param entry the parent entry
+	 * @param descending whether to return the categories in descending order
+	 * @return child categories as stream
+	 */
+	public Stream<VirtualViewEntryData> childCategories(VirtualViewEntryData entry, boolean descending) {
+		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = entry.getChildCategoriesAsMap();
+		if (descending) {
+			map = map.descendingMap();
+		}
+		return map
+				.values()
+				.stream()
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+	
+	/**
+	 * Returns the child view entries in sorted order
+	 * 
+	 * @param descending whether to return the entries in descending order
+	 * @return child entries as stream
+	 */
+	public Stream<VirtualViewEntryData> childEntries(VirtualViewEntryData entry, boolean descending) {
+		ConcurrentNavigableMap<ViewEntrySortKey, VirtualViewEntryData> map = entry.getChildEntriesAsMap();
+		if (descending) {
+			map = map.descendingMap();
+		}
+		return map
+				.values()
+				.stream()
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
 	}
 	
 	/**

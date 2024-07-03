@@ -2,10 +2,10 @@ package com.mindoo.domino.jna.virtualviews;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,11 +17,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
+import com.mindoo.domino.jna.utils.IDUtils;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithCategories;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithDocuments;
+import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
 import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
@@ -43,7 +46,8 @@ public class VirtualView {
 	private List<VirtualViewColumn> valueFunctionColumns;
 	private boolean[] docOrderDescending;
 	private boolean viewHasTotalColumns;
-	
+	private AtomicLong categoryNoteId = new AtomicLong(4);
+
 	/** contains the occurences of a note id in the view */
 	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
 	
@@ -52,12 +56,14 @@ public class VirtualView {
 	/** lock to coordinate r/w access on the view */
 	private ReadWriteLock viewChangeLock = new ReentrantReadWriteLock();
 	
+	private LinkedHashMap<String, IVirtualViewDataProvider> dataProviderByOrigin;
 	
 	public VirtualView(VirtualViewColumn...columnsParam ) {
 		this(Arrays.asList(columnsParam));
 	}
 	
 	public VirtualView(List<VirtualViewColumn> columnsParam) {
+		this.dataProviderByOrigin = new LinkedHashMap<>();
 		this.columns = new ArrayList<>();
 		this.categoryColumns = new ArrayList<>();
 		this.sortColumns = new ArrayList<>();
@@ -111,8 +117,39 @@ public class VirtualView {
 		this.entriesByNoteId = new ConcurrentHashMap<>();
 	}
 	
-	private AtomicLong categoryNoteId = new AtomicLong(4);
-
+	public void addDataProvider(IVirtualViewDataProvider provider) {
+		String origin = provider.getOrigin();
+		if (this.dataProviderByOrigin.containsKey(origin)) {
+			throw new IllegalArgumentException("Data provider with origin '" + origin + "' already added");
+		}
+		this.dataProviderByOrigin.put(origin, provider);
+	}
+	
+	public Iterator<IVirtualViewDataProvider> getDataProviders() {
+		return this.dataProviderByOrigin.values().iterator();
+	}
+	
+	/**
+	 * Updates the data for all data providers
+	 */
+	public void update() {
+		for (IVirtualViewDataProvider currProvider : this.dataProviderByOrigin.values()) {
+			currProvider.update();
+		}
+	}
+	
+	/**
+	 * Updates the data for a specific data provider
+	 * 
+	 * @param origin origin of the data provider
+	 */
+	public void update(String origin) {
+		IVirtualViewDataProvider provider = this.dataProviderByOrigin.get(origin);
+		if (provider != null) {
+			provider.update();
+		}
+	}
+	
 	private int createNewCategoryNoteId() {
 		int newId = (int) categoryNoteId.addAndGet(4);
 		return (int) ((NotesConstants.RRV_DELETED | newId) & 0xFFFFFFFF);
@@ -120,6 +157,127 @@ public class VirtualView {
 	
 	public List<VirtualViewColumn> getColumns() {
 		return columns;
+	}
+	
+	public class VirtualViewNavigatorBuilder {
+		private VirtualView view;
+		private String effectiveUserName;
+		private WithCategories cats;
+		private WithDocuments docs;
+		ViewEntryAccessCheck accessCheck;
+		
+		private VirtualViewNavigatorBuilder(VirtualView view) {
+			this.view = view;
+			cats = WithCategories.NO;
+			docs = WithDocuments.NO;
+		}
+		
+		public VirtualViewNavigatorBuilder withCategories() {
+			cats = WithCategories.YES;
+			return this;
+		}
+		
+		public VirtualViewNavigatorBuilder withDocuments() {
+			docs = WithDocuments.YES;
+			return this;
+		}
+		
+		public VirtualViewNavigatorBuilder withEffectiveUserName(String effectiveUserName) {
+			this.effectiveUserName = effectiveUserName;
+			return this;
+		}
+		
+		private ViewEntryAccessCheck createAccessCheck() {
+			ViewEntryAccessCheck accessCheck = ViewEntryAccessCheck
+					.forUser(VirtualView.this, StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName);
+			return accessCheck;
+		}
+		
+		/**
+		 * Creates a new view navigator for the whole view
+		 * 
+		 * @return navigator
+		 */
+		public VirtualViewNavigator build() {
+			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck());
+		}
+		
+		/**
+		 * Creates a new view navigator for a subtree of the view
+		 * 
+		 * @param topEntry top entry of the subtree (navigator contains all descendants of this entry)
+		 * @return navigator
+		 */
+		public VirtualViewNavigator buildFromDescendants(VirtualViewEntryData topEntry) {
+			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck());
+		}
+		
+		/**
+		 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
+		 * 
+		 * @param category category name (e.g. "Sales\\2017")
+		 * @return navigator
+		 */
+		public VirtualViewNavigator buildFromCategory(String category) {
+			ViewEntryAccessCheck accessCheck = createAccessCheck();
+
+			String[] categoryParts = category.split("\\\\", -1);
+			
+			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), 
+					WithCategories.YES, WithDocuments.NO, accessCheck);
+			
+			VirtualViewEntryData currCategoryEntry = getRoot();
+			for (String currPart : categoryParts) {
+				VirtualViewEntryData matchingSubCategories = findCategoryNav
+						.childCategoriesByKey(currCategoryEntry, currPart, true, true)
+						.findFirst()
+						.orElse(null);
+				
+				if (matchingSubCategories == null) {
+					// category not found
+					currCategoryEntry = null;
+					break;
+				}
+				else {
+					currCategoryEntry = matchingSubCategories;
+				}
+			}
+			
+			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
+					accessCheck);
+			return nav;
+		}
+		
+		/**
+		 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
+		 * 
+		 * @param categoryLevels category levels (e.g. Arrays.asList("Sales", "2017"))
+		 * @return navigator
+		 */
+		public VirtualViewNavigator buildFromCategory(List<Object> categoryLevels) {
+			ViewEntryAccessCheck accessCheck = createAccessCheck();
+
+			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), WithCategories.YES,
+					WithDocuments.NO, accessCheck);
+
+			VirtualViewEntryData currCategoryEntry = getRoot();
+			for (Object currPart : categoryLevels) {
+				VirtualViewEntryData matchingSubCategories = findCategoryNav
+						.childCategoriesBetween(currCategoryEntry, currPart, currPart, false).findFirst().orElse(null);
+
+				if (matchingSubCategories == null) {
+					// category not found
+					currCategoryEntry = null;
+					break;
+				} else {
+					currCategoryEntry = matchingSubCategories;
+				}
+			}
+
+			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
+					accessCheck);
+			return nav;
+		}
 	}
 	
 	/**
@@ -130,86 +288,8 @@ public class VirtualView {
 	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 * @return navigator
 	 */
-	public VirtualViewNavigator createViewNav(WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
-		return new VirtualViewNavigator(this, cats, docs, viewEntryAccessCheck);
-	}
-
-	/**
-	 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
-	 * 
-	 * @param category category name (e.g. "Sales\\2017")
-	 * @param cats whether to include category entries
-	 * @param docs whether to include document entries
-	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
-	 * @return navigator
-	 */
-	public VirtualViewNavigator createViewNavFromCategory(String category, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
-		String[] categoryParts = category.split("\\\\", -1);
-		
-		VirtualViewEntryData currCategoryEntry = getRoot();
-		for (String currPart : categoryParts) {
-			Collection<VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
-					currPart, true,
-					currPart, true,
-					false);
-			
-			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.iterator();
-			if (matchingSubCategoriesIt.hasNext()) {
-				currCategoryEntry = matchingSubCategoriesIt.next();
-			} else {
-				// category not found
-				currCategoryEntry = null;
-				break;
-			}
-		}
-		
-		VirtualViewNavigator nav = new VirtualViewNavigator(this, currCategoryEntry, cats, docs, viewEntryAccessCheck);
-		return nav;
-	}
-
-	/**
-	 * Creates a new view navigator that starts at a specific category (containing all descendants of the category entry)
-	 * 
-	 * @param categoryLevels category levels (e.g. Arrays.asList("Sales", "2017"))
-	 * @param cats whether to include category entries
-	 * @param docs whether to include document entries
-	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
-	 * @return navigator
-	 */
-	public VirtualViewNavigator createViewNavFromCategory(List<Object> categoryLevels, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
-		VirtualViewEntryData currCategoryEntry = getRoot();
-		for (Object currPart : categoryLevels) {
-			Collection<VirtualViewEntryData>  matchingSubCategories = currCategoryEntry.getChildCategories(
-					currPart, true,
-					currPart, true,
-					false);
-			
-			Iterator<VirtualViewEntryData> matchingSubCategoriesIt = matchingSubCategories.iterator();
-			if (matchingSubCategoriesIt.hasNext()) {
-				currCategoryEntry = matchingSubCategoriesIt.next();
-			} else {
-				// category not found
-				currCategoryEntry = null;
-				break;
-			}
-		}
-		
-		VirtualViewNavigator nav = new VirtualViewNavigator(this, currCategoryEntry, cats, docs, viewEntryAccessCheck);
-		return nav;
-	}
-
-	/**
-	 * Creates a new view navigator for a subtree of the view
-	 * 
-	 * @param topEntry top entry of the subtree (navigator contains all descendants of this entry)
-	 * @param cats whether to include category entries
-	 * @param docs whether to include document entries
-	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
-	 * @return navigator
-	 */
-	public VirtualViewNavigator createViewNavFromDescendants(VirtualViewEntryData topEntry, WithCategories cats, WithDocuments docs, ViewEntryAccessCheck viewEntryAccessCheck) {
-		VirtualViewNavigator nav = new VirtualViewNavigator(this, topEntry, cats, docs, viewEntryAccessCheck);
-		return nav;
+	public VirtualViewNavigatorBuilder createViewNav() {
+		return new VirtualViewNavigatorBuilder(this);
 	}
 
 	/**

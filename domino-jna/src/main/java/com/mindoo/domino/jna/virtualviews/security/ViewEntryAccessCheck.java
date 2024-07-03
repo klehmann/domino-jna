@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.virtualviews.security;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -8,31 +9,52 @@ import java.util.TreeSet;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
+import com.mindoo.domino.jna.virtualviews.VirtualView;
 import com.mindoo.domino.jna.virtualviews.VirtualViewEntryData;
+import com.mindoo.domino.jna.virtualviews.dataprovider.AbstractNSFVirtualViewDataProvider;
+import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
 
-public class ViewEntryAccessCheck {
-	private String userName;
+/**
+ * Class that checks if a user has read access to a view entry by comparing the user's name variants, groups and roles
+ * with the computed readers list of the entry
+ */
+public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
+	private VirtualView view;
+	private String effectiveUserName;
 	private Map<String,Set<String>> userNamesListByOrigin;
 	
-	public static ViewEntryAccessCheck forUser(String userName) {
-		return new ViewEntryAccessCheck(userName);
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param view virtual view
+	 * @param effectiveUserName name of the user to check access for
+	 * @return access check instance
+	 */
+	public static ViewEntryAccessCheck forUser(VirtualView view, String effectiveUserName) {
+		return new ViewEntryAccessCheck(view, effectiveUserName);
 	}
 	
-	private ViewEntryAccessCheck(String userName) {
-		this.userName = userName;
+	private ViewEntryAccessCheck(VirtualView view, String effectiveUserName) {
+		this.view = view;
+		this.effectiveUserName = effectiveUserName;
 		this.userNamesListByOrigin = new HashMap<>();
+		
+		//collect the usernames lists for the user in all databases
+		Iterator<IVirtualViewDataProvider> dataProvidersIt = view.getDataProviders();
+		while (dataProvidersIt.hasNext()) {
+			IVirtualViewDataProvider currProvider = dataProvidersIt.next();
+			if (currProvider instanceof AbstractNSFVirtualViewDataProvider) {
+				NotesDatabase db = ((AbstractNSFVirtualViewDataProvider) currProvider).getDatabase();
+				addDbUserNamesListForOrigins(db, currProvider.getOrigin());
+			}
+		}
 	}
 	
 	public String getUserName() {
-		return userName;
+		return effectiveUserName;
 	}
 	
-	/**
-	 * Checks if the user has read access to the provided entry
-	 * 
-	 * @param entry entry to check
-	 * @return true if the user has read access
-	 */
+	@Override
 	public boolean isVisible(VirtualViewEntryData entry) {
 		if (!entry.isDocument()) {
 			//categories are always visible
@@ -68,10 +90,10 @@ public class ViewEntryAccessCheck {
 	 */
 	public ViewEntryAccessCheck addDbUserNamesListForOrigins(NotesDatabase db, String... origins) {
 		TreeSet<String> userNamesList = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-		List<String> nameVariants = NotesNamingUtils.getUserNamesList(db.getServer(), userName);
+		List<String> nameVariants = NotesNamingUtils.getUserNamesList(db.getServer(), effectiveUserName);
 		userNamesList.addAll(nameVariants);
 		
-		List<String> roles = db.queryAccessRoles(userName);
+		List<String> roles = db.queryAccessRoles(effectiveUserName);
 		userNamesList.addAll(roles);
 		
 		for (String currOrigin : origins) {

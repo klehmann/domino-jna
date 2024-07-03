@@ -21,10 +21,13 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
 /**
  * Data provider for a {@link VirtualView} that adds an arbitrary list of note ids to the {@link VirtualView}.
  */
-public class NoteIdsVirtualViewDataProvider {
+public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private String origin;
 	private NotesDatabase db;
+	
+	private String dbServer;
+	private String dbFilePath;
+	private String origin;
 	private Map<String,String> overrideFormula;
 
 	private Set<Integer> addedSinceLastUpdate;
@@ -33,28 +36,27 @@ public class NoteIdsVirtualViewDataProvider {
 	/**
 	 * Creates a new data provider
 	 * 
-	 * @param view virtual view
-	 * @param origin a string that identifies the origin of the data
-	 * @param db database
-	 */
-	public NoteIdsVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db) {
-		this(view, origin, db, null);
-	}
-	
-	/**
-	 * Creates a new data provider
-	 * 
-	 * @param view virtual view
 	 * @param origin a string that identifies the origin of the data
 	 * @param db database
 	 * @param overrideFormula optional formula overrides for NSFSearch
 	 */
-	public NoteIdsVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db, Map<String,String> overrideFormula) {
-		this.view = view;
+	public NoteIdsVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, Map<String,String> overrideFormula) {
 		this.origin = origin;
-		this.db = db;
+		this.dbServer = dbServer;
+		this.dbFilePath = dbFilePath;
+		this.overrideFormula = overrideFormula;
 		this.addedSinceLastUpdate = new HashSet<>();
 		this.removedSinceLastUpdate = new HashSet<>();
+	}
+	
+	@Override
+	public void init(VirtualView view) {
+		this.view = view;
+	}
+
+	@Override
+	public String getOrigin() {
+		return origin;
 	}
 	
 	/**
@@ -75,11 +77,19 @@ public class NoteIdsVirtualViewDataProvider {
 		removedSinceLastUpdate.addAll(noteIds);
 	}
 	
-	/**
-	 * Fetches the latest changes in the folder (added/removed note ids) and computes the
-	 * view column values for the added notes
-	 */
+	public NotesDatabase getDatabase() {
+		if (db == null || db.isRecycled()) {
+			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
+		}
+		return db;
+	}
+
+	@Override
 	public void update() {
+		if (view == null) {
+			throw new IllegalStateException("View not initialized");
+		}
+
 		if (addedSinceLastUpdate.isEmpty() && removedSinceLastUpdate.isEmpty()) {
 			return;
 		}
@@ -102,6 +112,8 @@ public class NoteIdsVirtualViewDataProvider {
 		formulas.put("$C1$", "");
 		
 		removedSinceLastUpdate.forEach(change::removeEntry);
+		
+		NotesDatabase db = getDatabase();
 		
 		NotesIDTable idTableFilter = null;		
 		if (!addedSinceLastUpdate.isEmpty()) {

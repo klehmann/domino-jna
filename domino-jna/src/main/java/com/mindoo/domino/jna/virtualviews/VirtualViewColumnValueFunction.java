@@ -7,8 +7,23 @@ import com.mindoo.domino.jna.INoteSummary;
  * 
  * @param <T> column value type
  */
-public interface VirtualViewColumnValueFunction<T> {
-
+public abstract class VirtualViewColumnValueFunction<T> {
+	private int m_version;
+	
+	public VirtualViewColumnValueFunction(int version) {
+		m_version = version;
+	}
+	
+	/**
+	 * Returns the version of this function. If the function implementation changes, the version
+	 * should be increased to make caching and reusing of the {@link VirtualView} instances work correctly
+	 * 
+	 * @return version
+	 */
+	public final int getVersion() {
+		return m_version;
+	}
+	
 	/**
 	 * Computes the value of a column in a {@link VirtualView}
 	 * 
@@ -17,6 +32,6 @@ public interface VirtualViewColumnValueFunction<T> {
 	 * @param columnValues note summary data to read other column values (e.g. from formula execution or previous function calls)
 	 * @return value or null (String, Number, NotesTimeDate, List&lt;String&gt;, List&lt;Number&gt; or List&lt;NotesTimeDate&gt;)
 	 */
-	T getValue(String origin, String itemName, INoteSummary columnValues);
+	public abstract T getValue(String origin, String itemName, INoteSummary columnValues);
 	
 }

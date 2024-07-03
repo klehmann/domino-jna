@@ -20,37 +20,53 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  * Data provider for a {@link VirtualView} that fetches data from a Notes database
  * via NSF search (results are matching a selection formula) and updates the {@link VirtualView} with the latest data.
  */
-public class NotesSearchVirtualViewDataProvider {
+public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
+
 	private String origin;
-	private NotesDatabase db;
 	private String selectionFormula;
 	private Set<Integer> noteIdFilter;
 	private Map<String,String> overrideFormula;
-	
 	private NotesTimeDate since;
+	private String dbServer;
+	private String dbFilePath;
+	
+	private NotesDatabase db;
 
-	public NotesSearchVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db, String selectionFormula) {
-		this(view, origin, db, selectionFormula, null, null);
-	}
-
-	public NotesSearchVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db, String selectionFormula,
+	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String selectionFormula,
 			Map<String,String> overrideFormula, Set<Integer> noteIdFilter) {
 		
-		this.view = view;
 		this.origin = origin;
-		this.db = db;
+		this.dbServer = dbServer;
+		this.dbFilePath = dbFilePath;
 		this.selectionFormula = selectionFormula;
 		this.overrideFormula = overrideFormula;
 		this.noteIdFilter = noteIdFilter;
 	}
 	
-	/**
-	 * Fetches the latest data from the database that is matching the selection formula
-	 * and cleans up docs that are no longer part of the selection (either by changes
-	 * or deletions).
-	 */
+	@Override
+	public void init(VirtualView view) {
+		this.view = view;
+	}
+	
+	@Override
+	public String getOrigin() {
+		return origin;
+	}
+	
+	public NotesDatabase getDatabase() {
+		if (db == null || db.isRecycled()) {
+			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
+		}
+		return db;
+	}
+	
+	@Override
 	public void update() {
+		if (view == null) {
+			throw new IllegalStateException("View not initialized");
+		}
+		
 		VirtualViewDataChange change = new VirtualViewDataChange(origin);
 		
 		Map<String,String> formulas = new HashMap<>();
@@ -80,6 +96,8 @@ public class NotesSearchVirtualViewDataProvider {
 			idTableFilter = noteIdFilterAsTable.intersect(allIds);
 			noteIdFilterAsTable.recycle();
 		}
+		
+		NotesDatabase db = getDatabase();
 		
 		NotesTimeDate newSince =
 				NotesSearch.search(db, idTableFilter, selectionFormula, formulas, "-",

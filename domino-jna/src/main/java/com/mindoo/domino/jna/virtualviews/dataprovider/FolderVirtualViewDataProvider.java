@@ -13,6 +13,7 @@ import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.utils.Pair;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
@@ -22,53 +23,78 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  * On each {@link #update()} call, we incrementally read the added and removed note ids from the folder
  * and push those changes to the {@link VirtualView}.
  */
-public class FolderVirtualViewDataProvider {
+public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private String origin;
 	private NotesDatabase db;
 	private int folderNoteId;
+
+	private String dbServer;
+	private String dbFilePath;
+	private String origin;
+	private String folderName;
 	private Map<String,String> overrideFormula;
 	private NotesTimeDate since;
 
 	/**
 	 * Creates a new data provider
 	 * 
-	 * @param view virtual view
-	 * @param origin a string that identifies the origin of the data
-	 * @param db database
-	 * @param folder folder to sync with (we read added/removed note ids)
-	 */
-	public FolderVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db, NotesCollection folder) {
-		this(view, origin, db, folder, null);
-	}
-	
-	/**
-	 * Creates a new data provider
-	 * 
-	 * @param view virtual view
 	 * @param origin a string that identifies the origin of the data
 	 * @param db database
 	 * @param folder folder to sync with (we read added/removed note ids)
 	 * @param overrideFormula optional formula overrides for NSFSearch
 	 */
-	public FolderVirtualViewDataProvider(VirtualView view, String origin, NotesDatabase db, NotesCollection folder,
+	public FolderVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String folderName,
 			Map<String,String> overrideFormula) {
-		this.view = view;
 		this.origin = origin;
-		this.db = db;
-		if (!folder.isFolder()) {
-			throw new IllegalArgumentException("This is a view, not a folder");
-		}
-		this.folderNoteId = folder.getNoteId();
+		this.dbServer = dbServer;
+		this.dbFilePath = dbFilePath;
+		this.overrideFormula = overrideFormula;
 		
 		this.since = new NotesTimeDate(new int[] {0,0});
 	}
 	
+	@Override
+	public void init(VirtualView view) {
+		this.view = view;
+	}
+	
+	@Override
+	public String getOrigin() {
+		return origin;
+	}
+	
+	public NotesDatabase getDatabase() {
+		if (db == null || db.isRecycled()) {
+			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
+		}
+		return db;
+	}
+	
+	private int getFolderNoteId() {
+		if (folderNoteId == 0) {
+			NotesDatabase db = getDatabase();
+			NotesCollection col = db.openCollectionByName(folderName);
+			if (col == null) {
+				throw new NotesError("Folder " + folderName + " not found in database "+dbServer+"!!"+dbFilePath);
+			}
+			if (!col.isFolder()) {
+				throw new NotesError("The view " + folderName + " is not a folder in database "+dbServer+"!!"+dbFilePath);
+			}
+			this.folderNoteId = col.getNoteId();
+			col.recycle();
+		}
+		return folderNoteId;
+	}
 	/**
 	 * Fetches the latest changes in the folder (added/removed note ids) and computes the
 	 * view column values for the added notes
 	 */
+	@Override
 	public void update() {
+		if (view == null) {
+			throw new IllegalStateException("View not initialized");
+		}
+		
 		VirtualViewDataChange change = new VirtualViewDataChange(origin);
 
 		Map<String,String> formulas = new HashMap<>();
@@ -86,6 +112,9 @@ public class FolderVirtualViewDataProvider {
 		//compute readers lists
 		formulas.put("$C1$", "");
 
+		NotesDatabase db = getDatabase();
+		int folderNoteId = getFolderNoteId();
+		
 		Pair<NotesIDTable,NotesIDTable> folderChanges = db.getFolderChanges(folderNoteId, since);
 		NotesIDTable addedIds = folderChanges.getValue1();
 		NotesIDTable removedIds = folderChanges.getValue2();
