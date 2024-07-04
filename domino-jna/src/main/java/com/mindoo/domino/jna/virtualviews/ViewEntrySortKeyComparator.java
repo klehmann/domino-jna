@@ -17,14 +17,6 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		this.docOrderPerColumnDescending = docOrderDescending;
 	}
 	
-	public boolean isCategoryOrderDescending() {
-		return categoryOrderDescending;
-	}
-	
-	public boolean[] getDocOrderPerColumnDescending() {
-		return docOrderPerColumnDescending;
-	}
-	
 	@Override
 	public int compare(ViewEntrySortKey o1, ViewEntrySortKey o2) {
 		List<Object> values1 = o1.getValues();
