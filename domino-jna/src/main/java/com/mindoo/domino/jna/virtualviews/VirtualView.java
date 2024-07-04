@@ -282,8 +282,8 @@ public class VirtualView {
 			VirtualViewEntryData currCategoryEntry = getRoot();
 			for (String currPart : categoryParts) {
 				VirtualViewEntryData matchingSubCategories = findCategoryNav
-						.childCategoriesByKey(currCategoryEntry, currPart, true, true)
-						.findFirst()
+						.childCategoriesByKey(currCategoryEntry, currPart, true, false)
+						.findFirst()	
 						.orElse(null);
 				
 				if (matchingSubCategories == null) {
@@ -335,12 +335,9 @@ public class VirtualView {
 	}
 	
 	/**
-	 * Creates a new view navigator of all view entries
+	 * Creates a new view navigator to traverse the view structure
 	 * 
-	 * @param cats whether to include category entries
-	 * @param docs whether to include document entries
-	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
-	 * @return navigator
+	 * @return builder
 	 */
 	public VirtualViewNavigatorBuilder createViewNav() {
 		return new VirtualViewNavigatorBuilder(this);

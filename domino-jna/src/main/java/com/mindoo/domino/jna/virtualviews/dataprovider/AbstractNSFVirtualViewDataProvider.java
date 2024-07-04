@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.virtualviews.dataprovider;
 
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
  * Base class for data providers that fetch data from a Notes database
@@ -11,6 +12,9 @@ public abstract class AbstractNSFVirtualViewDataProvider implements IVirtualView
 	protected String dbFilePath;
 	
 	public AbstractNSFVirtualViewDataProvider(String dbServer, String dbFilePath) {
+		if (StringUtil.isEmpty(dbFilePath)) {
+			throw new IllegalArgumentException("FilePath cannot be empty");
+		}
 		this.dbServer = dbServer;
 		this.dbFilePath = dbFilePath;
 	}

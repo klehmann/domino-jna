@@ -23,7 +23,6 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  */
 public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private NotesDatabase db;
 	
 	//data for serialization
 	private String origin;
@@ -35,7 +34,8 @@ public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataPr
 	 * Creates a new data provider
 	 * 
 	 * @param origin a string that identifies the origin of the data
-	 * @param db database
+	 * @param dbServer server name
+	 * @param dbFilePath database file path
 	 * @param overrideFormula optional formula overrides for NSFSearch
 	 */
 	public NoteIdsVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, Map<String,String> overrideFormula) {

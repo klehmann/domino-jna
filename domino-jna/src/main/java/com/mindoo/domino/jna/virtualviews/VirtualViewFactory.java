@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Category;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Hidden;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
@@ -111,11 +112,12 @@ public enum VirtualViewFactory {
 		 * @param dbServer The server name of the database
 		 * @param dbFilePath The file path of the database
 		 * @param searchFormula The search formula to use
+		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}
 		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
 		 * @param noteIdFilter Optional set with note ids to pre-filter the search results or null
 		 * @return builder object to add more data providers
 		 */
-		public VirtualViewBuilder withDbSearch(String origin, String dbServer, String dbFilePath, String searchFormula,
+		public VirtualViewBuilder withDbSearch(String origin, String dbServer, String dbFilePath, String searchFormula, Set<NoteClass> noteClasses,
 				Map<String,String> overrideColumnFormulas,
 				Set<Integer> noteIdFilter) {
 
@@ -124,6 +126,7 @@ public enum VirtualViewFactory {
 					dbServer,
 					dbFilePath,
 					searchFormula,
+					noteClasses,
 					null,
 					noteIdFilter);
 			

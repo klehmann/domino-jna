@@ -25,7 +25,6 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
  */
 public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private NotesDatabase db;	
 	private int folderNoteId;
 
 	//data for serialization
@@ -38,8 +37,9 @@ public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataPro
 	 * Creates a new data provider
 	 * 
 	 * @param origin a string that identifies the origin of the data
-	 * @param db database
-	 * @param folder folder to sync with (we read added/removed note ids)
+	 * @param dbServer server name
+	 * @param dbFilePath database file path
+	 * @param folderName folder to sync with (we read added/removed note ids)
 	 * @param overrideFormula optional formula overrides for NSFSearch
 	 */
 	public FolderVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String folderName,

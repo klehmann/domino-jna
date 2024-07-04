@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.virtualviews.dataprovider;
 
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,6 +14,7 @@ import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange;
 
@@ -30,14 +32,16 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 	private Set<Integer> noteIdFilter;
 	private Map<String,String> overrideFormula;
 	private NotesTimeDate since;
-
-	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String selectionFormula,
-			Map<String,String> overrideFormula, Set<Integer> noteIdFilter) {
+	private Set<NoteClass> noteClasses;
+	
+	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String optSelectionFormula, Set<NoteClass> optNoteClasses,
+			Map<String,String> optOverrideFormula, Set<Integer> optNoteIdFilter) {
 		super(dbServer, dbFilePath);
 		this.origin = origin;
-		this.selectionFormula = selectionFormula;
-		this.overrideFormula = overrideFormula;
-		this.noteIdFilter = noteIdFilter;
+		this.selectionFormula = optSelectionFormula;
+		this.overrideFormula = optOverrideFormula;
+		this.noteIdFilter = optNoteIdFilter;
+		this.noteClasses = new HashSet<>(optNoteClasses);
 	}
 	
 	@Override
@@ -89,8 +93,8 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		NotesDatabase db = getDatabase();
 		
 		NotesTimeDate newSince =
-				NotesSearch.search(db, idTableFilter, selectionFormula, formulas, "-",
-						EnumSet.of(Search.SESSION_USERNAME), EnumSet.of(NoteClass.DATA),
+				NotesSearch.search(db, idTableFilter, StringUtil.isEmpty(selectionFormula) ? "@true" : selectionFormula, formulas, "-",
+						EnumSet.of(Search.SESSION_USERNAME), noteClasses == null ? EnumSet.of(NoteClass.DATA) : noteClasses,
 						since, new NotesSearch.SearchCallback() {
 					
 					@Override
@@ -116,8 +120,13 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 						String unid = searchMatch.getUNID();
 						Map<String,Object> values = summaryBufferData.asMap(true);
 						
-						change.addEntry(noteId, unid, values);
-
+						if (noteIdFilter == null || noteIdFilter.contains(noteId)) {
+							change.addEntry(noteId, unid, values);
+						}
+						else {
+							change.removeEntry(noteId);
+						}
+						
 						return Action.Continue;
 					}
 
