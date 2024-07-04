@@ -33,7 +33,10 @@ Export-Package: com.mindoo.domino.jna,
  com.mindoo.domino.jna.sync,
  com.mindoo.domino.jna.transactions,
  com.mindoo.domino.jna.utils,
- com.mindoo.domino.jna.xsp.http
+ com.mindoo.domino.jna.xsp.http,
+ com.mindoo.domino.jna.virtualviews,
+ com.mindoo.domino.jna.virtualviews.dataprovider,
+ com.mindoo.domino.jna.virtualviews.security
 Bundle-ClassPath: lib/metadata-extractor-2.11.0.jar,
  lib/xmpcore-5.1.3.jar,
  lib/asm-6.0.jar,
