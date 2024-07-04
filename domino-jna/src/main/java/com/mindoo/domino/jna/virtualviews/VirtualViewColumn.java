@@ -1,7 +1,8 @@
 package com.mindoo.domino.jna.virtualviews;
 
-public class VirtualViewColumn {
-	public static enum ColumnSort { ASCENDING, DESCENDING, NONE }
+import com.mindoo.domino.jna.IViewColumn;
+
+public class VirtualViewColumn implements IViewColumn {
 	public static enum Category { YES, NO }
 	public static enum Hidden { YES, NO }
 	public static enum Total { NONE, SUM, AVERAGE }
@@ -51,11 +52,11 @@ public class VirtualViewColumn {
 		return itemName;
 	}
 	
-	public String getValueFormula() {
+	public String getFormula() {
 		return valueFormula;
 	}
 	
-	public VirtualViewColumnValueFunction<?> getValueFunction() {
+	public VirtualViewColumnValueFunction<?> getFunction() {
 		return valueFunction;
 	}
 	
@@ -71,6 +72,7 @@ public class VirtualViewColumn {
 		return isHidden == Hidden.YES;
 	}
 	
+	@Override
 	public ColumnSort getSorting() {
 		return sorting;
 	}

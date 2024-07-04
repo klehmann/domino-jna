@@ -71,7 +71,7 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		
 		Map<String,String> formulas = new HashMap<>();
 		this.view.getColumns().forEach(column -> {
-			String formula = column.getValueFormula();
+			String formula = column.getFormula();
 			if (formula != null) {
 				formulas.put(column.getItemName(), formula);
 			}			

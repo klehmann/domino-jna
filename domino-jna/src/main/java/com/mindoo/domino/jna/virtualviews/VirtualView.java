@@ -15,11 +15,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.utils.IDUtils;
 import com.mindoo.domino.jna.utils.StringUtil;
-import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
 import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithCategories;
@@ -94,7 +94,7 @@ public class VirtualView {
 				this.sortColumns.add(currColumn);
 			}
 
-			if (currColumn.getValueFunction() != null) {
+			if (currColumn.getFunction() != null) {
 				this.valueFunctionColumns.add(currColumn);
 			}
 			
@@ -192,11 +192,21 @@ public class VirtualView {
 			this.view = view;
 		}
 		
+		/**
+		 * By default, both categories and documents are included in the view navigator. If you call this method, only categories will be included.
+		 * 
+		 * @return builder
+		 */
 		public VirtualViewNavigatorBuilder withCategories() {
 			cats = WithCategories.YES;
 			return this;
 		}
-		
+
+		/**
+		 * By default, both categories and documents are included in the view navigator. If you call this method, only documents will be included.
+		 * 
+		 * @return builder
+		 */
 		public VirtualViewNavigatorBuilder withDocuments() {
 			docs = WithDocuments.YES;
 			return this;
@@ -216,6 +226,12 @@ public class VirtualView {
 			}
 		}
 		
+		/**
+		 * Sets the effective user name to use for view entry access checks. By default, the current ID username is used.
+		 * 
+		 * @param effectiveUserName effective user name
+		 * @return builder
+		 */
 		public VirtualViewNavigatorBuilder withEffectiveUserName(String effectiveUserName) {
 			this.effectiveUserName = effectiveUserName;
 			return this;
@@ -485,7 +501,7 @@ public class VirtualView {
 		//compute additional values provided via function
 		for (VirtualViewColumn currValueFunctionColumn : this.valueFunctionColumns) {
 			String itemName = currValueFunctionColumn.getItemName();
-			Object value = currValueFunctionColumn.getValueFunction().getValue(origin, itemName, new TypedItemAccess() {
+			Object value = currValueFunctionColumn.getFunction().getValue(origin, itemName, new TypedItemAccess() {
 
 				@Override
 				public Object get(String itemName) {

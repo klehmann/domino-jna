@@ -7,9 +7,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Category;
-import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.ColumnSort;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Hidden;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
 import com.mindoo.domino.jna.virtualviews.dataprovider.FolderVirtualViewDataProvider;

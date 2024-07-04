@@ -1,8 +1,5 @@
 package com.mindoo.domino.jna;
 
-import java.util.Calendar;
-import java.util.List;
-
 import com.mindoo.domino.jna.constants.ReadMask;
 
 /**

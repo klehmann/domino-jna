@@ -7,7 +7,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.mindoo.domino.jna.NotesACL;
+import com.mindoo.domino.jna.NotesACL.NotesACLAccess;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
 import com.mindoo.domino.jna.virtualviews.VirtualViewEntryData;
@@ -22,6 +25,7 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 	private VirtualView view;
 	private String effectiveUserName;
 	private Map<String,Set<String>> userNamesListByOrigin;
+	private Map<String,AclLevel> dbAccessLevelsByOrigin;
 	
 	/**
 	 * Creates a new instance
@@ -38,6 +42,7 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 		this.view = view;
 		this.effectiveUserName = effectiveUserName;
 		this.userNamesListByOrigin = new HashMap<>();
+		this.dbAccessLevelsByOrigin = new HashMap<>();
 		
 		//collect the usernames lists for the user in all databases
 		Iterator<IVirtualViewDataProvider> dataProvidersIt = view.getDataProviders();
@@ -45,6 +50,10 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 			IVirtualViewDataProvider currProvider = dataProvidersIt.next();
 			if (currProvider instanceof AbstractNSFVirtualViewDataProvider) {
 				NotesDatabase db = ((AbstractNSFVirtualViewDataProvider) currProvider).getDatabase();
+				NotesACL acl = db.getACL();
+				NotesACLAccess aclAccess = acl.lookupAccess(effectiveUserName);
+				dbAccessLevelsByOrigin.put(currProvider.getOrigin(), aclAccess.getAclLevel());
+				
 				addDbUserNamesListForOrigins(db, currProvider.getOrigin());
 			}
 		}
@@ -61,12 +70,19 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 			return true;
 		}
 		
+		String origin = entry.getOrigin();
+
+		//check general DB access level of the user
+		AclLevel aclLevel = dbAccessLevelsByOrigin.get(origin);
+		if (aclLevel == null || aclLevel == AclLevel.NOACCESS || aclLevel == AclLevel.DEPOSITOR) {
+			return false;
+		}
+		
 		List<String> readersList = entry.getReadersList();
 		if (readersList == null || readersList.contains("*")) {
 			return true;
 		}
 		
-		String origin = entry.getOrigin();
 		Set<String> userNamesList = userNamesListByOrigin.get(origin);
 		if (userNamesList == null) {
 			return false;
