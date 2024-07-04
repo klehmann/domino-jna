@@ -29,8 +29,6 @@ public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataPro
 	private int folderNoteId;
 
 	//data for serialization
-	private String dbServer;
-	private String dbFilePath;
 	private String origin;
 	private String folderName;
 	private Map<String,String> overrideFormula;
@@ -46,9 +44,8 @@ public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataPro
 	 */
 	public FolderVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String folderName,
 			Map<String,String> overrideFormula) {
+		super(dbServer, dbFilePath);
 		this.origin = origin;
-		this.dbServer = dbServer;
-		this.dbFilePath = dbFilePath;
 		this.overrideFormula = overrideFormula;
 		
 		this.since = new NotesTimeDate(new int[] {0,0});
@@ -63,14 +60,7 @@ public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataPro
 	public String getOrigin() {
 		return origin;
 	}
-	
-	public NotesDatabase getDatabase() {
-		if (db == null || db.isRecycled()) {
-			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
-		}
-		return db;
-	}
-	
+		
 	private int getFolderNoteId() {
 		if (folderNoteId == 0) {
 			NotesDatabase db = getDatabase();

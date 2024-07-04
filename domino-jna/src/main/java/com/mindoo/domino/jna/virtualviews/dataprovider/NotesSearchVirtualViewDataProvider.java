@@ -30,15 +30,11 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 	private Set<Integer> noteIdFilter;
 	private Map<String,String> overrideFormula;
 	private NotesTimeDate since;
-	private String dbServer;
-	private String dbFilePath;
 
 	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String selectionFormula,
 			Map<String,String> overrideFormula, Set<Integer> noteIdFilter) {
-		
+		super(dbServer, dbFilePath);
 		this.origin = origin;
-		this.dbServer = dbServer;
-		this.dbFilePath = dbFilePath;
 		this.selectionFormula = selectionFormula;
 		this.overrideFormula = overrideFormula;
 		this.noteIdFilter = noteIdFilter;
@@ -52,13 +48,6 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 	@Override
 	public String getOrigin() {
 		return origin;
-	}
-	
-	public NotesDatabase getDatabase() {
-		if (db == null || db.isRecycled()) {
-			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
-		}
-		return db;
 	}
 	
 	@Override

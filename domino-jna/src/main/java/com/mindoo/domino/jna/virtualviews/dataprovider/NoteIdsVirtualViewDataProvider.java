@@ -26,8 +26,6 @@ public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataPr
 	private NotesDatabase db;
 	
 	//data for serialization
-	private String dbServer;
-	private String dbFilePath;
 	private String origin;
 	private Map<String,String> overrideFormula;
 	private Set<Integer> addedSinceLastUpdate;
@@ -41,9 +39,8 @@ public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataPr
 	 * @param overrideFormula optional formula overrides for NSFSearch
 	 */
 	public NoteIdsVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, Map<String,String> overrideFormula) {
+		super(dbServer, dbFilePath);
 		this.origin = origin;
-		this.dbServer = dbServer;
-		this.dbFilePath = dbFilePath;
 		this.overrideFormula = overrideFormula;
 		this.addedSinceLastUpdate = new HashSet<>();
 		this.removedSinceLastUpdate = new HashSet<>();
@@ -75,13 +72,6 @@ public class NoteIdsVirtualViewDataProvider extends AbstractNSFVirtualViewDataPr
 	 */
 	public void removeNoteIds(Collection<Integer> noteIds) {
 		removedSinceLastUpdate.addAll(noteIds);
-	}
-	
-	public NotesDatabase getDatabase() {
-		if (db == null || db.isRecycled()) {
-			db = new NotesDatabase(dbServer, dbFilePath, (String) null);
-		}
-		return db;
 	}
 
 	@Override
