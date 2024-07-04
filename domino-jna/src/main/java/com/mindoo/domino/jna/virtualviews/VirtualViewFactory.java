@@ -3,8 +3,9 @@ package com.mindoo.domino.jna.virtualviews;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
@@ -17,15 +18,25 @@ import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
 import com.mindoo.domino.jna.virtualviews.dataprovider.NoteIdsVirtualViewDataProvider;
 import com.mindoo.domino.jna.virtualviews.dataprovider.NotesSearchVirtualViewDataProvider;
 
-public class VirtualViewFactory {
-
+/**
+ * Factory class to create {@link VirtualView} objects and cache them for reuse
+ */
+public enum VirtualViewFactory {
+	INSTANCE;
+	
+	private ConcurrentHashMap<String,VirtualViewWithVersion> viewsById;
+	
+	private VirtualViewFactory() {
+		viewsById = new ConcurrentHashMap<>();
+	}
+	
 	/**
 	 * Creates a new {@link VirtualView} object with the specified columns
 	 * 
 	 * @param columnsParam columns to display in the view
 	 * @return builder object to add data providers
 	 */
-	public VirtualViewBuilder createView(VirtualViewColumn... columnsParam) {
+	public static VirtualViewBuilder createView(VirtualViewColumn... columnsParam) {
 		return createView(Arrays.asList(columnsParam));
 	}
 	
@@ -35,7 +46,7 @@ public class VirtualViewFactory {
 	 * @param columnsParam columns to display in the view
 	 * @return builder object to add data providers
 	 */
-	public VirtualViewBuilder createView(List<VirtualViewColumn> columnsParam) {
+	public static VirtualViewBuilder createView(List<VirtualViewColumn> columnsParam) {
 		return new VirtualViewBuilder(columnsParam);
 	}
 
@@ -45,7 +56,7 @@ public class VirtualViewFactory {
 	 * @param col NotesCollection to use as template
 	 * @return builder object to add data providers
 	 */
-	public VirtualViewBuilder createViewFromTemplate(NotesCollection col) {
+	public static VirtualViewBuilder createViewFromTemplate(NotesCollection col) {
 		List<VirtualViewColumn> virtualViewColumns = col
 				.getColumns()
 				.stream()
@@ -68,7 +79,7 @@ public class VirtualViewFactory {
 						}
 					}
 					
-					//currently unsupported, because we don't extract that into from the NotesCollection design
+					//currently unsupported, because we don't extract that info from the NotesCollection design
 					Total totalMode = Total.NONE;
 					return new VirtualViewColumn(title, itemName, isCategory ? Category.YES : Category.NO, isHidden ? Hidden.YES : Hidden.NO, sort,
 							totalMode, formula);
@@ -177,10 +188,52 @@ public class VirtualViewFactory {
 		}
 	}
 	
-	protected Optional<VirtualView> findInVirtualViewCache(String key) {
-		return Optional.empty();
+	/**
+	 * Reuses a {@link VirtualView} if it already exists, otherwise creates a new one
+	 * 
+	 * @param viewId unique id of the view
+	 * @param version version of the view, increase this number to force a rebuilt of the view
+	 * @param fct function to create the view
+	 * @return view
+	 */
+	public VirtualView createViewOnce(String viewId, int version, Function<String, VirtualView> fct) {
+		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
+		if (viewWithVersion != null && viewWithVersion.getVersion() == version) {
+			return viewWithVersion.getView();
+		} else {
+			VirtualView view = fct.apply(viewId);
+			if (view == null) {
+				throw new IllegalArgumentException("Function must not return null");
+			}
+			viewsById.put(viewId, new VirtualViewWithVersion(view, version));
+			return view;
+		}
 	}
 	
-	protected void addToVirtualViewCache(String key, VirtualView view) {
+	/**
+	 * Disposes a view by removing it from the cache
+	 * 
+	 * @param viewId unique id of the view
+	 */
+	public void disposeView(String viewId) {
+		viewsById.remove(viewId);
+	}
+	
+	private static class VirtualViewWithVersion {
+		private VirtualView view;
+		private int version;
+
+		public VirtualViewWithVersion(VirtualView view, int version) {
+			this.view = view;
+			this.version = version;
+		}
+		
+		public VirtualView getView() {
+            return view;
+		}
+		
+		public int getVersion() {
+			return version;
+		}		
 	}
 }
