@@ -184,14 +184,12 @@ public class VirtualView {
 	public class VirtualViewNavigatorBuilder {
 		private VirtualView view;
 		private String effectiveUserName;
-		private WithCategories cats;
-		private WithDocuments docs;
+		private WithCategories cats = null;
+		private WithDocuments docs = null;
 		ViewEntryAccessCheck accessCheck;
 		
 		private VirtualViewNavigatorBuilder(VirtualView view) {
 			this.view = view;
-			cats = WithCategories.NO;
-			docs = WithDocuments.NO;
 		}
 		
 		public VirtualViewNavigatorBuilder withCategories() {
@@ -202,6 +200,20 @@ public class VirtualView {
 		public VirtualViewNavigatorBuilder withDocuments() {
 			docs = WithDocuments.YES;
 			return this;
+		}
+		
+		private void fillWithCategoriesAndDocumentsWithDefaults() {
+			if (cats == null && docs == null) {
+				//if nothing is set, show all entries
+				cats = WithCategories.YES;
+				docs = WithDocuments.YES;
+			}
+			if (cats == null) {
+				cats = WithCategories.NO;
+			}
+			if (docs == null) {
+				docs = WithDocuments.NO;
+			}
 		}
 		
 		public VirtualViewNavigatorBuilder withEffectiveUserName(String effectiveUserName) {
@@ -221,6 +233,7 @@ public class VirtualView {
 		 * @return navigator
 		 */
 		public VirtualViewNavigator build() {
+			fillWithCategoriesAndDocumentsWithDefaults();
 			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck());
 		}
 		
@@ -231,6 +244,7 @@ public class VirtualView {
 		 * @return navigator
 		 */
 		public VirtualViewNavigator buildFromDescendants(VirtualViewEntryData topEntry) {
+			fillWithCategoriesAndDocumentsWithDefaults();
 			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck());
 		}
 		
@@ -241,6 +255,7 @@ public class VirtualView {
 		 * @return navigator
 		 */
 		public VirtualViewNavigator buildFromCategory(String category) {
+			fillWithCategoriesAndDocumentsWithDefaults();
 			ViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			String[] categoryParts = category.split("\\\\", -1);
@@ -277,6 +292,7 @@ public class VirtualView {
 		 * @return navigator
 		 */
 		public VirtualViewNavigator buildFromCategory(List<Object> categoryLevels) {
+			fillWithCategoriesAndDocumentsWithDefaults();
 			ViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), WithCategories.YES,
@@ -524,8 +540,6 @@ public class VirtualView {
 		VirtualViewColumn currCategoryColumn = remainingCategoryColumns.get(0);
 		List<VirtualViewColumn> remainingColumnsForNextIteration = remainingCategoryColumns.size() == 1 ? Collections.emptyList() : remainingCategoryColumns.subList(1, remainingCategoryColumns.size());
 		
-		ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
-				currCategoryColumn.getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
 		
 		String itemName = currCategoryColumn.getItemName();
 		Object valuesForColumn = columnValues.get(itemName);
@@ -563,7 +577,10 @@ public class VirtualView {
 				
 				VirtualViewEntryData currentSubCatParent = targetParent;
 				
-				for (String currSubCat : parts) {
+				for (int i=0; i<parts.length; i++) {
+					String currSubCat = parts[i];
+					boolean isLastPart = i == parts.length-1;
+					
 					Object currSubCatObj = "".equals(currSubCat) ? null : currSubCat;
 					
 					ViewEntrySortKey categorySortKey = ViewEntrySortKey.createSortKey(true, Arrays.asList(new Object[] { currSubCatObj }),
@@ -571,11 +588,34 @@ public class VirtualView {
 					
 					VirtualViewEntryData entryWithSortKey = currentSubCatParent.getChildEntriesAsMap().get(categorySortKey);
 					if (entryWithSortKey == null) {
+						boolean childCategoryOrderingDescending;
+						if (!isLastPart) {
+							//sort the subcategories like the current column, e.g. for "2024\03", sort the "03" like the "2024"
+							childCategoryOrderingDescending = currCategoryColumn.getSorting() == ColumnSort.DESCENDING;
+						}
+						else {
+							//for the last part, sort the categories like the next category column
+							VirtualViewColumn nextCategoryColumn = remainingColumnsForNextIteration.isEmpty() ? null : remainingColumnsForNextIteration.get(0);
+							
+							if (nextCategoryColumn != null && nextCategoryColumn.getSorting() == ColumnSort.DESCENDING) {
+								childCategoryOrderingDescending = true;
+							}
+							else {
+								childCategoryOrderingDescending = false;
+							}
+						}
+						ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(childCategoryOrderingDescending, this.docOrderDescending);
+
+						
 						int newCategoryNoteId = createNewCategoryNoteId();
 						entryWithSortKey = new VirtualViewEntryData(this, currentSubCatParent, ORIGIN_VIRTUALVIEW,
 								newCategoryNoteId, "", categorySortKey,
 								childEntryComparator);
-						entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
+						Map<String,Object> categoryColValues = new ConcurrentHashMap<>();
+						if (currSubCatObj != null) {
+							categoryColValues.put(itemName, currSubCatObj);
+						}
+						entryWithSortKey.setColumnValues(categoryColValues);
 						
 						if (currentSubCatParent.getChildEntriesAsMap().put(categorySortKey, entryWithSortKey) == null) {
 							currentSubCatParent.childCount.incrementAndGet();
@@ -610,11 +650,23 @@ public class VirtualView {
 				
 				VirtualViewEntryData entryWithSortKey = targetParent.getChildEntriesAsMap().get(categorySortKey);
 				if (entryWithSortKey == null) {
+					VirtualViewColumn nextCategoryColumn = remainingColumnsForNextIteration.isEmpty() ? null : remainingColumnsForNextIteration.get(0);
+					ColumnSort nextCategoryColumnSort = ColumnSort.ASCENDING;
+					if (nextCategoryColumn != null && nextCategoryColumn.getSorting() == ColumnSort.DESCENDING) {
+						nextCategoryColumnSort = ColumnSort.DESCENDING;
+					}
+					ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
+							nextCategoryColumnSort == ColumnSort.DESCENDING, this.docOrderDescending);
+
 					int newCategoryNoteId = createNewCategoryNoteId();
 					entryWithSortKey = new VirtualViewEntryData(this, targetParent, ORIGIN_VIRTUALVIEW,
 							newCategoryNoteId, "", categorySortKey,
 							childEntryComparator);
-					entryWithSortKey.setColumnValues(new ConcurrentHashMap<>());
+					Map<String,Object> categoryColValues = new ConcurrentHashMap<>();
+					if (currCategoryValue != null) {
+						categoryColValues.put(itemName, currCategoryValue);
+					}
+					entryWithSortKey.setColumnValues(categoryColValues);
 
 					if (targetParent.getChildEntriesAsMap().put(categorySortKey, entryWithSortKey) == null) {
 						targetParent.childCount.incrementAndGet();
@@ -719,33 +771,22 @@ public class VirtualView {
 			if (dblVal == null) {
 				catEntry.getColumnValues().remove(itemName);
 			}
-			
-			if (currTotalColumn.getTotalMode() == Total.SUM) {
-				catEntry.getColumnValues().put(itemName, dblVal);
-			}
-			else if (currTotalColumn.getTotalMode() == Total.AVERAGE) {
-				int docCount = catEntry.getDescendantDocumentCount(); // computeDescendantDocCount(catEntry);
-				if (docCount == 0) {
-					catEntry.getColumnValues().remove(itemName);
+			else {
+				if (currTotalColumn.getTotalMode() == Total.SUM) {
+					catEntry.getColumnValues().put(itemName, dblVal);
 				}
-				else {
-					catEntry.getColumnValues().put(itemName, dblVal / docCount);
-				}
+				else if (currTotalColumn.getTotalMode() == Total.AVERAGE) {
+					int docCount = catEntry.getDescendantDocumentCount(); // computeDescendantDocCount(catEntry);
+					if (docCount == 0) {
+						catEntry.getColumnValues().remove(itemName);
+					}
+					else {
+						catEntry.getColumnValues().put(itemName, dblVal / docCount);
+					}
+				}				
 			}
 		}
 	}
-	
-//	private int computeDescendantDocCount(VirtualViewEntry catEntry) {
-//		int docCount = 0;
-//		for (VirtualViewEntry currChild : catEntry.getChildEntries().values()) {
-//			if (currChild.isCategory()) {
-//				docCount += currChild.getChildDocumentCount();
-//			} else {
-//				docCount++;
-//			}
-//		}
-//		return docCount;
-//	}
 	
 	/**
 	 * Removes an entry from the tree structure. If the parent of the entry is a category and

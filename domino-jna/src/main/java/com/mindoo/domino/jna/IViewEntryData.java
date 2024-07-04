@@ -52,4 +52,10 @@ public interface IViewEntryData extends INoteSummary {
 	
 	Object get(String columnNameOrTitle);
 	
+	/**
+	 * Returns the level of the entry in the view (0 for first level)
+	 * 
+	 * @return level
+	 */
+	int getLevel();
 }

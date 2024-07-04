@@ -208,11 +208,7 @@ public class NotesViewEntryData implements IViewEntryData {
 		return m_pos;
 	}
 
-	/**
-	 * Returns the level of the entry in the view (position 1 = level 0, position 1.1 = level 1)
-	 * 
-	 * @return level, only available when position is loaded, otherwise the method returns -1
-	 */
+	@Override
 	public int getLevel() {
 		return m_pos!=null ? (m_pos.length-1) : -1;
 	}

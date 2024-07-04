@@ -487,6 +487,11 @@ public class NotesMarkdownTable {
 	 */
 	public static final ColumnInfo POS = new ColumnInfo("#", 20, (table, entry) -> { return entry.getPositionStr();});
 
+	/**
+	 * Table column for the level of the view entry (0 for root of virtual view, 1 for first level, ...)
+	 */
+	public static final ColumnInfo LEVEL = new ColumnInfo("Level", 5, (table, entry) -> { return String.valueOf(entry.getLevel()); });
+
 	private static enum ExpandState {NONE, EXPANDED, COLLAPSED};
 
 	/**
@@ -551,4 +556,38 @@ public class NotesMarkdownTable {
 
 	});
 
+	public static final ColumnInfo CATEGORY = new ColumnInfo("Category", 40,
+			(table, entry) -> {
+				if (entry.isCategory()) {
+					String sVal;
+					int level = entry.getLevel();
+					if (table.m_realView != null) {
+						if (level == -1) {
+							//ReadMask.INDEX_POSITION not loaded from view
+							return "(no index position found)";
+						}
+						int indentLevels = ((NotesViewEntryData)entry).getIndentLevels();
+
+						NotesViewColumn col = table.m_realView.getColumns().get(level);
+						Object categoryVal = entry.get(col.getItemName());
+						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+					}
+					else {
+						if (level == -1) {
+							//for virtual views, -1 means the artificial root entry
+							return "";
+						}
+						VirtualViewColumn col = table.m_virtualView.getColumns().get(level);
+						Object categoryVal = entry.get(col.getItemName());
+						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+					}
+					if (StringUtil.isEmpty(sVal)) {
+						sVal = "(not categorized)";
+					}
+					return sVal;
+				}
+				else {
+					return "";
+				}
+			});
 }

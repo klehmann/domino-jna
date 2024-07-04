@@ -1,8 +1,6 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -21,7 +19,6 @@ import java.util.stream.StreamSupport;
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.virtualviews.VirtualView.ScopedNoteId;
 import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
-import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
  * Notes ViewNavigator like implementation for the {@link VirtualView} to navigate in
@@ -126,11 +123,10 @@ public class VirtualViewNavigator {
 	 * Moves the cursor to a position in the view
 	 * 
 	 * @param posStr position string e.g. "1.2.3"
-	 * @param delimiter delimiter in position string
 	 * @return true if position could be found
 	 */
-	public boolean gotoPos(String posStr, char delimiter) {
-		int[] pos = toPositionArray(posStr, delimiter);
+	public boolean gotoPos(String posStr) {
+		int[] pos = toPositionArray(posStr, '.');
 		return gotoPos(pos);
 	}
 
@@ -149,11 +145,10 @@ public class VirtualViewNavigator {
 	 * Returns the view entry at the specified position
 	 * 
 	 * @param posStr position string e.g. "1.2.3"
-	 * @param delimiter delimiter in position string
 	 * @return entry if found or empty
 	 */
-	public Optional<VirtualViewEntryData> getPos(String posStr, char delimiter) {
-		int[] pos = toPositionArray(posStr, delimiter);
+	public Optional<VirtualViewEntryData> getPos(String posStr) {
+		int[] pos = toPositionArray(posStr, '.');
 		return getPos(pos);
 	}
 	

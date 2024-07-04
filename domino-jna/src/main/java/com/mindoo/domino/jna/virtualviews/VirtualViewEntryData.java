@@ -30,12 +30,14 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	private int noteId;
 	private String unid;
 	private int siblingIndex;
-	private int level;
+	private int level = Integer.MIN_VALUE;
 	
 	private ViewEntrySortKey sortKey;	
 	private Map<String,Object> columnValues;
 	
 	private ConcurrentSkipListMap<ViewEntrySortKey,VirtualViewEntryData> childEntriesBySortKey;
+	private Comparator<ViewEntrySortKey> childrenComparator;
+	
 	/** this is updated by the VirtualView when child elements are added/removed */
 	AtomicInteger childCount;
 	AtomicInteger childCategoryCount;
@@ -63,6 +65,7 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		this.descendantCategoryCount = new AtomicInteger();
 		
 		Objects.requireNonNull(childrenComparator);
+		this.childrenComparator = childrenComparator;
 		this.childEntriesBySortKey = new ConcurrentSkipListMap<>(childrenComparator);
 	}
 	
@@ -74,6 +77,10 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		return parent;
 	}
 
+	public Comparator<?> getChildrenComparator() {
+		return childrenComparator;
+	}
+	
 	@Override
 	public int getChildCount() {
 		return childCount.get();
@@ -268,17 +275,10 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		return sb.toString();
 	}
 	
-	/**
-	 * Returns the level of the entry in the view (0 for root of virtual view, 1 for first level, ...)
-	 * 
-	 * @return level
-	 */
+	@Override
 	public int getLevel() {
-		if (parentView.getRoot().equals(this)) {
-			return 0;
-		}
-		
-		if (level == 0) {
+		if (level == Integer.MIN_VALUE) {
+			level = -1;
 			VirtualViewEntryData parentEntry = getParent();
 			while (parentEntry != null) {
 				level++;
