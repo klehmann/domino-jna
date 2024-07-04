@@ -28,7 +28,7 @@
 					<execution>
 						<phase>generate-sources</phase>
 						<configuration>
-							<tasks>
+							<target>
 								<ant antfile="${basedir}${file.separator}build.xml" target="main"
 									inheritAll="true">
 									<property name="maven_plugin_classpath" refid="maven.plugin.classpath" />
@@ -37,7 +37,7 @@
 									<property name="project_loc" value="${basedir}" />
 									<property name="workspace_loc" value="${basedir}${file.separator}.." />
 								</ant>
-							</tasks>
+							</target>
 						</configuration>
 						<goals>
 							<goal>run</goal>
@@ -57,9 +57,9 @@
 						</exclusions>
 					</dependency>
 					<dependency>
-						<groupId>ant</groupId>
-						<artifactId>ant-nodeps</artifactId>
-						<version>1.6.5</version>
+					    <groupId>org.apache.ant</groupId>
+					    <artifactId>ant-nodeps</artifactId>
+					    <version>1.8.1</version>
 					</dependency>
 				</dependencies>
 			</plugin>
