@@ -43,7 +43,7 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 						return categoryOrderDescending ? -1 : 1;
 					}
 					else {
-						//special case, LOW_SORTVAL always on top
+						//special case, LOW_SORTVAL always on top; we use LOW_SORTVAL and HIGH_SORTVAL to select all categories or all documents
 						if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal1)) {
 							if (VirtualViewEntryData.LOW_SORTVAL.equals(catVal2)) {
 								throw new IllegalStateException("Unexpected to find this value twice");
@@ -80,22 +80,38 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 							String str1 = (String) catVal1;
 							String str2 = (String) catVal2;
 							int result = str1.compareToIgnoreCase(str2);
-							return categoryOrderDescending ? -result : result;
+							
+							if (result != 0) {
+								return categoryOrderDescending ? -result : result;
+							}
+							
 						} else if (catVal1 instanceof Number && catVal2 instanceof Number) {
 							Number num1 = (Number) catVal1;
 							Number num2 = (Number) catVal2;
 							double d1 = num1.doubleValue();
 							double d2 = num2.doubleValue();
 							int result = Double.compare(d1, d2);
-							return categoryOrderDescending ? -result : result;
+							
+							if (result != 0) {
+								return categoryOrderDescending ? -result : result;
+							}
+
 						} else if (catVal1 instanceof NotesTimeDate && catVal2 instanceof Comparable) {
 							NotesTimeDate time1 = (NotesTimeDate) catVal1;
 							NotesTimeDate time2 = (NotesTimeDate) catVal2;
 							int result = time1.compareTo(time2);
-							return categoryOrderDescending ? -result : result;
+							
+							if (result != 0) {
+								return categoryOrderDescending ? -result : result;
+							}
+
 						} else {
 							throw new IllegalArgumentException("Unsupported value type for category: " + catVal1.getClass());
 						}
+						
+						//category values are equal, now sort by origin and note id
+						
+						return compareOriginAndNoteId(o1, o2);
 					}					
 				}
 			}
@@ -220,40 +236,42 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		}
 
 		//all column sort values equal, now sort by origin and note id
+		return compareOriginAndNoteId(o1, o2);
+	}
+
+	private int compareOriginAndNoteId(ViewEntrySortKey o1, ViewEntrySortKey o2) {
 		String origin1 = o1.getOrigin();
 		String origin2 = o2.getOrigin();
-		
-		if (VirtualViewEntryData.LOW_SORTVAL.equals(origin1)) {
-			if (VirtualViewEntryData.LOW_SORTVAL.equals(origin2)) {
+
+		if (VirtualViewEntryData.LOW_ORIGIN.equals(origin1)) {
+			if (VirtualViewEntryData.LOW_ORIGIN.equals(origin2)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
-			
+
 			return -1;
-		}
-		else if (VirtualViewEntryData.LOW_SORTVAL.equals(origin2)) {
-			if (VirtualViewEntryData.LOW_SORTVAL.equals(origin1)) {
+		} else if (VirtualViewEntryData.LOW_ORIGIN.equals(origin2)) {
+			if (VirtualViewEntryData.LOW_ORIGIN.equals(origin1)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
-			
+
 			return 1;
 		}
-		
-		//special case, HIGH_SORTVAL always on bottom
-		if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin1)) {
-			if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin2)) {
+
+		// special case, HIGH_SORTVAL always on bottom
+		if (VirtualViewEntryData.HIGH_ORIGIN.equals(origin1)) {
+			if (VirtualViewEntryData.HIGH_ORIGIN.equals(origin2)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
-			
+
 			return 1;
-        }
-		else if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin2)) {
-			if (VirtualViewEntryData.HIGH_SORTVAL.equals(origin1)) {
+		} else if (VirtualViewEntryData.HIGH_ORIGIN.equals(origin2)) {
+			if (VirtualViewEntryData.HIGH_ORIGIN.equals(origin1)) {
 				throw new IllegalStateException("Unexpected to find this value twice");
 			}
-			
+
 			return -1;
 		}
-		
+
 		int result = origin1.compareTo(origin2);
 		if (result != 0) {
 			return result;
@@ -263,5 +281,4 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		int noteId2 = o2.getNoteId();
 		return noteId1 - noteId2;
 	}
-
 }
