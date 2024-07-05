@@ -13,6 +13,7 @@ import java.util.WeakHashMap;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
+import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.IViewEntryData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesIDTable;
@@ -273,7 +274,9 @@ public class NotesMarkdownTable {
 					.orElseThrow(
 							() -> new IllegalArgumentException(MessageFormat.format("Column {0} not found", itemName)));
 
-			title = col.getTitle() + " (" + col.getItemName() + ")";
+			String sortingArrow = col.getSorting() == ColumnSort.ASCENDING ? "↑" : col.getSorting() == ColumnSort.DESCENDING ? "↓" : "";
+			
+			title = (col.isHidden() ? "[" : "") + col.getTitle() + (col.isHidden() ? "]" : "") +  sortingArrow + " (" + col.getItemName() + ")";
 		} else {
 			VirtualViewColumn col = m_virtualView
 					.getColumns()
@@ -285,7 +288,9 @@ public class NotesMarkdownTable {
 					.orElseThrow(
 							() -> new IllegalArgumentException(MessageFormat.format("Column {0} not found", itemName)));
 
-			title = col.getTitle() + " (" + col.getItemName() + ")";
+			String sortingArrow = col.getSorting() == ColumnSort.ASCENDING ? "↑" : col.getSorting() == ColumnSort.DESCENDING ? "↓" : "";
+
+			title = (col.isHidden() ? "[" : "") + col.getTitle() + (col.isHidden() ? "]" : "") +  sortingArrow + " (" + col.getItemName() + ")";
 		}
 		
 		return addColumn(title, width, (table, entry) -> {
