@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -35,7 +36,7 @@ import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
  * <li>Navigation to the next/previous sibling entry ({@link #gotoPrevSibling()} / {@link #gotoNextSibling()})</li>
  * <li>Navigation to the first/last child entry ({@link #gotoFirstChild()} / {@link #gotoLastChild()})</li>
  * <li>Reduce the view to selected entries</li>
- * <li>Expansion/collapse of entries (e.g. {@link #expandAll()} or {@link #expand(int[])})</li>
+ * <li>Expansion/collapse of entries (e.g. {@link #expandAllByDefault()} or {@link #expand(int[])})</li>
  * </ul>
  * <br>
  * Those navigation methods move the cursor position within the tree structure.<br>
@@ -57,7 +58,7 @@ public class VirtualViewNavigator {
 	
 	/** if expandAll==true, this set is treated as collapsed list */
 	private Set<ScopedNoteId> expandedOrCollapsedEntries = ConcurrentHashMap.newKeySet();
-	private boolean expandAll = false;
+	private boolean expandAllByDefault = false;
 	private int expandLevel;
 	
 	private Stack<TraversalInfo> currentEntryStack;
@@ -740,7 +741,7 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
-	 * Selects all view entries. Use {@link #deselect(String, int)} to remove
+	 * Selects all view entries by default. Use {@link #deselect(String, int)} to remove
 	 * entries from the selection
 	 * 
 	 * @return this navigator
@@ -749,6 +750,24 @@ public class VirtualViewNavigator {
 		selectedOrDeselectedEntries.clear();
 		selectAll = true;
 		return this;
+	}
+
+	/**
+	 * Returns whether all entries are selected by default (after {@link #selectAll()} has been called)
+	 * 
+	 * @return true if all entries are selected by default
+	 */
+	public boolean isSelectAllByDefault() {
+		return selectAll;
+	}
+	
+	/**
+	 * Returns whether all entries are deselected by default (after {@link #deselectAll()} has been called)
+	 * 
+	 * @return true if all entries are deselected by default
+	 */
+	public boolean isDeselectAllByDefault() {
+		return !selectAll;
 	}
 	
 	/**
@@ -780,6 +799,27 @@ public class VirtualViewNavigator {
     }
 	
 	/**
+	 * Returns a copy of the internal structure for selected entries or deselected entries if {@link #selectAll()} has been called
+	 * 
+	 * @return set of selected entries
+	 */
+	public Set<ScopedNoteId> getSelectedOrDeselectedEntries() {
+		return new HashSet<>(selectedOrDeselectedEntries);
+	}
+
+	/**
+	 * Bulk function to set selected / deselected entries
+	 * 
+	 * @param ids set of selected entries
+	 * @return this navigator
+	 */
+	public VirtualViewNavigator setSelectedOrDeselectedEntries(Set<ScopedNoteId> ids) {
+		selectedOrDeselectedEntries.clear();
+		selectedOrDeselectedEntries.addAll(ids);
+		return this;
+	}
+	
+	/**
 	 * Checks if a view entry is selected
 	 * 
 	 * @param origin origin of the entry
@@ -795,20 +835,24 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
-	 * Collapse all entries
+	 * Collapse all entries by default. Use {@link #expand(String, int)} and the other expand methods to expand specific entries.
+	 * 
+	 * @return this navigator
 	 */
 	public VirtualViewNavigator collapseAll() {
 		expandedOrCollapsedEntries.clear();
-		expandAll = false;
+		expandAllByDefault = false;
 		return this;
 	}
 	
 	/**
-	 * Expand all entries
+	 * Expand all entries by default. Use {@link #collapse(String, int)} and the other collapse methods to collapse specific entries.
+	 * 
+	 * @return this navigator
 	 */
 	public VirtualViewNavigator expandAll() {
 		expandedOrCollapsedEntries.clear();
-		expandAll = true;
+		expandAllByDefault = true;
 		return this;
 	}
 	
@@ -836,11 +880,10 @@ public class VirtualViewNavigator {
 	 * Expand a view entry at a position
 	 * 
 	 * @param posStr position string like "1.2.3"
-	 * @param delimiter delimiter used in the position string like '.'
 	 * @return this navigator
 	 */
-	public VirtualViewNavigator expand(String posStr, char delimiter) {
-		int[] pos = toPositionArray(posStr, delimiter);
+	public VirtualViewNavigator expand(String posStr) {
+		int[] pos = toPositionArray(posStr, '.');
 		expand(pos);
 		return this;
 	}
@@ -849,11 +892,10 @@ public class VirtualViewNavigator {
 	 * Collapse a view entry at a position
 	 * 
 	 * @param posStr position string like "1.2.3"
-	 * @param delimiter delimiter used in the position string like '.'
 	 * @return this navigator
 	 */
-	public VirtualViewNavigator collapse(String posStr, char delimiter) {
-		int[] pos = toPositionArray(posStr, delimiter);
+	public VirtualViewNavigator collapse(String posStr) {
+		int[] pos = toPositionArray(posStr, '.');
 		collapse(pos);
 		return this;
 	}
@@ -894,7 +936,7 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator expand(String origin, int noteId) {
-		if (!expandAll) {
+		if (!expandAllByDefault) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));			
 		}
 		else {
@@ -912,7 +954,7 @@ public class VirtualViewNavigator {
 	 * @return this navigator
 	 */
 	public VirtualViewNavigator collapse(String origin, int noteId) {
-		if (expandAll) {
+		if (expandAllByDefault) {
 			expandedOrCollapsedEntries.add(new ScopedNoteId(origin, noteId));
 		}
 		else {
@@ -939,6 +981,55 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
+	 * Returns a copy of the internal structure that contains the expanded or collapsed entries (depending on
+	 * the current expandAll state)
+	 * 
+	 * @return set of expanded or collapsed entries
+	 */
+	public Set<ScopedNoteId> getExpandedOrCollapsedEntries() {
+		return new HashSet<>(expandedOrCollapsedEntries);
+	}
+	
+	/**
+	 * Bulk function to set expanded or collapsed entries
+	 * 
+	 * @param ids set of expanded or collapsed entries
+	 * @return this navigator
+	 */
+	public VirtualViewNavigator setExpandedOrCollapsedEntries(Set<ScopedNoteId> ids) {
+		expandedOrCollapsedEntries.clear();
+		expandedOrCollapsedEntries.addAll(ids);
+		return this;
+	}
+	
+	/**
+	 * Returns the current default expand policy (e.g. expand all by default or collapse all by default)
+	 * 
+	 * @return true if all entries are expanded by default
+	 */
+	public boolean isExpandAllByDefault() {
+		return expandAllByDefault;
+	}
+	
+	/**
+	 * Returns the current default collapse policy (e.g. collapse all by default or expand all by default)
+	 * 
+	 * @return true if all entries are collapsed by default
+	 */
+	public boolean isCollapseAllByDefault() {
+		return !expandAllByDefault;
+	}
+	
+	/**
+	 * Returns the current expand level
+	 * 
+	 * @return expand level
+	 */
+	public int getExpandLevel() {
+		return expandLevel;
+	}
+	
+	/**
 	 * Checks if an entry is expanded based on its origin/noteId (does not check if expandLevel is set)
 	 * 
 	 * @param origin origin of the entry
@@ -948,10 +1039,10 @@ public class VirtualViewNavigator {
 	public boolean isExpanded(String origin, int noteId) {
 		ScopedNoteId scopedNoteId = new ScopedNoteId(origin, noteId);
 		
-		if (expandAll && !expandedOrCollapsedEntries.contains(scopedNoteId)) { // expandedOrCollapsedEntries is collapsed list here
+		if (expandAllByDefault && !expandedOrCollapsedEntries.contains(scopedNoteId)) { // expandedOrCollapsedEntries is collapsed list here
 			return true;
 		}
-		else if (!expandAll && expandedOrCollapsedEntries.contains(scopedNoteId)) { // expandedOrCollapsedEntries is expanded list here
+		else if (!expandAllByDefault && expandedOrCollapsedEntries.contains(scopedNoteId)) { // expandedOrCollapsedEntries is expanded list here
 			return true;
 		}
 		else if (view.getRoot().getNoteId() == noteId && VirtualView.ORIGIN_VIRTUALVIEW.equals(origin)) {

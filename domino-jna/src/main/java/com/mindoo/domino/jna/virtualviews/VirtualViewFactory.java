@@ -143,14 +143,12 @@ public enum VirtualViewFactory {
 		}
 		
 		/**
-		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data documents
-		 * it computes the view column values.
+		 * Adds a data provider to the view that runs a formula search in a Notes database on all profile documents
 		 * 
 		 * @param origin The origin id of the data provider, used to identify the data provider in the view
 		 * @param dbServer The server name of the database
 		 * @param dbFilePath The file path of the database
 		 * @param searchFormula The search formula to use
-		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}
 		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
 		 * @param noteIdFilter Optional set with note ids to pre-filter the search results or null
 		 * @return builder object to add more data providers
