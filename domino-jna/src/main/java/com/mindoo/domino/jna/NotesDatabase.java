@@ -1866,6 +1866,10 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	public int findCollection(String collectionName) {
 		checkHandle();
 		
+		if (StringUtil.isEmpty(collectionName)) {
+			throw new IllegalArgumentException("Collection name cannot be empty or null");
+		}
+		
 		Memory collectionNameLMBCS = NotesStringUtils.toLMBCS(collectionName, true);
 
 		IntByReference retCollectionNoteID = new IntByReference();
