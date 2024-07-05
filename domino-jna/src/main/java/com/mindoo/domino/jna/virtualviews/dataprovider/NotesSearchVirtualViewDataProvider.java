@@ -28,7 +28,6 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
  */
 public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDataProvider {
 	private VirtualView view;
-	private NotesDatabase db;
 
 	//data for serialization
 	private String origin;
@@ -106,6 +105,8 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		//compute readers lists
 		formulas.put("$C1$", "");
 
+		NotesDatabase db = getDatabase();
+		
 		NotesIDTable idTableFilter = null;
 		if (since ==null && noteIdFilter != null) {
 			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
@@ -118,8 +119,23 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 			idTableFilter = noteIdFilterAsTable.intersect(allIds);
 			noteIdFilterAsTable.recycle();
 		}
-		
-		NotesDatabase db = getDatabase();
+		if (since == null && !StringUtil.isEmpty(optFTQuery)) {
+			//make the initial run faster by doing the FT search first and pumping the result into NSFSearch
+			EnumSet<FTSearch> ftOptions = optFTOptions==null ? EnumSet.noneOf(FTSearch.class) : EnumSet.copyOf(optFTOptions);
+			ftOptions.add(FTSearch.RET_IDTABLE);
+			if (idTableFilter != null) {
+				ftOptions.add(FTSearch.REFINE);
+			}
+			
+			NotesFTSearchResult ftResult = db.ftSearchExt(optFTQuery, 0, ftOptions, idTableFilter, 0, 0);
+			NotesIDTable ftIdTable = ftResult.getMatches();
+			
+			//prevent any invalid note ids in the ft search result
+			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
+			allNoteIdsSince.setMinimum();
+			NotesIDTable allIds = db.getModifiedNoteTable(EnumSet.of(NoteClass.DATA), allNoteIdsSince, null);
+			idTableFilter = ftIdTable.intersect(allIds);
+		}
 		
 		Set<Integer> removalNoteIds = new HashSet<>();
 		final Map<Integer,EntryData> additionsByNoteId = new HashMap<>();
@@ -174,7 +190,8 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 
 		});
 
-		if (!StringUtil.isEmpty(optFTQuery)) {
+		if (since != null && // not on the first run (there we already did the ft search above)
+				!StringUtil.isEmpty(optFTQuery)) {
 			//post process the collected IDs with a full text search
 			NotesIDTable idTable = new NotesIDTable(additionsByNoteId.keySet());
 			EnumSet<FTSearch> ftOptions = optFTOptions==null ? EnumSet.noneOf(FTSearch.class) : EnumSet.copyOf(optFTOptions);
