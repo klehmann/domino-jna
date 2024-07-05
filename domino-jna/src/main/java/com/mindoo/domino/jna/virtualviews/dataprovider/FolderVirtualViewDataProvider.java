@@ -46,6 +46,7 @@ public class FolderVirtualViewDataProvider extends AbstractNSFVirtualViewDataPro
 			Map<String,String> overrideFormula) {
 		super(dbServer, dbFilePath);
 		this.origin = origin;
+		this.folderName = folderName;
 		this.overrideFormula = overrideFormula;
 		
 		this.since = new NotesTimeDate(new int[] {0,0});
