@@ -146,5 +146,19 @@ public interface INoteSummary {
 	 * @return long list
 	 */
 	public List<Long> getAsLongList(String itemName, List<Long> defaultValue);
+
+	/**
+	 * Decodes the $name field and extracts the profile name
+	 * 
+	 * @return profile name or empty string
+	 */
+	String getProfileName();
+
+	/**
+	 * Decodes the $name field and extracts the profile user name
+	 * 
+	 * @return profile user name or empty string
+	 */
+	String getProfileUserName();
 	
 }

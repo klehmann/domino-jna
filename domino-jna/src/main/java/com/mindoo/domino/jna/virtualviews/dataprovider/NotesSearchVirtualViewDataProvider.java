@@ -33,15 +33,30 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 	private Map<String,String> overrideFormula;
 	private NotesTimeDate since;
 	private Set<NoteClass> noteClasses;
+	private Set<Search> searchFlags;
 	
-	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String optSelectionFormula, Set<NoteClass> optNoteClasses,
+	/**
+	 * Creates a new data provider
+	 * 
+	 * @param origin origin string to identify the data provider
+	 * @param dbServer db server
+	 * @param dbFilePath db file path
+	 * @param optSelectionFormula optional selection formula or null to select all docs
+	 * @param optNoteClasses optional set of note classes to search for or null to search for data notes only
+	 * @param searchFlags search flags or null to use default flags
+	 * @param optOverrideFormula optional map of column names to formula strings to override the column formulas from the {@link VirtualView}
+	 * @param optNoteIdFilter optional set of note ids to filter the search results or null to include all notes
+	 */
+	public NotesSearchVirtualViewDataProvider(String origin, String dbServer, String dbFilePath, String optSelectionFormula,
+			Set<NoteClass> optNoteClasses, Set<Search> searchFlags,
 			Map<String,String> optOverrideFormula, Set<Integer> optNoteIdFilter) {
 		super(dbServer, dbFilePath);
 		this.origin = origin;
 		this.selectionFormula = optSelectionFormula;
 		this.overrideFormula = optOverrideFormula;
 		this.noteIdFilter = optNoteIdFilter;
-		this.noteClasses = new HashSet<>(optNoteClasses);
+		this.noteClasses = optNoteClasses == null ? EnumSet.of(NoteClass.DATA) : new HashSet<>(optNoteClasses);
+		this.searchFlags = searchFlags == null ? EnumSet.noneOf(Search.class) : new HashSet<>(searchFlags);
 	}
 	
 	@Override
@@ -93,8 +108,9 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		NotesDatabase db = getDatabase();
 		
 		NotesTimeDate newSince =
-				NotesSearch.search(db, idTableFilter, StringUtil.isEmpty(selectionFormula) ? "@true" : selectionFormula, formulas, "-",
-						EnumSet.of(Search.SESSION_USERNAME), noteClasses == null ? EnumSet.of(NoteClass.DATA) : noteClasses,
+				NotesSearch.search(db, idTableFilter, StringUtil.isEmpty(selectionFormula) ? "@true" : selectionFormula,
+						formulas, "-",
+						searchFlags, noteClasses,
 						since, new NotesSearch.SearchCallback() {
 					
 					@Override
@@ -120,7 +136,15 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 						String unid = searchMatch.getUNID();
 						Map<String,Object> values = summaryBufferData.asMap(true);
 						
-						if (noteIdFilter == null || noteIdFilter.contains(noteId)) {
+						boolean isAccepted = true;
+						if (noteIdFilter != null && !noteIdFilter.contains(noteId)) {
+							isAccepted = false;
+						}
+						if (isAccepted && !isAccepted(searchMatch, summaryBufferData)) {
+							isAccepted = false;
+						}
+						
+						if (isAccepted) {
 							change.addEntry(noteId, unid, values);
 						}
 						else {
@@ -135,5 +159,17 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		view.applyChanges(change);
 
 	    this.since = newSince;
+	}
+
+	/**
+	 * Override this method to apply additional filtering to the search results
+	 * 
+	 * @param searchMatch search match
+	 * @param summaryBufferData summary buffer data
+	 * @return true to accept the entry, false to skip it
+	 */
+	protected boolean isAccepted(ISearchMatch searchMatch,
+							IItemTableData summaryBufferData) {
+		return true;
 	}
 }

@@ -23,6 +23,9 @@ public class VirtualViewColumn implements IViewColumn {
 		this.itemName = itemName;
 		this.isCategory = isCategory;
 		this.isHidden = isHidden;
+		if (isCategory == Category.YES && sorting == ColumnSort.NONE) {
+			throw new IllegalArgumentException("Category columns must be sorted");
+		}
 		this.sorting = sorting;
 		this.totalMode = totalMode;
 		

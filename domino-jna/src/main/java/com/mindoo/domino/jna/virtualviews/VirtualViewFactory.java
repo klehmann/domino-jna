@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,8 +10,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
+import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.constants.NoteClass;
+import com.mindoo.domino.jna.constants.Search;
+import com.mindoo.domino.jna.utils.StringUtil;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Category;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Hidden;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
@@ -105,14 +110,14 @@ public enum VirtualViewFactory {
 		}
 
 		/**
-		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching documents
+		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data or design documents
 		 * it computes the view column values.
 		 * 
 		 * @param origin The origin id of the data provider, used to identify the data provider in the view
 		 * @param dbServer The server name of the database
 		 * @param dbFilePath The file path of the database
 		 * @param searchFormula The search formula to use
-		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}
+		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}; to search for all design notes, use {@link NoteClass#ALLNONDATA} or use specific note classes like {@link NoteClass#VIEW}
 		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
 		 * @param noteIdFilter Optional set with note ids to pre-filter the search results or null
 		 * @return builder object to add more data providers
@@ -127,8 +132,59 @@ public enum VirtualViewFactory {
 					dbFilePath,
 					searchFormula,
 					noteClasses,
+					EnumSet.of(Search.SESSION_USERNAME),
 					null,
 					noteIdFilter);
+			
+            dataProvider.init(m_view);            
+            m_view.addDataProvider(dataProvider);
+            
+			return this;
+		}
+		
+		/**
+		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data documents
+		 * it computes the view column values.
+		 * 
+		 * @param origin The origin id of the data provider, used to identify the data provider in the view
+		 * @param dbServer The server name of the database
+		 * @param dbFilePath The file path of the database
+		 * @param searchFormula The search formula to use
+		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}
+		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
+		 * @param noteIdFilter Optional set with note ids to pre-filter the search results or null
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withProfileDocs(String origin, String dbServer, String dbFilePath, String searchFormula, 
+				Map<String,String> overrideColumnFormulas,
+				Set<Integer> noteIdFilter) {
+
+			String combinedSearchFormula = "@Begins($Name; \"$profile_\")";
+			if (StringUtil.isNotEmpty(searchFormula)) {
+				combinedSearchFormula += " & (" + searchFormula + ")";
+			}
+			
+			NotesSearchVirtualViewDataProvider dataProvider = new NotesSearchVirtualViewDataProvider(
+					origin,
+					dbServer,
+					dbFilePath,
+					combinedSearchFormula,
+					EnumSet.of(NoteClass.DATA),
+					EnumSet.of(Search.NAMED_GHOSTS, Search.SELECT_NAMED_GHOSTS, Search.PROFILE_DOCS),
+					null,
+					noteIdFilter) {
+			
+				@Override
+				protected boolean isAccepted(ISearchMatch searchMatch, IItemTableData summaryBufferData) {
+					String name = summaryBufferData.getAsString("$Name", "");
+					if (name.startsWith("$profile_")) {
+						return true;
+					}
+					else {
+						return false;
+					}
+				}				
+			};
 			
             dataProvider.init(m_view);            
             m_view.addDataProvider(dataProvider);
