@@ -13,6 +13,7 @@ import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.utils.StringUtil;
@@ -110,6 +111,21 @@ public enum VirtualViewFactory {
 		}
 
 		/**
+		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data documents
+		 * it computes the view column values.
+		 * 
+		 * @param origin The origin id of the data provider, used to identify the data provider in the view
+		 * @param dbServer The server name of the database
+		 * @param dbFilePath The file path of the database
+		 * @param searchFormula The search formula to use
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withDbSearch(String origin, String dbServer, String dbFilePath, String searchFormula) {			
+			return withDbSearch(origin, dbServer, dbFilePath, searchFormula, EnumSet.of(NoteClass.DATA),
+					null, null, null, null);
+		}
+		
+		/**
 		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data or design documents
 		 * it computes the view column values.
 		 * 
@@ -118,11 +134,14 @@ public enum VirtualViewFactory {
 		 * @param dbFilePath The file path of the database
 		 * @param searchFormula The search formula to use
 		 * @param noteClasses Optional set with note classes to pre-filter the search results or null to use {@link NoteClass#DATA}; to search for all design notes, use {@link NoteClass#ALLNONDATA} or use specific note classes like {@link NoteClass#VIEW}
+		 * @param optFTQuery Optional full text query to post process the found notes or null
+		 * @param optFTOptions Optional full text search options or null for default FT options
 		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
 		 * @param noteIdFilter Optional set with note ids to pre-filter the search results or null
 		 * @return builder object to add more data providers
 		 */
 		public VirtualViewBuilder withDbSearch(String origin, String dbServer, String dbFilePath, String searchFormula, Set<NoteClass> noteClasses,
+				String optFTQuery, Set<FTSearch> optFTOptions,
 				Map<String,String> overrideColumnFormulas,
 				Set<Integer> noteIdFilter) {
 
@@ -133,6 +152,8 @@ public enum VirtualViewFactory {
 					searchFormula,
 					noteClasses,
 					EnumSet.of(Search.SESSION_USERNAME),
+					optFTQuery,
+					optFTOptions,
 					null,
 					noteIdFilter);
 			
@@ -140,6 +161,19 @@ public enum VirtualViewFactory {
             m_view.addDataProvider(dataProvider);
             
 			return this;
+		}
+		
+		/**
+		 * Adds a data provider to the view that runs a formula search in a Notes database on all profile documents
+		 * 
+		 * @param origin The origin id of the data provider, used to identify the data provider in the view
+		 * @param dbServer The server name of the database
+		 * @param dbFilePath The file path of the database
+		 * @param searchFormula The search formula to use
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withProfileDocs(String origin, String dbServer, String dbFilePath, String searchFormula) {
+			return withProfileDocs(origin, dbServer, dbFilePath, searchFormula, null, null);
 		}
 		
 		/**
@@ -170,6 +204,8 @@ public enum VirtualViewFactory {
 					EnumSet.of(NoteClass.DATA),
 					EnumSet.of(Search.NAMED_GHOSTS, Search.SELECT_NAMED_GHOSTS, Search.PROFILE_DOCS),
 					null,
+					null,
+					null,
 					noteIdFilter) {
 			
 				@Override
@@ -198,6 +234,20 @@ public enum VirtualViewFactory {
 		 * @param dbServer The server name of the database
 		 * @param dbFilePath The file path of the database
 		 * @param folderName name of the folder
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withFolderEntries(String origin, String dbServer, String dbFilePath, String folderName) {
+			return withFolderEntries(origin, dbServer, dbFilePath, folderName, null);
+		}
+		
+		/**
+		 * Adds a data provider to the view that takes the documents of an existing folder and computes the view column values for them.<br>
+		 * When updating the data provider via {@link VirtualView#update(String)}, we incrementally fetch folder changes (additions/removals).
+		 * 
+		 * @param origin The origin id of the data provider, used to identify the data provider in the view
+		 * @param dbServer The server name of the database
+		 * @param dbFilePath The file path of the database
+		 * @param folderName name of the folder
 		 * @param overrideColumnFormulas Optional map with column formulas to override the original formulas derived from the view columns or null
 		 * @return builder object to add more data providers
 		 */
@@ -208,6 +258,19 @@ public enum VirtualViewFactory {
 			m_view.addDataProvider(dataProvider);
 
 			return this;
+		}
+
+		/**
+		 * Adds a data provider to the view that computes the view column values for a manual list of note ids.<br>
+		 * 
+		 * @param origin The origin id of the data provider, used to identify the data provider in the view
+		 * @param dbServer The server name of the database
+		 * @param dbFilePath The file path of the database
+		 * @param noteIds set with note ids to include in the view
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withManualNoteIds(String origin, String dbServer, String dbFilePath, Set<Integer> noteIds) {
+			return withManualNoteIds(origin, dbServer, dbFilePath, noteIds, null);
 		}
 		
 		/**
