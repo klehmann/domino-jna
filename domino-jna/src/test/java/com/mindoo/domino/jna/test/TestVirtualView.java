@@ -8,15 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
-
 import com.mindoo.domino.jna.INoteSummary;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
-import com.mindoo.domino.jna.constants.Navigate;
 import com.mindoo.domino.jna.constants.NoteClass;
-import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.utils.NotesIniUtils;
 import com.mindoo.domino.jna.utils.NotesMarkdownTable;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
@@ -388,32 +384,10 @@ public class TestVirtualView extends BaseJNATestClass {
 				NotesDatabase db = new NotesDatabase("", DBPATH_FAKENAMES_NSF, "");
 				NotesCollection col = db.openCollectionByName("People");
 				
-				new NotesMarkdownTable(col, System.out)
-				.addAllStandardColumns()
-				.addAllViewColumns()
-				.printHeader()
-				.printRows(col.getAllEntries("0", 1, EnumSet.of(Navigate.NEXT), Integer.MAX_VALUE, 
-						EnumSet.of(ReadMask.NOTEUNID, ReadMask.NOTEID, ReadMask.SUMMARYVALUES, ReadMask.INDEXPOSITION, ReadMask.INDENTLEVELS), new NotesCollection.EntriesAsListCallback(Integer.MAX_VALUE)))
-				.printFooter();
-				
-				return null;
-			}
-		});
-	}
-	
-
-//	@Test
-	public void testMarkdownVirtualViewWithTimeRecords() {
-		runWithSession(new IDominoCallable<Object>() {
-
-			@Override
-			public Object call(Session session) throws Exception {
-				NotesDatabase db = new NotesDatabase("", "office/mindoo-timerecord.nsf", "");
-				NotesCollection col = db.openCollectionByName("allbyresource");
-				
-				VirtualView virtualView = VirtualViewFactory.INSTANCE.createViewOnce("timerecords_allbyresource", 1, (id) -> {
+				VirtualView virtualView = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_people", 1, (id) -> {
 					return VirtualViewFactory.createViewFromTemplate(col)
-					.withDbSearch("timerecords1", "", "office/mindoo-timerecord.nsf", col.getSelectionFormula())
+					.withDbSearch("fakenames1", "", DBPATH_FAKENAMES_NSF,
+							col.getSelectionFormula())
 					.build();
 				});
 				
@@ -421,13 +395,9 @@ public class TestVirtualView extends BaseJNATestClass {
 						.withEffectiveUserName(session.getEffectiveUserName())
 						.build()
 						.expandAll();
-				
-				VirtualViewEntryData entryAtPos = virtualViewNav.getPos("1.1").orElse(null);
-				System.out.println("Entry at 1.1: "+entryAtPos);
-				
+
 				new NotesMarkdownTable(virtualViewNav, System.out)
 				.addAllStandardColumns()
-//				.addColumn(NotesMarkdownTable.CATEGORY)
 				.addAllViewColumns()
 				.printHeader()
 				.printRows(virtualViewNav.entriesForward(SelectedOnly.NO))
@@ -436,8 +406,8 @@ public class TestVirtualView extends BaseJNATestClass {
 				return null;
 			}
 		});
-	}
-	
+	}	
+
 //	@Test
 	public void testFakenameDesignViews() {
 		runWithSession(new IDominoCallable<Object>() {
