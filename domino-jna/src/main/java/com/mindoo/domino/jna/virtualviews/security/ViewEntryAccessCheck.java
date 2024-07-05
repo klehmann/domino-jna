@@ -82,6 +82,10 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 		if (readersList == null || readersList.contains("*")) {
 			return true;
 		}
+		if (readersList != null && readersList.size() == 1 && readersList.get(0).equals("$P")) {
+			//we had this value when searching through profile docs with NSFSearchExtended3
+			return true;
+		}
 		
 		Set<String> userNamesList = userNamesListByOrigin.get(origin);
 		if (userNamesList == null) {
