@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,10 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.mindoo.domino.jna.IViewColumn.ColumnSort;
-import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesCollection;
+import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
@@ -319,6 +320,7 @@ public enum VirtualViewFactory {
 	public VirtualView createViewOnce(String viewId, int version, Function<String, VirtualView> fct) {
 		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
 		if (viewWithVersion != null && viewWithVersion.getVersion() == version) {
+			viewWithVersion.setLastAccess(System.currentTimeMillis());
 			return viewWithVersion.getView();
 		} else {
 			VirtualView view = fct.apply(viewId);
@@ -338,14 +340,57 @@ public enum VirtualViewFactory {
 	public void disposeView(String viewId) {
 		viewsById.remove(viewId);
 	}
+
+	/**
+	 * Returns the view ids of all views that are currently stored in the cache
+	 * 
+	 * @return view ids
+	 */
+	public Iterator<String> getStoredViewIds() {
+		return viewsById.keySet().iterator();
+	}
+	
+	/**
+	 * Returns the time when a view was last accessed via {@link #createViewOnce(String, int, Function)}
+	 * 
+	 * @param viewId view id
+	 * @return last access time or -1 if the view is not in the cache
+	 */
+	public long getLastViewAccess(String viewId) {
+		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
+		if (viewWithVersion != null) {
+			return viewWithVersion.getLastAccess();
+		} else {
+			return -1;
+		}
+	}
+	
+	/**
+	 * Returns the stored version of a view
+	 * 
+	 * @param viewId view id
+	 * @return version or -1 if the view is not in the cache
+	 */
+	public int getViewVersion(String viewId) {
+		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
+		if (viewWithVersion != null) {
+			return viewWithVersion.getVersion();
+		} else {
+			return -1;
+		}
+	}
 	
 	private static class VirtualViewWithVersion {
 		private VirtualView view;
 		private int version;
-
+		private long created;
+		private long lastAccess;
+		
 		public VirtualViewWithVersion(VirtualView view, int version) {
 			this.view = view;
 			this.version = version;
+			this.created = System.currentTimeMillis();
+			this.lastAccess = created;
 		}
 		
 		public VirtualView getView() {
@@ -354,6 +399,18 @@ public enum VirtualViewFactory {
 		
 		public int getVersion() {
 			return version;
-		}		
+		}
+		
+		public long getCreated() {
+			return created;
+		}
+		
+		public long getLastAccess() {
+			return lastAccess;
+		}
+		
+		public void setLastAccess(long lastAccess) {
+			this.lastAccess = lastAccess;
+		}
 	}
 }
