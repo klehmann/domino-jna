@@ -2,6 +2,7 @@ package com.mindoo.domino.jna.virtualviews;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -186,10 +187,22 @@ public class VirtualView {
 		private String effectiveUserName;
 		private WithCategories cats = null;
 		private WithDocuments docs = null;
+		private boolean dontShowEmptyCategories = false;
+		
 		ViewEntryAccessCheck accessCheck;
 		
 		private VirtualViewNavigatorBuilder(VirtualView view) {
 			this.view = view;
+		}
+
+		/**
+		 * By default, empty categories are shown in the view navigator. If you call this method, empty categories will be skipped.
+		 * 
+		 * @return builder
+		 */
+		public VirtualViewNavigatorBuilder dontShowEmptyCategories() {
+			this.dontShowEmptyCategories = true;
+			return this;
 		}
 		
 		/**
@@ -238,8 +251,9 @@ public class VirtualView {
 		}
 		
 		private ViewEntryAccessCheck createAccessCheck() {
-			ViewEntryAccessCheck accessCheck = ViewEntryAccessCheck
-					.forUser(VirtualView.this, StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName);
+			ViewEntryAccessCheck accessCheck = new ViewEntryAccessCheck(VirtualView.this,
+					StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
+							dontShowEmptyCategories);
 			return accessCheck;
 		}
 		
@@ -386,7 +400,7 @@ public class VirtualView {
 						    parentEntry.childCount.decrementAndGet();
 					    	parentEntry.childDocumentCount.decrementAndGet();
 
-						    reduceDescendantCountAndTotalValuesOfParents(currEntry);
+						    removeDocFromCountsAndReadersLisOfParents(currEntry);
 						    
 						    //remember to assign new sibling indexes
 						    markEntryForSiblingIndexFlush(parentEntry);
@@ -541,7 +555,7 @@ public class VirtualView {
 			if (targetParent.getChildEntriesAsMap().put(sortKey, newDocChild) == null) {
 				targetParent.childCount.incrementAndGet();
 				targetParent.childDocumentCount.incrementAndGet();
-				increaseDescendantCountAndTotalValuesOfParents(newDocChild);
+				addDocToCountsAndReadersListOfParents(newDocChild);
 			}
 		    //remember to assign new sibling indexes
 			markEntryForSiblingIndexFlush(targetParent);
@@ -710,7 +724,7 @@ public class VirtualView {
 		return createdChildEntriesForDocument;
 	}
 
-	private void increaseDescendantCountAndTotalValuesOfParents(VirtualViewEntryData docEntry) {
+	private void addDocToCountsAndReadersListOfParents(VirtualViewEntryData docEntry) {
 		Map<String,Double> docTotalValues = null;
 		if (viewHasTotalColumns) {
 			docTotalValues = new HashMap<>();
@@ -721,6 +735,15 @@ public class VirtualView {
 					docTotalValues.put(itemName, docVal);
 				}
 			}			
+		}
+		
+		String origin = docEntry.getOrigin();
+		Collection<String> readersList = docEntry.getDocReadersList();
+		boolean hasNoReadersItems = readersList == null || readersList.contains("*");
+		
+		if (readersList == null) {
+			//we have at least a descendant that is always visible
+			readersList = Arrays.asList("*");
 		}
 		
 		VirtualViewEntryData currParent = docEntry.getParent();
@@ -739,11 +762,19 @@ public class VirtualView {
 				computeTotalColumnValues(currParent);				
 			}
 
+			if (hasNoReadersItems) {
+				currParent.descendantCountWithoutReaders.incrementAndGet();
+			}
+			
+			for (String currReader : readersList) {
+				currParent.increaseAndGetReader(origin, currReader);
+			}
+
 			currParent = currParent.getParent();
 		}
 	}
 	
-	private void reduceDescendantCountAndTotalValuesOfParents(VirtualViewEntryData docEntry) {
+	private void removeDocFromCountsAndReadersLisOfParents(VirtualViewEntryData docEntry) {
 		Map<String,Double> docTotalValues = null;
 		if (viewHasTotalColumns) {
 			docTotalValues = new HashMap<>();
@@ -754,6 +785,15 @@ public class VirtualView {
 					docTotalValues.put(itemName, docVal);
 				}
 			}			
+		}
+
+		String origin = docEntry.getOrigin();
+		Collection<String> readersList = docEntry.getDocReadersList();
+		boolean hasNoReadersItems = readersList == null || readersList.contains("*");
+		
+		if (readersList == null) {
+			//we have at least a descendant that is always visible
+			readersList = Arrays.asList("*");
 		}
 
 		VirtualViewEntryData currParent = docEntry.getParent();
@@ -770,6 +810,14 @@ public class VirtualView {
 	            }				
 				
 				computeTotalColumnValues(currParent);				
+			}
+			
+			if (hasNoReadersItems) {
+				currParent.descendantCountWithoutReaders.decrementAndGet();
+			}
+			
+			for (String currReader : readersList) {
+				currParent.decreaseAndGetReader(origin, currReader);
 			}
 			
 			currParent = currParent.getParent();

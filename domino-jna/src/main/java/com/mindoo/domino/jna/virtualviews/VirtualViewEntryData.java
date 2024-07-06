@@ -1,18 +1,18 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.mindoo.domino.jna.IViewEntryData;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -97,6 +97,10 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	@Override
 	public int getDescendantCount() {
 		return descendantCount.get();
+	}
+	
+	public int getDescendantCountWithoutReaders() {
+		return descendantCountWithoutReaders.get();
 	}
 	
 	public int getDescendantDocumentCount() {
@@ -240,12 +244,39 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	}
 	
 	/**
-	 * Returns a list of readers that are allowed to see the entry
+	 * Returns a list of readers that are allowed to see a document entry
 	 * 
 	 * @return readers list or null if the entry is visible to everyone
 	 */
-	public List<String> getReadersList() {
-	    return getAsStringList("$C1$", null);
+	public Collection<String> getDocReadersList() {
+		if (isCategory()) {
+			return categoryReadersList.keySet();
+		}
+		else {
+		    return getAsStringList("$C1$", null);			
+		}
+	}
+	
+	/**
+	 * For category entries, we collect the readers lists of all descendants to do
+	 * quick read access checks. This method returns the names of all origins that
+	 * have readers lists for this category entry.
+	 * 
+	 * @return origins
+	 */
+	public Set<String> getCategoryReadersListOrigins() {
+		return categoryReadersList.keySet();
+	}
+	
+	/**
+	 * For category entries, we collect the readers lists of all descendants to do
+	 * quick read access checks. This method returns the readers list for a specific origin.
+	 * 
+	 * @param origin origin
+	 * @return readers list or null if no readers list is stored for this origin
+	 */
+	public Set<String> getCategoryReadersList(String origin) {
+		return categoryReadersList.getOrDefault(origin, Collections.emptyMap()).keySet();
 	}
 	
 	int getSiblingIndex() {
@@ -321,7 +352,11 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 		return posArr;
 	}
 	
-	private ConcurrentHashMap<String,AtomicLong> totalValues = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String,Double> totalValues = new ConcurrentHashMap<>();
+	
+	private ConcurrentHashMap<String,Map<String,Integer>> categoryReadersList = new ConcurrentHashMap<>();
+	/** number of descendant entries that do not have reader items or just "*" */
+	AtomicInteger descendantCountWithoutReaders = new AtomicInteger();
 	
 	/**
 	 * Adds a value to a total value and returns the new total
@@ -331,11 +366,16 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	 * @return new total value
 	 */
 	double addAndGetTotalValue(String itemName, double val) {
-		return totalValues.computeIfAbsent(itemName, (key) -> new AtomicLong()).updateAndGet((oldVal) -> {
-			double dbl = Double.longBitsToDouble(oldVal);
-			dbl += val;
-			return Double.doubleToLongBits(dbl);
-		});
+		String itemNameLC = itemName.toLowerCase();
+		
+		return totalValues.compute(itemNameLC, (key, oldVal) -> {
+			if (oldVal == null) {
+				return Double.valueOf(val);
+            }
+            else {
+            	return Double.valueOf(oldVal.doubleValue() + val);
+            }
+        }).doubleValue();
 	}
 	
 	/**
@@ -345,13 +385,45 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	 * @return total value or null if no total value is stored
 	 */
 	public Double getTotalValue(String itemName) {
-		AtomicLong x = totalValues.get(itemName);
-		if (x == null) {
-			return null;
-		}
-		return Double.longBitsToDouble(x.get());
+		String itemNameLC = itemName.toLowerCase();
+		
+		return totalValues.getOrDefault(itemName, null);
 	}
 	
+	int increaseAndGetReader(String origin, String reader) {
+		String readerLC = reader.toLowerCase();
+		
+		return categoryReadersList.computeIfAbsent(origin, (key) -> {
+			return new ConcurrentHashMap<>();
+		})
+		.compute(readerLC, (key, oldVal) -> {
+			if (oldVal == null) {
+				return 1;
+			} else {
+				return oldVal + 1;
+			}
+		});
+	}
+	
+	int decreaseAndGetReader(String origin, String reader) {
+		String readerLC = reader.toLowerCase();
+		
+		return categoryReadersList.computeIfAbsent(origin, (key) -> {
+			return new ConcurrentHashMap<>();
+		})
+		.compute(readerLC, (key, oldVal) -> {
+			if (oldVal == null) {
+				//should not happen
+				return -1;
+			} else if (oldVal == 1) {
+				//remove reader from map
+				return null;
+			} else {
+				return oldVal - 1;
+			}
+		});
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();

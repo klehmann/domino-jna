@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.virtualviews.security;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -19,28 +20,32 @@ import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
 
 /**
  * Class that checks if a user has read access to a view entry by comparing the user's name variants, groups and roles
- * with the computed readers list of the entry
+ * with the computed readers list of the entry.<br>
+ * <br>
+ * During view indexing. we collect all reader lists of documents and accumulate them for each origin database
+ * in the parent categories (with their count) up until the root entry. We also count how many docs there are that have no reader
+ * items at all. This allows us to quickly check if a user has access to a category by checking if there are any
+ * descendants without reader items.<br>
+ * 
  */
 public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 	private VirtualView view;
 	private String effectiveUserName;
 	private Map<String,Set<String>> userNamesListByOrigin;
 	private Map<String,AclLevel> dbAccessLevelsByOrigin;
+	private boolean dontShowEmptyCategories;
 	
 	/**
 	 * Creates a new instance
 	 * 
 	 * @param view virtual view
 	 * @param effectiveUserName name of the user to check access for
-	 * @return access check instance
+	 * @param dontShowEmptyCategories true to skip categories that have no entries the user can see
 	 */
-	public static ViewEntryAccessCheck forUser(VirtualView view, String effectiveUserName) {
-		return new ViewEntryAccessCheck(view, effectiveUserName);
-	}
-	
-	private ViewEntryAccessCheck(VirtualView view, String effectiveUserName) {
+	public ViewEntryAccessCheck(VirtualView view, String effectiveUserName, boolean dontShowEmptyCategories) {
 		this.view = view;
 		this.effectiveUserName = effectiveUserName;
+		this.dontShowEmptyCategories = dontShowEmptyCategories;
 		this.userNamesListByOrigin = new HashMap<>();
 		this.dbAccessLevelsByOrigin = new HashMap<>();
 		
@@ -65,37 +70,83 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 	
 	@Override
 	public boolean isVisible(VirtualViewEntryData entry) {
-		if (!entry.isDocument()) {
-			//categories are always visible
-			return true;
-		}
-		
-		String origin = entry.getOrigin();
-
-		//check general DB access level of the user
-		AclLevel aclLevel = dbAccessLevelsByOrigin.get(origin);
-		if (aclLevel == null || aclLevel == AclLevel.NOACCESS || aclLevel == AclLevel.DEPOSITOR) {
-			return false;
-		}
-		
-		List<String> readersList = entry.getReadersList();
-		if (readersList == null || readersList.contains("*")) {
-			return true;
-		}
-		if (readersList != null && readersList.size() == 1 && readersList.get(0).equals("$P")) {
-			//we had this value when searching through profile docs with NSFSearchExtended3
-			return true;
-		}
-		
-		Set<String> userNamesList = userNamesListByOrigin.get(origin);
-		if (userNamesList == null) {
-			return false;
-		}
-
-		for (String currReader : readersList) {
-			if (userNamesList.contains(currReader)) {
+		if (entry.isDocument()) {
+			String origin = entry.getOrigin();
+			
+			//check general DB access level of the user
+			AclLevel aclLevel = dbAccessLevelsByOrigin.get(origin);
+			if (aclLevel == null || aclLevel.getValue() < AclLevel.READER.getValue()) {
+				return false;
+			}
+			
+			Collection<String> readersList = entry.getDocReadersList();
+			if (readersList == null || readersList.contains("*")) {
 				return true;
 			}
+			
+			Set<String> userNamesList = userNamesListByOrigin.get(origin);
+			if (userNamesList == null) {
+				return false;
+			}
+
+			for (String currReader : readersList) {
+				if (userNamesList.contains(currReader)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		else if (entry.isCategory()) {
+			if (!dontShowEmptyCategories) {
+				//show all categories
+				return true;
+			}
+			
+			//fast check if there are any descendants without reader items
+			Set<String> origins = entry.getCategoryReadersListOrigins();
+			
+			if (entry.getDescendantCountWithoutReaders() > 0) {
+				//check if the user has read access to all origins
+				boolean accessToAllDbs = true;
+				
+				for (String currOrigin : origins) {
+					AclLevel aclLevel = dbAccessLevelsByOrigin.get(currOrigin);
+					if (aclLevel != null && aclLevel.getValue() < AclLevel.READER.getValue()) {
+						accessToAllDbs = false;
+						break;
+					}
+				}
+				
+				if (accessToAllDbs) {
+					return true;
+				}
+				
+				//go on with slower check
+			}
+			
+			//slower check: for all origins, check if the user can see any entry
+			
+			for (String currOrigin : origins) {
+				// check general DB access level of the user
+				AclLevel aclLevel = dbAccessLevelsByOrigin.get(currOrigin);
+				if (aclLevel != null && aclLevel.getValue() > AclLevel.DEPOSITOR.getValue()) {
+					Set<String> readersForOrigin = entry.getCategoryReadersList(currOrigin);
+					if (readersForOrigin != null) {
+						if (readersForOrigin.contains("*")) {
+							return true;
+						}
+						
+						Set<String> userNamesList = userNamesListByOrigin.get(currOrigin);
+						if (userNamesList != null) {
+							for (String currReader : readersForOrigin) {
+								if (userNamesList.contains(currReader)) {
+									return true;
+								}
+							}
+						}
+					}					
+				}
+			}			
 		}
 		return false;
 	}
