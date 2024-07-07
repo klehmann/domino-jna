@@ -1,5 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
+Bundle-ActivationPolicy: lazy
 Bundle-Name: Domino JNA XSP Integrator Plugin
 Bundle-SymbolicName: com.mindoo.domino.jna.xsp;singleton:=true
 Bundle-Version: 0.9.49.qualifier
