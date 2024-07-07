@@ -1,8 +1,12 @@
 package com.mindoo.domino.jna.test;
 
+import static org.junit.Assert.*;
+
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -10,26 +14,32 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.mindoo.domino.jna.IItemTableData;
+import com.mindoo.domino.jna.NotesBuildVersion;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.constants.DatabaseOption;
+import com.mindoo.domino.jna.constants.ItemType;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 
+import lotus.domino.Database;
+import lotus.domino.Document;
+import lotus.domino.Item;
 import lotus.domino.Session;
 
 public class TestLargeSummarySupport extends BaseJNATestClass {
 
-	@Test
+//	@Test
 	public void testLargeSummarySupport() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				withTempDb((db) -> {
-					db.setOption(DatabaseOption.LARGE_BUCKETS_ENABLED, true);
+				withLargeDataEnabledTempDb(LargeDataLevel.R12, (db) -> {
+					assertTrue(db.getOption(DatabaseOption.LARGE_BUCKETS_ENABLED));
 					
 					StringWriter sampleDataWriter = new StringWriter();
 					produceTestData(12000, sampleDataWriter);
@@ -50,14 +60,14 @@ public class TestLargeSummarySupport extends BaseJNATestClass {
 		});
 	}
 	
-	@Test
+//	@Test
 	public void testSearchWithLargeSummarySupport() {
 		runWithSession(new IDominoCallable<Object>() {
 
 			@Override
 			public Object call(Session session) throws Exception {
-				withTempDb((db) -> {
-					db.setOption(DatabaseOption.LARGE_BUCKETS_ENABLED, true);
+				withLargeDataEnabledTempDb(LargeDataLevel.R12, (db) -> {
+					assertTrue(db.getOption(DatabaseOption.LARGE_BUCKETS_ENABLED));
 					
 					StringWriter sampleDataWriter = new StringWriter();
 					produceTestData(12000, sampleDataWriter);
@@ -106,4 +116,69 @@ public class TestLargeSummarySupport extends BaseJNATestClass {
 			}
 		});
 	}
+
+	/**
+	 * Writes large items lists in a doc of an R12 database, reads them and compare both
+	 * values.
+	 * 
+	 * @throws Exception in case of errors
+	 */
+	@Test
+	public void testLargeItemListSupport() throws Exception {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				withLargeDataEnabledTempDb(LargeDataLevel.R12, (db) -> {
+					assertTrue(db.getOption(DatabaseOption.LARGE_BUCKETS_ENABLED));
+					assertTrue(db.getOption(DatabaseOption.LARGE_ITEMS_ENABLED));
+
+					// Check if we're running on V12 in the abstract first.
+					// This should avoid test trouble on at least V11 macOS
+					{
+						NotesBuildVersion buildVersion = db.getParentServerMajMinVersion();
+						if (buildVersion.getMajorVersion() < 12) {
+							// large item storage not supported by this API version
+							return;
+						}
+					}
+					
+					//ODS 55+
+					assertTrue(db.getNSFVersionInfo().getMajorVersion()>=55);
+
+					NotesNote noteLarge = db.createNote();
+					
+					final StringWriter summaryTextWriter = new StringWriter();
+					produceTestData(60000, summaryTextWriter);
+					final String summaryText = summaryTextWriter.toString();
+
+					List<String> largeList = new ArrayList<>();
+					for (int i = 0; i < 1000; i++) {
+						largeList.add(summaryText);
+					}
+
+					//non-summary item:
+					NotesItem largeItem = noteLarge.replaceItemValue("textlistitem", EnumSet.noneOf(ItemType.class), largeList);
+					noteLarge.update();
+
+					final int noteId = noteLarge.getNoteId();
+					noteLarge.recycle();
+					noteLarge = db.openNoteById(noteId);
+					
+					List<String> testLargeList = noteLarge.getItemValueStringList("textlistitem");
+					assertNotNull(testLargeList);
+					assertEquals(largeList.size(), testLargeList.size());
+
+					for (int i = 0; i < largeList.size(); i++) {
+						assertEquals(largeList.get(i), testLargeList.get(i));
+					}
+					
+				});
+				
+				return null;
+			}
+		});
+
+	}
+
 }

@@ -88,4 +88,5 @@ public class NotesMimeUtils {
 	public static void setMimeData(NotesNote note, String itemName, MIMEData mimeData) {
 		getAccessService().setMimeData(note, itemName, mimeData);
 	}
+
 }

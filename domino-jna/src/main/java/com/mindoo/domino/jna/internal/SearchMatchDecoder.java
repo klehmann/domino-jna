@@ -249,19 +249,30 @@ public class SearchMatchDecoder {
 		@Override
 		public String getUNID() {
 			if (m_unid==null) {
-				Formatter formatter = new Formatter();
-				formatter.format("%08x", this.oid_file_innards[1]);
-				formatter.format("%08x", this.oid_file_innards[0]);
+				// optimized version of String.format that runs faster
+				// String.format("%08x%08x%08x%08x", this.oid_file_innards[1], this.oid_file_innards[0], this.oid_note_innards[1], this.oid_note_innards[0])
 				
-				formatter.format("%08x", this.oid_note_innards[1]);
-				formatter.format("%08x", this.oid_note_innards[0]);
-				
-				m_unid = formatter.toString().toUpperCase();
-				formatter.close();
+				m_unid = new StringBuilder(32)
+			            .append(toHex(this.oid_file_innards[1]))
+			            .append(toHex(this.oid_file_innards[0]))
+			            .append(toHex(this.oid_note_innards[1]))
+			            .append(toHex(this.oid_note_innards[0]))
+			            .toString()
+			            .toUpperCase();
 			}
 			return m_unid;
 		}
 
+		private String toHex(int value) {
+		    char[] hexChars = new char[8];
+		    for (int i = 7; i >= 0; i--) {
+		        int v = value & 0x0F;
+		        hexChars[i] = (char) (v < 10 ? v + '0' : v - 10 + 'a');
+		        value >>>= 4;
+		    }
+		    return new String(hexChars);
+		}
+		
 		@Override
 		public NotesTimeDate getDbCreated() {
 			if (m_dbCreated==null) {

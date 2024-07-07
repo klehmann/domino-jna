@@ -6,7 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -25,6 +29,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
@@ -32,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.mindoo.domino.jna.NotesItem.ICompositeCallbackDirect;
@@ -59,6 +66,7 @@ import com.mindoo.domino.jna.html.HtmlConvertProperties;
 import com.mindoo.domino.jna.html.HtmlConvertProperties.HtmlLinkHandling;
 import com.mindoo.domino.jna.html.IHtmlApiReference;
 import com.mindoo.domino.jna.html.IHtmlApiUrlTargetComponent;
+import com.mindoo.domino.jna.html.IHtmlAttachmentRef;
 import com.mindoo.domino.jna.html.IHtmlConversionResult;
 import com.mindoo.domino.jna.html.IHtmlImageRef;
 import com.mindoo.domino.jna.html.ReferenceType;
@@ -71,7 +79,10 @@ import com.mindoo.domino.jna.internal.DatabaseObjectProducerUtil;
 import com.mindoo.domino.jna.internal.DatabaseObjectProducerUtil.ObjectInfo;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.FieldPropAdaptable;
+import com.mindoo.domino.jna.internal.INotesNativeAPIV1201;
 import com.mindoo.domino.jna.internal.ItemDecoder;
+import com.mindoo.domino.jna.internal.Mem;
+import com.mindoo.domino.jna.internal.Mem.LockedMemory;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
@@ -79,6 +90,7 @@ import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
+import com.mindoo.domino.jna.internal.NotesNativeAPIV1201;
 import com.mindoo.domino.jna.internal.ReadOnlyMemory;
 import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.ViewFormatDecoder;
@@ -105,6 +117,8 @@ import com.mindoo.domino.jna.internal.structs.html.HtmlApi_UrlTargetComponentStr
 import com.mindoo.domino.jna.mime.MIMEData;
 import com.mindoo.domino.jna.mime.MimeConversionControl;
 import com.mindoo.domino.jna.mime.NotesMimeUtils;
+import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
+import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.richtext.FieldInfo;
 import com.mindoo.domino.jna.richtext.ICompoundText;
 import com.mindoo.domino.jna.richtext.IRichTextNavigator;
@@ -1141,11 +1155,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		ShortByReference retDataType = new ShortByReference();
 		IntByReference retValueLen = new IntByReference();
 
-		NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
+		NotesBlockIdStruct.ByReference retValueBid = NotesBlockIdStruct.ByReference.newInstance();
 		
 		short result;
 		if (PlatformUtils.is64Bit()) {
-			
 			NotesNativeAPI64.get().NSFItemQueryEx(m_hNote64,
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
@@ -1501,9 +1514,7 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			List<String> strList = new ArrayList<String>(docValues.size());
 			for (int i = 0; i < docValues.size(); i++) {
 				String currStr = docValues.get(i).toString();
-				if (!"".equals(currStr)) {
-					strList.add(currStr);
-				}
+				strList.add(currStr);
 			}
 			return strList;
 		}
@@ -2107,9 +2118,27 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	 * @param fileCreated file creation date
 	 * @param fileModified file modified date
 	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
+	 * @deprecated will be removed, use {@link #attachFile(IAttachmentProducer, String, NotesTimeDate, NotesTimeDate)} instead
 	 */
 	public NotesAttachment attachFile(IAttachmentProducer producer, String uniqueFileNameInNote, 
 			Date fileCreated, Date fileModified) {
+		return attachFile(producer, uniqueFileNameInNote, new NotesTimeDate(fileCreated), new NotesTimeDate(fileModified));
+	}
+	
+	/**
+	 * Creates a new attachment with streamed data. This method does not require the
+	 * file to be written to disk first like {@link #attachFile(String, String, Compression)},
+	 * but creates and auto-resizes an NSF binary object based on the data written in
+	 * {@link IAttachmentProducer#produceAttachment(OutputStream)}.
+	 * 
+	 * @param producer attachment producer
+	 * @param uniqueFileNameInNote filename that will be stored internally with the attachment, displayed when the attachment is not part of any richtext item (called "V2 attachment" in the Domino help), and subsequently used when selecting which attachment to extract or detach.  Note that these operations may be carried out both from the workstation application Attachments dialog box and programmatically, so try to choose meaningful filenames as opposed to attach.001, attach002, etc., whenever possible. This function will be sure that the filename is really unique by appending _2, _3 etc. to the base filename, followed by the extension; use the returned NotesAttachment to get the filename we picked
+	 * @param fileCreated file creation date
+	 * @param fileModified file modified date
+	 * @return attachment object just created, e.g. to pass into {@link RichTextBuilder#addFileHotspot(NotesAttachment, String)}
+	 */
+	public NotesAttachment attachFile(IAttachmentProducer producer, String uniqueFileNameInNote, 
+			NotesTimeDate fileCreated, NotesTimeDate fileModified) {
 		checkHandle();
 
 		//currently we do not support compression, because we could not find a Java OutputStream
@@ -2162,8 +2191,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
 				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
 				fileObjectStruct.FileAttributes = 0;
-				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
-				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated.getInnards());
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified.getInnards());
 				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
 				fileObjectStruct.FileSize = currFileSize.get();
 				fileObjectStruct.Flags = 0;
@@ -2209,8 +2238,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				NotesFileObjectStruct fileObjectStruct = NotesFileObjectStruct.newInstance(ptrFileObjectWithDatatype.share(2));
 				fileObjectStruct.CompressionType = (short) (compression.getValue() & 0xffff);
 				fileObjectStruct.FileAttributes = 0;
-				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated);
-				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified);
+				fileObjectStruct.FileCreated = NotesTimeDateStruct.newInstance(fileCreated.getInnards());
+				fileObjectStruct.FileModified = NotesTimeDateStruct.newInstance(fileModified.getInnards());
 				fileObjectStruct.FileNameLength = (short) (reallyUniqueFileNameMem.size() & 0xffff);
 				fileObjectStruct.FileSize = currFileSize.get();
 				fileObjectStruct.Flags = 0;
@@ -3210,6 +3239,13 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 	}
 	
+	/**
+	 * Creates an in-memory copy of this note with an empty note id, a new OID (so a new UNID as well)
+	 * and with the parent database handle set to the specified target database
+	 * 
+	 * @param targetDb target database
+	 * @return note copy in target database
+	 */
 	public NotesNote copyToDatabase(NotesDatabase targetDb) {
 		checkHandle();
 
@@ -3398,16 +3434,16 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				value instanceof TemporalAccessor) {
 			return true;
 		}
-		else if (value instanceof List && ((List)value).isEmpty()) {
+		else if (value instanceof Iterable && !((Iterable)value).iterator().hasNext()) {
 			return true;
 		}
-		else if (value instanceof List && isStringList((List) value)) {
+		else if (value instanceof Iterable && isStringList((Iterable) value)) {
 			return true;
 		}
-		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
+		else if (value instanceof Iterable && isNumberOrNumberArrayList((Iterable) value)) {
 			return true;
 		}
-		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+		else if (value instanceof Iterable && isCalendarOrCalendarArrayList((Iterable) value)) {
 			return true;
 		}
 		else if (value instanceof Calendar[] && ((Calendar[])value).length==2) {
@@ -3417,6 +3453,9 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			return true;
 		}
 		else if (value instanceof Date[] && ((Date[])value).length==2) {
+			return true;
+		}
+		else if (value instanceof TemporalAccessor[] && ((TemporalAccessor[])value).length==2) {
 			return true;
 		}
 		else if (value instanceof Number[] && ((Number[])value).length==2) {
@@ -3532,86 +3571,45 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 
 			int valueSize = (int) (2 + (strValueMem==null ? 0 : strValueMem.size()));
 			
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
-					valuePtr = valuePtr.share(2);
-					if (strValueMem!=null) {
-						valuePtr.write(0, strValueMem.getByteArray(0, (int) strValueMem.size()), 0, (int) strValueMem.size());
-					}
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT, (int) rethItem.getValue(), valueSize);
-					return item;
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
+				valuePtr = valuePtr.share(2);
+				if (strValueMem!=null) {
+					valuePtr.write(0, strValueMem.getByteArray(0, (int) strValueMem.size()), 0, (int) strValueMem.size());
 				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
-				}
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TEXT);
-					valuePtr = valuePtr.share(2);
-					if (strValueMem!=null) {
-						valuePtr.write(0, strValueMem.getByteArray(0, (int) strValueMem.size()), 0, (int) strValueMem.size());
-					}
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT, rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		
 		}
 		else if (value instanceof Number) {
 			int valueSize = 2 + 8;
 			
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
-					valuePtr = valuePtr.share(2);
-					valuePtr.setDouble(0, ((Number)value).doubleValue());
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
-				}
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
+				valuePtr = valuePtr.share(2);
+				valuePtr.setDouble(0, ((Number)value).doubleValue());
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER);
-					valuePtr = valuePtr.share(2);
-					valuePtr.setDouble(0, ((Number)value).doubleValue());
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER, rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		}
 		else if (value instanceof Calendar || value instanceof Temporal || value instanceof Date) {
@@ -3637,132 +3635,137 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 
 			int valueSize = 2 + 8;
 			
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
-					valuePtr = valuePtr.share(2);
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
+				valuePtr = valuePtr.share(2);
 
-					NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
-					timeDate.Innards[0] = innards[0];
-					timeDate.Innards[1] = innards[1];
-					timeDate.write();
+				NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
+				timeDate.Innards[0] = innards[0];
+				timeDate.Innards[1] = innards[1];
+				timeDate.write();
 
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
-				}
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME);
-					valuePtr = valuePtr.share(2);
-
-					NotesTimeDateStruct timeDate = NotesTimeDateStruct.newInstance(valuePtr);
-					timeDate.Innards[0] = innards[0];
-					timeDate.Innards[1] = innards[1];
-					timeDate.write();
-
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME, rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
-			}			
+			finally {
+				Mem.OSUnlockObject(rethItem);
+			}
 		}
-		else if (value instanceof List && (((List)value).isEmpty() || isStringList((List) value))) {
-			List<String> strList = (List<String>) value;
-			
+		else if (value instanceof Iterable && (!((Iterable<?>)value).iterator().hasNext() || isStringList((Iterable<?>) value))) {
+			List<String> strList = StreamSupport.stream(((Iterable<String>) value).spliterator(), false)
+					.collect(Collectors.toList());
+
 			if (strList.size()> 65535) {
-				throw new IllegalArgumentException("String list size must fit in a WORD ("+strList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("String list size must fit in a WORD ({0}>65535)", strList.size()));
 			}
-			
-			short result;
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethList = new LongByReference();
+
+			boolean useLarge = getParent().hasLargeItemSupport();
+
+			if (!useLarge) {
+				DHANDLE.ByReference rethList = DHANDLE.newInstanceByReference();
 				ShortByReference retListSize = new ShortByReference();
 
-				result = NotesNativeAPI64.get().ListAllocate((short) 0, 
+				short result = NotesNativeAPI.get().ListAllocate((short) 0, 
 						(short) 0,
 						1, rethList, null, retListSize);
-				
+
 				NotesErrorUtils.checkResult(result);
 
-				long hList = rethList.getValue();
-				Mem64.OSUnlockObject(hList);
-				
-				for (int i=0; i<strList.size(); i++) {
-					String currStr = strList.get(i);
-					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+				Mem.OSUnlockObject(rethList);
 
-					result = NotesNativeAPI64.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
-							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
+				int i = 0;
+				for (String currStr : strList) {
+					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+					if (currStrMem!=null && currStrMem.size() > 65535) {
+						throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+					}
+
+					char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
+
+					result = NotesNativeAPI.get().ListAddEntry(rethList.getByValue(), 1, retListSize, (char) i, currStrMem,
+							textSize);
 					NotesErrorUtils.checkResult(result);
+
+					i++;
 				}
-				
+
 				int listSize = retListSize.getValue() & 0xffff;
-				
-				@SuppressWarnings("unused")
-				Pointer valuePtr = Mem64.OSLockObject(hList);
-				try {
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
-					return item;
-				}
-				finally {
-					Mem64.OSUnlockObject(hList);
-				}
+
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST,
+						rethList, listSize);
+				return item;
 			}
 			else {
-				IntByReference rethList = new IntByReference();
-				ShortByReference retListSize = new ShortByReference();
+				INotesNativeAPIV1201 capi1201 = NotesNativeAPIV1201.get();
 
-				result = NotesNativeAPI32.get().ListAllocate((short) 0, 
-						(short) 0,
-						1, rethList, null, retListSize);
-				
+				IntByReference rethList = new IntByReference();
+				PointerByReference retpList = null;
+				IntByReference retListSize = new IntByReference();
+
+				short result = capi1201.ListAllocate2Ext((short) 0,
+						0,
+						false,
+						rethList,
+						retpList,
+						retListSize,
+						true);
 				NotesErrorUtils.checkResult(result);
 
 				int hList = rethList.getValue();
-				Mem32.OSUnlockObject(hList);
-				
-				for (int i=0; i<strList.size(); i++) {
-					String currStr = strList.get(i);
-					Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
-					result = NotesNativeAPI32.get().ListAddEntry(hList, 1, retListSize, (short) (i & 0xffff), currStrMem,
-							(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
-					NotesErrorUtils.checkResult(result);
+				if (hList==0) {
+					throw new NotesError("Method to create list returned a null handle");
 				}
-				
-				int listSize = retListSize.getValue() & 0xffff;
-				
-				@SuppressWarnings("unused")
-				Pointer valuePtr = Mem32.OSLockObject(hList);
+
 				try {
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, (int) hList, listSize);
-					return item;
+					int i=0;
+					for (String currStr : strList) {
+						Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+						if (currStrMem!=null && currStrMem.size() > 65535) {
+							throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
+						}
+
+						//somehow these two lines produce different results for the ListAddEntry2Ext call with text lengths >32767 bytes
+						//short textSize = (short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff));
+						char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
+
+						short addResult = capi1201.ListAddEntry2Ext(hList,
+								false,
+								retListSize,
+								(short) (i & 0xffff),
+								currStrMem,
+								textSize,
+								true);
+						NotesErrorUtils.checkResult(addResult);
+
+						i++;
+					}
+
+					int listSize = retListSize.getValue();
+
+					//copy list content into item and free memory
+					try (LockedMemory lockedMem = Mem.OSMemoryLock(rethList.getValue(), false)) {
+						NotesItem retItem = appendItemValue(itemName, flags, NotesItem.TYPE_TEXT_LIST, lockedMem.getPointer(), listSize);
+						return retItem;
+					}
 				}
 				finally {
-					Mem32.OSUnlockObject(hList);
+					if (hList!=0) {
+						Mem.OSMemoryFree(hList);
+					}
 				}
+
 			}
+			
 		}
-		else if (value instanceof List && isNumberOrNumberArrayList((List) value)) {
-			List<?> numberOrNumberArrList = toNumberOrNumberArrayList((List<?>) value);
+		else if (value instanceof Iterable && isNumberOrNumberArrayList((Iterable<?>) value)) {
+			List<?> numberOrNumberArrList = toNumberOrNumberArrayList((Iterable<?>) value);
 			
 			List<Number> numberList = new ArrayList<Number>();
 			List<double[]> numberArrList = new ArrayList<double[]>();
@@ -3778,106 +3781,59 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			}
 			
 			if (numberList.size()> 65535) {
-				throw new IllegalArgumentException("Number list size must fit in a WORD ("+numberList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("Number list size must fit in a WORD ({0}>65535)", numberList.size()));
 			}
 
 			if (numberArrList.size()> 65535) {
-				throw new IllegalArgumentException("Number range list size must fit in a WORD ("+numberList.size()+">65535)");
+				throw new IllegalArgumentException(MessageFormat.format("Number range list size must fit in a WORD ({0}>65535)", numberList.size()));
 			}
 
 			int valueSize = 2 + NotesConstants.rangeSize + 
 					8 * numberList.size() +
 					NotesConstants.numberPairSize * numberArrList.size();
 
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
+				valuePtr = valuePtr.share(2);
 				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
+				Pointer rangePtr = valuePtr;
+				NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+				range.ListEntries = (short) (numberList.size() & 0xffff);
+				range.RangeEntries = (short) (numberArrList.size() & 0xffff);
+				range.write();
+
+				Pointer doubleListPtr = rangePtr.share(NotesConstants.rangeSize);
 				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
-					valuePtr = valuePtr.share(2);
-					
-					Pointer rangePtr = valuePtr;
-					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (numberList.size() & 0xffff);
-					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
-					range.write();
-
-					Pointer doubleListPtr = rangePtr.share(NotesConstants.rangeSize);
-					
-					for (int i=0; i<numberList.size(); i++) {
-						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
-						doubleListPtr = doubleListPtr.share(8);
-					}
-
-					Pointer doubleArrListPtr = doubleListPtr;
-					
-					for (int i=0; i<numberArrList.size(); i++) {
-						double[] currNumberArr = numberArrList.get(i);
-						
-						NotesNumberPairStruct numberPair = NotesNumberPairStruct.newInstance(doubleArrListPtr);
-						numberPair.Lower = currNumberArr[0];
-						numberPair.Upper = currNumberArr[1];
-						numberPair.write();
-
-						doubleArrListPtr = doubleArrListPtr.share(NotesConstants.numberPairSize);
-					}
-					
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, (int) rethItem.getValue(),
-							valueSize);
-					return item;
+				for (int i=0; i<numberList.size(); i++) {
+					doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
+					doubleListPtr = doubleListPtr.share(8);
 				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
+
+				Pointer doubleArrListPtr = doubleListPtr;
+				
+				for (int i=0; i<numberArrList.size(); i++) {
+					double[] currNumberArr = numberArrList.get(i);
+					
+					NotesNumberPairStruct numberPair = NotesNumberPairStruct.newInstance(doubleArrListPtr);
+					numberPair.Lower = currNumberArr[0];
+					numberPair.Upper = currNumberArr[1];
+					numberPair.write();
+
+					doubleArrListPtr = doubleArrListPtr.share(NotesConstants.numberPairSize);
 				}
+				
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, rethItem,
+						valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NUMBER_RANGE);
-					valuePtr = valuePtr.share(2);
-					
-					Pointer rangePtr = valuePtr;
-					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (numberList.size() & 0xffff);
-					range.RangeEntries = (short) (numberArrList.size() & 0xffff);
-					range.write();
-
-					Pointer doubleListPtr = rangePtr.share(NotesConstants.rangeSize);
-					
-					for (int i=0; i<numberList.size(); i++) {
-						doubleListPtr.setDouble(0, numberList.get(i).doubleValue());
-						doubleListPtr = doubleListPtr.share(8);
-					}
-
-					Pointer doubleArrListPtr = doubleListPtr;
-					
-					for (int i=0; i<numberArrList.size(); i++) {
-						double[] currNumberArr = numberArrList.get(i);
-						
-						NotesNumberPairStruct numberPair = NotesNumberPairStruct.newInstance(doubleArrListPtr);
-						numberPair.Lower = currNumberArr[0];
-						numberPair.Upper = currNumberArr[1];
-						numberPair.write();
-
-						doubleArrListPtr = doubleArrListPtr.share(NotesConstants.numberPairSize);
-					}
-					
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NUMBER_RANGE, rethItem.getValue(),
-							valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		}
 		else if (value instanceof Calendar[]) {
@@ -3889,7 +3845,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		else if (value instanceof NotesTimeDate[]) {
 			return appendItemValue(itemName, flags, Arrays.asList(value));
 		}
-		else if (value instanceof List && isCalendarOrCalendarArrayList((List) value)) {
+		else if (value instanceof NotesDateRange) {
+			return appendItemValue(itemName, flags, Arrays.asList(value));
+		}
+		else if (value instanceof Iterable && isCalendarOrCalendarArrayList((Iterable<?>) value)) {
 			List<?> dateOrDateTimeRangeList = toDateTimeOrDateTimeRangeList((Iterable<?>) value);
 			
 			List<NotesTimeDate> dateTimeList = new ArrayList<>();
@@ -3916,117 +3875,59 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 					8 * dateTimeList.size() +
 					NotesConstants.timeDatePairSize * dateRangeList.size();
 
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
+				valuePtr = valuePtr.share(2);
 				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
+				Pointer rangePtr = valuePtr;
+				NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
+				range.ListEntries = (short) (dateTimeList.size() & 0xffff);
+				range.RangeEntries = (short) (dateRangeList.size() & 0xffff);
+				range.write();
+
+				Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
 				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
-					valuePtr = valuePtr.share(2);
-					
-					Pointer rangePtr = valuePtr;
-					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (dateTimeList.size() & 0xffff);
-					range.RangeEntries = (short) (dateRangeList.size() & 0xffff);
-					range.write();
+				for (NotesTimeDate currCal : dateTimeList) {
+					int[] innards = currCal.getInnards();
 
-					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
-					
-					for (NotesTimeDate currCal : dateTimeList) {
-						int[] innards = currCal.getInnards();
-
-						dateListPtr.setInt(0, innards[0]);
-						dateListPtr = dateListPtr.share(4);
-						dateListPtr.setInt(0, innards[1]);
-						dateListPtr = dateListPtr.share(4);
-					}
-					
-					Pointer rangeListPtr = dateListPtr;
-					
-					for (int i=0; i<dateRangeList.size(); i++) {
-						NotesDateRange currRangeVal = dateRangeList.get(i);
-						NotesTimeDate start = currRangeVal.getStartDateTime();
-						NotesTimeDate end = currRangeVal.getEndDateTime();
-						
-						int[] innardsStart = start.getInnards();
-						int[] innardsEnd = end.getInnards();
-
-						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
-						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
-						
-						NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(rangeListPtr);
-						timeDatePair.Lower = timeDateStart;
-						timeDatePair.Upper = timeDateEnd;
-						timeDatePair.write();
-
-						rangeListPtr = rangeListPtr.share(NotesConstants.timeDatePairSize);
-					}
-
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
-					return item;
+					dateListPtr.setInt(0, innards[0]);
+					dateListPtr = dateListPtr.share(4);
+					dateListPtr.setInt(0, innards[1]);
+					dateListPtr = dateListPtr.share(4);
 				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
+				
+				Pointer rangeListPtr = dateListPtr;
+				
+				for (int i=0; i<dateRangeList.size(); i++) {
+					NotesDateRange currRangeVal = dateRangeList.get(i);
+					NotesTimeDate start = currRangeVal.getStartDateTime();
+					NotesTimeDate end = currRangeVal.getEndDateTime();
+					
+					int[] innardsStart = start.getInnards();
+					int[] innardsEnd = end.getInnards();
+
+					NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
+					NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
+					
+					NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(rangeListPtr);
+					timeDatePair.Lower = timeDateStart;
+					timeDatePair.Upper = timeDateEnd;
+					timeDatePair.write();
+
+					rangeListPtr = rangeListPtr.share(NotesConstants.timeDatePairSize);
 				}
+
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_TIME_RANGE);
-					valuePtr = valuePtr.share(2);
-					
-					Pointer rangePtr = valuePtr;
-					NotesRangeStruct range = NotesRangeStruct.newInstance(rangePtr);
-					range.ListEntries = (short) (dateTimeList.size() & 0xffff);
-					range.RangeEntries = (short) (dateRangeList.size() & 0xffff);
-					range.write();
-
-					Pointer dateListPtr = rangePtr.share(NotesConstants.rangeSize);
-					
-					for (NotesTimeDate currCal : dateTimeList) {
-						int[] innards = currCal.getInnards();
-
-						dateListPtr.setInt(0, innards[0]);
-						dateListPtr = dateListPtr.share(4);
-						dateListPtr.setInt(0, innards[1]);
-						dateListPtr = dateListPtr.share(4);
-					}
-					
-					Pointer rangeListPtr = dateListPtr;
-					
-					for (int i=0; i<dateRangeList.size(); i++) {
-						NotesDateRange currRangeVal = dateRangeList.get(i);
-						NotesTimeDate start = currRangeVal.getStartDateTime();
-						NotesTimeDate end = currRangeVal.getEndDateTime();
-						
-						int[] innardsStart = start.getInnards();
-						int[] innardsEnd = end.getInnards();
-
-						NotesTimeDateStruct timeDateStart = NotesTimeDateStruct.newInstance(innardsStart);
-						NotesTimeDateStruct timeDateEnd = NotesTimeDateStruct.newInstance(innardsEnd);
-						
-						NotesTimeDatePairStruct timeDatePair = NotesTimeDatePairStruct.newInstance(rangeListPtr);
-						timeDatePair.Lower = timeDateStart;
-						timeDatePair.Upper = timeDateEnd;
-						timeDatePair.write();
-
-						rangeListPtr = rangeListPtr.share(NotesConstants.timeDatePairSize);
-					}
-
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_TIME_RANGE, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		}
 		else if (value instanceof double[]) {
@@ -4062,55 +3963,28 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			//date type + LIST structure + UNIVERSALNOTEID
 			int valueSize = 2 + 2 + 2 * NotesConstants.timeDateSize;
 			
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
+				valuePtr = valuePtr.share(2);
 				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
+				//LIST structure
+				valuePtr.setShort(0, (short) 1);
+				valuePtr = valuePtr.share(2);
 				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
-					valuePtr = valuePtr.share(2);
-					
-					//LIST structure
-					valuePtr.setShort(0, (short) 1);
-					valuePtr = valuePtr.share(2);
-					
-					struct.write();
-					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
+				struct.write();
+				valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
 
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
-				}
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_NOTEREF_LIST);
-					valuePtr = valuePtr.share(2);
-					
-					//LIST structure
-					valuePtr.setShort(0, (short) 1);
-					valuePtr = valuePtr.share(2);
-					
-					struct.write();
-					valuePtr.write(0, struct.getAdapter(Pointer.class).getByteArray(0, 2*NotesConstants.timeDateSize), 0, 2*NotesConstants.timeDateSize);
-
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		}
 		else if (value instanceof FormulaExecution) {
@@ -4121,46 +3995,49 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			
 			//date type + compiled formula
 			int valueSize = 2 + compiledFormula.length;
+
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
 			
-			if (PlatformUtils.is64Bit()) {
-				LongByReference rethItem = new LongByReference();
-				short result = Mem64.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.setShort(0, (short) NotesItem.TYPE_FORMULA);
+				valuePtr = valuePtr.share(2);
 				
-				Pointer valuePtr = Mem64.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_FORMULA);
-					valuePtr = valuePtr.share(2);
-					
-					valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
+				valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
 
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_FORMULA, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem64.OSUnlockObject(rethItem.getValue());
-				}
+				NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_FORMULA, rethItem, valueSize);
+				return item;
 			}
-			else {
-				IntByReference rethItem = new IntByReference();
-				short result = Mem32.OSMemAlloc((short) 0, valueSize, rethItem);
-				NotesErrorUtils.checkResult(result);
-				
-				Pointer valuePtr = Mem32.OSLockObject(rethItem.getValue());
-				
-				try {
-					valuePtr.setShort(0, (short) NotesItem.TYPE_FORMULA);
-					valuePtr = valuePtr.share(2);
-					
-					valuePtr.write(0, compiledFormula, 0, compiledFormula.length);
+			finally {
+				Mem.OSUnlockObject(rethItem);
+			}
+		}
+		else if (value instanceof ByteBuffer) {
+			ByteBuffer byteBufValue = (ByteBuffer) value;
+			int valueSize = byteBufValue.remaining();
+			//byte array with a datatype WORD and the raw value
+			byte[] rawDataWithType = new byte[valueSize];
+			byteBufValue.get(rawDataWithType);
+			
+			//date type + compiled formula
 
-					NotesItem item = appendItemValue(itemName, flags, NotesItem.TYPE_NOTEREF_LIST, (int) rethItem.getValue(), valueSize);
-					return item;
-				}
-				finally {
-					Mem32.OSUnlockObject(rethItem.getValue());
-				}
+			DHANDLE.ByReference rethItem = DHANDLE.newInstanceByReference();
+			short result = Mem.OSMemAlloc((short) 0, valueSize, rethItem);
+			NotesErrorUtils.checkResult(result);
+			
+			Pointer valuePtr = Mem.OSLockObject(rethItem);
+			
+			try {
+				valuePtr.write(0, rawDataWithType, 0, rawDataWithType.length);
+				short dataType = valuePtr.getShort(0);
+				NotesItem item = appendItemValue(itemName, flags, dataType, rethItem, valueSize);
+				return item;
+			}
+			finally {
+				Mem.OSUnlockObject(rethItem);
 			}
 		}
 		else {
@@ -4168,33 +4045,29 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 	}
 
-	private List<?> toNumberOrNumberArrayList(List<?> list) {
-		boolean allNumbers = true;
-		for (int i=0; i<list.size(); i++) {
-			if (!(list.get(i) instanceof double[]) && !(list.get(i) instanceof Double)) {
-				allNumbers = false;
-				break;
-			}
+	private List<?> toNumberOrNumberArrayList(Iterable<?> list) {
+		boolean allNumbers = StreamSupport.stream(list.spliterator(), false)
+				.allMatch(i -> i instanceof double[] || i instanceof Double);
+
+		if (allNumbers) {
+			return StreamSupport.stream(list.spliterator(), false).collect(Collectors.toList());
 		}
 		
-		if (allNumbers)
-			return (List<?>) list;
-		
 		List<Object> convertedList = new ArrayList<>();
-		for (int i=0; i<list.size(); i++) {
-			if (list.get(i) instanceof Number) {
+		for (Object currObj : list) {
+			if (currObj instanceof Number) {
 				//ok
-				convertedList.add(((Number)list.get(i)).doubleValue());
+				convertedList.add(((Number)currObj).doubleValue());
 			}
-			else if (list.get(i) instanceof double[]) {
-				if (((double[])list.get(i)).length!=2) {
+			else if (currObj instanceof double[]) {
+				if (((double[])currObj).length!=2) {
 					throw new IllegalArgumentException("Length of double array entry must be 2 for number ranges");
 				}
 				//ok
-				convertedList.add((double[]) list.get(i));
+				convertedList.add((double[]) currObj);
 			}
-			else if (list.get(i) instanceof Number[]) {
-				Number[] numberArr = (Number[]) list.get(i);
+			else if (currObj instanceof Number[]) {
+				Number[] numberArr = (Number[]) currObj;
 				if (numberArr.length!=2) {
 					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
 				}
@@ -4204,8 +4077,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						numberArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Double[]) {
-				Double[] doubleArr = (Double[]) list.get(i);
+			else if (currObj instanceof Double[]) {
+				Double[] doubleArr = (Double[]) currObj;
 				if (doubleArr.length!=2) {
 					throw new IllegalArgumentException("Length of Number array entry must be 2 for number ranges");
 				}
@@ -4215,8 +4088,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						doubleArr[1]
 				});
 			}
-			else if (list.get(i) instanceof Integer[]) {
-				Integer[] integerArr = (Integer[]) list.get(i);
+			else if (currObj instanceof Integer[]) {
+				Integer[] integerArr = (Integer[]) currObj;
 				if (integerArr.length!=2) {
 					throw new IllegalArgumentException("Length of Integer array entry must be 2 for number ranges");
 				}
@@ -4226,8 +4099,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						integerArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Long[]) {
-				Long[] longArr = (Long[]) list.get(i);
+			else if (currObj instanceof Long[]) {
+				Long[] longArr = (Long[]) currObj;
 				if (longArr.length!=2) {
 					throw new IllegalArgumentException("Length of Long array entry must be 2 for number ranges");
 				}
@@ -4237,8 +4110,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						longArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof Float[]) {
-				Float[] floatArr = (Float[]) list.get(i);
+			else if (currObj instanceof Float[]) {
+				Float[] floatArr = (Float[]) currObj;
 				if (floatArr.length!=2) {
 					throw new IllegalArgumentException("Length of Float array entry must be 2 for number ranges");
 				}
@@ -4248,8 +4121,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						floatArr[1].doubleValue()
 				});
 			}
-			else if (list.get(i) instanceof int[]) {
-				int[] intArr = (int[]) list.get(i);
+			else if (currObj instanceof int[]) {
+				int[] intArr = (int[]) currObj;
 				if (intArr.length!=2) {
 					throw new IllegalArgumentException("Length of int array entry must be 2 for number ranges");
 				}
@@ -4259,8 +4132,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						intArr[1]
 				});
 			}
-			else if (list.get(i) instanceof long[]) {
-				long[] longArr = (long[]) list.get(i);
+			else if (currObj instanceof long[]) {
+				long[] longArr = (long[]) currObj;
 				if (longArr.length!=2) {
 					throw new IllegalArgumentException("Length of long array entry must be 2 for number ranges");
 				}
@@ -4270,8 +4143,8 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 						longArr[1]
 				});
 			}
-			else if (list.get(i) instanceof float[]) {
-				float[] floatArr = (float[]) list.get(i);
+			else if (currObj instanceof float[]) {
+				float[] floatArr = (float[]) currObj;
 				if (floatArr.length!=2) {
 					throw new IllegalArgumentException("Length of float array entry must be 2 for number ranges");
 				}
@@ -4282,7 +4155,7 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				});
 			}
 			else {
-				throw new IllegalArgumentException("Unsupported date format found in list: "+(list.get(i)==null ? "null" : list.get(i).getClass().getName()));
+				throw new IllegalArgumentException("Unsupported date format found in list: "+(currObj==null ? "null" : currObj.getClass().getName()));
 			}
 		}
 		return convertedList;
@@ -4333,9 +4206,21 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 				convertedList.add(new NotesDateRange(ntdArr[0], ntdArr[1]));
 			}
+			else if (obj instanceof TemporalAccessor[]) {
+				TemporalAccessor[] taArr = (TemporalAccessor[]) obj;
+				if (taArr.length!=2) {
+					throw new IllegalArgumentException("Length of TemporalAccessor array entry must be 2 for date ranges");
+				}
+				NotesTimeDate start = new NotesTimeDate(taArr[0]);
+				NotesTimeDate end = new NotesTimeDate(taArr[1]);
+				convertedList.add(new NotesDateRange(start, end));
+			}
 			else if(obj instanceof NotesDateRange) {
 				NotesDateRange range = (NotesDateRange)obj;
 				convertedList.add(new NotesDateRange(range.getStartDateTime(), range.getEndDateTime()));
+			}
+			else if(obj instanceof TemporalAccessor) {
+				convertedList.add(new NotesTimeDate((TemporalAccessor) obj));
 			}
 			else {
 				throw new IllegalArgumentException(MessageFormat.format("Unsupported date format found in list: {0}", (obj==null ? "null" : obj.getClass().getName()))); //$NON-NLS-2$
@@ -4344,19 +4229,19 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		return convertedList;
 	}
 	
-	private boolean isStringList(List<?> list) {
-		if (list==null || list.isEmpty()) {
+	private boolean isStringList(Iterable<?> list) {
+		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
-		for (int i=0; i<list.size(); i++) {
-			if (!(list.get(i) instanceof String)) {
+		for (Object currObj : list) {
+			if (!(currObj instanceof String)) {
 				return false;
 			}
 		}
 		return true;
 	}
 	
-	private boolean isCalendarOrCalendarArrayList(List<?> list) {
+	private boolean isCalendarOrCalendarArrayList(Iterable<?> list) {
 		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
@@ -4382,7 +4267,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 				}
 			}
 			else if (currObj instanceof TemporalAccessor[]) {
-				isAccepted = true;
+				TemporalAccessor[] taArr = (TemporalAccessor[]) currObj;
+				if (taArr.length==2) {
+					isAccepted = true;
+				}
 			}
 			else if (currObj instanceof Calendar) {
 				isAccepted = true;
@@ -4407,14 +4295,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		return true;
 	}
 	
-	private boolean isNumberOrNumberArrayList(List<?> list) {
-		if (list==null || list.isEmpty()) {
+	private boolean isNumberOrNumberArrayList(Iterable<?> list) {
+		if (list==null || !list.iterator().hasNext()) {
 			return false;
 		}
-		for (int i=0; i<list.size(); i++) {
+		for (Object currObj : list) {
 			boolean isAccepted=false;
-			
-			Object currObj = list.get(i);
 			
 			if (currObj instanceof double[]) {
 				double[] valArr = (double[]) currObj;
@@ -4482,15 +4368,15 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	}
 	
 	/**
-	 * Internal method that calls the C API method to write the item
+	 * Internal method that calls the C API method to write the item with a handle to populate the BLOCKID structure.
 	 * 
 	 * @param itemName item name
 	 * @param flags item flags
 	 * @param itemType item type
-	 * @param hItemValue handle to memory block with item value
+	 * @param hItemValue handle to memory block with item value beginning with data type short
 	 * @param valueLength length of binary item value (without data type short)
 	 */
-	private NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, int itemType, int hItemValue, int valueLength) {
+	private NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, int itemType, DHANDLE hItemValue, int valueLength) {
 		checkHandle();
 
 		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
@@ -4498,7 +4384,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		short flagsShort = ItemType.toBitMask(flags);
 		
 		NotesBlockIdStruct.ByValue valueBlockIdByVal = NotesBlockIdStruct.ByValue.newInstance();
-		valueBlockIdByVal.pool = hItemValue;
+		if (hItemValue instanceof DHANDLE64) {
+			valueBlockIdByVal.pool = (int) (((DHANDLE64)hItemValue).hdl & 0xffffffff);
+		}
+		else if (hItemValue instanceof DHANDLE32) {
+			valueBlockIdByVal.pool = ((DHANDLE32)hItemValue).hdl;
+		}
 		valueBlockIdByVal.block = 0;
 		valueBlockIdByVal.write();
 		
@@ -4507,21 +4398,55 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		retItemBlockId.block = 0;
 		retItemBlockId.write();
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().NSFItemAppendByBLOCKID(m_hNote64, flagsShort, itemNameMem,
-					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
-					valueLength, retItemBlockId);
-		}
-		else {
-			result = NotesNativeAPI32.get().NSFItemAppendByBLOCKID(m_hNote32, flagsShort, itemNameMem,
-					(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
-					valueLength, retItemBlockId);
-		}
+		DHANDLE docHandle = getHandle();
+		
+		short result = NotesNativeAPI.get().NSFItemAppendByBLOCKID(docHandle.getByValue(),
+				flagsShort, itemNameMem,
+				(short) (itemNameMem==null ? 0 : itemNameMem.size()), valueBlockIdByVal,
+				valueLength, retItemBlockId);
 		NotesErrorUtils.checkResult(result);
 		
 		NotesItem item = new NotesItem(this, retItemBlockId, itemType, valueBlockIdByVal);
 		return item;
+	}
+	
+	/**
+	 * Internal method that calls the C API method to write the item with a pointer to the item value.
+	 * 
+	 * @param itemName item name
+	 * @param flags item flags
+	 * @param itemType item type
+	 * @param ptr value pointer without data type short
+	 * @param valueLength length of binary item value (without data type short)
+	 */
+	private NotesItem appendItemValue(String itemName, EnumSet<ItemType> flags, int itemType, Pointer ptr, int valueLength) {
+		checkHandle();
+
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
+		
+		short flagsShort = ItemType.toBitMask(flags);
+		
+		DHANDLE docHandle = getHandle();
+		
+		short result = NotesNativeAPI.get().NSFItemAppend(
+				docHandle.getByValue(),
+				flagsShort,
+				itemNameMem,
+				(short) (itemNameMem==null ? 0 : itemNameMem.size()),
+		    (short) (itemType & 0xffff),
+		    ptr,
+		    valueLength);
+		NotesErrorUtils.checkResult(result);
+		
+		//find the item we just wrote because NSFItemAppend does not return the BLOCKID;
+		//we don't use NSFItemAppendByBLOCKID because it does not support large item values (for which we added this method primarily)
+		AtomicReference<NotesItem> lastItemOfName = new AtomicReference<>();
+		
+		getItems(itemName, (itm, loop) -> {
+			lastItemOfName.set(itm);
+		});
+		
+		return lastItemOfName.get();
 	}
 	
 	/**
@@ -4960,6 +4885,98 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 
 		@Override
+		public MIMEData toMIME() {
+			MIMEData data = new MIMEData();
+			data.setHtml(getText());
+			
+			List<IHtmlImageRef> bodyImages = getImages();
+			
+			AtomicInteger imageCount = new AtomicInteger();
+			
+			//inline all embedded images
+			bodyImages.forEach((currImage) -> {
+				String imgSrc = currImage.getReferenceText();
+				String imgFormat = currImage.getFormat();
+				
+				ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+				
+				//produce a stable content ID for the image based on a hash of its content
+				AtomicReference<MessageDigest> digest = new AtomicReference<>();
+				try {
+					digest.set(MessageDigest.getInstance("SHA-256"));
+				} catch (NoSuchAlgorithmException e1) {
+					digest.set(null);
+				}
+			    
+				currImage.readImage(new IHtmlItemImageConversionCallback() {
+
+					@Override
+					public int setSize(int size) {
+						return 0;
+					}
+
+					@Override
+					public Action read(byte[] data) {
+						try {
+							bOut.write(data);
+							
+							if (digest.get()!=null) {
+								digest.get().update(data, 0, data.length);
+							}
+							
+						} catch (IOException e) {
+							throw new UncheckedIOException("Error reading image '"+imgSrc+
+									"' from document with UNID "+getUNID(), e);
+						}
+						return Action.Continue;
+					}
+					
+				});
+				
+				String contentId;
+				
+				if (digest.get()!=null) {
+				    byte[] digestVal = digest.get().digest();
+				    contentId = digestToString(digestVal);
+				}
+				else {
+					contentId = "img_"+imageCount.incrementAndGet();
+				}
+				
+				if (data.getEmbed(contentId)==null) {
+					IMimeAttachment imgAtt = new ByteArrayMimeAttachment(bOut.toByteArray(), contentId+"."+imgFormat);
+					data.embed(contentId, imgAtt);
+					
+					data.setHtml(data.getHtml().replace(imgSrc, "cid:" + contentId));
+				}
+				
+			});
+
+			return data;
+		}
+
+		/**
+		 * Converts a hash digest to a hex string
+		 * 
+		 * @param digest hash digest
+		 * @return hash as String
+		 */
+		private String digestToString(byte[] digest) {
+			StringBuilder hexString = new StringBuilder();
+
+			for (int i = 0; i < digest.length; i++) {
+				if ((0xff & digest[i]) < 0x10) {
+					hexString.append("0"
+							+ Integer.toHexString((0xFF & digest[i])));
+				} else {
+					hexString.append(Integer.toHexString(0xFF & digest[i]));
+				}
+			}
+
+			return hexString.toString();
+		}
+
+		@Override
 		public List<IHtmlApiReference> getReferences() {
 			return m_references;
 		}
@@ -4967,6 +4984,11 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		private IHtmlImageRef createImageRef(final String refText, final String fieldName, final int itemIndex,
 				final int itemOffset, final String format) {
 			return new IHtmlImageRef() {
+				
+				@Override
+				public String toString() {
+					return "IHtmlImageRef [format="+getFormat()+", itemName="+getItemName()+", itemIndex="+getItemIndex()+", itemOffset="+getItemOffset()+"]";
+				}
 				
 				@Override
 				public void readImage(IHtmlItemImageConversionCallback callback) {
@@ -5069,8 +5091,60 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			};
 		}
 		
-		public java.util.List<com.mindoo.domino.jna.html.IHtmlImageRef> getImages() {
-			List<IHtmlImageRef> imageRefs = new ArrayList<IHtmlImageRef>();
+		@Override
+		public List<IHtmlAttachmentRef> getAttachments() {
+			return m_references
+			.stream()
+			.filter((ref) -> {
+				return ref.getCommandId() == CommandId.OPENELEMENT;
+			})
+			.filter((ref) -> {
+				IHtmlApiUrlTargetComponent<?> docTarget = ref.getTargetByType(TargetType.DOCUMENT);
+				IHtmlApiUrlTargetComponent<?> fileNameTarget = ref.getTargetByType(TargetType.FILENAME);
+				return fileNameTarget!=null && docTarget!=null && getUNID().equals(docTarget.getValue());
+				
+			})
+			.map((ref) -> {
+				String refText = ref.getReferenceText();
+				IHtmlApiUrlTargetComponent<?> fileNameTarget = ref.getTargetByType(TargetType.FILENAME);
+				String fileName = (String) fileNameTarget.getValue();
+				
+				return new IHtmlAttachmentRef() {
+
+					@Override
+					public String getReferenceText() {
+						return refText;
+					}
+
+					@Override
+					public String getFileName() {
+						return fileName;
+					}
+					
+					@Override
+					public Optional<NotesAttachment> findAttachment() {
+						return Optional.ofNullable(getAttachment(fileName));
+					}
+					
+					@Override
+					public HtmlConvertProperties getProperties() {
+						return m_props;
+					}
+					
+					@Override
+					public String toString() {
+						return "IHtmlAttachmentRef [filename="+getFileName()+"]";
+					}
+
+				};
+			})
+			.map(IHtmlAttachmentRef.class::cast)
+			.collect(Collectors.toList());
+		}
+		
+		@Override
+		public List<IHtmlImageRef> getImages() {
+			List<IHtmlImageRef> imageRefs = new ArrayList<>();
 			
 			for (IHtmlApiReference currRef : m_references) {
 				if (currRef.getType() == ReferenceType.IMG) {
@@ -5455,6 +5529,43 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		
 	}
 	
+	private static String simpleHtmlEscape(String txt) {
+		final StringBuilder sb = new StringBuilder();
+
+		for (int i=0; i<txt.length(); i++) {
+			char c = txt.charAt(i);
+			
+			if (c == '<') {
+				sb.append("&lt;");
+			}
+			else if (c == '>') {
+				sb.append("&gt;");
+			}
+			else if (c == '\"') {
+				sb.append("&quot;");
+			}
+			else if (c == '\'') {
+				sb.append("&#039;");
+			}
+			else if (c == '\\') {
+				sb.append("&#092;");
+			}
+			else if (c == '&') {
+				sb.append("&amp;");
+			}
+			else if (c == '\r') {
+				//skip
+			}
+			else if (c == '\n') {
+				sb.append("<br>");
+			}
+			else {
+				sb.append(c);
+			}
+		}
+		return sb.toString();
+	}
+	
 	/**
 	 * Internal method doing the HTML conversion work
 	 * 
@@ -5469,6 +5580,17 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			Map<ReferenceType,EnumSet<TargetType>> targetTypeFilter) {
 		
 		checkHandle();
+		
+		if (itemName!=null) {
+			//fix to handle text items
+			NotesItem itm = getFirstItem(itemName);
+			if (itm!=null) {
+				if (itm.getType() == NotesItem.TYPE_TEXT || itm.getType() == NotesItem.TYPE_TEXT_LIST) {
+					String txtContentAsHtml = simpleHtmlEscape(getItemValueAsText(itemName, '\n'));
+					return new HtmlConversionResult(txtContentAsHtml, Collections.emptyList(), props);
+				}
+			}
+		}
 		
 		HtmlConverter htmlConverter = setupHtmlConverter(props);
 		
@@ -6595,9 +6717,12 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	}
 	
 	/**
-	 * This function converts the all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
+	 * This function converts all {@link NotesItem#TYPE_COMPOSITE} (richtext) items in an open note
 	 * to {@link NotesItem#TYPE_MIME_PART} items.<br>
-	 * It does not update the Domino database; to update the database, call {@link #update()}.
+	 * It does not update the Domino database; to update the database, call {@link #update()}. If
+	 * you want to render a single richtext item as MIME, use
+	 * {@link #convertItemToHtml(String, HtmlConvertProperties)} followed by
+	 * {@link IHtmlConversionResult#toMIME()} instead.
 	 * 
 	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
 	 */
@@ -6619,6 +6744,105 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 		}
 		else {
 			result = NotesNativeAPI32.get().MIMEConvertCDParts(getHandle32(), isCanonical, isMime, ccPtr);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function converts the input {@link NotesItem#TYPE_MIME_PART} item in an open note to a
+	 * {@link NotesItem#TYPE_COMPOSITE} item.<br>
+	 * <br>
+	 * It does not update the Domino database; to update the database, call {@link #update()}.<br>
+	 * <br>
+	 * You may specify Conversion Controls settings for the conversion process.<br>
+	 * For the named {@link NotesItem#TYPE_MIME_PART} item (which may actually be several items -- e.g., 'Body'),
+	 * the conversion function performs a conversion to Composite Document (CD) / richtext format.<br>
+	 * <br>
+	 * (R7.x/R8) Note that the conversion is not performed with 100% fidelity.  The function supports HTML font effects
+	 * specified as separate elements (e.g., &lt;b&gt; to set bold face), but it does not support styles, whether
+	 * specified as a CSS document, a &lt;style&gt; element, or as a 'style=' parameter to other elements
+	 * (e.g., &lt;div&gt; or &lt;span&gt;).  The rendering of tables and lists also may be somewhat different
+	 * in the converted document.  The conversion also does not convert "active content"; for example, Javascript
+	 * contained in an application/x-javascript part.<br>
+	 * Such parts are retained as attachments in the converted document.<br>
+	 * If this function is called on the Domino server, its actions are affected by its configuration as
+	 * specified in the Domino Server Configuration; see the MIME pages of the Server Configuration for details.<br>
+	 * <br>
+	 * If this function is called on the Notes client, its actions are affected by its configuration as specified
+	 * in the Personal Name and Address book; see the International MIME Settings document for details.
+	 * 
+	 * @param itemName item to convert
+	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
+	 */
+	public void convertToRichtext(String itemName, MimeConversionControl concCtrl) {
+		checkHandle();
+		
+		if (concCtrl!=null && concCtrl.isRecycled()) {
+			throw new NotesError(0, "The conversion control object is recycled");
+		}
+		
+		Memory itemNameMem = NotesStringUtils.toLMBCS(itemName, false);
+		
+		Pointer ccPtr = concCtrl==null ? null : concCtrl.getAdapter(Pointer.class);
+
+		boolean isCanonical = (getFlags() & NotesConstants.NOTE_FLAG_CANONICAL) == NotesConstants.NOTE_FLAG_CANONICAL;
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertMIMEPartCC(getHandle64(), itemNameMem,
+					(short) (itemNameMem.size() & 0xffff), isCanonical, ccPtr);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertMIMEPartCC(getHandle32(), itemNameMem,
+					(short) (itemNameMem.size() & 0xffff), isCanonical, ccPtr);
+		}
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * This function converts all {@link NotesItem#TYPE_MIME_PART} items in an open note to
+	 * {@link NotesItem#TYPE_COMPOSITE} items.<br>
+	 * <br>
+	 * It does not update the Domino database; to update the database, call {@link #update()}.<br>
+	 * <br>
+	 * You may specify Conversion Controls settings for the conversion process.<br>
+	 * The Conversion Controls settings may be changed to override aspects of server-side or client-side configuration;
+	 * see {@link MimeConversionControl}.  If the hCC handle is NULL, this function uses its internal default settings
+	 * (same as those set by {@link MimeConversionControl#setDefaults()}).<br>
+	 * <br>
+	 * For each {@link NotesItem#TYPE_MIME_PART} item (which may actually be several items -- e.g., 'Body'),
+	 * this function performs a conversion to Composite Document (CD) format.<br>
+	 * <br>
+	 * (R7.x/R8) Note that the conversion is not performed with 100% fidelity.  The function supports HTML font effects
+	 * specified as separate elements (e.g., &lt;b&gt; to set bold face), but it does not support styles, whether
+	 * specified as a CSS document, a &lt;style&gt; element, or as a 'style=' parameter to other elements
+	 * (e.g., &lt;div&gt; or &lt;span&gt;).  The rendering of tables and lists also may be somewhat different
+	 * in the converted document.  The conversion also does not convert "active content"; for example, Javascript
+	 * contained in an application/x-javascript part.<br>
+	 * Such parts are retained as attachments in the converted document.<br>
+	 * If this function is called on the Domino server, its actions are affected by its configuration as
+	 * specified in the Domino Server Configuration; see the MIME pages of the Server Configuration for details.<br>
+	 * <br>
+	 * If this function is called on the Notes client, its actions are affected by its configuration as specified
+	 * in the Personal Name and Address book; see the International MIME Settings document for details.
+	 *  
+	 * @param concCtrl  If non-NULL, the handle to the Conversion Controls settings. If NULL, the default settings are used.
+	 */
+	public void convertToRichtext(MimeConversionControl concCtrl) {
+		checkHandle();
+		
+		if (concCtrl!=null && concCtrl.isRecycled()) {
+			throw new NotesError(0, "The conversion control object is recycled");
+		}
+		
+		Pointer ccPtr = concCtrl==null ? null : concCtrl.getAdapter(Pointer.class);
+
+		boolean isCanonical = (getFlags() & NotesConstants.NOTE_FLAG_CANONICAL) == NotesConstants.NOTE_FLAG_CANONICAL;
+		short result;
+		if (PlatformUtils.is64Bit()) {
+			result = NotesNativeAPI64.get().MIMEConvertMIMEPartsCC(getHandle64(), isCanonical, ccPtr);
+		}
+		else {
+			result = NotesNativeAPI32.get().MIMEConvertMIMEPartsCC(getHandle32(), isCanonical, ccPtr);
 		}
 		NotesErrorUtils.checkResult(result);
 	}
@@ -6693,6 +6917,42 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 			String[] parsedParts = NotesDatabase.parseApplicationNamedNoteName(name);
 			if (parsedParts!=null) {
 				return parsedParts[0];
+			}
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * For named notes (created via {@link NotesDatabase#openNamedNote(String, String, boolean)},
+	 * this method returns the name value.
+	 * 
+	 * @return name or empty string
+	 */
+	public String getNamedNoteName() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseLegacyAPINamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[0];
+			}
+		}
+		
+		return "";
+	}
+	
+	/**
+	 * For named notes (created via {@link NotesDatabase#openNamedNote(String, String, boolean)},
+	 * this method returns the username value.
+	 * 
+	 * @return username or empty string
+	 */
+	public String getNamedNoteUsername() {
+		String name = getItemValueString("$name");
+		if (!StringUtil.isEmpty(name)) {
+			String[] parsedParts = NotesDatabase.parseLegacyAPINamedNoteName(name);
+			if (parsedParts!=null) {
+				return parsedParts[1];
 			}
 		}
 		
@@ -7448,10 +7708,10 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 	 * 
 	 * @return size
 	 */
-	public int size() {
+	public long size() {
 		checkHandle();
 		
-		int[] totalSize = new int[1];
+		long[] totalSize = new long[1];
 		
 		getItems(null, (item) -> {
 			totalSize[0] += item.getValueLength();
@@ -7567,5 +7827,58 @@ public class NotesNote implements IRecyclableNotesObject, IAdaptable {
 					return !StringUtil.isEmpty(val);
 				})
 				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Returns a stream of note attachments
+	 * 
+	 * @return attachments
+	 */
+	public Stream<NotesAttachment> getAttachments() {
+		return getAttachmentNames()
+				.stream()
+				.map(this::getAttachment)
+				.filter(Objects::nonNull);
+	}
+
+	/**
+	 * Checks if the note is unread for the {@link NotesDatabase} opener.<br>
+	 * Uses {@link NotesDatabase#isNoteUnread(String, int)} internally.
+	 *
+	 * @return true if unread
+	 */
+	public boolean isUnread() {
+		return getParent().isNoteUnread(null, getNoteId());
+	}
+
+	/**
+	 * Checks if the note is unread for the specified user.<br>
+	 * Uses {@link NotesDatabase#isNoteUnread(String, int)} internally.
+	 *
+	 * @param userName username in abbreviated or canonical format, if null, we use the
+	 *                 {@link NotesDatabase} opener
+	 * @return true if unread
+	 */
+	public boolean isUnread(String userName) {
+		return getParent().isNoteUnread(userName, getNoteId());
+	}
+
+	/**
+	 * Method to change the unread state of the note
+	 *
+	 * @param userName username in abbreviated or canonical format, if null, we use the
+	 *                 {@link NotesDatabase} opener
+	 * @param unread   true to mark unread, false to mark read
+	 * @return this note
+	 */
+	public NotesNote setUnread(String userName, boolean unread) {
+		if (unread) {
+			getParent().updateUnreadNoteTable(userName, null, Collections.singleton(getNoteId()));
+		}
+		else {
+			getParent().updateUnreadNoteTable(userName, Collections.singleton(getNoteId()), null);
+		}
+		return this;
+
 	}
 }

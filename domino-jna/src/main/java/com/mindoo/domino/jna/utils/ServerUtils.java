@@ -8,6 +8,7 @@ import java.util.List;
 import com.mindoo.domino.jna.constants.ClusterLookup;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.internal.ConsoleLine;
+import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.Mem32;
@@ -20,6 +21,7 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesConsoleEntryStruct;
+import com.mindoo.domino.jna.utils.NotesStringUtils.LineBreakConversion;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
@@ -337,4 +339,146 @@ public class ServerUtils {
 		}
 		
 	}
+	
+	public enum PasswordDigestType {
+		/** Compatible with 4.5+ */ 
+		V1(NotesConstants.SEC_pwddigest_V1),
+		/** More secure, compatible with R4.6+ */
+		V2(NotesConstants.SEC_pwddigest_V2),
+		/** Even more secure compatible with 8.01+ */
+		V3(NotesConstants.SEC_pwddigest_V3);
+		
+		private int val;
+		
+		private PasswordDigestType(int val) {
+			this.val = val;
+		}
+		
+		public int getVal() {
+			return val;
+		}
+	}
+	
+	/**
+	 * This function takes an unencoded password and returns the more secure version of the digest.
+	 * The Internet Password is in this "more secure" format.
+	 * 
+	 * @param pwd password
+	 * @param type digest type to produce
+	 * @return hashed password
+	 */
+	public static String hashPassword(String pwd, PasswordDigestType type) {
+		if (pwd==null) {
+			throw new IllegalArgumentException("Password is null");
+		}
+		if (StringUtil.isEmpty(pwd)) {
+			throw new IllegalArgumentException("Password is empty");
+		}
+
+		Memory pwdMem = NotesStringUtils.toLMBCS(pwd, false);
+		if (pwdMem.size() > 65535) {
+			throw new IllegalArgumentException("Password exceed max size of 0xffff bytes");
+		}
+		short wPasswordLen = (short) (pwdMem.size() & 0xffff);
+
+		DisposableMemory retDigest = new DisposableMemory(Short.toUnsignedInt(NotesConstants.MAXWORD) - 128);
+		try {
+			short wVersion = (short) (type.getVal() & 0xffff);
+			short wHashType = NotesConstants.SEC_ai_HMAC_SHA1;
+			ShortByReference retDigestLen = new ShortByReference();
+
+			short result = NotesNativeAPI.get().SECHashPassword3(
+					wPasswordLen,
+					pwdMem,
+					wVersion,
+					wHashType,
+					(Pointer) null,
+					12345, // not sure about this one, copied from example hashpwd.c
+					(Pointer) null,
+					0,
+					(short) (retDigest.size() & 0xffff),
+					retDigestLen,
+					retDigest,
+					0,
+					(Pointer) null
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			String retDigestStr = NotesStringUtils.fromLMBCS(retDigest, Short.toUnsignedInt(retDigestLen.getValue()));
+			return retDigestStr;
+		}
+		finally {
+			retDigest.dispose();
+		}
+
+	}
+	
+	/**
+	 * This function verifies an unencoded password against a digest password value. The unencoded password
+	 * can be either an unencoded Internet Password or Notes ID Password. The digest password value can be
+	 * either an Internet Password (more secure digest value) or a Password Digest. The unencoded Internet
+	 * Password is verified against the Internet Password. The Notes ID Password is verified against
+	 * the Password Digest.
+	 * 
+	 * @param pwd Unencoded password to be verified.
+	 * @param digest Digest to be compared against.
+	 */
+	public static void verifyPassword(String pwd, String digest) {
+		if (pwd==null) {
+			throw new IllegalArgumentException("Password is null");
+		}
+		if (StringUtil.isEmpty(pwd)) {
+			throw new IllegalArgumentException("Password is empty");
+		}
+		
+		Memory pwdMem = NotesStringUtils.toLMBCS(pwd, false);
+		if (pwdMem.size() > 65535) {
+			throw new IllegalArgumentException("Password exceed max size of 0xffff bytes");
+		}
+
+		if (digest==null) {
+			throw new IllegalArgumentException("Digest is null");
+		}
+		if (StringUtil.isEmpty(digest)) {
+			throw new IllegalArgumentException("Digest is empty");
+		}
+		
+		Memory digestMem = NotesStringUtils.toLMBCS(digest, false);
+		if (digestMem.size() > 65535) {
+			throw new IllegalArgumentException("Digest exceed max size of 0xffff bytes");
+		}
+		
+		short pwdLen = (short) (pwdMem.size() & 0xffff);
+		short digestLen = (short) (digestMem.size() & 0xffff);
+		
+		short result = NotesNativeAPI.get().SECVerifyPassword(pwdLen, pwdMem,
+				digestLen, digestMem, 0, null);
+		NotesErrorUtils.checkResult(result);
+	}
+	
+	/**
+	 * Format and write a message to the log file. <br>
+	 * <br>
+	 * This function formats a message, displays it on the standard output, and appends the message as
+	 * new line to the "Events" field in a Miscellaneous Events document in the Domino server or Notes client log.<br>
+	 * <br>
+	 * The generated message has the form:<br>
+	 * <br>
+	 * <code>&lt;DATE&gt;  &lt;TIME&gt; &lt;Primary status message&gt;</code><br>
+	 * <br>
+	 * Using this method instead of a simple <code>System.out.println()</code> has the benefit that
+	 * the message will be directly visible on the server console, while in other cases Domino might
+	 * buffer the messages written by Java (e.g. when an OSGi command is registered via the Eclipse
+	 * CommandInterpreter) until Java execution is done.
+	 * 
+	 * @param messageText message text
+	 */
+	public static void writeLogMessage(String messageText) {
+	    String[] lines = messageText.split("\\r?\\n", -1);
+	    for (String line : lines) {
+	      Memory lmbcs = NotesStringUtils.toLMBCS(line, true);
+	      NotesNativeAPI.get().AddInLogMessageText(lmbcs, (short)0, new Object[0]);
+	    }
+	}
+	
 }

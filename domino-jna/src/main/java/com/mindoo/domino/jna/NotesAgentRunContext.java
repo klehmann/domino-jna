@@ -12,7 +12,6 @@ import lotus.domino.Document;
  */
 public class NotesAgentRunContext {
 	private boolean m_checkSecurity;
-	private boolean m_reopenDbAsSigner;
 	private Writer m_stdOut;
 	private int m_timeoutSeconds;
 	private NotesNote m_documentContextAsNote;
@@ -60,32 +59,6 @@ public class NotesAgentRunContext {
 	 */
 	public NotesAgentRunContext setCheckSecurity(boolean checkSecurity) {
 		this.m_checkSecurity = checkSecurity;
-		return this;
-	}
-
-	/**
-	 * Returns whether the DB should be reopened as agent signer
-	 * 
-	 * @return true to reopen
-	 */
-	public boolean isReopenDbAsSigner() {
-		return m_reopenDbAsSigner;
-	}
-
-	/**
-	 * Use this method to set the AGENT_REOPEN_DB flag:<br>
-	 * <br>
-	 * AGENT_REOPEN_DB:<br>
-	 *  If AGENT_REOPEN_DB is set, the AgentRun call will reopen the agent's
-	 *  database with the privileges of the signer of the agent.
-	 *  If the flag is not set, the agent's "context" database will be open
-	 *  with the privileges of the current user (the current Notes id or the current Domino web user).
-	 *  
-	 * @param reopenAsSigner true to reopen database, false by default
-	 * @return this context object (for chained calls)
-	 */
-	public NotesAgentRunContext setReopenDbAsSigner(boolean reopenAsSigner) {
-		this.m_reopenDbAsSigner = reopenAsSigner;
 		return this;
 	}
 
@@ -208,11 +181,9 @@ public class NotesAgentRunContext {
 	}
 
 	/**
-	 * Sets the Notes username e.g. to be used for evaluating @UserNamesList.
-	 * Unfortunately, this does not cover Session.EffectiveUserName.
-	 * We still need to find a way to change this (when calling WebQueryOpen/Save agents manually), if there is any.
+	 * Sets the user identity for the agent execution, e.g. returned by <code>Session.effectiveUsername</code> in the agent code.
 	 * 
-	 * @param sessionEffectiveName either in canonical or abbreviated format, null by default, which means Session.EffectiveUserName will be the agent signer
+	 * @param sessionEffectiveName either in canonical or abbreviated format, null by default, which means Session.EffectiveUserName will be the DB opener (for "run as web user"==true) or the agent signer
 	 * @return this context object (for chained calls)
 	 */
 	public NotesAgentRunContext setUsername(String sessionEffectiveName) {
@@ -221,8 +192,7 @@ public class NotesAgentRunContext {
 	}
 
 	/**
-	 * Returns the Notes username e.g. to be used for evaluating @UserNamesList as a string list
-	 * to write a custom {@link NotesNamesList}.
+	 * Returns the user identity for the agent execution, e.g. returned by <code>Session.effectiveUsername</code> in the agent code.
 	 * 
 	 * @return string list with output like from @UserNamesList in canonical or abbreviated format
 	 */
@@ -231,11 +201,9 @@ public class NotesAgentRunContext {
 	}
 
 	/**
-	 * Returns the Notes username e.g. to be used for evaluating @UserNamesList as a string list
-	 * to write a custom {@link NotesNamesList}. Unfortunately, this does not cover Session.EffectiveUserName.
-	 * We still need to find a way to change this (when calling WebQueryOpen/Save agents manually), if there is any.
+	 * Sets the user identity for the agent execution, e.g. returned by <code>Session.effectiveUsername</code> in the agent code.
 	 * 
-	 * @param sessionEffectiveNameAsStringList string list with output like from @UserNamesList in canonical or abbreviated format, null by default, which means Session.EffectiveUserName will be the agent signer
+	 * @param sessionEffectiveNameAsStringList string list with output like from @UserNamesList in canonical or abbreviated format, which means Session.EffectiveUserName will be the DB opener (for "run as web user"==true) or the agent signer
 	 * @return this context object (for chained calls)
 	 */
 	public NotesAgentRunContext setUsernameAsStringList(List<String> sessionEffectiveNameAsStringList) {
@@ -244,7 +212,7 @@ public class NotesAgentRunContext {
 	}
 
 	/**
-	 * Returns the Notes username e.g. to be used for evaluating @UserNamesList as a {@link NotesNamesList}
+	 * Returns the user identity for the agent execution, e.g. returned by <code>Session.effectiveUsername</code> in the agent code.
 	 * 
 	 * @return names list
 	 */
@@ -253,11 +221,9 @@ public class NotesAgentRunContext {
 	}
 
 	/**
-	 * Sets the Notes username e.g. to be used for evaluating @UserNamesList as a {@link NotesNamesList}.
-	 * Unfortunately, this does not cover Session.EffectiveUserName.
-	 * We still need to find a way to change this (when calling WebQueryOpen/Save agents manually), if there is any.
+	 * Sets the user identity for the agent execution, e.g. returned by <code>Session.effectiveUsername</code> in the agent code.
 	 * 
-	 * @param sessionEffectiveNameAsNamesList names list, null by default, which means Session.EffectiveUserName will be the agent signer
+	 * @param sessionEffectiveNameAsNamesList names list, null by default, which means Session.EffectiveUserName will be the DB opener (for "run as web user"==true) or the agent signer
 	 * @return this context object (for chained calls)
 	 */
 	public NotesAgentRunContext setUsernameAsNamesList(NotesNamesList sessionEffectiveNameAsNamesList) {

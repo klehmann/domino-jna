@@ -8,11 +8,12 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.IAllocatedMemory;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.ItemDecoder;
 import com.mindoo.domino.jna.internal.LMBCSStringList;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
@@ -130,7 +131,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 					return null;
 				}
 				
-				NotesIDTable idTable = new NotesIDTable(new Handle(handle), true);
+				NotesIDTable idTable = new NotesIDTable(DHANDLE64.newInstance(handle), true);
 				//register IDTable for later disposal
 				NotesGC.__objectCreated(NotesIDTable.class, idTable);
 
@@ -153,7 +154,7 @@ public abstract class AbstractDXLTransfer implements IAllocatedMemory {
 					return null;
 				}
 				
-				NotesIDTable idTable = new NotesIDTable(new Handle(handle), true);
+				NotesIDTable idTable = new NotesIDTable(DHANDLE32.newInstance(handle), true);
 				//register IDTable for later disposal
 				NotesGC.__objectCreated(NotesIDTable.class, idTable);
 

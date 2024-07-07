@@ -13,13 +13,14 @@ import com.mindoo.domino.jna.errors.NotesError;
 import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.structs.KFM_PASSWORDStruct;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Memory;
@@ -68,12 +69,12 @@ public class IDUtils {
 		if (PlatformUtils.is64Bit()) {
 			LongByReference rethKFC = new LongByReference();
 			_getUserIdFromVault(userName, password, null, rethKFC, null, serverName);
-			userId = new NotesUserId(new Handle(rethKFC.getValue()));
+			userId = new NotesUserId(DHANDLE64.newInstance(rethKFC.getValue()));
 		}
 		else {
 			IntByReference rethKFC = new IntByReference();
 			_getUserIdFromVault(userName, password, null, null, rethKFC, serverName);
-			userId = new NotesUserId(new Handle(rethKFC.getValue()));
+			userId = new NotesUserId(DHANDLE32.newInstance(rethKFC.getValue()));
 		}
 		return userId;
 	}
@@ -616,7 +617,7 @@ public class IDUtils {
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				NotesUserId id = new NotesUserId(new Handle(phKFC64.getValue()));
+				NotesUserId id = new NotesUserId(DHANDLE64.newInstance(phKFC64.getValue()));
 				//invoke callback code
 				return callback.accessId(id);
 			}
@@ -633,7 +634,7 @@ public class IDUtils {
 			NotesErrorUtils.checkResult(result);
 			
 			try {
-				NotesUserId id = new NotesUserId(new Handle(phKFC32.getValue()));
+				NotesUserId id = new NotesUserId(DHANDLE32.newInstance(phKFC32.getValue()));
 				//invoke callback code
 				return callback.accessId(id);
 			}

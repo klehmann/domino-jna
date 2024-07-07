@@ -164,7 +164,7 @@ public interface INotesNativeAPI extends Library {
 
 	short ListGetText (Pointer pList,
 			boolean fPrefixDataType,
-			short entryNumber,
+			char entryNumber,
 			Memory retTextPointer,
 			ShortByReference retTextLength);
 
@@ -827,5 +827,198 @@ public interface INotesNativeAPI extends Library {
 	int IDEntries (DHANDLE.ByValue hTable);
 	short IDDestroyTable(DHANDLE.ByValue hTable);
 	short IDDeleteTable  (DHANDLE.ByValue hTable, DHANDLE.ByValue hIDsToDelete);
+
+	short NSFDbGetUnreadNoteTable2(
+			HANDLE.ByValue hDB,
+			Memory userName,
+			short userNameLength,
+			boolean fCreateIfNotAvailable,
+			boolean fUpdateUnread,
+			DHANDLE.ByReference rethUnreadList);
+
+	short NSFDbSetUnreadNoteTable(
+			HANDLE.ByValue hDB,
+			Memory UserName,
+			short UserNameLength,
+			boolean fFlushToDisk,
+			DHANDLE.ByValue hOriginalUnreadList,
+			DHANDLE.ByValue hUnreadUnreadList);
+	
+	short NSFDbUpdateUnread(
+			HANDLE.ByValue hDataDB,
+			DHANDLE.ByValue hUnreadList);
+
+	short SECVerifyPassword(
+			short wPasswordLen,
+			Pointer Password,
+			short wDigestLen,
+			Pointer Digest,
+			int ReservedFlags,
+			Pointer pReserved);
+
+	short SECHashPassword3(
+			short wPasswordLen,
+			Pointer Password,
+			short wVersion,
+			short wHashType,
+			Pointer Param1,
+			int dwParam1,
+			Pointer Param2,
+			int dwParam2,
+			short wMaxDigestLen,
+			ShortByReference retDigestLen,
+			Pointer retDigest,
+			int ReservedFlags,
+			Pointer pReserved
+		);
+
+	short NAMEGetAddressBooks(
+			Memory pszServer,
+			short wOptions,
+			ShortByReference pwReturnCount,
+			ShortByReference pwReturnLength,
+			DHANDLE.ByReference phReturn);
+
+	void OSLocalFree (Pointer ptr);
+
+	void AddInLogMessageText(Memory string, short AdditionalErrorCode, Object... args);
+
+	@UndocumentedAPI
+	short NSFGetNamedObjects(HANDLE.ByValue hDb, short Namespace, IntByReference rethBuffer, IntByReference retBufferLength);
+
+	@UndocumentedAPI
+	short NSFDbGetNamedObjectID(HANDLE.ByValue hDB, short NameSpace,
+            Memory Name, short NameLength,
+            IntByReference rtnObjectID);
+
+	short NSFItemAppendByBLOCKID(
+			DHANDLE.ByValue note_handle,
+			short item_flags,
+			Memory item_name,
+			short name_len,
+			NotesBlockIdStruct.ByValue value_bid,
+			int value_len,
+			NotesBlockIdStruct item_bid_ptr);
+
+	short NSFItemAppend(
+		    DHANDLE.ByValue note_handle,
+		    short item_flags,
+		    Memory item_name,
+		    short name_len,
+		    short item_type,
+		    Pointer item_value,
+		    int value_len);
+
+	short ListAllocate(
+			short ListEntries,
+			short TextSize,
+			int fPrefixDataType,
+			DHANDLE.ByReference rethList,
+			Memory retpList,
+			ShortByReference retListSize);
+	
+	short ListAddEntry(
+			DHANDLE.ByValue hList,
+			int fPrefixDataType,
+			ShortByReference pListSize,
+			char EntryNumber,
+			Memory Text,
+			char TextSize);
+	
+	short ListRemoveAllEntries(
+			DHANDLE.ByValue hList,
+			int fPrefixDataType,
+			ShortByReference pListSize);
+
+	short SchFreeTimeSearch(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			short fFindFirstFit,
+			int dwReserved,
+			NotesTimeDatePairStruct pInterval,
+			short Duration,
+			Pointer pNames,
+			DHANDLE.ByReference rethRange);
+
+	short SchRetrieve(
+			NotesUniversalNoteIdStruct pApptUnid,
+			NotesTimeDateStruct pApptOrigDate,
+			int dwOptions,
+			NotesTimeDatePairStruct pInterval,
+			Pointer pNames,
+			DHANDLE.ByReference rethCntnr,
+			Pointer mustBeNull1,
+			Pointer mustBeNull2,
+			Pointer mustBeNull3);
+
+	void SchContainer_Free(DHANDLE.ByValue hCntnr);
+
+	short SchContainer_GetFirstSchedule(
+			DHANDLE.ByValue hCntnr,
+			IntByReference rethObj,
+			Memory retpSchedule);
+	short Schedule_Free(DHANDLE.ByValue hCntnr, int hSched);
+	short SchContainer_GetNextSchedule(
+			DHANDLE.ByValue hCntnr,
+			int hCurSchedule,
+			IntByReference rethNextSchedule,
+			Memory retpNextSchedule);
+	short Schedule_ExtractFreeTimeRange(
+			DHANDLE.ByValue hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			short fFindFirstFit,
+			short wDuration,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			DHANDLE.ByReference rethRange);
+	short Schedule_ExtractBusyTimeRange(
+			DHANDLE.ByValue hCntnr,
+			int hSchedObj,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			DHANDLE.ByReference rethRange,
+			IntByReference rethMoreCtx);
+	short Schedule_ExtractMoreBusyTimeRange(
+			DHANDLE.ByValue hCntnr,
+			int hMoreCtx,
+			NotesUniversalNoteIdStruct punidIgnore,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			DHANDLE.ByReference rethRange,
+			IntByReference rethMore);
+	short Schedule_ExtractSchedList(
+			DHANDLE.ByValue hCntnr,
+			int hSchedObj,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			DHANDLE.ByReference rethSchedList,
+			IntByReference rethMore);
+	short Schedule_ExtractMoreSchedList(
+			DHANDLE.ByValue hCntnr,
+			int hMoreCtx,
+			NotesTimeDatePairStruct pInterval,
+			IntByReference retdwSize,
+			DHANDLE.ByReference rethSchedList,
+			IntByReference rethMore);
+	short Schedule_Access(
+			DHANDLE.ByValue hCntnr,
+			int hSched,
+			PointerByReference pretSched);
+	short Schedule_GetFirstDetails(
+			DHANDLE.ByValue hCntnr,
+			int hSchedObj,
+			IntByReference rethDetailObj,
+			PointerByReference retpDetail);
+	
+	short Schedule_GetNextDetails(
+			DHANDLE.ByValue hCntnr,
+			int hDetailObj,
+			IntByReference rethNextDetailObj,
+			PointerByReference retpNextDetail);
+
+	short NSFDbMajorMinorVersionGet (HANDLE.ByValue hDB, ShortByReference retMajorVersion, 
+			ShortByReference retMinorVersion);
 
 }

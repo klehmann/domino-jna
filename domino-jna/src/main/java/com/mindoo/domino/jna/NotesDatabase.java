@@ -20,10 +20,12 @@ import java.util.Formatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,11 +74,13 @@ import com.mindoo.domino.jna.gc.IRecyclableNotesObject;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.DisposableMemory;
 import com.mindoo.domino.jna.internal.FTSearchResultsDecoder;
-import com.mindoo.domino.jna.internal.Handle;
 import com.mindoo.domino.jna.internal.INotesNativeAPI32;
 import com.mindoo.domino.jna.internal.INotesNativeAPI64;
+import com.mindoo.domino.jna.internal.Mem;
+import com.mindoo.domino.jna.internal.Mem.LockedMemory;
 import com.mindoo.domino.jna.internal.Mem32;
 import com.mindoo.domino.jna.internal.Mem64;
+import com.mindoo.domino.jna.internal.NamedObjectEntryStruct;
 import com.mindoo.domino.jna.internal.NotesCallbacks;
 import com.mindoo.domino.jna.internal.NotesCallbacks.ABORTCHECKPROC;
 import com.mindoo.domino.jna.internal.NotesConstants;
@@ -85,10 +89,13 @@ import com.mindoo.domino.jna.internal.NotesNativeAPI32;
 import com.mindoo.domino.jna.internal.NotesNativeAPI32V1000;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64;
 import com.mindoo.domino.jna.internal.NotesNativeAPI64V1000;
+import com.mindoo.domino.jna.internal.NotesNativeAPIV1201;
 import com.mindoo.domino.jna.internal.RecycleHierarchy;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks;
 import com.mindoo.domino.jna.internal.Win32NotesCallbacks.ABORTCHECKPROCWin32;
 import com.mindoo.domino.jna.internal.handles.DHANDLE;
+import com.mindoo.domino.jna.internal.handles.DHANDLE32;
+import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.internal.handles.HANDLE;
 import com.mindoo.domino.jna.internal.handles.HANDLE32;
 import com.mindoo.domino.jna.internal.handles.HANDLE64;
@@ -123,7 +130,6 @@ import com.mindoo.domino.jna.utils.StringTokenizerExt;
 import com.mindoo.domino.jna.utils.StringUtil;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
-import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
@@ -161,6 +167,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	boolean m_passNamesListToDbOpen;
 	private boolean m_passNamesListToViewOpen;
 	private DbMode m_dbMode;
+	private Boolean m_hasLargeItemSupport;
 	
 	private final RecycleHierarchy m_recycleHierarchy = new RecycleHierarchy();
 	
@@ -339,7 +346,13 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		if (filePath==null)
 			throw new NullPointerException("filePath is null");
 
-		server = NotesNamingUtils.toCanonicalName(server);
+		if (NotesGC.isFixupLocalServerNames() && StringUtil.isEmpty(server) && IDUtils.isOnServer()) {
+			//switch to full server name, prevents "database is in use" errors when running side-by-side with Domino
+			server = IDUtils.getIdUsername();
+		}
+		else {
+			server = NotesNamingUtils.toCanonicalName(server);
+		}
 		
 		boolean isOnServer = IDUtils.isOnServer();
 		
@@ -775,7 +788,10 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		Simple(NotesConstants.DBCREATE_ENCRYPT_SIMPLE),
 		Medium(NotesConstants.DBCREATE_ENCRYPT_MEDIUM),
 		Strong(NotesConstants.DBCREATE_ENCRYPT_STRONG),
-		AES128(NotesConstants.DBCREATE_ENCRYPT_AES128);
+		/** added in 12.0.1 */
+		AES128(NotesConstants.DBCREATE_ENCRYPT_AES128),
+		/** added in 12.0.2 */
+		AES256(NotesConstants.DBCREATE_ENCRYPT_AES256);
 
 		private final int value;
 
@@ -1849,6 +1865,10 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 */
 	public int findCollection(String collectionName) {
 		checkHandle();
+		
+		if (StringUtil.isEmpty(collectionName)) {
+			throw new IllegalArgumentException("Collection name cannot be empty or null");
+		}
 		
 		Memory collectionNameLMBCS = NotesStringUtils.toLMBCS(collectionName, true);
 
@@ -6998,75 +7018,21 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		Continue, Stop
 	}
 	
-
 	/**
-	 * Callback interface to receive the named objects in a database
+	 * Name, Namespace and note id for a named object
 	 */
-	private static interface NamedObjectEnumCallback {
-		/**
-		 * Method is called for every named object in the database
-		 * 
-		 * @param nameSpace namespace
-		 * @param name name of named object
-		 * @param rrv RRV to be used with {@link NotesDatabase#openNoteById(int)}
-		 * @param entryTime sequence time of the note or null if not provided
-		 * @return action, either {@link Action#Continue} to continue scanning and {@link Action#Stop} to stop the search
-		 */
-		public Action objectFound(String name, int rrv, NotesTimeDate entryTime);
-	}
-
-	private final String propEnforceLocalNamedObjectSearch = NotesDatabase.class.getName()+".namedobjects.enforcelocal";
-	private final String propEnforceRemoteNamedObjectSearch = NotesDatabase.class.getName()+".namedobjects.enforceremote";
-	
-	/**
-	 * Enumerates all named objects in the database. As of Notes/Domino R10/R11, this
-	 * method only returns data in a local database
-	 * 
-	 * @param callback enumeration callback
-	 */
-	private void getNamedObjects(NamedObjectEnumCallback callback) {
-		boolean useLocalSearch;
-		
-		if (isRemote()) {
-			//NSFDbNamedObjectEnum cannot be used in remote databases as of R11
-			useLocalSearch = false;
-
-			//enforce flag can be used to override this behavior if R12 supports remote searches
-			if (Boolean.TRUE.equals(NotesGC.getCustomValue(propEnforceLocalNamedObjectSearch))) {
-				useLocalSearch = true;
-			}
-		}
-		else {
-			useLocalSearch = true;
-			
-			//enforce flag can be used to select an NSFSearchExtended3 based locally
-			//(mostly to compare both ways for testcases)
-			if (Boolean.TRUE.equals(NotesGC.getCustomValue(propEnforceRemoteNamedObjectSearch))) {
-				useLocalSearch = false;
-			}
-		}
-		
-		if (useLocalSearch) {
-			_getNamedObjectInfosLocal(callback);
-		}
-		else {
-			_getNamedObjectInfosRemote(callback);
-		}
-	}
-	
-	/**
-	 * Cache object for named object table entries
-	 */
-	private static class NamedObjectCacheEntry {
+	public static class NamedObjectInfo {
 		private String name;
+		private String[] parsedName;
+		private int nameLength;
+		private short namespace;
 		private int noteId;
-		private NotesTimeDate sequenceTime;
 		
 		public String getName() {
 			return name;
 		}
 		
-		public void setName(String name) {
+		private void setName(String name) {
 			this.name = name;
 		}
 		
@@ -7074,337 +7040,253 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 			return noteId;
 		}
 		
-		public void setNoteId(int noteId) {
+		private void setNoteId(int noteId) {
 			this.noteId = noteId;
 		}
 
-		public NotesTimeDate getSequenceTime() {
-			return sequenceTime;
+		public short getNamespace() {
+			return namespace;
 		}
 
-		public void setSequenceTime(NotesTimeDate sequenceTime) {
-			this.sequenceTime = sequenceTime;
+		private void setNamespace(short namespace) {
+			this.namespace = namespace;
 		}
+
+		public int getNameLength() {
+			return nameLength;
+		}
+
+		private void setNameLength(int nameLength) {
+			this.nameLength = nameLength;
+		}
+
+		public String getNamedNoteName() {
+			if (parsedName==null) {
+				parsedName = parseLegacyAPINamedNoteName(getName());
+			}
+			return parsedName!=null ? parsedName[0] : "";
+		}
+		
+		public String getNamedNoteUsername() {
+			if (parsedName==null) {
+				parsedName = parseLegacyAPINamedNoteName(getName());
+			}
+			return parsedName!=null ? parsedName[1] : "";
+		}
+		
+		@Override
+		public String toString() {
+			return "NamedObjectInfo [name=" + name + ", namespace=" + namespace + ", noteId=" + noteId + "]";
+		}
+		
+	}
+
+	/**
+	 * Reads infos about named notes
+	 * 
+	 * @param name name used to create the named notes; empty to find all named notes
+	 * @return named object infos
+	 */
+	public List<NamedObjectInfo> getNamedNoteInfos(String name) {
+		String prefix = StringUtil.isEmpty(name) ? "$DGHST_": computeNamedNoteValue(name, "");
+		
+		return getNamedObjects(NotesConstants.NONS_NAMED_NOTE)
+				.stream()
+				.filter((entry) -> {
+					return StringUtil.startsWithIgnoreCase(entry.getName(), prefix);
+				})
+				.collect(Collectors.toList());
 	}
 	
-	private Map<Integer,NamedObjectCacheEntry> remoteDbNamedObjectLookupCache = new HashMap<>();
-	private NotesTimeDate remoteNamedObjectLookupCutOffDate_DataNotes = null;
-	
 	/**
-	 * Enumerates all named objects in the database, implementation for remote database
-	 * where NSFDbNamedObjectEnum is not yet available.
+	 * Reads infos about named notes. Implementation is private, because there's no real
+	 * usage for other namespaces than NONS_NAMED_NOTE and the risk is high to break internal NSF stuff
 	 * 
-	 * @param callback enumeration callback
+	 * @param namespace namespace
+	 * @return named object infos
 	 */
-	private void _getNamedObjectInfosRemote(NamedObjectEnumCallback callback) {
-		LinkedHashMap<String, String> items = new LinkedHashMap<>();
-		items.put("$name", "");
+	private List<NamedObjectInfo> getNamedObjects(short namespace) {
+		checkHandle();
+		
+		HANDLE hDb = getHandle();
+		IntByReference rethBuffer = new IntByReference();
+		IntByReference retBufferLength = new IntByReference();
+		
+		short result = NotesNativeAPI.get().NSFGetNamedObjects(hDb.getByValue(), namespace, rethBuffer, retBufferLength);
+		NotesErrorUtils.checkResult(result);
+		
+		int hBuffer = rethBuffer.getValue();
+		if (hBuffer==0) {
+			return Collections.emptyList();
+		}
 
-		//use incremental NSFSearch to improve performance on the second call
-		NotesSearch.SearchCallback searchCallback = new NotesSearch.SearchCallback() {
-
-			@Override
-			public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
-					IItemTableData summaryBufferData) {
-
-				int noteId = searchMatch.getNoteId();
-				NotesTimeDate entryTime = searchMatch.getSeqTime();
-				String name = summaryBufferData.getAsString("$name", "");
-
-				NamedObjectCacheEntry info = new NamedObjectCacheEntry();
-				info.setName(name);
-				info.setNoteId(noteId);
-				info.setSequenceTime(entryTime);
-
-				EnumSet<NoteClass> noteClass = searchMatch.getNoteClass();
-
-				if (noteClass.contains(NoteClass.DATA)) {
-					remoteDbNamedObjectLookupCache.put(noteId, info);
-				}
+		try (LockedMemory lockedMem = Mem.OSMemoryLock(rethBuffer.getValue(), true);) {
+			Pointer ptr = lockedMem.getPointer();
+			
+			int numEntries = Short.toUnsignedInt(ptr.getShort(0));
+			if (numEntries==0) {
+				return Collections.emptyList();
+			}
+			
+			ptr = ptr.share(2);
+			
+			NamedObjectInfo[] objInfos = new NamedObjectInfo[numEntries];
+			
+			for (int i=0; i<numEntries; i++) {
+				NamedObjectInfo objInfo = new NamedObjectInfo();
+				objInfos[i] = objInfo;
 				
-				return Action.Continue;
+				NamedObjectEntryStruct namedObjStruct = NamedObjectEntryStruct.newInstance(ptr);
+				namedObjStruct.read();
+				int structSize = namedObjStruct.size();
+				
+				int nameLength = Short.toUnsignedInt(namedObjStruct.NameLength);
+				objInfo.setNameLength(nameLength);
+				
+				short currNamespace = namedObjStruct.NameSpace;
+				objInfo.setNamespace(currNamespace);
+				
+				int noteId = namedObjStruct.NoteID;
+				objInfo.setNoteId(noteId);
+				
+				ptr = ptr.share(structSize);
 			}
-
-			@Override
-			public Action deletionStubFound(NotesDatabase parentDb, ISearchMatch searchMatch,
-					IItemTableData summaryBufferData) {
-
-				remoteDbNamedObjectLookupCache.remove(searchMatch.getNoteId());
-				return Action.Continue;
+			
+			for (int i=0; i<numEntries; i++) {
+				NamedObjectInfo objInfo = objInfos[i];
+				int nameLength = objInfo.getNameLength();
+				String name = NotesStringUtils.fromLMBCS(ptr, nameLength);
+				objInfo.setName(name);
+				ptr = ptr.share(nameLength);
 			}
-
-			@Override
-			public Action noteFoundNotMatchingFormula(NotesDatabase parentDb, ISearchMatch searchMatch,
-					IItemTableData summaryBufferData) {
-
-				remoteDbNamedObjectLookupCache.remove(searchMatch.getNoteId());
-				return Action.Continue;
-			}
-
-		};
-
-		//although this search is very fast, using a local database is really recommended to make use of the named object table C methods
-		remoteNamedObjectLookupCutOffDate_DataNotes = NotesSearch.search(this, null, "@IsAvailable($name)", items, "-",
-				EnumSet.of(Search.NAMED_GHOSTS, Search.SELECT_NAMED_GHOSTS), EnumSet.of(NoteClass.DATA),
-				remoteNamedObjectLookupCutOffDate_DataNotes, searchCallback);
-		
-		for (NamedObjectCacheEntry currInfo : remoteDbNamedObjectLookupCache.values()) {
-			Action action = callback.objectFound(currInfo.getName(), currInfo.getNoteId(), currInfo.getSequenceTime());
-			if (action == Action.Stop) {
-				break;
-			}
+			
+			return Arrays.asList(objInfos);
 		}
 	}
 	
 	/**
-	 * Enumerates all named objects in the database. As of Notes/Domino R10/R11, this
-	 * method only returns data in a local database
+	 * Opens a named note as it is written with the legacy Java/LS APIs since 12.0.1<br>
+	 * <br>
+	 * <b>The character "*" is not allowed on the name parameter.</b>
 	 * 
-	 * @param callback enumeration callback
+	 * @param name name
+	 * @param createOnFail true to create a new unsaved note if not found
+	 * @return note or null if not found and createOnFail is <code>false</code>
 	 */
-	private void _getNamedObjectInfosLocal(NamedObjectEnumCallback callback) {
-		checkHandle();
-
-		if (isRemote()) {
-			throw new IllegalStateException("This method cannot yet be called on remote databases");
-		}
-
-		if (callback==null) {
-			throw new IllegalArgumentException("Callback cannot be null");
-		}
-
-		Exception[] ex = new Exception[1];
-
-		if (PlatformUtils.is64Bit()) {
-			NotesCallbacks.b64_NSFDbNamedObjectEnumPROC cCallback = new NotesCallbacks.b64_NSFDbNamedObjectEnumPROC() {
-
-				@Override
-				public short invoke(long hDB, Pointer param, short nameSpaceShort, Pointer nameMem, short nameLength,
-						IntByReference objectID, NotesTimeDateStruct entryTimeStruct) {
-
-					if (objectID==null) {
-						//skip some entries in the named object table because they are used internally
-						//as duplicate lookup keys and cannot be queried via NSFDbGetNamedObjectID
-						return 0;
-					}
-					if (nameSpaceShort!=NotesConstants.NONS_NAMED_NOTE) {
-						//skip internal NSF structures
-						return 0;
-					}
-
-					String name = NotesStringUtils.fromLMBCS(nameMem, (int) (nameLength & 0xffff));
-					NotesTimeDate entryTimeDate = entryTimeStruct==null ? null : new NotesTimeDate(entryTimeStruct.Innards);
-
-					try {
-						Action action = callback.objectFound(name, objectID==null ? 0 : objectID.getValue(), entryTimeDate);
-						if (action==Action.Stop) {
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-						else {
-							return 0;
-						}
-					}
-					catch (Exception e) {
-						ex[0] = e;
-						return INotesErrorConstants.ERR_CANCEL;
-					}
-				}
-			};
-
-			AccessController.doPrivileged(new PrivilegedAction<Object>() {
-				@Override
-				public Object run() {
-					short result = NotesNativeAPI64.get().NSFDbNamedObjectEnum(m_hDB64, cCallback, null);
-					if (result == INotesErrorConstants.ERR_CANCEL) {
-						if (ex[0] != null) {
-							throw new NotesError(0, "Error enumerating named objects", ex[0]);
-						}
-						return null;
-					}
-					NotesErrorUtils.checkResult(result);
-
-					return null;
-				}
-			});
-		}
-		else {
-			NotesCallbacks.b32_NSFDbNamedObjectEnumPROC cCallback;
-
-			if (Platform.isWindows()) {
-				cCallback = new Win32NotesCallbacks.NSFDbNamedObjectEnumPROCWin32() {
-
-					@Override
-					public short invoke(int hDB, Pointer param, short nameSpaceShort, Pointer nameMem, short nameLength,
-							IntByReference objectID, NotesTimeDateStruct entryTimeStruct) {
-
-						if (objectID==null) {
-							//skip some entries in the named object table because they are used internally
-							//as duplicate lookup keys and cannot be queried via NSFDbGetNamedObjectID
-							return 0;
-						}
-
-						if (nameSpaceShort!=NotesConstants.NONS_NAMED_NOTE) {
-							//skip internal NSF structures
-							return 0;
-						}
-
-						String name = NotesStringUtils.fromLMBCS(nameMem, (int) (nameLength & 0xffff));
-						NotesTimeDate entryTimeDate = entryTimeStruct==null ? null : new NotesTimeDate(entryTimeStruct.Innards);
-
-						try {
-							Action action = callback.objectFound(name, objectID==null ? 0 : objectID.getValue(), entryTimeDate);
-							if (action==Action.Stop) {
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							else {
-								return 0;
-							}
-						}
-						catch (Exception e) {
-							ex[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-
-					}};
+	public NotesNote openNamedNote(String name, boolean createOnFail) {
+		return openNamedNote(name, "", createOnFail);
+	}
+	
+	/**
+	 * Opens a named note as it is written with the legacy Java/LS APIs since 12.0.1<br>
+	 * <br>
+	 * <b>The character "*" is not allowed on the name/username parameters.</b>
+	 * 
+	 * @param name name
+	 * @param username username
+	 * @param createOnFail true to create a new unsaved note if not found
+	 * @return note or null if not found and createOnFail is <code>false</code>
+	 */
+	public NotesNote openNamedNote(String name, String username, boolean createOnFail) {
+		int noteId = findNamedNoteId(name, username);
+		if (noteId!=0) {
+			NotesNote note = openNoteById(noteId);
+			if (note!=null) {
+				return note;
 			}
-			else {
-				cCallback = new NotesCallbacks.b32_NSFDbNamedObjectEnumPROC() {
-
-					@Override
-					public short invoke(int hDB, Pointer param, short nameSpaceShort, Pointer nameMem, short nameLength,
-							IntByReference objectID, NotesTimeDateStruct entryTimeStruct) {
-
-						if (objectID==null) {
-							//skip some entries in the named object table because they are used internally
-							//as duplicate lookup keys and cannot be queried via NSFDbGetNamedObjectID
-							return 0;
-						}
-
-						if (nameSpaceShort!=NotesConstants.NONS_NAMED_NOTE) {
-							//skip internal NSF structures
-							return 0;
-						}
-
-						String name = NotesStringUtils.fromLMBCS(nameMem, (int) (nameLength & 0xffff));
-						NotesTimeDate entryTimeDate = entryTimeStruct==null ? null : new NotesTimeDate(entryTimeStruct.Innards);
-
-						try {
-							Action action = callback.objectFound(name, objectID==null ? 0 : objectID.getValue(), entryTimeDate);
-							if (action==Action.Stop) {
-								return INotesErrorConstants.ERR_CANCEL;
-							}
-							else {
-								return 0;
-							}
-						}
-						catch (Exception e) {
-							ex[0] = e;
-							return INotesErrorConstants.ERR_CANCEL;
-						}
-
-					}};
-			}
-
-			AccessController.doPrivileged(new PrivilegedAction<Object>() {
-				@Override
-				public Object run() {
-					short result = NotesNativeAPI32.get().NSFDbNamedObjectEnum(m_hDB32, cCallback, null);
-					if (result == INotesErrorConstants.ERR_CANCEL) {
-						if (ex[0] != null) {
-							throw new NotesError(0, "Error enumerating named objects", ex[0]);
-						}
-						return null;
-					}
-					NotesErrorUtils.checkResult(result);
-					return null;
-				}
-			});
-
 		}
+		
+		if (!createOnFail) {
+			return null;
+		}
+		
+		NotesNote newNote = createGhostNote();
+		String nameAndUser = computeNamedNoteValue(name, username);
+		newNote.replaceItemValue("$Name", nameAndUser);
+		return newNote;
+	}
+	
+	/**
+	 * Finds the note id of a named document as it is written with the legacy Java/LS APIs since 12.0.1<br>
+	 * <br>
+	 * <b>The character "*" is not allowed on the name parameters.</b>
+	 * 
+	 * @param name name
+	 * @return note id or 0 if not found
+	 */
+	public int findNamedNoteId(String name) {
+		return findNamedNoteId(name, "");
+	}
+	
+	/**
+	 * Finds the note id of a named document as it is written with the legacy Java/LS APIs since 12.0.1.<br>
+	 * <br>
+	 * <b>The character "*" is not allowed on the name/username parameters.</b>
+	 * 
+	 * @param name name
+	 * @param username username
+	 * @return note id or 0 if not found
+	 */
+	public int findNamedNoteId(String name, String username) {
+		String nameAndUser = computeNamedNoteValue(name, username);
+		return findNamedObjectNoteId(nameAndUser , NotesConstants.NONS_NAMED_NOTE);
+	}
+	
+	/**
+	 * Computes the $name value for ghost notes as they are written since 12.0.1 by the Java/LS API ("named documents")
+	 * 
+	 * @param name name
+	 * @param username username
+	 * @return $name value
+	 */
+	private String computeNamedNoteValue(String name, String username) {
+		if (name==null) {
+			throw new IllegalArgumentException("Name parameter cannot be null");
+		}
+		else if (StringUtil.isEmpty(name)) {
+			throw new IllegalArgumentException("Name parameter cannot be empty");
+		}
+		else if (name.contains("*")) { //$NON-NLS-1$
+			throw new IllegalArgumentException(MessageFormat.format("Invalid character '*' in name parameter: {0}", name));
+		}
+
+		String usernameNotNull = username==null ? "" : username; //$NON-NLS-1$
+		if (usernameNotNull.contains("*")) { //$NON-NLS-1$
+			throw new IllegalArgumentException(MessageFormat.format("Invalid character '*' in username parameter: {0}", usernameNotNull));
+		}
+
+		return "$DGHST_" + name + "*" + usernameNotNull; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/**
-	 * Returns the RRV of a named object in the database
+	 * Returns the note id of a named object in the database
 	 * 
-	 * @param name name to look for
-	 * @return rrv or 0 if not found
+	 * @param nameItemValue value to look for in the $name item
+	 * @param namespace namespace for named object search, e.g. {@link NotesConstants#NONS_NAMED_NOTE} for named notes (notes with a $name item)
+	 * @return note id or 0 if not found
 	 */
-	private int getNamedObjectRRV(String name) {
+	private int findNamedObjectNoteId(String nameItemValue, short namespace) {
 		checkHandle();
 		
-		if (StringUtil.isEmpty(name)) {
+		if (StringUtil.isEmpty(nameItemValue)) {
 			throw new IllegalArgumentException("Name cannot be empty");
 		}
 
-		boolean useLocalSearch;
+		Memory nameMem = NotesStringUtils.toLMBCS(nameItemValue, false);
 		
-		if (isRemote()) {
-			//NSFDbNamedObjectEnum cannot be used in remote databases as of R11
-			useLocalSearch = false;
-
-			//enforce flag can be used to override this behavior if R12 supports remote searches
-			if (Boolean.TRUE.equals(NotesGC.getCustomValue(propEnforceLocalNamedObjectSearch))) {
-				useLocalSearch = true;
-			}
-		}
-		else {
-			useLocalSearch = true;
-			
-			//enforce flag can be used to select an NSFSearchExtended3 based locally
-			//(mostly to compare both ways for testcases)
-			if (Boolean.TRUE.equals(NotesGC.getCustomValue(propEnforceRemoteNamedObjectSearch))) {
-				useLocalSearch = false;
-			}
-		}
+		IntByReference rtnObjectID = new IntByReference();
 		
-		if (useLocalSearch) {
-			Memory nameMem = NotesStringUtils.toLMBCS(name, false);
-			
-			IntByReference rtnObjectID = new IntByReference();
-			
-			short nsAsShort = NotesConstants.NONS_NAMED_NOTE | NotesConstants.NONS_NOASSIGN;
-			
-			short result;
-			if (PlatformUtils.is64Bit()) {
-				result = NotesNativeAPI64.get().NSFDbGetNamedObjectID(m_hDB64, nsAsShort, nameMem,
-						(short) (nameMem.size() & 0xffff), rtnObjectID);
-				if ((result & NotesConstants.ERR_MASK)==578) //special database object cannot be located
-					return 0;
-				NotesErrorUtils.checkResult(result);
-			}
-			else {
-				result = NotesNativeAPI32.get().NSFDbGetNamedObjectID(m_hDB32, nsAsShort, nameMem,
-						(short) (nameMem.size() & 0xffff), rtnObjectID);
-				if ((result & NotesConstants.ERR_MASK)==578) //special database object cannot be located
-					return 0;
-				NotesErrorUtils.checkResult(result);
-			}
+		short nsWithNoAssignBit = (short) (namespace | NotesConstants.NONS_NOASSIGN); //prevent assigning a new RRV if not found
+		
+		HANDLE hDb = getHandle();
+		
+		short result = NotesNativeAPI.get().NSFDbGetNamedObjectID(hDb.getByValue(), nsWithNoAssignBit, nameMem,
+				(short) (nameMem.size() & 0xffff), rtnObjectID);
+		if ((result & NotesConstants.ERR_MASK)==578) //special database object cannot be located
+			return 0;
+		NotesErrorUtils.checkResult(result);
 
-			return rtnObjectID.getValue();
-		}
-		else {
-			AtomicInteger result = new AtomicInteger();
-
-			//use NSF search based approach for remote database, because
-			//NSFDbGetNamedObjectID only works locally and there no exported
-			//function for remote databases in nnotes.dll yet
-			_getNamedObjectInfosRemote(new NamedObjectEnumCallback() {
-
-				@Override
-				public Action objectFound(String currName, int currObjectId,
-						NotesTimeDate currEntryTime) {
-					if (name.equalsIgnoreCase(currName)) {
-						result.set(currObjectId);
-						return Action.Stop;
-					}
-					else {
-						return Action.Continue;
-					}
-				}
-			});
-			
-			return result.get();
-		}
+		return rtnObjectID.getValue();
 	}
 	
 	/**
@@ -7429,7 +7311,9 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	/**
 	 * Uses an efficient NSF lookup mechanism to find a document that 
 	 * matches the primary key specified with <code>category</code> and
-	 * <code>objectKey</code>.
+	 * <code>objectKey</code>. Uses a similar lookup mechanism that got introduced
+	 * in 12.0.1 with "named documents", but the unique lookup key used
+	 * here is different.
 	 * 
 	 * @param category category part of primary key
 	 * @param objectId object id part of primary key
@@ -7437,8 +7321,33 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 */
 	public NotesNote openNoteByPrimaryKey(String category, String objectId) {
 		String fullNodeName = getApplicationNoteName(category, objectId);
-		int rrv = getNamedObjectRRV(fullNodeName);
-		return rrv==0 ? null : openNoteById(rrv);
+		int noteId = findNamedObjectNoteId(fullNodeName, NotesConstants.NONS_NAMED_NOTE);
+		return noteId==0 ? null : openNoteById(noteId);
+	}
+	
+
+	/**
+	 * Parses a string like "$DGHST_nameddoc*user" into
+	 * name/username
+	 * 
+	 * @param name name
+	 * @return array of [name,username] or null if unsupported format
+	 */
+	static String[] parseLegacyAPINamedNoteName(String name) {
+		if (!name.startsWith("$DGHST_")) {
+			return null;
+		}
+		
+		String remainder = name.substring(7); //"$DGHST_".length()
+		
+		int iPos = remainder.indexOf("*");
+		if (iPos==-1) {
+			return null;
+		}
+		
+		String namePart = remainder.substring(0, iPos);
+		String userNamePart = remainder.substring(iPos+1);
+		return new String[] {namePart, userNamePart};
 	}
 	
 	/**
@@ -7481,13 +7390,14 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	public Map<String,Map<String,Integer>> getAllNotesByPrimaryKey() {
 		Map<String,Map<String,Integer>> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		
-		getNamedObjects(new NamedObjectEnumCallback() {
+		getNamedObjects(NotesConstants.NONS_NAMED_NOTE)
+		.forEach((entry) -> {
+			int noteId = entry.getNoteId();
 			
-			@Override
-			public Action objectFound(String name, int objectId, NotesTimeDate entryTime) {
-				//only read entries starting with $app_ , that way we skip internal NSF stuff
-				if (objectId!=0 && StringUtil.startsWithIgnoreCase(name, NAMEDNOTES_APPLICATION_PREFIX)) {
-					String[] parsedNamedNoteInfos = parseApplicationNamedNoteName(name);
+			if (noteId!=0) {
+				String currName = entry.getName();
+				if (StringUtil.startsWithIgnoreCase(currName, NAMEDNOTES_APPLICATION_PREFIX)) {
+					String[] parsedNamedNoteInfos = parseApplicationNamedNoteName(currName);
 					if (parsedNamedNoteInfos!=null) {
 						String category = parsedNamedNoteInfos[0];
 						String objectKey = parsedNamedNoteInfos[1];
@@ -7498,12 +7408,11 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 							result.put(category, entriesForCategory);
 						}
 						
-						entriesForCategory.put(objectKey, objectId);
+						entriesForCategory.put(objectKey, noteId);
 					}
 				}
-				
-				return Action.Continue;
 			}
+			
 		});
 		
 		return result;
@@ -7525,17 +7434,18 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		
 		Map<String,Integer> result = new HashMap<>();
 		
-		getNamedObjects(new NamedObjectEnumCallback() {
+		getNamedObjects(NotesConstants.NONS_NAMED_NOTE)
+		.forEach((entry) -> {
+			int noteId = entry.getNoteId();
 			
-			@Override
-			public Action objectFound(String name, int rrv, NotesTimeDate entryTime) {
-				if (rrv!=0 && StringUtil.startsWithIgnoreCase(name, prefix)) {
-					String objectKey = name.substring(prefix.length()).toLowerCase(Locale.ENGLISH);
-					result.put(objectKey, rrv);
+			if (noteId!=0) {
+				String currName = entry.getName();
+				if (StringUtil.startsWithIgnoreCase(currName, prefix)) {
+					String objectKey = currName.substring(prefix.length()).toLowerCase(Locale.ENGLISH);
+					result.put(objectKey, noteId);
 				}
-				
-				return Action.Continue;
 			}
+			
 		});
 		
 		return result;
@@ -8116,20 +8026,20 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 
 			// non-views, and v3 servers
 			// first get all the public design notes
-			Handle hIDTable;
+			DHANDLE hIDTable;
 			if (PlatformUtils.is64Bit()) {
 				LongByReference rethIDTable = new LongByReference();
 				result = NotesNativeAPI64.get().DesignGetNoteTable(m_hDB64,
 						(short) (noteClass.getValue() & 0xffff), rethIDTable);
 				NotesErrorUtils.checkResult(result);
-				hIDTable = new Handle(rethIDTable.getValue());
+				hIDTable = DHANDLE64.newInstance(rethIDTable.getValue());
 			}
 			else {
 				IntByReference rethIDTable = new IntByReference();
 				result = NotesNativeAPI32.get().DesignGetNoteTable(m_hDB32,
 						(short) (noteClass.getValue() & 0xffff), rethIDTable);
 				NotesErrorUtils.checkResult(result);
-				hIDTable = new Handle(rethIDTable.getValue());
+				hIDTable = DHANDLE32.newInstance(rethIDTable.getValue());
 			}
 
 			idTable.set(new NotesIDTable(hIDTable, false));
@@ -8408,7 +8318,814 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 		ShortByReference retClass = new ShortByReference();
 		short result = NotesNativeAPI.get().NSFDbClassGet(hDb, retClass);
 		NotesErrorUtils.checkResult(result);
-		
+
 		return DBClass.toType(retClass.getValue() & 0xffff);
+	}
+
+	private String m_cachedUnreadTableUsernameCanonical;
+	private NotesIDTable m_cachedUnreadTable;
+
+	/**
+	 * Checks if a NotesNote is in the unread table for the specified user.<br>
+	 * <br>
+	 * For performance reasons we internally cache the unread table and store the
+	 * username.
+	 * This cached table is reused if the username on subsequent calls is the same
+	 * and recycled if it is different.
+	 *
+	 * @param userNameParam name if user in abbreviated or canonical format; if null, we
+	 *                 use the {@link NotesDatabase} opener
+	 * @param noteId   note id of document
+	 * @return true if unread
+	 */
+	public boolean isNoteUnread(String userNameParam, int noteId) {
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		if (
+				StringUtil.isEmpty(m_cachedUnreadTableUsernameCanonical) ||
+				m_cachedUnreadTable==null ||
+				m_cachedUnreadTable.isRecycled() ||
+				!NotesNamingUtils.equalNames(userNameCanonical, m_cachedUnreadTableUsernameCanonical)) {
+
+			if (m_cachedUnreadTable!=null) {
+				m_cachedUnreadTable.recycle();
+				m_cachedUnreadTable = null;
+			}
+
+			m_cachedUnreadTable = getUnreadNoteTable(userNameCanonical, true, true).orElse(null);
+			m_cachedUnreadTableUsernameCanonical = userNameCanonical;
+		}
+
+		return m_cachedUnreadTable != null && m_cachedUnreadTable.contains(noteId);
+	}
+
+	/**
+	 * An ID Table is created containing the list of unread notes in the
+	 * database for the specified user.<br>
+	 * <br>
+	 * The argument {@code createIfNotAvailable} controls what action is to be
+	 * performed
+	 * if there is no list of unread notes for the specified user in the
+	 * database.<br>
+	 * <br>
+	 * If no list is found and this flag is set to {@code false}, the method will
+	 * return an empty {@link Optional}.<br>
+	 * If this flag is set to {code true}, the list of unread notes will be
+	 * created and all
+	 * notes in the database will be added to the list.<br>
+	 * <br>
+	 * No coordination is performed between different users of the same
+	 * database.<br>
+	 * <br>
+	 * If an application obtains a list of unread notes while another user is
+	 * modifying the
+	 * list, the changes made may not be visible to the application.<br>
+	 * <br>
+	 * Unread marks for each user are stored in the client desktop.dsk file and in
+	 * the database.<br>
+	 * <br>
+	 * When a user closes a database (either through the Notes user interface or
+	 * through an API program),
+	 * the unread marks in the desktop.dsk file and in the database are synchronized
+	 * so that
+	 * they match.<br>
+	 * Unread marks are not replicated when a database is replicated.<br>
+	 * <br>
+	 * Instead, when a user opens a replica of a database, the unread marks from the
+	 * desktop.dsk
+	 * file propagates to the replica database.<br>
+	 *
+	 * @param userNameParam             user for which to check unread marks (abbreviated
+	 *                             or canonical format); use {@code null} for
+	 *                             current {@link NotesDatabase} opener
+	 * @param createIfNotAvailable {code true}: If the unread list for this user
+	 *                             cannot be found on disk, return all note IDs.
+	 *                             {@code false}: If the list cannot be found,
+	 *                             return an empty {@link Optional}
+	 * @param updateUnread         {@code true} to update unread marks,
+	 *                             {@code false} to not update unread marks.
+	 * @return an {@link Optional} describing the table of unread documents, or an
+	 *         empty one if there is no table
+	 */
+	public Optional<NotesIDTable> getUnreadNoteTable(String userNameParam, boolean createIfNotAvailable, boolean updateUnread) {
+		checkHandle();
+
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, false);
+		if (userNameCanonicalMem.size() > 65535) {
+			throw new IllegalArgumentException("Username exceeds max length of 65535 bytes");
+		}
+		short userNameLength = (short) (userNameCanonicalMem.size() & 0xffff);
+
+		DHANDLE.ByReference rethUnreadList = DHANDLE.newInstanceByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPI.get().NSFDbGetUnreadNoteTable2(hDb.getByValue(), userNameCanonicalMem, userNameLength,
+				createIfNotAvailable, updateUnread, rethUnreadList);
+
+		NotesErrorUtils.checkResult(result);
+
+		if (rethUnreadList.isNull()) {
+			return Optional.empty();
+		}
+		else {
+			//make the cached ID table reflect the latest DB changes
+			result = NotesNativeAPI.get().NSFDbUpdateUnread(hDb.getByValue(), rethUnreadList.getByValue());
+			NotesErrorUtils.checkResult(result);
+
+			return Optional.of(new NotesIDTable(rethUnreadList, false));
+		}
+	}
+
+	/**
+	 * Method to apply changes to the unread note table
+	 *
+	 * @param userNameParam       user for which to update unread marks (abbreviated
+	 *                            or canonical format); use {@code null} for current
+	 *                            {@link NotesDatabase} opener
+	 * @param noteIdToMarkRead    note ids to mark read (=remove from the unread
+	 *                            table)
+	 * @param noteIdsToMarkUnread note ids to mark unread (=add to the unread table)
+	 */
+	public void updateUnreadNoteTable(String userNameParam, Set<Integer> noteIdToMarkRead,
+			Set<Integer> noteIdsToMarkUnread) {
+
+		checkHandle();
+
+		String userName = StringUtil.isEmpty(userNameParam) ? getNamesList().get(0) : userNameParam;
+		String userNameCanonical = NotesNamingUtils.toCanonicalName(userName);
+
+		Memory userNameCanonicalMem = NotesStringUtils.toLMBCS(userNameCanonical, false);
+		if (userNameCanonicalMem.size() > 65535) {
+			throw new IllegalArgumentException("Username exceeds max length of 65535 bytes");
+		}
+		short userNameLength = (short) (userNameCanonicalMem.size() & 0xffff);
+
+		NotesIDTable unreadTable = getUnreadNoteTable(userNameCanonical, true, true).orElse(null);
+		NotesIDTable unreadTableOrig;
+
+		HANDLE hDb = getHandle();
+
+		if (unreadTable != null) {
+			//make the cached ID table reflect the latest DB changes
+			short result = NotesNativeAPI.get().NSFDbUpdateUnread(hDb.getByValue(), unreadTable.getHandle().getByValue());
+			NotesErrorUtils.checkResult(result);
+
+			unreadTableOrig = (NotesIDTable) unreadTable.clone();
+		}
+		else {
+			unreadTable = new NotesIDTable();
+
+			unreadTableOrig = new NotesIDTable();
+		}
+
+		if (noteIdToMarkRead != null && !noteIdToMarkRead.isEmpty()) {
+			unreadTable.asSet().removeAll(noteIdToMarkRead);
+		}
+
+		if (noteIdsToMarkUnread != null && !noteIdsToMarkUnread.isEmpty()) {
+			unreadTable.asSet().addAll(noteIdsToMarkUnread);
+		}
+
+		short result = NotesNativeAPI.get().NSFDbSetUnreadNoteTable(hDb.getByValue(), userNameCanonicalMem, userNameLength,
+				true, unreadTableOrig.getHandle().getByValue(), unreadTable.getHandle().getByValue());
+		NotesErrorUtils.checkResult(result);
+
+		unreadTable.recycle();
+		unreadTableOrig.recycle();
+
+		//remove cached unread table for this user that is used by isNoteUnread
+		if (m_cachedUnreadTable!=null &&
+				NotesNamingUtils.equalNames(userNameCanonical, m_cachedUnreadTableUsernameCanonical)) {
+			m_cachedUnreadTable.recycle();
+			m_cachedUnreadTable = null;
+			m_cachedUnreadTableUsernameCanonical = null;
+		}
+
+	}
+	
+	/**
+	 * This function gets the list of Address books in use locally or Domino Directories on a server.<br>
+	 * <br>
+	 * If a server is specified, and that server is configured to have a Directory Assistance database 
+	 * (formerly referred to as the Master Address Book), then this function gets the list of Domino
+	 * Directories (Server Address books)  from this database.<br>
+	 * <br>
+	 * In Domino and Notes Releases 4.6.x, it only includes Domino Name &amp; Address books and not any of
+	 * the LDAP directories in the list.<br>
+	 * <br>
+	 * If no server is specified or if no Directory Assistance database is configured on the specified server,
+	 * then this function uses the NAMES variable in the notes.ini file to construct the list of Address books.<br>
+	 * <br>
+	 * The NAMES variable defines the list of Domino Directories and Address books in use by Domino and Notes.<br>
+	 * If the NAMES variable is missing, the default is "NAMES.NSF".<br>
+	 * <br>
+	 * For each name in the NAMES list, the used C API method checks that the database exists.
+	 * If the databases exists, it adds the database path to the return list. If no named databases exists,
+	 * we return an empty list.<br>
+	 * 
+	 * @param serverName Name of server. Specify NULL to get the list of Address books used on the local system.
+	 * @return paths
+	 */
+	public static Set<String> getAddressBookPaths(String serverName) {
+		Memory server = NotesStringUtils.toLMBCS(serverName, true);
+		ShortByReference returnCount = new ShortByReference();
+		ShortByReference returnLength = new ShortByReference();
+		
+		DHANDLE.ByReference hReturn = DHANDLE.newInstanceByReference();
+		short result = NotesNativeAPI.get().NAMEGetAddressBooks(
+			server,
+			(short)0,
+			returnCount,
+			returnLength,
+			hReturn
+		);
+		NotesErrorUtils.checkResult(result);
+		
+		Pointer ptr = Mem.OSLockObject(hReturn);
+		try {
+			int count = returnCount.getValue();
+			Set<String> retList = new LinkedHashSet<>(count);
+			
+			Pointer strPtr = ptr.share(0);
+			for(int i = 0; i < count; i++) {
+				int strlen = NotesStringUtils.getNullTerminatedLength(strPtr);
+				String path = NotesStringUtils.fromLMBCS(strPtr, strlen);
+				if(StringUtil.isNotEmpty(path)) {
+					retList.add(path);
+				}
+				
+				strPtr = strPtr.share(strlen);
+			}
+			
+			return retList;
+		}
+		finally {
+			Mem.OSUnlockObject(hReturn);
+			Mem.OSMemFree(hReturn.getByValue());
+		}
+	}
+	
+	/**
+	 * Caches the database option LARGE_ITEMS_ENABLED internally to improve performance
+	 * 
+	 * @return true if large items are supported
+	 */
+	boolean hasLargeItemSupport() {
+		if (m_hasLargeItemSupport==null) {
+			m_hasLargeItemSupport = getOption(DatabaseOption.LARGE_ITEMS_ENABLED);
+		}
+		return m_hasLargeItemSupport;
+	}
+
+	public interface NSFVersionInfo {
+
+		/**
+		 * The major version number indicates which releases of Domino and Notes
+		 * software
+		 * are able to access that database.<br>
+		 * The major verson number of a database is the same as the ODS version number
+		 * that
+		 * is displayed in the Notes Client File/Database/Properties/second information
+		 * tab.
+		 *
+		 * @return major version
+		 */
+		int getMajorVersion();
+
+		/**
+		 * The minor version number indicates small changes to the internal format of a
+		 * database,
+		 * and is generally of little interest to a C API program.
+		 *
+		 * @return minor version
+		 */
+		int getMinorVersion();
+	}
+
+
+	/**
+	 * Reads information about the On-Disk-Structure (ODS) of the database.
+	 * Each release of Domino or Notes software can access databases that have a
+	 * major version
+	 * number that is less than or equal to a particular value associated with that
+	 * release.<br>
+	 * <br>
+	 * A Domino database that has a major version number that is greater than the
+	 * major version
+	 * number associated with a particular Domino or Notes release cannot be
+	 * accessed by that release.<br>
+	 * <br>
+	 * The following table shows which major version numbers can be accessed by
+	 * particular
+	 * releases of Domino or Notes:<br>
+	 * <br>
+	 * <table>
+	 * <caption>The table ODS levels corresponding to Domino releases</caption>
+	 * <tr>
+	 * <th>Domino or Notes Software Releases</th>
+	 * <th>Major Version Numbers That Can Be Accessed</th>
+	 * </tr>
+	 * <tr>
+	 * <td>1.x</td>
+	 * <td>16</td>
+	 * </tr>
+	 * <tr>
+	 * <td>2.x</td>
+	 * <td>16</td>
+	 * </tr>
+	 * <tr>
+	 * <td>3.x</td>
+	 * <td>17</td>
+	 * </tr>
+	 * <tr>
+	 * <td>4.0, 4.1, 4.5.x, 4.6.x</td>
+	 * <td>20 or less</td>
+	 * </tr>
+	 * <tr>
+	 * <td>5.0 - 5.0.12, 6 - 6.0.3, 6.5, 7.0</td>
+	 * <td>43 or less</td>
+	 * </tr>
+	 * <tr>
+	 * <td>9.0</td>
+	 * <td>52</td>
+	 * </tr>
+	 * <tr>
+	 * <td>10.x - 11.x</td>
+	 * <td>53</td>
+	 * </tr>
+	 * <tr>
+	 * <td>12.0.0</td>
+	 * <td>54</td>
+	 * </tr>
+	 * </table>
+	 *
+	 * @return ODS info
+	 */
+	public NSFVersionInfo getNSFVersionInfo() {
+		checkHandle();
+
+		HANDLE hDb = getHandle();
+
+		ShortByReference retMajorVersion = new ShortByReference();
+		ShortByReference retMinorVersion = new ShortByReference();
+
+		short result = NotesNativeAPI.get().NSFDbMajorMinorVersionGet(hDb.getByValue(), retMajorVersion, retMinorVersion);
+
+		NotesErrorUtils.checkResult(result);
+
+		int majorVersion = Short.toUnsignedInt(retMajorVersion.getValue());
+		int minorVersion = Short.toUnsignedInt(retMinorVersion.getValue());
+
+		return new NSFVersionInfo() {
+
+			@Override
+			public int getMajorVersion() {
+				return majorVersion;
+			}
+
+			@Override
+			public int getMinorVersion() {
+				return minorVersion;
+			}
+			
+			@Override
+			public String toString() {
+				return "NSFVersionInfo [majorVersion="+getMajorVersion()+", minorVersion="+getMinorVersion()+"]";
+			}
+			
+		};
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param field the name of the fields to be indexed
+	 */
+	public void createIndex(String name, String field) {
+		createIndex(name, Arrays.asList(field), false, false);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param field the name of the fields to be indexed
+	 * @param isvisible Makes the view visible. If not specified, a hidden view is created using parentheses. For example, "myindex" becomes "(myindex)". If set to true, all users see the view created by the call when they open the database.
+	 * @param nobuild Doesn't build the view, allowing for normal view processing to do so. All views created by createIndex are created with refresh options set to "Automatic". If not specified, the view created is built as part of the createIndex operation.
+	 */
+	public void createIndex(String name, String field, boolean isvisible, boolean nobuild) {
+		createIndex(name, Arrays.asList(field), isvisible, nobuild);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If the view already exists, the method does nothing.
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param fields the names of the fields to be indexed
+	 */
+	public void createIndex(String name, Collection<String> fields) {
+		createIndex(name, fields, false, false);
+	}
+
+	/**
+	 * Creates an index (Domino view) that is optimized for DQL query terms.<br>
+	 * If a view with the specified name already exists, the method does nothing (does not check compatibility of columns).
+	 * 
+	 * @param name The name of the index to create. Use a name that doesn't conflict with the name of an existing view. Note: Each index name should be easy to identity as a view created via this call and unique within the database. If you create a hidden index (IsVisible is default or false), then the provided view name and that name in parentheses (that is, both "viewname" and "(viewname)") are reserved in the database and you cannot create another view or index with that name.
+	 * @param fields the names of the fields to be indexed
+	 * @param isvisible Makes the view visible. If not specified, a hidden view is created using parentheses. For example, "myindex" becomes "(myindex)". If set to true, all users see the view created by the call when they open the database.
+	 * @param nobuild Doesn't build the view, allowing for normal view processing to do so. All views created by createIndex are created with refresh options set to "Automatic". If not specified, the view created is built as part of the createIndex operation.
+	 */
+	public void createIndex(String name, Collection<String> fields, boolean isvisible, boolean nobuild) {
+		checkHandle();
+
+		if (StringUtil.isEmpty(name)) {
+			throw new IllegalArgumentException("Index name cannot be empty");
+		}
+
+		List<Memory> fieldsMem = new ArrayList<>();
+
+		for (String currField : fields) {
+			if (StringUtil.isEmpty(currField)) {
+				throw new IllegalArgumentException(MessageFormat.format("Method does not support empty field names: {0}", fields));
+			}
+
+			Memory currFieldMem = NotesStringUtils.toLMBCS(currField, true);
+			if (currFieldMem.size() > (NotesConstants.DESIGN_NAME_MAX-1)) {
+				throw new IllegalArgumentException(MessageFormat.format("Field exceeds max length of {0}: {1}", NotesConstants.DESIGN_NAME_MAX-1, currField));
+			}
+			fieldsMem.add(currFieldMem);
+		}
+
+		IntByReference hdsgncmd = new IntByReference();
+
+		for (Memory currFieldMem : fieldsMem) {
+			short result = NotesNativeAPIV1201.get().NSFDesignCommandAddComponent(currFieldMem,
+					NotesConstants.DESIGN_COMPONENT_ATTR.VALS_ASCENDING.getValue(),
+					hdsgncmd);
+			NotesErrorUtils.checkResult(result);
+		}
+
+		Memory nameMem = NotesStringUtils.toLMBCS(name, true);
+
+		IntByReference hretval = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		int dwFlags = 0;
+		if (isvisible) {
+			dwFlags |= NotesConstants.CREATE_INDEX_NOHIDE;
+		}
+
+		if (nobuild) {
+			dwFlags |= NotesConstants.CREATE_INDEX_NOBUILD;
+		}
+
+		int dwFlagsFinal = dwFlags;
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.CREATE_INDEX.getValue(),
+				dwFlagsFinal, nameMem,
+				hretval, hreterror, hdsgncmd.getValue());
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+	}
+
+
+	/**
+	 * Removes an index (Domino view) that is optimized for DQL query terms.<br>
+	 * removeIndex is very powerful and can remove production views.<br>
+	 * Take care in choosing what indexes (views) to remove.<br>
+	 * <br>
+	 * Removes a hidden view if you omit the parentheses in the index name and there is no
+	 * visible view with the same name.<br>
+	 * For example, if "myview" and "(myview)" exist, "myview" deletes only "myview.".<br>
+	 * But if only "(myview)" exists, "myview" deletes "(myview)".<br>
+	 * Naming your index views differently than the other views in the database is recommended.<br>
+	 * <br>
+	 * If no view could be found, the method does nothing.
+	 * 
+	 * @param name the name of the index to remove
+	 */
+	public void removeIndex(String name) {
+		checkHandle();
+
+		if (StringUtil.isEmpty(name)) {
+			throw new IllegalArgumentException("Index name cannot be empty");
+		}
+
+		Memory nameMem = NotesStringUtils.toLMBCS(name, true);
+
+		IntByReference hidx = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.DELETE_INDEX.getValue(), 0, nameMem,
+				hidx, hreterror, 0);
+
+		if (hidx.getValue()!=0) {
+			Mem.OSMemoryFree(hidx.getValue());
+		}
+
+		if ((result & NotesConstants.ERR_MASK)==1028) { //index view not found
+			if (hreterror.getValue()!=0) {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+			return;
+		}
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+	}
+
+
+	/**
+	 * Lists the indexes that are optimized for Domino DQL query terms.
+	 * 
+	 * @return string in JSON format
+	 */
+	public String listIndexes() {
+		checkHandle();
+
+		IntByReference hret = new IntByReference();
+		IntByReference hreterror = new IntByReference();
+
+		HANDLE hDb = getHandle();
+
+		short result = NotesNativeAPIV1201.get().NSFDesignCommand(hDb.getByValue(),
+				NotesConstants.DESIGN_COMMAND_TYPE.LIST_INDEXES.getValue(), 0, null,
+				hret, hreterror, 0);
+
+		String errorTxt = "";
+		if (hreterror.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hreterror.getValue())) {
+				errorTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hreterror.getValue());
+			}
+		}
+
+		if (result!=0) {
+			if (!StringUtil.isEmpty(errorTxt)) {
+				throw new NotesError(result, errorTxt, NotesErrorUtils.toNotesError(result));
+			}
+			else {
+				NotesErrorUtils.checkResult(result);
+			}
+		}
+
+		String retTxt = "";
+		if (hret.getValue()!=0) {
+			try (LockedMemory m = Mem.OSMemoryLock(hret.getValue())) {
+				retTxt = NotesStringUtils.fromLMBCS(m.getPointer(), -1);
+			}
+			finally {
+				Mem.OSMemoryFree(hret.getValue());
+			}
+		}
+
+		return retTxt;
+	}
+
+	public static interface IFolderChangesCallback {
+		
+		Action processFolderChanges(String folderUnid, NotesIDTable addedNoteTable, NotesIDTable removedNoteTable);
+	}
+	
+	/**
+	 * This function will get all folder changes for a specific time period and call the callback routine for each change.
+	 * 
+	 * @param since TIMEDATE structure containing a time/date value specifying the earliest time the folder was modified.
+	 * @param callback This function is called for each folder change
+	 * @return TIMEDATE value containing a time/date value specifying the latest time the folder was modified (for the next call)
+	 */
+	public NotesTimeDate getAllFolderChanges(NotesTimeDate since, IFolderChangesCallback callback) {
+		checkHandle();
+
+		if (since == null) {
+			throw new IllegalArgumentException("Since value cannot be null");
+		}
+		
+		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+
+		NotesTimeDateStruct retUntilStruct = NotesTimeDateStruct.newInstance();
+
+		//we don't recycle the IDTable handles returned in the callback because we got crashes when doing so
+		//(the debug code in NotesGC crashed, which dumps object data like the IDTable size before recycling to stdout, because
+		//the handle was already invalid)
+		if (PlatformUtils.is64Bit()) {
+			NotesCallbacks.b64_NSFGetAllFolderChangesCallback cCallback = new NotesCallbacks.b64_NSFGetAllFolderChangesCallback() {
+
+				@Override
+				public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable,
+						long hRemovedNoteTable) {
+					NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+					NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+					
+					NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+					NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+					
+					String folderUnid = noteUnid.toString();
+					
+					Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+					if (action == Action.Continue) {
+						return 0;
+					}
+					else {
+						return INotesErrorConstants.ERR_CANCEL;
+					}
+				}
+				
+			};
+			
+			short result = NotesNativeAPI64.get().NSFGetAllFolderChanges(getHandle64(), getHandle64(),
+					sinceStruct, 0, cCallback, null, retUntilStruct);
+			if (result == INotesErrorConstants.ERR_CANCEL) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			retUntilStruct.read();
+			return new NotesTimeDate(retUntilStruct.Innards);
+		}
+		else {
+			NotesCallbacks.b32_NSFGetAllFolderChangesCallback cCallback;
+			
+			if (PlatformUtils.isWin32()) {
+				cCallback = new Win32NotesCallbacks.b32_NSFGetAllFolderChangesCallbackWin32() {
+
+					@Override
+					public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable,
+							int hRemovedNoteTable) {
+						NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+						NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+						
+						NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+						NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+						
+						String folderUnid = noteUnid.toString();
+						
+						Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+						if (action == Action.Continue) {
+							return 0;
+						}
+						else {
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+					}
+					
+				};
+			}
+			else {
+				cCallback = new NotesCallbacks.b32_NSFGetAllFolderChangesCallback() {
+
+					@Override
+					public short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable,
+							int hRemovedNoteTable) {
+						NotesIDTable addedNoteTable = new NotesIDTable(hAddedNoteTable, true);
+						NotesIDTable addedNoteTableCopy = (NotesIDTable) addedNoteTable.clone();
+						
+						NotesIDTable removedNoteTable = new NotesIDTable(hRemovedNoteTable, true);
+						NotesIDTable removedNoteTableCopy = (NotesIDTable) removedNoteTable.clone();
+						
+						String folderUnid = noteUnid.toString();
+						
+						Action action = callback.processFolderChanges(folderUnid, addedNoteTableCopy, removedNoteTableCopy);
+						if (action == Action.Continue) {
+							return 0;
+						}
+						else {
+							return INotesErrorConstants.ERR_CANCEL;
+						}
+					}
+					
+				};
+			}
+			
+			short result = NotesNativeAPI32.get().NSFGetAllFolderChanges(getHandle32(), getHandle32(),
+					sinceStruct, 0, cCallback, null, retUntilStruct);
+			if (result == INotesErrorConstants.ERR_CANCEL) {
+				return null;
+			}
+			NotesErrorUtils.checkResult(result);
+			
+			retUntilStruct.read();
+			return new NotesTimeDate(retUntilStruct.Innards);
+
+		}
+	}
+	
+	/**
+	 * This function gets the Note IDs of notes added to or removed, not deleted, from a folder and returns
+	 * the respective ID Tables.<br>
+	 * <br>
+	 * This function works on folders only and is not supported for remote databases.
+	 * 
+	 * @param folderNoteId The ID of the folder note in the database
+	 * @param since TIMEDATE structure containing the starting date used to determine which notes have been added or removed, not deleted, from the folder and added to the ID Tables returned by this function. Passing a cleared TIMEDATE structure (TimeDateClear), will return all changes since the start of the database.
+	 * @return pair of IDTables for added and removed notes
+	 */
+	public Pair<NotesIDTable,NotesIDTable> getFolderChanges(int folderNoteId, NotesTimeDate since) {
+		checkHandle();
+		
+		NotesTimeDateStruct sinceStruct = since.getAdapter(NotesTimeDateStruct.class);
+
+		if (PlatformUtils.is64Bit()) {
+			LongByReference hAddedNoteTable = new LongByReference();
+			LongByReference hRemovedNoteTable = new LongByReference();
+			
+			short result = NotesNativeAPI64.get().NSFGetFolderChanges(
+					getHandle64(), getHandle64(),
+					folderNoteId,
+					sinceStruct,
+					0,
+					hAddedNoteTable,
+					hRemovedNoteTable
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesIDTable addedNoteTable = null;
+			if (hAddedNoteTable.getValue() != 0) {
+				addedNoteTable = new NotesIDTable(hAddedNoteTable.getValue(), false);
+			}
+			NotesIDTable removedNoteTable = null;
+			if (hRemovedNoteTable.getValue() != 0) {
+				removedNoteTable = new NotesIDTable(hRemovedNoteTable.getValue(), false);
+			}
+			
+			return new Pair<>(addedNoteTable, removedNoteTable);
+		}
+		else {
+			IntByReference hAddedNoteTable = new IntByReference();
+			IntByReference hRemovedNoteTable = new IntByReference();
+			
+			short result = NotesNativeAPI32.get().NSFGetFolderChanges(
+					getHandle32(), getHandle32(),
+					folderNoteId,
+					sinceStruct,
+					0,
+					hAddedNoteTable,
+					hRemovedNoteTable
+					);
+			NotesErrorUtils.checkResult(result);
+			
+			NotesIDTable addedNoteTable = null;
+			if (hAddedNoteTable.getValue() != 0) {
+				addedNoteTable = new NotesIDTable(hAddedNoteTable.getValue(), false);
+			}
+			NotesIDTable removedNoteTable = null;
+			if (hRemovedNoteTable.getValue() != 0) {
+				removedNoteTable = new NotesIDTable(hRemovedNoteTable.getValue(), false);
+			}
+			
+			return new Pair<>(addedNoteTable, removedNoteTable);
+		}
+		
 	}
 }

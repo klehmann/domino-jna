@@ -91,4 +91,13 @@ public class NotesBuildVersion {
 	public int getFixpackNumber() {
 		return m_fixpackNumber;
 	}
+
+	@Override
+	public String toString() {
+		return "NotesBuildVersion [majorVersion=" + m_majorVersion + ", minorVersion=" + m_minorVersion
+				+ ", qmrNumber=" + m_qmrNumber + ", qmuNumber=" + m_qmuNumber + ", hotfixNumber=" + m_hotfixNumber
+				+ ", flags=" + m_flags + ", fixpackNumber=" + m_fixpackNumber + "]";
+	}
+	
+	
 }

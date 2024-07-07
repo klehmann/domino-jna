@@ -6,20 +6,26 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.mindoo.domino.jna.NotesAttachment;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.mime.attachments.ByteArrayMimeAttachment;
+import com.mindoo.domino.jna.mime.attachments.ByteBufferMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.IMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.LocalFileMimeAttachment;
 import com.mindoo.domino.jna.mime.attachments.UrlMimeAttachment;
+import com.mindoo.domino.jna.utils.StringUtil;
 
 /**
  * Container for text and binary data of an item of type {@link NotesItem#TYPE_MIME_PART}.
  */
 public class MIMEData {
-	private String m_html;
-	private String m_text;
+	private static final String MIMETYPE_TEXT_PLAIN = "text/plain";
+	private static final String MIMETYPE_TEXT_HTML = "text/html";
+	
+	private Map<String,String> m_mailBodyByContentType;
 	private Map<String,IMimeAttachment> m_embeds;
 	private List<IMimeAttachment> m_attachments;
 	private int m_uniqueCidCounter=1;
@@ -32,8 +38,11 @@ public class MIMEData {
 	
 	public MIMEData(String html, String text,
 			Map<String,IMimeAttachment> embeds, List<IMimeAttachment> attachments) {
-		m_html = html;
-		m_text = text;
+		
+		m_mailBodyByContentType = new HashMap<>();
+		setHtml(html);
+		setPlainText(text);
+		
 		m_embeds = embeds==null ? new HashMap<>() : new HashMap<>(embeds);
 		m_attachments = attachments==null ? new ArrayList<>() : new ArrayList<>(attachments);
 	}
@@ -44,7 +53,7 @@ public class MIMEData {
 	 * @return HTML, not null
 	 */
 	public String getHtml() {
-		return m_html!=null ? m_html : "";
+		return m_mailBodyByContentType.getOrDefault(MIMETYPE_TEXT_HTML, "");
 	}
 	
 	/**
@@ -53,7 +62,12 @@ public class MIMEData {
 	 * @param html html
 	 */
 	public void setHtml(String html) {
-		m_html = html;
+		if (html==null) {
+			m_mailBodyByContentType.remove(MIMETYPE_TEXT_HTML);
+		}
+		else {
+			m_mailBodyByContentType.put(MIMETYPE_TEXT_HTML, html);
+		}
 		m_toString = null;
 	}
 
@@ -63,7 +77,7 @@ public class MIMEData {
 	 * @return plaintext content or empty string
 	 */
 	public String getPlainText() {
-		return m_text!=null ? m_text : "";
+		return m_mailBodyByContentType.getOrDefault(MIMETYPE_TEXT_PLAIN, "");
 	}
 	
 	/**
@@ -72,8 +86,53 @@ public class MIMEData {
 	 * @param text plaintext
 	 */
 	public void setPlainText(String text) {
-		m_text = text;
+		if (text==null) {
+			m_mailBodyByContentType.remove(MIMETYPE_TEXT_PLAIN);
+		}
+		else {
+			m_mailBodyByContentType.put(MIMETYPE_TEXT_PLAIN, text);
+		}
 		m_toString = null;
+	}
+	
+	/**
+	 * Sets mail body content of a specific type
+	 * 
+	 * @param contentType content type, e.g. "text/html" or "text/plain"
+	 * @param content body content
+	 */
+	public void setBodyContent(String contentType, String content) {
+		if (content==null) {
+			m_mailBodyByContentType.remove(contentType);
+		}
+		else {
+			m_mailBodyByContentType.put(contentType, content);
+		}
+		m_toString = null;
+	}
+	
+	/**
+	 * Returns mail body content of a specific type
+	 * 
+	 * @param contentType content type
+	 * @return mail body content
+	 */
+	public Optional<String> getBodyContent(String contentType) {
+		if (m_mailBodyByContentType.containsKey(contentType)) {
+			return Optional.of(m_mailBodyByContentType.get(contentType));
+		}
+		else {
+			return Optional.empty();
+		}
+	}
+	
+	/**
+	 * Returns all defined content types for the mail body
+	 * 
+	 * @return content types, e.g. "text/html" or "text/plain"
+	 */
+	public Iterable<String> getBodyContentTypes() {
+		return m_mailBodyByContentType.keySet();
 	}
 	
 	/**
@@ -93,20 +152,42 @@ public class MIMEData {
 	 * @return unique content id
 	 */
 	public String embed(IMimeAttachment attachment) {
+		return embed((String) null, attachment);
+	}
+	
+	/**
+	 * Adds an inline file
+	 * 
+	 * @param attachment attachment
+	 * @return unique content id
+	 */
+	public String embed(NotesAttachment attachment) {
+		return embed((String) null, attachment);
+	}
+	
+	/**
+	 * Adds/changes an inline file with a given content id
+	 * 
+	 * @param cid content id
+	 * @param attachment attachment
+	 * @return unique content id
+	 */
+	public String embed(String cid, IMimeAttachment attachment) {
+		if (StringUtil.isEmpty(cid)) {
+			//find a unique content id
+			do {
+				cid = "att_"+(m_uniqueCidCounter++)+"@jnadoc";
+			}
+			while (m_embeds.containsKey(cid));
+		}
+
 		if (attachment==null) {
-			throw new IllegalArgumentException("Attachment cannot be null");
+			m_embeds.remove(cid);
 		}
-
-		//find a unique content id
-		String cid;
-		do {
-			cid = "att_"+(m_uniqueCidCounter++)+"@jnxdoc";
+		else {
+			m_embeds.put(cid, attachment);
 		}
-		while (m_embeds.containsKey(cid));
-		
-		m_embeds.put(cid, attachment);
 		m_toString = null;
-
 		return cid;
 	}
 	
@@ -115,15 +196,10 @@ public class MIMEData {
 	 * 
 	 * @param cid content id
 	 * @param attachment attachment
+	 * @return unique content id
 	 */
-	public void embed(String cid, IMimeAttachment attachment) {
-		if (attachment==null) {
-			m_embeds.remove(cid);
-		}
-		else {
-			m_embeds.put(cid, attachment);
-		}
-		m_toString = null;
+	public String embed(String cid, NotesAttachment attachment) {
+		return embed(cid, new ByteBufferMimeAttachment(attachment.toByteBuffer(), attachment.getFileName()));
 	}
 	
 	/**
@@ -134,6 +210,15 @@ public class MIMEData {
 	public void removeEmbed(String cid) {
 		m_embeds.remove(cid);
 		m_toString = null;
+	}
+	
+	/**
+	 * Method to check if this object contains embedded MIME resources
+	 * 
+	 * @return true if we have embeds
+	 */
+	public boolean hasEmbeds() {
+		return !m_embeds.isEmpty();
 	}
 	
 	/**
@@ -160,10 +245,24 @@ public class MIMEData {
 		m_toString = null;
 	}
 	
+	/**
+	 * Attaches a {@link NotesAttachment} by converting it into an {@link ByteBufferMimeAttachment}
+	 * internally.
+	 * 
+	 * @param attachment attachment
+	 */
+	public void attach(NotesAttachment attachment) {
+		attach(new ByteBufferMimeAttachment(attachment.toByteBuffer(), attachment.getFileName()));
+	}
+	
 	public List<IMimeAttachment> getAttachments() {
 		return Collections.unmodifiableList(m_attachments);
 	}
 
+	public boolean hasAttachments() {
+		return !m_attachments.isEmpty();
+	}
+	
 	/**
 	 * Removes an attachment from the MIME data
 	 * 
@@ -176,8 +275,7 @@ public class MIMEData {
 
 	public String toString() {
 		if (m_toString==null) {
-			m_toString = "MimeData [hasHtml="+(m_html!=null && m_html.length()>0)
-					+", hasText=" + (m_text!=null && m_text.length()>0)
+			m_toString = "MimeData [contentTypes="+m_mailBodyByContentType.keySet().stream().collect(Collectors.toList())
 					+ ", embeds="+m_embeds.keySet()
 					+ ", attachments="+
 					m_attachments.stream().map((att) -> {
@@ -187,7 +285,6 @@ public class MIMEData {
 							return "-error-";
 						}
 					}).collect(Collectors.toList())+"]";
-			
 		}
 		return m_toString;
 	}

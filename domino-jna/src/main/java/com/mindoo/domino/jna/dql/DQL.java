@@ -987,7 +987,8 @@ public class DQL {
 		@Override
 		public String toString() {
 			if (this.m_toString == null) {
-				this.m_toString = MessageFormat.format("@formula(''{0}'')", escapeStringValue(m_formula)); //$NON-NLS-1$
+		        String escapedFormula = m_formula.replace("'", "\\'"); //$NON-NLS-1$ //$NON-NLS-2$
+		        this.m_toString = MessageFormat.format("@formula(''{0}'')", escapedFormula); //$NON-NLS-1$
 			}
 			return this.m_toString;
 		}

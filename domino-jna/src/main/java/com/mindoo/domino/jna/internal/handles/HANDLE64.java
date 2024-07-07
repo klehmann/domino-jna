@@ -29,6 +29,10 @@ public class HANDLE64 extends BaseStructure implements HANDLE {
 		setAlignType(ALIGN_DEFAULT);
 	}
 
+	public long getValue() {
+		return hdl;
+	}
+
 	public static HANDLE64 newInstance(long hdl) {
 		return AccessController.doPrivileged((PrivilegedAction<HANDLE64>) () -> new HANDLE64(hdl));
 	}

@@ -139,6 +139,40 @@ public class TestFormulaExecution extends BaseJNATestClass {
 	}
 	
 	@Test
+	public void testLargeResult() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				withTempDb((db) -> {
+					NotesNote tmpNote = db.createNote();
+					String testStr = new String(TestFormulaExecution.this.produceTestData(30000), "ASCII");
+					tmpNote.replaceItemValue("field1", testStr);
+					tmpNote.replaceItemValue("field2", testStr);
+					tmpNote.replaceItemValue("field3", testStr);
+					//an example for a formula that produces a result larger than the default 64k result buffer
+					String formula = "field1 : field2 : field3";
+					
+					List<Object> result = FormulaExecution.evaluate(formula, tmpNote);
+					int totalLength = 0;
+					for (Object currResultVal : result) {
+						if (currResultVal instanceof String) {
+							totalLength += ((String)currResultVal).length();
+						}
+					}
+					assertEquals(90000, totalLength);
+					
+					//please note that although we CAN get back more than 64k of data, Domino's formula execution is still very limited;
+					//e.g. the formula engine cannot produce a string larger than 64k of text and @DbColumn cannot return more than 65534 row entries
+					
+				});
+				
+				return null;
+			}
+		});
+	}
+	
+	@Test
 	public void testDisallowedFormulas() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -156,21 +190,21 @@ public class TestFormulaExecution extends BaseJNATestClass {
 
 					//check if we can prevent Notes.ini changes
 					{
-						NotesIniUtils.setEnvironmentString("$jnx_test", "");
+						NotesIniUtils.setEnvironmentString("$jna_test", "");
 
-						FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jnx_test\"; \"123\")");
+						FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jna_test\"; \"123\")");
 						formula.evaluate(null);
 						//this is allowed, to the value should have been set
-						String val = NotesIniUtils.getEnvironmentString("$jnx_test");
+						String val = NotesIniUtils.getEnvironmentString("$jna_test");
 						assertEquals("123", val);
 					}
 
 					{
-						NotesIniUtils.setEnvironmentString("$jnx_test", "");
+						NotesIniUtils.setEnvironmentString("$jna_test", "");
 
 						NotesError e = null;
 						try {
-							FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jnx_test\"; \"123\")")
+							FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jna_test\"; \"123\")")
 									.disallow(Disallow.SETENVIRONMENT);
 							formula.evaluate(null);
 						}
@@ -183,11 +217,11 @@ public class TestFormulaExecution extends BaseJNATestClass {
 					}
 
 					{
-						NotesIniUtils.setEnvironmentString("$jnx_test", "");
+						NotesIniUtils.setEnvironmentString("$jna_test", "");
 
 						NotesError e = null;
 						try {
-							FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jnx_test\"; \"123\")")
+							FormulaExecution formula = new FormulaExecution("@SetEnvironment(\"jna_test\"; \"123\")")
 									.disallow(Disallow.UNSAFE);
 							formula.evaluate(null);
 						}

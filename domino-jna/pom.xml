@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-base</artifactId>
-		<version>0.9.48-SNAPSHOT</version>
+		<version>0.9.49-SNAPSHOT</version>
 	</parent>
 
 	<name>Domino JNA</name>
@@ -212,6 +212,18 @@
 			<version>${jfairy.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+		    <groupId>org.glassfish.corba</groupId>
+		    <artifactId>glassfish-corba-omgapi</artifactId>
+		    <version>4.2.5</version>	
+		    <scope>provided</scope>
+		</dependency>		
+		<dependency> 
+		    <groupId>org.openjdk.jol</groupId> 
+		    <artifactId>jol-core</artifactId>    
+		    <version>0.10</version>
+		    <scope>test</scope>
+		</dependency>		
 	</dependencies>
 
 	<build>

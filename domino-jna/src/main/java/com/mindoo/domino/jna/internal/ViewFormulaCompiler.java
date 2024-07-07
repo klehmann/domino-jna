@@ -28,10 +28,12 @@ public class ViewFormulaCompiler {
 	 * 
 	 * @param selectionFormula selection formula
 	 * @param columnItemNamesAndFormulas map with programmatic column names as keys and their formula as values, will be processed in key order
+	 * @param addConflict true to add special columns for $Conflict and $REF at the end of the compiled formula
 	 * @return handle to combined formula for 32 bit
 	 */
-	public static int b32_compile(String selectionFormula, LinkedHashMap<String,String> columnItemNamesAndFormulas) {
-		return (int) b64_compile(selectionFormula, columnItemNamesAndFormulas);
+	public static int b32_compile(String selectionFormula, LinkedHashMap<String,String> columnItemNamesAndFormulas,
+			boolean addConflict, boolean addRef) {
+		return (int) b64_compile(selectionFormula, columnItemNamesAndFormulas, addConflict, addRef);
 	}
 	
 	/**
@@ -40,9 +42,12 @@ public class ViewFormulaCompiler {
 	 * 
 	 * @param selectionFormula selection formula
 	 * @param columnItemNamesAndFormulas map with programmatic column names as keys and their formula as values, will be processed in key order; if null, we simply compile the selection formula
+	 * @param addConflict true to add special column for $Conflict at the end of the compiled formula (required for $Formula item of views)
+	 * @param addRef true to add the special column $REF at the end of the compiled formula (required for $Formula item of views)
 	 * @return handle to combined formula for 64 bit
 	 */
-	public static long b64_compile(String selectionFormula, LinkedHashMap<String,String> columnItemNamesAndFormulas) {
+	public static long b64_compile(String selectionFormula, LinkedHashMap<String,String> columnItemNamesAndFormulas,
+			boolean addConflict, boolean addRef) {
 		Memory formulaName = null;
 		short formulaNameLength = 0;
 		Memory selectionFormulaMem = NotesStringUtils.toLMBCS(selectionFormula, false);
@@ -204,6 +209,38 @@ public class ViewFormulaCompiler {
 						}
 					}
 				}
+				
+				//add special columns required for view selection formulas
+				
+				if (addConflict) {
+					Memory columnItemNameMem = NotesStringUtils.toLMBCS("$Conflict", false);
+					short columnItemNameLength = (short) (columnItemNameMem.size() & 0xffff);
+
+					if (PlatformUtils.is64Bit()) {
+						result = NotesNativeAPI64.get().NSFFormulaSummaryItem(hViewFormula64, columnItemNameMem, columnItemNameLength);
+						NotesErrorUtils.checkResult(result);
+					}
+					else {
+						result = NotesNativeAPI32.get().NSFFormulaSummaryItem(hViewFormula32, columnItemNameMem, columnItemNameLength);
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				
+				if (addRef) {
+					Memory columnItemNameMem = NotesStringUtils.toLMBCS("$REF", false);
+					short columnItemNameLength = (short) (columnItemNameMem.size() & 0xffff);
+
+					//add summary item definition for column
+					if (PlatformUtils.is64Bit()) {
+						result = NotesNativeAPI64.get().NSFFormulaSummaryItem(hViewFormula64, columnItemNameMem, columnItemNameLength);
+						NotesErrorUtils.checkResult(result);
+					}
+					else {
+						result = NotesNativeAPI32.get().NSFFormulaSummaryItem(hViewFormula32, columnItemNameMem, columnItemNameLength);
+						NotesErrorUtils.checkResult(result);
+					}
+				}
+				
 				//all ok!
 				errorCompilingColumns = false;
 			}

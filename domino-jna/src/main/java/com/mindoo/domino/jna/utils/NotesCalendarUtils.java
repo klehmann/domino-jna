@@ -612,7 +612,7 @@ public class NotesCalendarUtils {
 							try {
 								int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pUIDData, 0) & 0xffff);
 								for (int i=0; i<numEntriesAsInt; i++) {
-									result = NotesNativeAPI.get().ListGetText(pUIDData, false, (short) (i & 0xffff), retTextPointer, retTextLength);
+									result = NotesNativeAPI.get().ListGetText(pUIDData, false, (char) i, retTextPointer, retTextLength);
 									NotesErrorUtils.checkResult(result);
 									
 									String currUID = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);
@@ -680,7 +680,7 @@ public class NotesCalendarUtils {
 							try {
 								int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pUIDData, 0) & 0xffff);
 								for (int i=0; i<numEntriesAsInt; i++) {
-									result = NotesNativeAPI.get().ListGetText(pUIDData, false, (short) (i & 0xffff), retTextPointer, retTextLength);
+									result = NotesNativeAPI.get().ListGetText(pUIDData, false, (char) i, retTextPointer, retTextLength);
 									NotesErrorUtils.checkResult(result);
 									
 									String currUID = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), retTextLength.getValue() & 0xffff);

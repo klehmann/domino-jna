@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-xsp-build</artifactId>
-		<version>0.9.48-SNAPSHOT</version>
+		<version>0.9.49-SNAPSHOT</version>
 		<relativePath>../com.mindoo.domino.jna.xsp.build</relativePath>
 	</parent>
 
@@ -20,7 +20,7 @@
 						<id>setqualifier</id>
 						<phase>install</phase>
 						<configuration>
-							<tasks>
+							<target>
 								<ant antfile="${basedir}${file.separator}build.xml" target="main"
 									inheritAll="true">
 									<property name="maven_plugin_classpath" refid="maven.plugin.classpath" />
@@ -29,7 +29,7 @@
 									<property name="workspace_loc" value="${basedir}${file.separator}.." />
 									<property name="build_timestamp" value="${buildQualifier}" />
 								</ant>
-							</tasks>
+							</target>
 						</configuration>
 						<goals>
 							<goal>run</goal>
@@ -49,9 +49,9 @@
 						</exclusions>
 					</dependency>
 					<dependency>
-						<groupId>ant</groupId>
-						<artifactId>ant-nodeps</artifactId>
-						<version>1.6.5</version>
+					    <groupId>org.apache.ant</groupId>
+					    <artifactId>ant-nodeps</artifactId>
+					    <version>1.8.1</version>
 					</dependency>
 				</dependencies>
 			</plugin>

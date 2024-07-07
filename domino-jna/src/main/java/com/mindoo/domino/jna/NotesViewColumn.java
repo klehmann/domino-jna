@@ -25,7 +25,7 @@ import com.sun.jna.ptr.ShortByReference;
  * 
  * @author Karsten Lehmann
  */
-public class NotesViewColumn {
+public class NotesViewColumn implements IViewColumn {
 	private NotesViewFormat m_parentFormat;
 	private String m_itemName;
 	private String m_title;
@@ -68,10 +68,12 @@ public class NotesViewColumn {
 		
 	}
 	
+	@Override
 	public String getItemName() {
 		return m_itemName;
 	}
 	
+	@Override
 	public String getTitle() {
 		return m_title;
 	}
@@ -88,6 +90,7 @@ public class NotesViewColumn {
 		return m_constantValue!=null && m_constantValue.length>0;
 	}
 	
+	@Override
 	public String getFormula() {
 		if (m_formula==null) {
 			if (m_formulaCompiled!=null && m_formulaCompiled.length>0) {
@@ -196,6 +199,21 @@ public class NotesViewColumn {
 		return (m_flags1 & NotesConstants.VCF1_M_SortDescending) == NotesConstants.VCF1_M_SortDescending;
 	}
 
+	@Override
+	public ColumnSort getSorting() {
+		if (isSorted()) {
+			if (isSortedDescending()) {
+				return ColumnSort.DESCENDING;
+			}
+			else {
+				return ColumnSort.ASCENDING;
+			}
+		}
+		else {
+			return ColumnSort.NONE;
+		}
+	}
+	
 	public boolean isHidden() {
 		return (m_flags1 & NotesConstants.VCF1_M_Hidden) == NotesConstants.VCF1_M_Hidden;
 	}

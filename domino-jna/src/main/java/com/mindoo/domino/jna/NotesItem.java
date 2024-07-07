@@ -109,7 +109,7 @@ public class NotesItem {
 	 * @param parentNote parent note
 	 * @param itemBlockId item block id
 	 * @param dataType data type
-	 * @param valueBlockId value block id
+	 * @param valueBlockId value block id or null if not retrieved yet
 	 * @param valueLength value length in bytes
 	 */
 	NotesItem(NotesNote parentNote, NotesBlockIdStruct itemBlockId, int dataType,
@@ -413,20 +413,20 @@ public class NotesItem {
 		itemBlockIdByVal.pool = m_itemBlockId.pool;
 		itemBlockIdByVal.block = m_itemBlockId.block;
 
+		NotesBlockIdStruct.ByReference retValueBid = NotesBlockIdStruct.ByReference.newInstance();
+		
 		if (PlatformUtils.is64Bit()) {
-			NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
-
 			NotesNativeAPI64.get().NSFItemQueryEx(m_parentNote.getHandle64(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
 		}
 		else {
-			NotesBlockIdStruct retValueBid = NotesBlockIdStruct.newInstance();
-
 			NotesNativeAPI32.get().NSFItemQueryEx(m_parentNote.getHandle32(),
 					itemBlockIdByVal, item_name, (short) (item_name.size() & 0xffff), retName_len,
 					retItem_flags, retDataType, retValueBid, retValueLen, retSeqByte, retDupItemID);
 		}
+		m_valueBlockId = retValueBid;
+
 
 		m_dataType = retDataType.getValue();
 		m_seq = retSeqByte.getValue();

@@ -142,7 +142,7 @@ public interface NotesCallbacks {
 	}
 
 	interface b32_NSFGetAllFolderChangesCallback extends Callback {
-		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable, int removedNoteTable);
+		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, int hAddedNoteTable, int hRemovedNoteTable);
 	}
 
 	/**
@@ -186,7 +186,7 @@ public interface NotesCallbacks {
 	}
 
 	interface b64_NSFGetAllFolderChangesCallback extends Callback {
-		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable, long removedNoteTable);
+		short invoke(Pointer param, NotesUniversalNoteIdStruct noteUnid, long hAddedNoteTable, long hRemovedNoteTable);
 	}
 
 	interface STATTRAVERSEPROC extends Callback {

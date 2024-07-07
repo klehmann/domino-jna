@@ -2,7 +2,6 @@ package com.mindoo.domino.jna;
 
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -14,9 +13,9 @@ import java.util.TreeMap;
 import com.mindoo.domino.jna.constants.ReadMask;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.NotesConstants;
+import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.utils.EmptyIterator;
 import com.mindoo.domino.jna.utils.LMBCSString;
-import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 
 /**
@@ -24,7 +23,7 @@ import com.mindoo.domino.jna.utils.NotesStringUtils;
  * 
  * @author Karsten Lehmann
  */
-public class NotesViewEntryData implements INoteSummary {
+public class NotesViewEntryData extends TypedItemAccess implements IViewEntryData {
 	private NotesCollection m_parentCollection;
 	
 	private int[] m_pos;
@@ -203,15 +202,12 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return position or null
 	 */
+	@Override
 	public int[] getPosition() {
 		return m_pos;
 	}
 
-	/**
-	 * Returns the level of the entry in the view (position 1 = level 0, position 1.1 = level 1)
-	 * 
-	 * @return level, only available when position is loaded, otherwise the method returns -1
-	 */
+	@Override
 	public int getLevel() {
 		return m_pos!=null ? (m_pos.length-1) : -1;
 	}
@@ -222,6 +218,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return position string or empty string
 	 */
+	@Override
 	public String getPositionStr() {
 		if (m_posStr==null) {
 			if (m_pos==null || m_pos.length==0) {
@@ -254,6 +251,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return note id or 0
 	 */
+	@Override
 	public int getNoteId() {
 		return m_noteId!=null ? m_noteId.intValue() : 0;
 	}
@@ -282,6 +280,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if document
 	 */
+	@Override
 	public boolean isDocument() {
 		return !isCategory() && !isTotal();
 	}
@@ -292,6 +291,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if category
 	 */
+	@Override
 	public boolean isCategory()  {
 		if (m_noteId!=null) {
 			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY) == NotesConstants.NOTEID_CATEGORY;
@@ -305,6 +305,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return true if total
 	 */
+	@Override
 	public boolean isTotal() {
 		if (m_noteId!=null) {
 			return (m_noteId.intValue() & NotesConstants.NOTEID_CATEGORY_TOTAL) == NotesConstants.NOTEID_CATEGORY_TOTAL;
@@ -318,6 +319,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return UNID or null
 	 */
+	@Override
 	public String getUNID() {
 		if (m_unid==null) {
 			if (m_unidAsLongs!=null) {
@@ -370,6 +372,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getSiblingCount() {
 		return m_siblingCount!=null ? m_siblingCount.intValue() : 0;
 	}
@@ -389,6 +392,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getChildCount() {
 		return m_childCount!=null ? m_childCount.intValue() : 0;
 	}
@@ -408,6 +412,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * 
 	 * @return count or 0
 	 */
+	@Override
 	public int getDescendantCount() {
 		return m_descendantCount!=null ? m_descendantCount.intValue() : 0;
 	}
@@ -665,6 +670,7 @@ public class NotesViewEntryData implements INoteSummary {
 	 * @param columnNameOrTitle programatic column name or column title
 	 * @return column value or null
 	 */
+	@Override
 	public Object get(String columnNameOrTitle) {
 		if (isPreferNotesTimeDates()) {
 			return get(columnNameOrTitle, false);
@@ -784,389 +790,6 @@ public class NotesViewEntryData implements INoteSummary {
 			}
 		}
 		return false;
-	}
-	
-	@Override
-	public String getAsString(String columnName, String defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof String) {
-			return (String) val;
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (valAsList.isEmpty()) {
-				return defaultValue;
-			}
-			else {
-				return valAsList.get(0).toString();
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public String getAsNameAbbreviated(String columnName) {
-		String nameStr = getAsString(columnName, null);
-		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
-	}
-
-	@Override
-	public String getAsNameAbbreviated(String columnName, String defaultValue) {
-		String nameStr = getAsString(columnName, defaultValue);
-		return nameStr==null ? null : NotesNamingUtils.toAbbreviatedName(nameStr);
-	}
-	 
-	@Override
-	public List<String> getAsNamesListAbbreviated(String columnName) {
-		List<String> strList = getAsStringList(columnName, null);
-		if (strList!=null) {
-			List<String> namesAbbr = new ArrayList<String>(strList.size());
-			for (int i=0; i<strList.size(); i++) {
-				namesAbbr.add(NotesNamingUtils.toAbbreviatedName(strList.get(i)));
-			}
-			return namesAbbr;
-		}
-		else
-			return null;
-	}
-	
-	@Override
-	public List<String> getAsNamesListAbbreviated(String columnName, List<String> defaultValue) {
-		List<String> strList = getAsStringList(columnName, defaultValue);
-		if (strList!=null) {
-			List<String> namesAbbr = new ArrayList<String>(strList.size());
-			for (int i=0; i<strList.size(); i++) {
-				namesAbbr.add(NotesNamingUtils.toAbbreviatedName(strList.get(i)));
-			}
-			return namesAbbr;
-		}
-		else
-			return null;
-	}
-	
-	@Override
-	public List<String> getAsStringList(String columnName, List<String> defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof String) {
-			return Arrays.asList((String) val);
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			boolean correctType=true;
-			for (int i=0; i<valAsList.size(); i++) {
-				if (!(valAsList.get(i) instanceof String)) {
-					correctType=false;
-					break;
-				}
-			}
-			
-			if (correctType) {
-				return (List<String>) valAsList;
-			}
-			else {
-				List<String> strList = new ArrayList<String>();
-				for (int i=0; i<valAsList.size(); i++) {
-					strList.add(valAsList.get(i).toString());
-				}
-				return strList;
-			}
-		}
-		else if (val!=null) {
-			return Arrays.asList(val.toString());
-		}
-		return defaultValue;
-	}
-	
-	@Override
-	public Calendar getAsCalendar(String columnName, Calendar defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof NotesTimeDate) {
-			return ((NotesTimeDate)val).toCalendar();
-		}
-		else if (val instanceof Calendar) {
-			return (Calendar) val;
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (!valAsList.isEmpty()) {
-				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof NotesTimeDate) {
-					return ((NotesTimeDate) firstVal).toCalendar();
-				}
-				else if (firstVal instanceof Calendar) {
-					return (Calendar) firstVal;
-				}
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public NotesTimeDate getAsTimeDate(String columnName, NotesTimeDate defaultValue) {
-		Object val = get(columnName, false);
-		if (val instanceof NotesTimeDate) {
-			return (NotesTimeDate) val;
-		}
-		else if (val instanceof Calendar) {
-			return new NotesTimeDate((Calendar) val);
-		}
-		else if (val instanceof Date) {
-			return new NotesTimeDate((Date) val);
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (!valAsList.isEmpty()) {
-				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof NotesTimeDate) {
-					return (NotesTimeDate) firstVal;
-				}
-			}
-		}
-		return defaultValue;
-	}
-	
-	@Override
-	public List<Calendar> getAsCalendarList(String columnName, List<Calendar> defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof NotesTimeDate) {
-			return Arrays.asList(((NotesTimeDate)val).toCalendar());
-		}
-		else if (val instanceof Calendar) {
-			return Arrays.asList((Calendar) val);
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			List<Calendar> valAsCalendarList = new ArrayList<Calendar>();
-			
-			for (int i=0; i<valAsList.size(); i++) {
-				Object currListVal = valAsList.get(i);
-				if (currListVal instanceof NotesTimeDate) {
-					valAsCalendarList.add(((NotesTimeDate)currListVal).toCalendar());
-				}
-				else if (currListVal instanceof Calendar) {
-					valAsCalendarList.add((Calendar) currListVal);
-				}
-				else {
-					//incorrect content type
-					return defaultValue;
-				}
-			}
-			return valAsCalendarList;
-		}
-		return defaultValue;
-	}
-	
-	@Override
-	public List<NotesTimeDate> getAsTimeDateList(String columnName, List<NotesTimeDate> defaultValue) {
-		Object val = get(columnName, false);
-		if (val instanceof NotesTimeDate) {
-			return Arrays.asList(((NotesTimeDate)val));
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			boolean correctType = true;
-			
-			for (Object currVal : valAsList) {
-				if (!(currVal instanceof NotesTimeDate)) {
-					correctType = false;
-					break;
-				}
-			}
-			
-			if (correctType) {
-				return (List<NotesTimeDate>) valAsList;
-			}
-			else {
-				return defaultValue;
-			}
-		}
-		return defaultValue;
-	}
-	
-	@Override
-	public Double getAsDouble(String columnName, Double defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return ((Number) val).doubleValue();
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (!valAsList.isEmpty()) {
-				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof Number) {
-					return ((Number) firstVal).doubleValue();
-				}
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public Integer getAsInteger(String columnName, Integer defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return ((Number) val).intValue();
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (!valAsList.isEmpty()) {
-				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof Number) {
-					return ((Number) firstVal).intValue();
-				}
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public Long getAsLong(String columnName, Long defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return ((Number) val).longValue();
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			if (!valAsList.isEmpty()) {
-				Object firstVal = valAsList.get(0);
-				if (firstVal instanceof Number) {
-					return ((Number) firstVal).longValue();
-				}
-			}
-		}
-		return defaultValue;
-	}
-	
-	@Override
-	public List<Double> getAsDoubleList(String columnName, List<Double> defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return Arrays.asList(((Number) val).doubleValue());
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			boolean correctType=true;
-			boolean numberList=true;
-			
-			for (int i=0; i<valAsList.size(); i++) {
-				Object currObj = valAsList.get(i);
-				
-				if (currObj instanceof Double) {
-					//ok
-				}
-				else if (currObj instanceof Number) {
-					correctType=false;
-					numberList=true;
-				}
-				else {
-					correctType=false;
-					numberList=false;
-				}
-			}
-			
-			if (correctType) {
-				return (List<Double>) valAsList;
-			}
-			else if (numberList) {
-				List<Double> dblList = new ArrayList<Double>(valAsList.size());
-				for (int i=0; i<valAsList.size(); i++) {
-					dblList.add(((Number)valAsList.get(i)).doubleValue());
-				}
-				return dblList;
-			}
-			else {
-				return defaultValue;
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public List<Integer> getAsIntegerList(String columnName, List<Integer> defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return Arrays.asList(((Number) val).intValue());
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			boolean correctType=true;
-			boolean numberList=true;
-			
-			for (int i=0; i<valAsList.size(); i++) {
-				Object currObj = valAsList.get(i);
-				
-				if (currObj instanceof Integer) {
-					//ok
-				}
-				else if (currObj instanceof Number) {
-					correctType=false;
-					numberList=true;
-				}
-				else {
-					correctType=false;
-					numberList=false;
-				}
-			}
-			
-			if (correctType) {
-				return (List<Integer>) valAsList;
-			}
-			else if (numberList) {
-				List<Integer> intList = new ArrayList<Integer>(valAsList.size());
-				for (int i=0; i<valAsList.size(); i++) {
-					intList.add(((Number)valAsList.get(i)).intValue());
-				}
-				return intList;
-			}
-			else {
-				return defaultValue;
-			}
-		}
-		return defaultValue;
-	}
-
-	@Override
-	public List<Long> getAsLongList(String columnName, List<Long> defaultValue) {
-		Object val = get(columnName);
-		if (val instanceof Number) {
-			return Arrays.asList(((Number) val).longValue());
-		}
-		else if (val instanceof List) {
-			List<?> valAsList = (List<?>) val;
-			boolean correctType=true;
-			boolean numberList=true;
-			
-			for (int i=0; i<valAsList.size(); i++) {
-				Object currObj = valAsList.get(i);
-				
-				if (currObj instanceof Long) {
-					//ok
-				}
-				else if (currObj instanceof Number) {
-					correctType=false;
-					numberList=true;
-				}
-				else {
-					correctType=false;
-					numberList=false;
-				}
-			}
-			
-			if (correctType) {
-				return (List<Long>) valAsList;
-			}
-			else if (numberList) {
-				List<Long> intList = new ArrayList<Long>(valAsList.size());
-				for (int i=0; i<valAsList.size(); i++) {
-					intList.add(((Number)valAsList.get(i)).longValue());
-				}
-				return intList;
-			}
-			else {
-				return defaultValue;
-			}
-		}
-		return defaultValue;
 	}
 	
 	/**

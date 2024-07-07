@@ -996,8 +996,8 @@ public byte DBCREATE_ENCRYPT_NONE = 0x00;
 public byte DBCREATE_ENCRYPT_SIMPLE	= 0x01;	
 public byte DBCREATE_ENCRYPT_MEDIUM	= 0x02;
 public byte DBCREATE_ENCRYPT_STRONG	= 0x03;
-public byte DBCREATE_ENCRYPT_AES128 = 0x04;
-public byte DBCREATE_ENCRYPT_AES256 = 0x05;
+public byte DBCREATE_ENCRYPT_AES128 = 0x04; //added in 12.0.1
+public byte DBCREATE_ENCRYPT_AES256 = 0x05; //added in 12.0.2
 
 /** if setting up a new database */
 short LSECINFOSET_DBCREATE = 0x0001;
@@ -4506,6 +4506,53 @@ This allows an Editor to assume some Designer-level access */
 
 	int MAX_CMD_VALLEN = NotesConstants.MAXSPRINTF + 1; // 256 + null term
 
+	  public enum DESIGN_COMPONENT_ATTR {
+		  VALS_UNORDERED(0),
+		  VALS_ASCENDING(1),
+		  VALS_DESCENDING(2);
+
+		  private final int m_value;
+
+		  DESIGN_COMPONENT_ATTR(final int value) {
+			  this.m_value = value;
+		  }
+
+		  public int getValue() {
+			  return this.m_value;
+		  }
+	  }
+
+	  /* Design command types */
+	  
+	  enum DESIGN_COMMAND_TYPE {
+	    CREATE_INDEX (0),
+	    RENAME_INDEX (1),
+	    DELETE_INDEX (2),
+	    LIST_INDEXES (3),
+	    DESIGN_CATALOG_REFRESH (4),
+	    NO_DESIGN_COMMAND (5);
+
+	    private final int m_value;
+
+	    DESIGN_COMMAND_TYPE(final int value) {
+	      this.m_value = value;
+	    }
+
+	    public int getValue() {
+	      return this.m_value;
+	    }
+
+	  };
+
+	  /* for Flags in NSFDesignCommand */
+	  
+	  /** Create a visible, not a hidden view */
+	  int CREATE_INDEX_NOHIDE = 0x00000001;
+	  /** After view is created, do NOT build it */
+	  int CREATE_INDEX_NOBUILD = 0x00000002;
+	  /** Create an inline updated view */
+	  int CREATE_INDEX_UPD_INLINE = 0x00000004;
+
 	public enum QUEP_LISTTYPE {
 		INPUT_RESULTS_LST(0),
 		SORT_COL_LST(1),
@@ -4632,5 +4679,14 @@ This allows an Editor to assume some Designer-level access */
 
 	  /**	Unsafe is any @func that creates/modifies anything (i.e. not "read only") */
 	  int COMPUTE_CAPABILITY_UNSAFE = 0x0000002F;
+
+	  short SEC_ai_HMAC_SHA1 = 32;
+	  
+	  /** Compatible with 4.5+						*/ 
+	  short SEC_pwddigest_V1 = 1;
+	  /** More secure, compatible with R4.6+		*/
+	  short SEC_pwddigest_V2 = 2;
+	  /** Even more secure compatible with 8.01+	*/
+	  short SEC_pwddigest_V3 = 3;
 
 }

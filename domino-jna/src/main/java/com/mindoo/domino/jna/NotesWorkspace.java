@@ -747,7 +747,7 @@ public class NotesWorkspace {
 		 */
 		public WorkspacePage setColor(Color color) {
 			int idx = findNearestTabColor(color.getRed(), color.getGreen(), color.getBlue());
-			return setColorIndex((byte) idx);
+			return setColorIndex(idx);
 		}
 
 		@Override

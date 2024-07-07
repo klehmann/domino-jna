@@ -35,16 +35,12 @@ public enum ReadMask {
 	SCORE(0x00000200),
 	/** TRUE if this entry is unread, FALSE otherwise */
 	INDEXUNREAD(0x00000400),
-	/** unknown */
-	SERETFLAGS(0x800),
 	/** Collection statistics (as a {@link NotesCollectionStats} object) */
 	COLLECTIONSTATS(0x00000100),
 	/** Return SIBLINGS, CHILDREN, DESCENDANTS, COLLECTIONSTATS, and COLLECTIONPOSITION in DWORDs */
 	RETURN_DWORD(0x00001000),
 	/** Return the position of an entry in the collection */
 	INDEXPOSITION(0x00004000),
-	/** Return "short" (build 110 or earlier) COLLECTIONPOSITIONS */ 
-	SHORT_COLPOS(0x00010000),
 	/** IndexPos.Tumbler[0] is a NOTEID for initial position
 	 * (looks like this only works with document note ids, categories return err 1028 entry not found) */ 
 	INIT_POS_NOTEID(0x00020000),
@@ -81,9 +77,7 @@ public enum ReadMask {
 	/** Compute subtotals */ 
 	COMPUTE_SUBTOTALS(0x20000000),
 	/** add WORD (bool) set to 1=ghost entry, 0=true entry */ 
-	IS_GHOST_ENTRY(0x40000000),
-	/** unknown */
-	ALL(0xE7FF);
+	IS_GHOST_ENTRY(0x40000000);
 	
 	private int m_val;
 	

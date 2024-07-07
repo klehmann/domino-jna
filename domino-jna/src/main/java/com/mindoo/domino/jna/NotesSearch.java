@@ -487,7 +487,7 @@ public class NotesSearch {
 		
 			long hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulasFixedOrder);
+				hFormula = ViewFormulaCompiler.b64_compile(formula, columnFormulasFixedOrder, false, false);
 			}
 
 			NotesIDTable tableWithHighOrderBit = null;
@@ -773,7 +773,7 @@ public class NotesSearch {
 			//formulaName only required of formula is used for collection columns
 			int hFormula = 0;
 			if (!StringUtil.isEmpty(formula)) {
-				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulasFixedOrder);
+				hFormula = ViewFormulaCompiler.b32_compile(formula, columnFormulasFixedOrder, false, false);
 			}
 			
 			NotesIDTable tableWithHighOrderBit = null;

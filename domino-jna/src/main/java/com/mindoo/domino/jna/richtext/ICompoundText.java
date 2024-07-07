@@ -1,5 +1,7 @@
 package com.mindoo.domino.jna.richtext;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -148,6 +150,26 @@ public interface ICompoundText<T extends ICompoundText<?>> extends IAdaptable {
 	 * @throws IOException if data cannot be read
 	 */
 	public T addImage(int fileSize, InputStream imageData) throws IOException;
+	
+	/**
+	 * Adds an image to the richtext item
+	 * 
+	 * @param imageData
+	 * @return image data as bytestream
+	 * @throws IOException if data cannot be read
+	 */
+	default T addImage(InputStream imageData) throws IOException {
+		ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+		byte[] buf = new byte[16384];
+		int len;
+		
+		while ((len=imageData.read(buf))>0) {
+			bOut.write(buf, 0, len);
+		}
+		
+		byte[] imageDataAsArr = bOut.toByteArray();
+		return addImage(imageDataAsArr.length, new ByteArrayInputStream(imageDataAsArr));
+	}
 	
 	/**
 	 * Adds an image to the richtext item

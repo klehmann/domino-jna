@@ -1,5 +1,6 @@
 package com.mindoo.domino.jna.internal;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,8 +17,6 @@ import com.mindoo.domino.jna.internal.handles.DHANDLE64;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.sun.jna.Memory;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.ShortByReference;
 
 /**
@@ -28,8 +27,7 @@ import com.sun.jna.ptr.ShortByReference;
 public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 	private List<String> m_values;
 	private boolean m_prefixDataType;
-	private int m_handle32;
-	private long m_handle64;
+	private DHANDLE m_handle;
 	private int m_listSizeBytes;
 	private boolean m_noFree;
 
@@ -62,36 +60,20 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 	
 	private void allocate() {
 		short result;
-		if (PlatformUtils.is64Bit()) {
-			LongByReference rethList = new LongByReference();
-			ShortByReference retListSize = new ShortByReference();
+		
+		DHANDLE.ByReference rethList = DHANDLE.newInstanceByReference();
+		ShortByReference retListSize = new ShortByReference();
 
-			result = NotesNativeAPI64.get().ListAllocate((short) 0, 
-					(short) 0,
-					m_prefixDataType ? 1 : 0, rethList, null, retListSize);
-			
-			NotesErrorUtils.checkResult(result);
+		result = NotesNativeAPI.get().ListAllocate((short) 0, 
+				(short) 0,
+				m_prefixDataType ? 1 : 0, rethList, null, retListSize);
+		
+		NotesErrorUtils.checkResult(result);
 
-			m_handle64 = rethList.getValue();
-			Mem64.OSUnlockObject(m_handle64);
-			
-			m_listSizeBytes = retListSize.getValue() & 0xffff;
-		}
-		else {
-			IntByReference rethList = new IntByReference();
-			ShortByReference retListSize = new ShortByReference();
-
-			result = NotesNativeAPI32.get().ListAllocate((short) 0, 
-					(short) 0,
-					m_prefixDataType ? 1 : 0, rethList, null, retListSize);
-			
-			NotesErrorUtils.checkResult(result);
-
-			m_handle32 = rethList.getValue();
-			Mem32.OSUnlockObject(m_handle32);
-			
-			m_listSizeBytes = retListSize.getValue() & 0xffff;
-		}
+		m_handle = rethList;
+		Mem.OSUnlockObject(m_handle);
+		
+		m_listSizeBytes = retListSize.getValue() & 0xffff;
 	}
 
 	/**
@@ -106,13 +88,7 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 		
 		ShortByReference retListSize = new ShortByReference();
 		
-		short result;
-		if (PlatformUtils.is64Bit()) {
-			result = NotesNativeAPI64.get().ListRemoveAllEntries(m_handle64, m_prefixDataType ? 1 : 0, retListSize);
-		}
-		else {
-			result = NotesNativeAPI32.get().ListRemoveAllEntries(m_handle32, m_prefixDataType ? 1 : 0, retListSize);
-		}
+		short result = NotesNativeAPI.get().ListRemoveAllEntries(m_handle.getByValue(), m_prefixDataType ? 1 : 0, retListSize);
 		NotesErrorUtils.checkResult(result);
 		
 		m_listSizeBytes = (int) (retListSize.getValue() & 0xffff);
@@ -145,40 +121,28 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 		}
 		
 		short result;
-		if (PlatformUtils.is64Bit()) {
-			ShortByReference retListSize = new ShortByReference();
-			retListSize.setValue((short) (m_listSizeBytes & 0xffff));
+		ShortByReference retListSize = new ShortByReference();
+		retListSize.setValue((short) (m_listSizeBytes & 0xffff));
 
-			for (int i=0; i<newValues.size(); i++) {
-				String currStr = newValues.get(i);
-				Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
-
-				short entryNo = (short) (m_values.size() & 0xffff);
-				
-				result = NotesNativeAPI64.get().ListAddEntry(m_handle64, m_prefixDataType ? 1 : 0, retListSize, entryNo, currStrMem,
-						(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
-				NotesErrorUtils.checkResult(result);
+		for (int i=0; i<newValues.size(); i++) {
+			String currStr = newValues.get(i);
+			Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
+			if (currStrMem!=null && currStrMem.size() > 65535) {
+				throw new NotesError(MessageFormat.format("List item at position {0} exceeds max lengths of 65535 bytes", i));
 			}
-			
-			m_listSizeBytes = retListSize.getValue() & 0xffff;
-		}
-		else {
-			ShortByReference retListSize = new ShortByReference();
-			retListSize.setValue((short) (m_listSizeBytes & 0xffff));
-			
-			for (int i=0; i<newValues.size(); i++) {
-				String currStr = newValues.get(i);
-				Memory currStrMem = NotesStringUtils.toLMBCS(currStr, false);
 
-				short entryNo = (short) (m_values.size() & 0xffff);
+			char textSize = currStrMem==null ? 0 : (char) currStrMem.size();
 
-				result = NotesNativeAPI32.get().ListAddEntry(m_handle32, m_prefixDataType ? 1 : 0, retListSize, entryNo, currStrMem,
-						(short) (currStrMem==null ? 0 : (currStrMem.size() & 0xffff)));
-				NotesErrorUtils.checkResult(result);
-			}
-			
-			m_listSizeBytes = retListSize.getValue() & 0xffff;
+			result = NotesNativeAPI.get().ListAddEntry(m_handle.getByValue(),
+					m_prefixDataType ? 1 : 0,
+							retListSize,
+							(char) i,
+							currStrMem,
+							textSize);
+			NotesErrorUtils.checkResult(result);
 		}
+		
+		m_listSizeBytes = retListSize.getValue() & 0xffff;
 		
 		m_values.addAll(newValues);
 	}
@@ -197,26 +161,14 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 			return;
 		}
 		
-		if (PlatformUtils.is64Bit()) {
-			short result = Mem64.OSMemFree(m_handle64);
-			NotesErrorUtils.checkResult(result);
-			m_handle64=0;
-		}
-		else {
-			short result = Mem32.OSMemFree(m_handle32);
-			NotesErrorUtils.checkResult(result);
-			m_handle32=0;
-		}
+		short result = Mem.OSMemFree(m_handle.getByValue());
+		NotesErrorUtils.checkResult(result);
+		m_handle=null;
 	}
 
 	@Override
 	public boolean isFreed() {
-		if (PlatformUtils.is64Bit()) {
-			return m_handle64==0;
-		}
-		else {
-			return m_handle32==0;
-		}
+		return m_handle==null || m_handle.isNull();
 	}
 
 	private void checkHandle() {
@@ -224,30 +176,25 @@ public class LMBCSStringList implements IAllocatedMemory, Iterable<String> {
 			throw new NotesError(0, "List already freed");
 		
 		if (PlatformUtils.is64Bit()) {
-			NotesGC.__b64_checkValidMemHandle(LMBCSStringList.class, m_handle64);
+			NotesGC.__b64_checkValidMemHandle(LMBCSStringList.class, ((DHANDLE64)m_handle).hdl);
 		}
 		else {
-			NotesGC.__b32_checkValidMemHandle(LMBCSStringList.class, m_handle32);
+			NotesGC.__b32_checkValidMemHandle(LMBCSStringList.class, ((DHANDLE32)m_handle).hdl);
 		}
 	}
 
 	@Override
 	public int getHandle32() {
-		return m_handle32;
+		return ((DHANDLE32)m_handle).hdl;
 	}
 
 	@Override
 	public long getHandle64() {
-		return m_handle64;
+		return ((DHANDLE64)m_handle).hdl;
 	}
 
 	public DHANDLE getHandle() {
-		if (PlatformUtils.is64Bit()) {
-			return DHANDLE64.newInstance(m_handle64);
-		}
-		else {
-			return DHANDLE32.newInstance(m_handle32);
-		}
+		return m_handle;
 	}
 	
 	@Override

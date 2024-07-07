@@ -3,6 +3,7 @@ package com.mindoo.domino.jna.internal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import com.mindoo.domino.jna.INoteSummary;
@@ -124,6 +125,12 @@ public abstract class TypedItemAccess implements INoteSummary {
 
 		if (val instanceof NotesTimeDate) {
 			return (NotesTimeDate) val;
+		}
+		else if (val instanceof Calendar) {
+			return new NotesTimeDate((Calendar) val);
+		}
+		else if (val instanceof Date) {
+			return new NotesTimeDate((Date) val);
 		}
 		else if (val instanceof List) {
 			List<?> valAsList = (List<?>) val;
@@ -403,5 +410,47 @@ public abstract class TypedItemAccess implements INoteSummary {
 			}
 		}
 		return defaultValue;
-	}	
+	}
+	
+	@Override
+	public String getProfileName() {
+		String[] profileAndUsername = parseProfileAndUserName();
+		if (profileAndUsername!=null && profileAndUsername[0]!=null) {
+			return profileAndUsername[0];
+		}
+		return "";
+	}
+	
+	private String[] parseProfileAndUserName() {
+		String name = getAsString("$name", ""); //$profile_015calendarprofile_<username>
+		if (!name.startsWith("$profile_")) {
+			return null;
+		}
+		
+		String remainder = name.substring(9); //"$profile_".length()
+		if (remainder.length()<3) {
+			return null;
+		}
+		
+		String profileNameLengthStr = remainder.substring(0, 3);
+		int profileNameLength = Integer.parseInt(profileNameLengthStr);
+		
+		remainder = remainder.substring(3);
+		String profileName = remainder.substring(0, profileNameLength);
+		
+		remainder = remainder.substring(profileNameLength+1);
+		
+		String userName = remainder;
+		
+		return new String[] {profileName, userName};
+	}
+	
+	@Override
+	public String getProfileUserName() {
+		String[] profileAndUsername = parseProfileAndUserName();
+		if (profileAndUsername!=null && profileAndUsername[1]!=null) {
+			return profileAndUsername[1];
+		}
+		return "";
+	}
 }

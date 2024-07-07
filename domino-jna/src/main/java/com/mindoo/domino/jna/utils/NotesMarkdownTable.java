@@ -9,13 +9,20 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
+import java.util.WeakHashMap;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
+import com.mindoo.domino.jna.IViewColumn.ColumnSort;
+import com.mindoo.domino.jna.IViewEntryData;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesViewColumn;
 import com.mindoo.domino.jna.NotesViewEntryData;
+import com.mindoo.domino.jna.virtualviews.VirtualView;
+import com.mindoo.domino.jna.virtualviews.VirtualViewColumn;
+import com.mindoo.domino.jna.virtualviews.VirtualViewEntryData;
+import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator;
 
 /**
  * Utility class to dump entries of a {@link NotesCollection} as a Markdown table.
@@ -42,7 +49,11 @@ import com.mindoo.domino.jna.NotesViewEntryData;
  * @author Karsten Lehmann
  */
 public class NotesMarkdownTable {
-	private NotesCollection m_view;
+	private NotesCollection m_realView;
+	
+	private VirtualViewNavigator m_virtualViewNav;
+	private VirtualView m_virtualView;
+	
 	private Writer m_writer;
 	private List<ColumnInfo> m_customColumns;
 
@@ -67,12 +78,37 @@ public class NotesMarkdownTable {
 	 * @param writer target writer
 	 */
 	public NotesMarkdownTable(NotesCollection view, Writer writer) {
-		m_view = view;
+		m_realView = view;
 		m_customColumns = new ArrayList<>();
 
 		m_writer = writer;
 	}
 
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param viewNav virtual view navigator to read expand states, its parent view and column infos
+	 * @param out target steam
+	 */
+	public NotesMarkdownTable(VirtualViewNavigator viewNav, OutputStream out) {
+		this(viewNav, new OutputStreamWriter(out));
+	}
+	
+
+	/**
+	 * Creates a new instance
+	 * 
+	 * @param viewNav virtual view navigator to read expand states, its parent view and column infos
+	 * @param writer target writer
+	 */
+	public NotesMarkdownTable(VirtualViewNavigator viewNav, Writer writer) {
+		m_virtualViewNav = viewNav;
+		m_virtualView = viewNav.getView();
+		m_customColumns = new ArrayList<>();
+
+		m_writer = writer;
+	}
+	
 	protected boolean isVisible(NotesViewColumn col) {
 		return true;
 	}
@@ -89,9 +125,9 @@ public class NotesMarkdownTable {
 	public static class ColumnInfo {
 		private String title;
 		private int width;
-		private Function<NotesViewEntryData,String> fct;
+		private BiFunction<NotesMarkdownTable, IViewEntryData,String> fct;
 
-		public ColumnInfo(String title, int width, Function<NotesViewEntryData,String> fct) {
+		public ColumnInfo(String title, int width, BiFunction<NotesMarkdownTable, IViewEntryData,String> fct) {
 			this.title = title;
 			this.width = width;
 			this.fct = fct;
@@ -105,20 +141,50 @@ public class NotesMarkdownTable {
 			return width;
 		}
 
-		public Function<NotesViewEntryData, String> getFunction() {
+		public BiFunction<NotesMarkdownTable, IViewEntryData, String> getFunction() {
 			return fct;
 		}
 
 	}
 
 	/**
+	 * Method to change the width of a column
+	 * 
+	 * @param title column title
+	 * @param width new width
+	 * @return this table
+	 */
+	public NotesMarkdownTable setColumnWidth(String title, int width) {
+		for (ColumnInfo currCol : m_customColumns) {
+			if (title.equalsIgnoreCase(currCol.getTitle())) {
+				currCol.width = width;
+				break;
+			}
+		}
+		return this;
+	}
+	
+	/**
+	 * Method to change the width of a column
+	 * 
+	 * @param idx column index (0-based)
+	 * @param width new width
+	 * @return this table
+	 */
+	public NotesMarkdownTable setColumnWidth(int idx, int width) {
+		m_customColumns.get(idx).width = width;
+		return this;
+	}	
+	
+	/**
 	 * Adds a computed column to the table
 	 * 
 	 * @param title column title
 	 * @param width column width in characters
 	 * @param fct function to compute the value from a {@link NotesViewEntryData}
+	 * @return this table
 	 */
-	public NotesMarkdownTable addColumn(String title, int width, Function<NotesViewEntryData,String> fct) {
+	public NotesMarkdownTable addColumn(String title, int width, BiFunction<NotesMarkdownTable, IViewEntryData,String> fct) {
 		ColumnInfo col = new ColumnInfo(title, width, fct);
 		m_customColumns.add(col);
 		return this;
@@ -160,11 +226,20 @@ public class NotesMarkdownTable {
 	 * @return this table
 	 */
 	public NotesMarkdownTable addAllViewColumns() {
-		m_view
-				.getColumns()
-				.stream()
-				.map((col) -> { return col.getItemName(); } )
-				.forEach(this::addViewColumn);
+		if (m_realView != null) {
+			m_realView
+			.getColumns()
+			.stream()
+			.map((col) -> { return col.getItemName(); } )
+			.forEach(this::addViewColumn);			
+		}
+		else {
+			m_virtualView
+			.getColumns()
+			.stream()
+			.map((col) -> { return col.getItemName(); })
+			.forEach(this::addViewColumn);
+		}
 		
 		return this;
 	}
@@ -187,18 +262,40 @@ public class NotesMarkdownTable {
 	 * @return this table
 	 */
 	public NotesMarkdownTable addViewColumn(String itemName, int width) {
-		NotesViewColumn col = m_view.getColumns()
-		.stream()
-		.filter((currCol) -> { return itemName.equalsIgnoreCase(currCol.getItemName()); })
-		.findFirst()
-		.orElseThrow(() -> new IllegalArgumentException(MessageFormat.format("Column {0} not found", itemName)));
-		
-		String title = col.getTitle() + "(" + col.getItemName()+")";
+		String title;
+		if (m_realView != null) {
+			NotesViewColumn col = m_realView
+					.getColumns()
+					.stream()
+					.filter((currCol) -> {
+						return itemName.equalsIgnoreCase(currCol.getItemName());
+					})
+					.findFirst()
+					.orElseThrow(
+							() -> new IllegalArgumentException(MessageFormat.format("Column {0} not found", itemName)));
 
-		return addColumn(title, width, (entry) -> {
+			String sortingArrow = col.getSorting() == ColumnSort.ASCENDING ? "↑" : col.getSorting() == ColumnSort.DESCENDING ? "↓" : "";
+			
+			title = (col.isHidden() ? "[" : "") + col.getTitle() + (col.isHidden() ? "]" : "") +  sortingArrow + " (" + col.getItemName() + ")";
+		} else {
+			VirtualViewColumn col = m_virtualView
+					.getColumns()
+					.stream()
+					.filter((currCol) -> {
+						return itemName.equalsIgnoreCase(currCol.getItemName());
+					})
+					.findFirst()
+					.orElseThrow(
+							() -> new IllegalArgumentException(MessageFormat.format("Column {0} not found", itemName)));
+
+			String sortingArrow = col.getSorting() == ColumnSort.ASCENDING ? "↑" : col.getSorting() == ColumnSort.DESCENDING ? "↓" : "";
+
+			title = (col.isHidden() ? "[" : "") + col.getTitle() + (col.isHidden() ? "]" : "") +  sortingArrow + " (" + col.getItemName() + ")";
+		}
+		
+		return addColumn(title, width, (table, entry) -> {
 			Object val = entry.get(itemName);
 			return valueToString(val);
-			
 		});
 		
 	}
@@ -251,21 +348,23 @@ public class NotesMarkdownTable {
 		}
 	}
 
-	public NotesMarkdownTable printRows(Stream<NotesViewEntryData> entries) {
+	public NotesMarkdownTable printRows(Stream<? extends IViewEntryData> entries) {
 		entries.forEach(this::printRow);
 		return this;
 	}
 
-	public NotesMarkdownTable printRows(Collection<NotesViewEntryData> entries) {
-		for (NotesViewEntryData currEntry : entries) {
+	public NotesMarkdownTable printRows(Collection<? extends IViewEntryData> entries) {
+		for (IViewEntryData currEntry : entries) {
 			printRow(currEntry);
 		}
 		return this;
 	}
 
-	public NotesMarkdownTable printRow(NotesViewEntryData entry) {
+	public NotesMarkdownTable printRow(IViewEntryData entry) {
 		try {
-			entry.setPreferNotesTimeDates(true);
+			if (entry instanceof NotesViewEntryData) {
+				((NotesViewEntryData)entry).setPreferNotesTimeDates(true);
+			}
 
 			int idx=0;
 
@@ -273,7 +372,7 @@ public class NotesMarkdownTable {
 			
 			for (ColumnInfo currCol : m_customColumns) {
 				int colWidth = currCol.getWidth();
-				String colValue = currCol.getFunction().apply(entry);
+				String colValue = currCol.getFunction().apply(this, entry);
 				if (colValue==null) {
 					colValue = "";
 				}
@@ -356,21 +455,47 @@ public class NotesMarkdownTable {
 	/**
 	 * Table column for the note id of the view entry
 	 */
-	public static final ColumnInfo NOTEID = new ColumnInfo("NoteID", 12, (entry) -> {
+	public static final ColumnInfo NOTEID = new ColumnInfo("NoteID", 12, (table, entry) -> {
 		return Integer.toString(entry.getNoteId());
 	});
 
 	/**
 	 * Table column for the UNID of the view entry
 	 */
-	public static final ColumnInfo UNID = new ColumnInfo("UNID", 32, (entry) -> {
+	public static final ColumnInfo UNID = new ColumnInfo("UNID", 32, (table, entry) -> {
 		return entry.getUNID().replace("00000000000000000000000000000000", "");
+	});
+
+	/**
+	 * Table column for the child count of the view entry
+	 */
+	public static final ColumnInfo CHILDCOUNT = new ColumnInfo("ChildCount", 12, (table, entry) -> {
+		return Integer.toString(entry.getChildCount());
+	});
+	
+	/**
+	 * Table column for the sibling count of the view entry
+	 */
+	public static final ColumnInfo SIBLINGCOUNT = new ColumnInfo("SiblingCount", 12, (table, entry) -> {
+		return Integer.toString(entry.getSiblingCount());
+	});
+
+	/**
+	 * Table column for the descendant count of the view entry
+	 */
+	public static final ColumnInfo DESCENDANTCOUNT = new ColumnInfo("DescendantCount", 12, (table, entry) -> {
+		return Integer.toString(entry.getDescendantCount());
 	});
 
 	/**
 	 * Table column for the COLLECTIONPOSITION of the view entry
 	 */
-	public static final ColumnInfo POS = new ColumnInfo("#", 20, (entry) -> { return entry.getPositionStr();});
+	public static final ColumnInfo POS = new ColumnInfo("#", 20, (table, entry) -> { return entry.getPositionStr();});
+
+	/**
+	 * Table column for the level of the view entry (0 for root of virtual view, 1 for first level, ...)
+	 */
+	public static final ColumnInfo LEVEL = new ColumnInfo("Level", 5, (table, entry) -> { return String.valueOf(entry.getLevel()); });
 
 	private static enum ExpandState {NONE, EXPANDED, COLLAPSED};
 
@@ -380,41 +505,49 @@ public class NotesMarkdownTable {
 	 * "-" for expanded entries with children.
 	 */
 	public static final ColumnInfo EXPANDSTATE = new ColumnInfo("", 1,
-			new Function<NotesViewEntryData,String>() {
+			new BiFunction<NotesMarkdownTable, IViewEntryData, String>() {
 
-		private Boolean m_collapsedListInverted;
-		private NotesIDTable m_collapsedList;
+		private WeakHashMap<NotesIDTable,Boolean> collapsedListInverted = new WeakHashMap<>();
+		
+		private ExpandState getExpandState(NotesMarkdownTable table, IViewEntryData entry) {
+			if (entry instanceof NotesViewEntryData) {
+				
+				NotesIDTable collapsedList = table.m_realView.getCollapsedList();
+				boolean inverted = collapsedListInverted.computeIfAbsent(collapsedList, (idTable) -> { return idTable.isInverted(); });
 
-		private ExpandState getExpandState(NotesViewEntryData entry) {
-			if (m_collapsedList==null) {
-				m_collapsedList = entry.getParent().getCollapsedList();
-			}
-			if (m_collapsedListInverted==null) {
-				m_collapsedListInverted = m_collapsedList.isInverted();
-			}
+				int noteId = entry.getNoteId();
+				if (noteId==0) {
+					return ExpandState.NONE;
+				}
 
-			int noteId = entry.getNoteId();
-			if (noteId==0) {
-				return ExpandState.NONE;
-			}
+				int childCount = entry.getChildCount();
+				if (childCount==0) {
+					return ExpandState.NONE;
+				}
 
-			int childCount = entry.getChildCount();
-			if (childCount==0) {
-				return ExpandState.NONE;
+				if (inverted) {
+					//expand list
+					return collapsedList.contains(noteId) ? ExpandState.EXPANDED : ExpandState.COLLAPSED;
+				}
+				else {
+					return collapsedList.contains(noteId) ? ExpandState.COLLAPSED : ExpandState.EXPANDED;
+				}
 			}
-
-			if (m_collapsedListInverted) {
-				//expand list
-				return m_collapsedList.contains(noteId) ? ExpandState.EXPANDED : ExpandState.COLLAPSED;
+			else if (entry instanceof VirtualViewEntryData) {				
+				VirtualViewEntryData virtualViewEntry = (VirtualViewEntryData) entry;
+				if (table.m_virtualViewNav.isExpanded(virtualViewEntry)) {
+					return ExpandState.EXPANDED;
+				}
+				else {
+					return ExpandState.COLLAPSED;
+				}
 			}
-			else {
-				return m_collapsedList.contains(noteId) ? ExpandState.COLLAPSED : ExpandState.EXPANDED;
-			}
+            return ExpandState.NONE;
 		}
 
 		@Override
-		public String apply(NotesViewEntryData entry) {
-			ExpandState expandState = getExpandState(entry);
+		public String apply(NotesMarkdownTable table, IViewEntryData entry) {
+			ExpandState expandState = getExpandState(table, entry);
 			switch (expandState) {
 			case COLLAPSED:
 				return "+";
@@ -428,4 +561,38 @@ public class NotesMarkdownTable {
 
 	});
 
+	public static final ColumnInfo CATEGORY = new ColumnInfo("Category", 40,
+			(table, entry) -> {
+				if (entry.isCategory()) {
+					String sVal;
+					int level = entry.getLevel();
+					if (table.m_realView != null) {
+						if (level == -1) {
+							//ReadMask.INDEX_POSITION not loaded from view
+							return "(no index position found)";
+						}
+						int indentLevels = ((NotesViewEntryData)entry).getIndentLevels();
+
+						NotesViewColumn col = table.m_realView.getColumns().get(level);
+						Object categoryVal = entry.get(col.getItemName());
+						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+					}
+					else {
+						if (level == -1) {
+							//for virtual views, -1 means the artificial root entry
+							return "";
+						}
+						VirtualViewColumn col = table.m_virtualView.getColumns().get(level);
+						Object categoryVal = entry.get(col.getItemName());
+						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+					}
+					if (StringUtil.isEmpty(sVal)) {
+						sVal = "(not categorized)";
+					}
+					return sVal;
+				}
+				else {
+					return "";
+				}
+			});
 }

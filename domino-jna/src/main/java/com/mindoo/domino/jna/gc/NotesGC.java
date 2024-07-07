@@ -94,6 +94,33 @@ public class NotesGC {
 		}
 	}
 	
+	public static boolean isFixupLocalServerNames() {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx==null) {
+			return false;
+		}
+		else {
+			return ctx.isFixupLocalServerNames();
+		}
+	}
+	
+	/**
+	 * Activates automatic correction that when Domino JNA is running server side,
+	 * we change an empty string as a server name "" into the actual server name on DB open.
+	 * This is required when Domino JNA
+	 * is used in a standalone application against a running Domino server so
+	 * that Domino can coordinate NSF file access. Otherwise opening databases might
+	 * fail with the error message that the NSF is in use.
+	 * 
+	 * @param b true to fix server, false by default
+	 */
+	public static void setFixupLocalServerNames(boolean b) {
+		DominoGCContext ctx = threadContext.get();
+		if (ctx!=null) {
+			ctx.setFixupLocalServerNames(b);
+		}
+	}
+	
 	/**
 	 * General switch to prefer {@link NotesTimeDate} as return values for various functions,
 	 * e.g. formula execution and view lookups.<br>
@@ -593,6 +620,13 @@ public class NotesGC {
 				@Override
 				public T run() {
 					try {
+						if ("true".equals(System.getProperty("dominojna.fixuplocalservername"))) {
+							NotesGC.setFixupLocalServerNames(true);
+						}
+						if ("true".equals(System.getProperty("dominojna.prefernotestimedate"))) {
+							NotesGC.setPreferNotesTimeDate(true);
+						}
+						
 						return callable.call();
 					} catch (Exception e) {
 						if (e instanceof RuntimeException) {
@@ -665,6 +699,7 @@ public class NotesGC {
 		private boolean m_debugLoggingEnabled;
 		private boolean m_logCrashingThreadStackTrace;
 		private boolean m_preferNotesTimeDate;
+		private boolean m_fixupLocalServerNames;
 		
 		private DominoGCContext(DominoGCContext parentCtx) {
 			m_parentCtx = parentCtx;
@@ -722,6 +757,18 @@ public class NotesGC {
 				return;
 			}
 			m_preferNotesTimeDate = b;
+		}
+		
+		public boolean isFixupLocalServerNames() {
+			return m_fixupLocalServerNames;
+		}
+		
+		public void setFixupLocalServerNames(boolean b) {
+			if (m_parentCtx!=null) {
+				m_parentCtx.setFixupLocalServerNames(b);
+				return;
+			}
+			m_fixupLocalServerNames = b;
 		}
 		
 		public boolean isLogCrashingThreadStackTrace() {
