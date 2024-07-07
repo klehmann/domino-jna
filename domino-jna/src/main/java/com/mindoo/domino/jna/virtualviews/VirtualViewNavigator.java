@@ -36,7 +36,7 @@ import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
  * <li>Navigation to the next/previous sibling entry ({@link #gotoPrevSibling()} / {@link #gotoNextSibling()})</li>
  * <li>Navigation to the first/last child entry ({@link #gotoFirstChild()} / {@link #gotoLastChild()})</li>
  * <li>Reduce the view to selected entries</li>
- * <li>Expansion/collapse of entries (e.g. {@link #expandAllByDefault()} or {@link #expand(int[])})</li>
+ * <li>Expansion/collapse of entries (e.g. {@link #expandAll()} or {@link #expand(int[])})</li>
  * </ul>
  * <br>
  * Those navigation methods move the cursor position within the tree structure.<br>
