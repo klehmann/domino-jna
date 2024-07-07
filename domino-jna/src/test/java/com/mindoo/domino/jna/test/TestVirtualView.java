@@ -102,6 +102,9 @@ public class TestVirtualView extends BaseJNATestClass {
 										@Override
 										public String getValue(String origin, String itemName,
 												INoteSummary columnValues) {
+											//poor man's JOIN :-)
+											//we fetch the company address from a map using the company name as key
+											
 											String companyName = columnValues.getAsString("CompanyName", "");
 											return someExternalData.getOrDefault(companyName, "");
 										}
@@ -111,7 +114,7 @@ public class TestVirtualView extends BaseJNATestClass {
 									Category.NO, Hidden.NO, ColumnSort.NONE, Total.NONE,
 									"LastMod"),
 
-							//rquired to have the CompanyName value available in the Java column function
+							//required to have the CompanyName value available in the summary buffer so that the Java column function can use it
 							new VirtualViewColumn("Company Name", "CompanyName",
 									Category.NO, Hidden.YES, ColumnSort.NONE, Total.NONE,
 									"CompanyName")
