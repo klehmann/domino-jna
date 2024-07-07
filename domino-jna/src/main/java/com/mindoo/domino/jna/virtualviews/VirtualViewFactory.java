@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -314,20 +315,24 @@ public enum VirtualViewFactory {
 	 * 
 	 * @param viewId unique id of the view
 	 * @param version version of the view, increase this number to force a rebuilt of the view
+	 * @param discardUnusedAfter if a view was not accessed for this time (by calling this method again), it will be removed from the cache
+	 * @param discardUnusedUnit unit of the discardUnusedAfter value (e.g. TimeUnit.MINUTES), in the Domino JNA OSGi plugin, we run our cleanup job every minute
 	 * @param fct function to create the view
 	 * @return view
 	 */
-	public VirtualView createViewOnce(String viewId, int version, Function<String, VirtualView> fct) {
+	public VirtualView createViewOnce(String viewId, int version, int discardUnusedAfter, TimeUnit discardUnusedUnit,
+			Function<String, VirtualView> fct) {
 		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
 		if (viewWithVersion != null && viewWithVersion.getVersion() == version) {
-			viewWithVersion.setLastAccess(System.currentTimeMillis());
+			viewWithVersion.updateLastAccess();
 			return viewWithVersion.getView();
 		} else {
 			VirtualView view = fct.apply(viewId);
 			if (view == null) {
 				throw new IllegalArgumentException("Function must not return null");
 			}
-			viewsById.put(viewId, new VirtualViewWithVersion(view, version));
+			long discardUnusedAfterMinutes = discardUnusedUnit.toMinutes(discardUnusedAfter);
+			viewsById.put(viewId, new VirtualViewWithVersion(view, version, discardUnusedAfterMinutes));
 			return view;
 		}
 	}
@@ -351,7 +356,29 @@ public enum VirtualViewFactory {
 	}
 	
 	/**
-	 * Returns the time when a view was last accessed via {@link #createViewOnce(String, int, Function)}
+	 * Go through the list of cached views and removes views that were not accessed for the
+	 * configured maximum time
+	 */
+	public void cleanupExpiredViews() {
+		boolean changed = false;
+		
+		long now = System.currentTimeMillis();
+		for (Iterator<Map.Entry<String, VirtualViewWithVersion>> it = viewsById.entrySet().iterator(); it.hasNext();) {
+			Map.Entry<String, VirtualViewWithVersion> currEntry = it.next();
+			VirtualViewWithVersion viewWithVersion = currEntry.getValue();
+			long timeDiffLastAccess = now - viewWithVersion.getLastAccess();
+			if (timeDiffLastAccess > viewWithVersion.getDiscardUnusedAfterMinutes() * 60 * 1000) {
+				it.remove();
+				changed = true;
+			}
+		}
+		if (changed) {
+			System.gc();
+		}
+	}
+	
+	/**
+	 * Returns the time when a view was last accessed via {@link #createViewOnce(String, int, int, TimeUnit, Function)}
 	 * 
 	 * @param viewId view id
 	 * @return last access time or -1 if the view is not in the cache
@@ -360,6 +387,37 @@ public enum VirtualViewFactory {
 		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
 		if (viewWithVersion != null) {
 			return viewWithVersion.getLastAccess();
+		} else {
+			return -1;
+		}
+	}
+	
+	/**
+	 * Returns the time when a view was created via {@link #createViewOnce(String, int, int, TimeUnit, Function)}
+	 * 
+	 * @param viewId view id
+	 * @return creation time or -1 if the view is not in the cache
+	 */
+	public long getViewCreationDate(String viewId) {
+		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
+		if (viewWithVersion != null) {
+			return viewWithVersion.getCreated();
+		} else {
+			return -1;
+		}
+	}
+	
+	/**
+	 * Returns the time after which a view is discarded if it was not accessed via
+	 * {@link #createViewOnce(String, int, int, TimeUnit, Function)}
+	 * 
+	 * @param viewId view id
+	 * @return time in minutes or -1 if the view is not in the cache
+	 */
+	public long getDiscardUnusedAfterMinutes(String viewId) {
+		VirtualViewWithVersion viewWithVersion = viewsById.get(viewId);
+		if (viewWithVersion != null) {
+			return viewWithVersion.getDiscardUnusedAfterMinutes();
 		} else {
 			return -1;
 		}
@@ -385,12 +443,14 @@ public enum VirtualViewFactory {
 		private int version;
 		private long created;
 		private long lastAccess;
+		private long discardUnusedAfterMinutes;
 		
-		public VirtualViewWithVersion(VirtualView view, int version) {
+		public VirtualViewWithVersion(VirtualView view, int version, long discardUnusedAfterMinutes) {
 			this.view = view;
 			this.version = version;
 			this.created = System.currentTimeMillis();
 			this.lastAccess = created;
+			this.discardUnusedAfterMinutes = discardUnusedAfterMinutes;
 		}
 		
 		public VirtualView getView() {
@@ -409,8 +469,12 @@ public enum VirtualViewFactory {
 			return lastAccess;
 		}
 		
-		public void setLastAccess(long lastAccess) {
-			this.lastAccess = lastAccess;
+		public void updateLastAccess() {
+			this.lastAccess = System.currentTimeMillis();
+		}
+		
+		public long getDiscardUnusedAfterMinutes() {
+			return discardUnusedAfterMinutes;
 		}
 	}
 }

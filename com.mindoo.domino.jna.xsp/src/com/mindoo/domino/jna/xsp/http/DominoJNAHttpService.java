@@ -13,6 +13,7 @@ import com.ibm.designer.runtime.domino.bootstrap.adapter.HttpServletRequestAdapt
 import com.ibm.designer.runtime.domino.bootstrap.adapter.HttpServletResponseAdapter;
 import com.ibm.designer.runtime.domino.bootstrap.adapter.HttpSessionAdapter;
 import com.mindoo.domino.jna.gc.NotesGC;
+import com.mindoo.domino.jna.xsp.internal.DominoJNAActivator;
 
 /**
  * {@link HttpService} that enables code processing Domino HTTP requests (like XPages) to use the
@@ -34,6 +35,8 @@ public class DominoJNAHttpService extends HttpService {
 	public DominoJNAHttpService(final LCDEnvironment lcdEnv) {
 		super(lcdEnv);
 		this.services = lcdEnv.getServices();
+		
+		DominoJNAActivator.getDefault().startVirtualViewCleanupJob();
 	}
 
 	@Override
