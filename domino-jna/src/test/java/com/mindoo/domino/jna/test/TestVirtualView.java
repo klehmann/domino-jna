@@ -3,10 +3,16 @@ package com.mindoo.domino.jna.test;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import org.junit.Test;
 
 import com.mindoo.domino.jna.INoteSummary;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
@@ -34,7 +40,7 @@ public class TestVirtualView extends BaseJNATestClass {
 	 * Sample to compute sums/averages, use categories and fetch additional data from an external source
 	 * (poor man's join)
 	 */
-//	@Test
+	@Test
 	public void testDataJoin() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -46,7 +52,8 @@ public class TestVirtualView extends BaseJNATestClass {
 
 				long update_t0=System.currentTimeMillis();
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts", 1,
+						1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Lastname", "Lastname",
 									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -113,6 +120,9 @@ public class TestVirtualView extends BaseJNATestClass {
 
 				System.out.println("Time to generate view structure: "+(update_t1-update_t0)+"ms");
 
+				Thread.sleep(5000);
+				VirtualViewFactory.INSTANCE.cleanupExpiredViews();
+				
 				StringWriter sWriter = new StringWriter();
 				PrintWriter pWriter = new PrintWriter(sWriter);
 
@@ -128,14 +138,7 @@ public class TestVirtualView extends BaseJNATestClass {
 				new NotesMarkdownTable(nav, pWriter)
 				.addColumn(NotesMarkdownTable.EXPANDSTATE)
 				.addColumn(NotesMarkdownTable.POS)
-				.addColumn("category", 40, (table, entry) -> {
-					if (entry instanceof VirtualViewEntryData) {
-						return String.valueOf(((VirtualViewEntryData) entry).getCategoryValue());
-					}
-					else {
-						return "";
-					}
-				})
+				.addColumn(NotesMarkdownTable.CATEGORY)
 				.addColumn(NotesMarkdownTable.NOTEID)
 				.addColumn(NotesMarkdownTable.UNID)
 				.addAllViewColumns()
@@ -168,7 +171,8 @@ public class TestVirtualView extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				long update_t0=System.currentTimeMillis();
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts",
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Origin", "Origin",
 									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -252,6 +256,129 @@ public class TestVirtualView extends BaseJNATestClass {
 
 	}
 
+	/**
+	 * To hide empty categories, we accumulate the readers lists of documents in their parent categories
+	 * together with a count, plus a separate count of documents that have no readers at all.<br>
+	 * <br>
+	 * This test case reads these collected information and displays them in the markdown table.
+	 */
+//	@Test
+	public void testForCategoryReaders() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				long update_t0=System.currentTimeMillis();
+				
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_readerstats",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+							new VirtualViewColumn("Origin", "Origin",
+									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									new VirtualViewColumnValueFunction<Object>(1) {
+
+								@Override
+								public Object getValue(String origin, String itemName,
+										INoteSummary columnValues) {
+									return origin;
+								}
+							}),
+
+							new VirtualViewColumn("Lastname", "Lastname",
+									Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname",
+									Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Firstname")
+
+							)
+							.withDbSearch("myfakenames1",
+									"", DBPATH_FAKENAMES_NSF,
+									"Form=\"Person\"")
+							.build();
+				});
+				
+				long update_t1=System.currentTimeMillis();
+
+				System.out.println("Time to generate view structure: "+(update_t1-update_t0)+"ms");
+
+				VirtualViewEntryData rootEntry = view.getRoot();
+				System.out.println("Reader items stats for the whole view:");
+				for (String currOrigin : rootEntry.getCategoryReadersListOrigins()) {
+					System.out.println("Origin: " + currOrigin);
+					
+					Collection<String> readers = rootEntry.getCategoryReadersList(currOrigin);
+					if (readers == null) {
+                        System.out.println("  All readers");
+                    }
+                    else {
+                        System.out.println("  " + readers.stream().collect(Collectors.joining(", ")));
+                    }
+					System.out.println("-----");
+				}
+				
+				StringWriter sWriter = new StringWriter();
+				PrintWriter pWriter = new PrintWriter(sWriter);
+
+				long nav_t0=System.currentTimeMillis();
+
+				VirtualViewNavigator nav = view
+						.createViewNav()
+						.withCategories()
+						.withDocuments()
+						.build()
+						.expandAll();
+
+				new NotesMarkdownTable(nav, pWriter)
+				.addColumn(NotesMarkdownTable.EXPANDSTATE)
+				.addColumn(NotesMarkdownTable.POS)
+				.addColumn(NotesMarkdownTable.CATEGORY)
+				.addColumn(NotesMarkdownTable.NOTEID)
+				.addColumn(NotesMarkdownTable.UNID)
+				.addColumn("Readers", 70, (table, entry) -> {
+					if (entry instanceof VirtualViewEntryData) {
+						VirtualViewEntryData virtualEntry = (VirtualViewEntryData) entry;
+						
+						if (entry.isDocument()) {
+							Collection<String> readers = virtualEntry.getDocReadersList();
+							if (readers == null) {
+								return "";							
+							}
+							else {
+								return readers.stream().collect(Collectors.joining(", "));
+							}							
+						}
+						else if (entry.isCategory()) {
+							TreeSet<String> readers = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+							for (String currOrigin : virtualEntry.getCategoryReadersListOrigins()) {
+								Collection<String> currReaders = virtualEntry.getCategoryReadersList(currOrigin);
+								if (currReaders != null) {
+									readers.addAll(currReaders);
+								}
+							}
+							return readers.stream().collect(Collectors.joining(", "));
+						}
+					}
+					return "";
+				})
+				.addAllViewColumns()
+
+				.printHeader()
+				.printRows(nav.entriesForward(SelectedOnly.NO))
+				.printFooter();
+
+				long nav_t1=System.currentTimeMillis();
+				System.out.println("Time to navigate view structure: "+(nav_t1-nav_t0)+"ms");
+
+				System.out.println(sWriter);
+
+				return null;
+			}
+		});
+
+	}
+	
 //	@Test
 	public void testRangeLookup() {
 		runWithSession(new IDominoCallable<Object>() {
@@ -260,7 +387,8 @@ public class TestVirtualView extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				long update_t0=System.currentTimeMillis();
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("keylookup1", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("keylookup1",
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Lastname", "Lastname",
 									Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -321,7 +449,8 @@ public class TestVirtualView extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				long update_t0=System.currentTimeMillis();
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("keylookup1", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("keylookup1",
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Lastname", "Lastname",
 									Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -384,7 +513,8 @@ public class TestVirtualView extends BaseJNATestClass {
 				NotesDatabase db = new NotesDatabase("", DBPATH_FAKENAMES_NSF, "");
 				NotesCollection col = db.openCollectionByName("People");
 				
-				VirtualView virtualView = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_people", 1, (id) -> {
+				VirtualView virtualView = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_people", 
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createViewFromTemplate(col)
 					.withDbSearch("fakenames1", "", DBPATH_FAKENAMES_NSF,
 							col.getSelectionFormula())
@@ -416,7 +546,8 @@ public class TestVirtualView extends BaseJNATestClass {
 			public Object call(Session session) throws Exception {
 				long update_t0=System.currentTimeMillis();
 
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_design_views", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_design_views", 
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("View title", "ViewTitle",
 									Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -473,7 +604,8 @@ public class TestVirtualView extends BaseJNATestClass {
 				String mailServer = NotesIniUtils.getEnvironmentString("MailServer");
 				String mailFile = NotesIniUtils.getEnvironmentString("MailFile");
 
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_profiledocs_byusername1", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_profiledocs_byusername1",
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Profile name", "ProfileName",
 									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
@@ -547,7 +679,8 @@ public class TestVirtualView extends BaseJNATestClass {
 
 				long update_t0=System.currentTimeMillis();
 
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_ftsearch_"+ftQuery, 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_ftsearch_"+ftQuery, 
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							
 							new VirtualViewColumn("Year", "$Year",
@@ -624,7 +757,8 @@ public class TestVirtualView extends BaseJNATestClass {
 
 				long update_t0=System.currentTimeMillis();
 
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_ftsearch_"+ftQuery, 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("mail_ftsearch_"+ftQuery, 
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							
 							new VirtualViewColumn("Year", "$Year",
@@ -698,7 +832,8 @@ public class TestVirtualView extends BaseJNATestClass {
 					db.createFolder(folderName);
 				}
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("folderdocs", 1, (id) -> {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("folderdocs", 
+						1, 1, TimeUnit.MINUTES, (id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Letter", "$1", 
 									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
