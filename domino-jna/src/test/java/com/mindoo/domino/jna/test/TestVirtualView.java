@@ -145,6 +145,7 @@ public class TestVirtualView extends BaseJNATestClass {
 						.build()
 						.expandAll();
 
+				//render the view as markdown table to the console
 				new NotesMarkdownTable(nav, pWriter)
 				.addColumn(NotesMarkdownTable.EXPANDSTATE)
 				.addColumn(NotesMarkdownTable.POS)
@@ -154,7 +155,7 @@ public class TestVirtualView extends BaseJNATestClass {
 				.addAllViewColumns()
 
 				.printHeader()
-				.printRows(nav.entriesForward(SelectedOnly.NO))
+				.printRows(nav.entriesForward(SelectedOnly.NO)) // convenience function that navigates the view and returns all expanded entries as a Stream
 				.printFooter();
 
 				long nav_t1=System.currentTimeMillis();
