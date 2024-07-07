@@ -51,9 +51,16 @@ public class TestVirtualView extends BaseJNATestClass {
 				someExternalData.put("Omnis", "Omnis Boulevard 12, New York");
 
 				long update_t0=System.currentTimeMillis();
+
+				//by using "createViewOnce", we mark the view to be stored in memory, as a version "1" and to auto discard it
+				//after 1 minute of inactivity (just for testing, in production you'd use a higher value)
 				
-				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts", 1,
-						1, TimeUnit.MINUTES, (id) -> {
+				//changing the version number to "2" would force a new view to be created
+				
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_namelenghts",
+						1, // version "1"
+						1, TimeUnit.MINUTES, // auto discard after 1 minute of inactivity (calling createViewOnce resets the counting)
+						(id) -> {
 					return VirtualViewFactory.createView(
 							new VirtualViewColumn("Lastname", "Lastname",
 									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
