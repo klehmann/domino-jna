@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mindoo.domino</groupId>
 	<artifactId>domino-jna-base</artifactId>
-	<version>0.9.49-SNAPSHOT</version>
+	<version>0.9.50-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>Domino JNA Base project</name>
@@ -23,8 +23,8 @@
 		<domino.version>11.0.0</domino.version>
 		<jna.version>4.5.1</jna.version>
 		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
-		<nexus-staging-maven-plugin.version>1.5.1</nexus-staging-maven-plugin.version>
-		<maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+		<nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
+		<maven-source-plugin.version>3.3.1</maven-source-plugin.version>
 		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
 		<maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>
 		<maven-javadoc-plugin.version>2.10.4</maven-javadoc-plugin.version>
