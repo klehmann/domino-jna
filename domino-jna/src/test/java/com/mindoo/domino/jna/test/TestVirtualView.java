@@ -72,7 +72,7 @@ public class TestVirtualView extends BaseJNATestClass {
 
 							new VirtualViewColumn("Total Name Length", "TotalNameLength",
 									Category.NO, Hidden.NO, ColumnSort.NONE, Total.SUM,
-									new VirtualViewColumnValueFunction<Integer>(1) {
+									new VirtualViewColumnValueFunction<Integer>(1) { // this 1 is a version number for the column function, might become relevant later when we store the index to disk
 
 								@Override
 								public Integer getValue(String origin, String itemName,
