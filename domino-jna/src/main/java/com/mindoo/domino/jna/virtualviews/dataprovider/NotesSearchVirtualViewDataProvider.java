@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesFTSearchResult;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -94,6 +95,15 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		return true;
 	}
 	
+	private NotesIDTable getAllIds(NotesDatabase db, NotesIDTable loadedTable) {
+		if (loadedTable != null) {
+			return loadedTable;
+		}
+		NotesTimeDate allNoteIdsSince = new NotesTimeDate();
+		allNoteIdsSince.setMinimum();
+		return db.getModifiedNoteTable(noteClasses, allNoteIdsSince, null);
+	}
+	
 	@Override
 	public void update() {
 		if (view == null) {
@@ -123,16 +133,16 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		}
 		
 		NotesDatabase db = getDatabase();
-		
+
+		NotesIDTable allIds = null;
+
 		NotesIDTable idTableFilter = null;
-		if (since ==null && noteIdFilter != null) {
-			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
-			allNoteIdsSince.setMinimum();
-			NotesIDTable allIds = db.getModifiedNoteTable(EnumSet.of(NoteClass.DATA), allNoteIdsSince, null);
+		if (since == null && noteIdFilter != null) {
 
 			//verify that the note ids in the filter are still valid, because NSFSearch throws an
 			//error if we pass invalid note ids
 			NotesIDTable noteIdFilterAsTable = new NotesIDTable(noteIdFilter);
+			allIds = getAllIds(db, allIds);
 			idTableFilter = noteIdFilterAsTable.intersect(allIds);
 			noteIdFilterAsTable.recycle();
 		}
@@ -148,9 +158,7 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 			NotesIDTable ftIdTable = ftResult.getMatches();
 			
 			//prevent any invalid note ids in the ft search result
-			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
-			allNoteIdsSince.setMinimum();
-			NotesIDTable allIds = db.getModifiedNoteTable(EnumSet.of(NoteClass.DATA), allNoteIdsSince, null);
+			allIds = getAllIds(db, allIds);
 			idTableFilter = ftIdTable.intersect(allIds);
 		}
 		
@@ -181,9 +189,10 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
 							IItemTableData summaryBufferData) {
 						
-						summaryBufferData.setPreferNotesTimeDates(true);						
 						int noteId = searchMatch.getNoteId();
 						String unid = searchMatch.getUNID();
+						
+						summaryBufferData.setPreferNotesTimeDates(true);						
 						Map<String,Object> values = summaryBufferData.asMap(true);
 						
 						boolean isAccepted = true;
@@ -209,7 +218,7 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 					}
 
 		});
-
+		
 		if (since != null && // not on the first run (there we already did the ft search above)
 				!StringUtil.isEmpty(optFTQuery)) {
 			//post process the collected IDs with a full text search
