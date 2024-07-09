@@ -70,6 +70,10 @@ public enum VirtualViewFactory {
 				.getColumns()
 				.stream()
 				.map((currCol) -> {
+					if (currCol.isResponse()) {
+						//skip response columns, unsupported
+						return null;
+					}
 					String title = currCol.getTitle();
 					String itemName = currCol.getItemName();
 					String formula = currCol.getFormula();
@@ -93,6 +97,7 @@ public enum VirtualViewFactory {
 					return new VirtualViewColumn(title, itemName, isCategory ? Category.YES : Category.NO, isHidden ? Hidden.YES : Hidden.NO, sort,
 							totalMode, formula);
                 })
+				.filter((currCol) -> currCol!=null)
 				.collect(Collectors.toList());
 		return new VirtualViewBuilder(virtualViewColumns);
 	}

@@ -469,7 +469,7 @@ public class NotesMarkdownTable {
 	/**
 	 * Table column for the child count of the view entry
 	 */
-	public static final ColumnInfo CHILDCOUNT = new ColumnInfo("ChildCount", 12, (table, entry) -> {
+	public static final ColumnInfo CHILDCOUNT = new ColumnInfo("ChildCount", 10, (table, entry) -> {
 		return Integer.toString(entry.getChildCount());
 	});
 	
@@ -483,8 +483,15 @@ public class NotesMarkdownTable {
 	/**
 	 * Table column for the descendant count of the view entry
 	 */
-	public static final ColumnInfo DESCENDANTCOUNT = new ColumnInfo("DescendantCount", 12, (table, entry) -> {
+	public static final ColumnInfo DESCENDANTCOUNT = new ColumnInfo("DescendantCount", 15, (table, entry) -> {
 		return Integer.toString(entry.getDescendantCount());
+	});
+
+	/**
+	 * Table column for the indent levels of the view entry
+	 */
+	public static final ColumnInfo INDENTLEVELS = new ColumnInfo("IndentLevels", 12, (table, entry) -> {
+		return Integer.toString(entry.getIndentLevels());
 	});
 
 	/**
@@ -566,6 +573,8 @@ public class NotesMarkdownTable {
 				if (entry.isCategory()) {
 					String sVal;
 					int level = entry.getLevel();
+					int indentLevel = entry.getIndentLevels();
+					
 					if (table.m_realView != null) {
 						if (level == -1) {
 							//ReadMask.INDEX_POSITION not loaded from view
@@ -582,9 +591,8 @@ public class NotesMarkdownTable {
 							//for virtual views, -1 means the artificial root entry
 							return "";
 						}
-						VirtualViewColumn col = table.m_virtualView.getColumns().get(level);
-						Object categoryVal = entry.get(col.getItemName());
-						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+						Object categoryVal = ((VirtualViewEntryData)entry).getCategoryValue();
+						sVal = StringUtil.repeat(' ', level + indentLevel) + String.valueOf(categoryVal);
 					}
 					if (StringUtil.isEmpty(sVal)) {
 						sVal = "(not categorized)";

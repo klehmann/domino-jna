@@ -604,9 +604,9 @@ public class VirtualView {
 				
 				VirtualViewEntryData currentSubCatParent = targetParent;
 				
-				for (int i=0; i<parts.length; i++) {
-					String currSubCat = parts[i];
-					boolean isLastPart = i == parts.length-1;
+				for (int indentLevel=0; indentLevel<parts.length; indentLevel++) {
+					String currSubCat = parts[indentLevel];
+					boolean isLastPart = indentLevel == parts.length-1;
 					
 					Object currSubCatObj = "".equals(currSubCat) ? null : currSubCat;
 					
@@ -642,6 +642,7 @@ public class VirtualView {
 						if (currSubCatObj != null) {
 							categoryColValues.put(itemName, currSubCatObj);
 						}
+						entryWithSortKey.setIndentLevels(indentLevel);
 						entryWithSortKey.setColumnValues(categoryColValues);
 						
 						if (currentSubCatParent.getChildEntriesAsMap().put(categorySortKey, entryWithSortKey) == null) {

@@ -82,6 +82,18 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		return origin;
 	}
 	
+	/**
+	 * By default, we exclude response documents from the virtual views, since the view indexer does not support response hierarchies.
+	 * <br>
+	 * Override this method to include response documents if your plan is to analyze responses, e.g. to build a lookup table for
+	 * the $ref field.
+	 * 
+	 * @return true by default
+	 */
+	protected boolean isExcludeResponseDocs() {
+		return true;
+	}
+	
 	@Override
 	public void update() {
 		if (view == null) {
@@ -105,6 +117,11 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		//compute readers lists
 		formulas.put("$C1$", "");
 
+		boolean noRefDocs = isExcludeResponseDocs();
+		if (noRefDocs) {
+			formulas.put("$REF_Text", "@Text($REF)");
+		}
+		
 		NotesDatabase db = getDatabase();
 		
 		NotesIDTable idTableFilter = null;
@@ -170,7 +187,10 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 						Map<String,Object> values = summaryBufferData.asMap(true);
 						
 						boolean isAccepted = true;
-						if (noteIdFilter != null && !noteIdFilter.contains(noteId)) {
+						if (noRefDocs && StringUtil.isNotEmpty(summaryBufferData.getAsString("$REF_Text", ""))) {
+							isAccepted = false;
+						}
+						if (isAccepted && noteIdFilter != null && !noteIdFilter.contains(noteId)) {
 							isAccepted = false;
 						}
 						if (isAccepted && !isAccepted(searchMatch, summaryBufferData)) {

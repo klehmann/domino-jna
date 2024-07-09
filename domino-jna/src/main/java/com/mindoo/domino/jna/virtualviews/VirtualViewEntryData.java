@@ -31,6 +31,7 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	private String unid;
 	private int siblingIndex;
 	private int level = Integer.MIN_VALUE;
+	private int indentLevels;
 	
 	private ViewEntrySortKey sortKey;	
 	private Map<String,Object> columnValues;
@@ -285,6 +286,15 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	
 	void setSiblingIndex(int idx) {
 		siblingIndex = idx;
+	}
+	
+	void setIndentLevels(int level) {
+		indentLevels = level;
+	}
+	
+	@Override
+	public int getIndentLevels() {
+		return indentLevels;
 	}
 	
 	/**

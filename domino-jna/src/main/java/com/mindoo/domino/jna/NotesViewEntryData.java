@@ -446,11 +446,14 @@ public class NotesViewEntryData extends TypedItemAccess implements IViewEntryDat
 	}
 
 	/**
-	 * Returns the indent levels in the view. Only returns a value if {@link ReadMask#INDENTLEVELS}
-	 * is used for the lookup
+	 * For category entries where the category contains a "\" character, this method returns the
+	 * index of the category entry (e.g. 1 for "level2" in the string "level1\level2").<br>
+	 * <br>
+	 * Only returns a value if {@link ReadMask#INDENTLEVELS} is used for the lookup.
 	 * 
 	 * @return levels or 0
 	 */
+	@Override
 	public int getIndentLevels() {
 		return m_indentLevels!=null ? m_indentLevels.intValue() : 0;
 	}
