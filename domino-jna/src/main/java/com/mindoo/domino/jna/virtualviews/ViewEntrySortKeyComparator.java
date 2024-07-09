@@ -30,17 +30,17 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				Object catVal1 = values1.get(0);
 				Object catVal2 = values2.get(0);
 				
-				//sort null category values on top ("(no category)")
+				//sort null category values to the bottom ("(Not categorized)")
 				if (catVal1 == null) {
 					if (catVal2 == null) {
 						return 0;
 					} else {
-						return categoryOrderDescending ? 1 : -1;
+						return categoryOrderDescending ? -1 : 1;
 					}
 				}
 				else {
 					if (catVal2 == null) {
-						return categoryOrderDescending ? -1 : 1;
+						return categoryOrderDescending ? 1 : -1;
 					}
 					else {
 						//special case, LOW_SORTVAL always on top; we use LOW_SORTVAL and HIGH_SORTVAL to select all categories or all documents
@@ -182,12 +182,12 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				if (currValue2 == null) {
 					continue;
 				} else {
-					return docOrderPerColumnDescending[i] ? 1 : -1;
+					return docOrderPerColumnDescending[i] ? -1 : 1;
 				}
 			}
 			else {
 				if (currValue2 == null) {
-					return docOrderPerColumnDescending[i] ? -1 : 1;
+					return docOrderPerColumnDescending[i] ? 1 : -1;
 				}
 				else {
 					if (currValue1 instanceof String && currValue2 instanceof String) {
