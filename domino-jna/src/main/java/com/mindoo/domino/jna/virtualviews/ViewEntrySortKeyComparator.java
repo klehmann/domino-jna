@@ -212,17 +212,8 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 						int result = ((Comparable)currValue1).compareTo((Comparable)currValue2);
 						
 						if (result != 0) {
-							return categoryOrderDescending ? -result : result;
+							return docOrderPerColumnDescending[i] ? -result : result;
 						}
-
-//					} else if (currValue1 instanceof NotesTimeDate && currValue2 instanceof NotesTimeDate) {
-//						NotesTimeDate time1 = (NotesTimeDate) currValue1;
-//						NotesTimeDate time2 = (NotesTimeDate) currValue2;
-//						
-//						int result = time1.compareTo(time2);
-//						if (result != 0) {
-//							return docOrderPerColumnDescending[i] ? -result : result;
-//						}
 					} else {
 						String class1 = currValue1 != null ? currValue1.getClass().getName() : "null";
 						String class2 = currValue2 != null ? currValue2.getClass().getName() : "null";
