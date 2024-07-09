@@ -33,6 +33,9 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	private int level = Integer.MIN_VALUE;
 	private int indentLevels;
 	
+	private int[] pos;
+	private String posStr;
+	
 	private ViewEntrySortKey sortKey;	
 	private Map<String,Object> columnValues;
 	
@@ -285,7 +288,12 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	}
 	
 	void setSiblingIndex(int idx) {
-		siblingIndex = idx;
+		if (siblingIndex != idx) {
+			siblingIndex = idx;
+			//reset cached values, because our index has changed
+			pos = null;
+			posStr = null;			
+		}
 	}
 	
 	void setIndentLevels(int level) {
@@ -304,16 +312,19 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	 */
 	@Override
 	public String getPositionStr() {
-		int[] pos = getPosition();
-		StringBuilder sb = new StringBuilder();
-		for (int i=0; i<pos.length; i++) {
-			if (sb.length() > 0) {
-				sb.append('.');
+		if (posStr == null) {
+			int[] pos = getPosition();
+			StringBuilder sb = new StringBuilder();
+			for (int i=0; i<pos.length; i++) {
+				if (sb.length() > 0) {
+					sb.append('.');
+				}
+
+				sb.append(pos[i]);
 			}
-			
-			sb.append(pos[i]);
+			posStr = sb.toString();
 		}
-		return sb.toString();
+		return posStr;
 	}
 	
 	@Override
@@ -336,30 +347,33 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	 */
 	@Override
 	public int[] getPosition() {
-		if (parentView.getRoot().equals(this)) {
-			return new int[] { 0 };
-		}
-		
-		LinkedList<Integer> pos = new LinkedList<>();
-		pos.add(getSiblingIndex());
-		
-		VirtualViewEntryData parentEntry = getParent();
-		while (parentEntry != null) {
-			int parentSiblingIdx = parentEntry.getSiblingIndex();
-			
-			parentEntry = parentEntry.getParent();
-			if (parentEntry != null) {
-				//ignore root sibling position
-				pos.addFirst(parentSiblingIdx);
+		if (pos == null) {
+			if (parentView.getRoot().equals(this)) {
+				pos = new int[] { 0 };
+			}
+			else {
+				LinkedList<Integer> posList = new LinkedList<>();
+				posList.add(getSiblingIndex());
+				
+				VirtualViewEntryData parentEntry = getParent();
+				while (parentEntry != null) {
+					int parentSiblingIdx = parentEntry.getSiblingIndex();
+					
+					parentEntry = parentEntry.getParent();
+					if (parentEntry != null) {
+						//ignore root sibling position
+						posList.addFirst(parentSiblingIdx);
+					}
+				}
+				
+				pos = new int[posList.size()];
+				int idx = 0;
+				for (Integer currPos : posList) {
+					pos[idx++] = currPos.intValue();
+				}
 			}
 		}
-		
-		int[] posArr = new int[pos.size()];
-		int idx = 0;
-		for (Integer currPos : pos) {
-			posArr[idx++] = currPos.intValue();
-		}
-		return posArr;
+		return pos;
 	}
 	
 	private ConcurrentHashMap<String,Double> totalValues = new ConcurrentHashMap<>();
