@@ -3,16 +3,18 @@ package com.mindoo.domino.jna.virtualviews;
 import java.util.Comparator;
 import java.util.List;
 
-import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.virtualviews.VirtualView.CategorizationStyle;
 
 /**
  * Comparator to sort {@link ViewEntrySortKey} objects within one level of the {@link VirtualView} tree structure
  */
 public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> {
+	private boolean categoriesOnTopOfDocuments;
 	private boolean categoryOrderDescending;
 	private boolean[] docOrderPerColumnDescending;
 	
-	public ViewEntrySortKeyComparator(boolean categoryOrderDescending, boolean[] docOrderDescending) {
+	public ViewEntrySortKeyComparator(CategorizationStyle categorizationStyle, boolean categoryOrderDescending, boolean[] docOrderDescending) {
+		this.categoriesOnTopOfDocuments = categorizationStyle == CategorizationStyle.CATEGORY_THEN_DOCUMENT;
 		this.categoryOrderDescending = categoryOrderDescending;
 		this.docOrderPerColumnDescending = docOrderDescending;
 	}
@@ -118,14 +120,14 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				}
 			}
 			else {
-				//sort category above document
-				return -1;
+				//sort category above/below document
+				return categoriesOnTopOfDocuments ? -1 : 1;
 			}
 		}
 		else {
 			if (isCategory2) {
-				//sort document below category
-				return 1;
+				//sort document below/above category
+				return categoriesOnTopOfDocuments ? 1 : -1;
 			}
 			else {
 				//both are no categories, fall through to sort by values

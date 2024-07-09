@@ -35,6 +35,8 @@ import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
  * The columns can be categorized and sorted.
  */
 public class VirtualView {
+	public static enum CategorizationStyle { CATEGORY_THEN_DOCUMENT, DOCUMENT_THEN_CATEGORY }
+	
 	static final String ORIGIN_VIRTUALVIEW = "virtualview";
 	
 	/** during a view update, we use this map to remember which sibiling indexes to recompute */
@@ -55,7 +57,9 @@ public class VirtualView {
 	private boolean[] docOrderDescending;
 	private boolean viewHasTotalColumns;
 	private AtomicLong categoryNoteId = new AtomicLong(4);
-
+	private CategorizationStyle categorizationStyle = CategorizationStyle.DOCUMENT_THEN_CATEGORY;
+	private boolean indexBuild = false;
+	
 	/** contains the occurences of a note id in the view */
 	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
 	
@@ -73,6 +77,7 @@ public class VirtualView {
 	/**
 	 * Creates a new virtual view
 	 * 
+	 * @param categorizationStyle categorization style (whether categories are on top of documents or vice versa)
 	 * @param columnsParam columns of the view
 	 */
 	public VirtualView(List<VirtualViewColumn> columnsParam) {
@@ -113,11 +118,11 @@ public class VirtualView {
 		ViewEntrySortKeyComparator rootChildEntryComparator;
 		if (this.categoryColumns.isEmpty()) {
 			rootChildEntryComparator = new ViewEntrySortKeyComparator(
-					false, this.docOrderDescending);
+					categorizationStyle, false, this.docOrderDescending);
 		}
 		else {
 			rootChildEntryComparator = new ViewEntrySortKeyComparator(
-					this.categoryColumns.get(0).getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
+					categorizationStyle, this.categoryColumns.get(0).getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
 		}
 		
 		ViewEntrySortKey rootSortKey = ViewEntrySortKey.createSortKey(true, Collections.emptyList(), ORIGIN_VIRTUALVIEW, 0);
@@ -131,16 +136,42 @@ public class VirtualView {
 	}
 	
 	/**
+	 * Method to chose the categorization style of the view, either
+	 * {@link CategorizationStyle#DOCUMENT_THEN_CATEGORY} (default style of Domino views) or
+	 * {@link CategorizationStyle#CATEGORY_THEN_DOCUMENT}
+	 * 
+	 * @param style categorization style
+	 * @return this view
+	 */
+	public VirtualView setCategorizationStyle(CategorizationStyle style) {
+		if (!indexBuild) {
+			this.categorizationStyle = style;			
+		}
+		return this;
+	}
+	
+	/**
+	 * Returns the categorization style of the view
+	 * 
+	 * @return categorization style
+	 */
+	public CategorizationStyle getCategorizationStyle() {
+		return categorizationStyle;
+	}
+	
+	/**
 	 * Adds a data provider to the view
 	 * 
 	 * @param provider data provider
+	 * @return this view
 	 */
-	public void addDataProvider(IVirtualViewDataProvider provider) {
+	public VirtualView addDataProvider(IVirtualViewDataProvider provider) {
 		String origin = provider.getOrigin();
 		if (this.dataProviderByOrigin.containsKey(origin)) {
 			throw new IllegalArgumentException("Data provider with origin '" + origin + "' already added");
 		}
 		this.dataProviderByOrigin.put(origin, provider);
+		return this;
 	}
 	
 	/**
@@ -380,6 +411,8 @@ public class VirtualView {
 	public void applyChanges(VirtualViewDataChange change) {
 		viewChangeLock.writeLock().lock();
 		try {
+			indexBuild = true;
+			
 			String origin = change.getOrigin();
 			List<VirtualViewEntryData> categoryEntriesToCheck = new ArrayList<>();
 			
@@ -543,7 +576,7 @@ public class VirtualView {
 			ViewEntrySortKey sortKey = ViewEntrySortKey.createSortKey(false, docSortValues, origin, noteId);
 
 			ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
-					false, this.docOrderDescending);
+					categorizationStyle, false, this.docOrderDescending);
 
 			VirtualViewEntryData newDocChild = new VirtualViewEntryData(this,
 					targetParent, origin, noteId,
@@ -631,7 +664,7 @@ public class VirtualView {
 								childCategoryOrderingDescending = false;
 							}
 						}
-						ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(childCategoryOrderingDescending, this.docOrderDescending);
+						ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(categorizationStyle, childCategoryOrderingDescending, this.docOrderDescending);
 
 						
 						int newCategoryNoteId = createNewCategoryNoteId();
@@ -684,7 +717,7 @@ public class VirtualView {
 						nextCategoryColumnSort = ColumnSort.DESCENDING;
 					}
 					ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
-							nextCategoryColumnSort == ColumnSort.DESCENDING, this.docOrderDescending);
+							categorizationStyle, nextCategoryColumnSort == ColumnSort.DESCENDING, this.docOrderDescending);
 
 					int newCategoryNoteId = createNewCategoryNoteId();
 					entryWithSortKey = new VirtualViewEntryData(this, targetParent, ORIGIN_VIRTUALVIEW,
