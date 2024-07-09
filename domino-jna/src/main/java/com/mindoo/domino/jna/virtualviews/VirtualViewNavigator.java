@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -738,6 +740,61 @@ public class VirtualViewNavigator {
 				.filter((currEntry) -> {
 					return viewEntryAccessCheck.isVisible(currEntry);
 				});
+	}
+
+	/**
+	 * Sorts the note ids by position and returns them as a linked hash set
+	 * 
+	 * @param origin origin
+	 * @param noteIds set of note ids
+	 * @return linked hash set of note ids sorted by position
+	 */
+	public LinkedHashSet<Integer> getSortedNoteIds(String origin, Set<Integer> noteIds) {
+		return noteIds
+				.stream()
+				.flatMap((noteId) -> {
+					return view.getEntries(origin, noteId).stream();
+				})
+				.sorted((entry1, entry2) -> {
+					int[] pos1 = entry1.getPosition();
+					int[] pos2 = entry2.getPosition();
+
+					return positionArrayComparator.compare(pos1, pos2);
+				})
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				})
+				.map((entry) -> {
+					return entry.getNoteId();
+				})
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+	}
+	
+	/**
+	 * Sorts the note ids by position and returns them as a linked hash set
+	 * 
+	 * @param noteIds set of note ids with origin
+	 * @return linked hash set of note ids sorted by position
+	 */
+	public LinkedHashSet<ScopedNoteId> getSortedNoteIds(Set<ScopedNoteId> noteIds) {
+		return noteIds
+				.stream()
+				.flatMap((scopedNoteId) -> {
+					return view.getEntries(scopedNoteId.getOrigin(), scopedNoteId.getNoteId()).stream();
+				})
+				.sorted((entry1, entry2) -> {
+					int[] pos1 = entry1.getPosition();
+					int[] pos2 = entry2.getPosition();
+
+					return positionArrayComparator.compare(pos1, pos2);
+				})
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				})
+				.map((entry) -> {
+					return new ScopedNoteId(entry.getOrigin(), entry.getNoteId());
+				})
+				.collect(Collectors.toCollection(LinkedHashSet::new));
 	}
 
 	/**
