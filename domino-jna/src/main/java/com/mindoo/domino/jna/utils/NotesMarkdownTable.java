@@ -573,18 +573,28 @@ public class NotesMarkdownTable {
 				if (entry.isCategory()) {
 					String sVal;
 					int level = entry.getLevel();
-					int indentLevel = entry.getIndentLevels();
+					int indentLevels = entry.getIndentLevels();
 					
 					if (table.m_realView != null) {
 						if (level == -1) {
 							//ReadMask.INDEX_POSITION not loaded from view
 							return "(no index position found)";
 						}
-						int indentLevels = ((NotesViewEntryData)entry).getIndentLevels();
 
-						NotesViewColumn col = table.m_realView.getColumns().get(level);
-						Object categoryVal = entry.get(col.getItemName());
-						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+						Object categoryVal = null;
+						for (int i=table.m_realView.getColumns().size()-1; i>=0; i--) {
+							NotesViewColumn col = table.m_realView.getColumns().get(i);
+							if (col.isCategory()) {
+								categoryVal = entry.get(col.getItemName());
+								if (categoryVal != null) {
+									break;
+								}
+							}
+						}
+						if (categoryVal == null) {
+							categoryVal = "(Not categorized)";
+						}
+						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
 					}
 					else {
 						if (level == -1) {
@@ -592,10 +602,10 @@ public class NotesMarkdownTable {
 							return "";
 						}
 						Object categoryVal = ((VirtualViewEntryData)entry).getCategoryValue();
-						sVal = StringUtil.repeat(' ', level + indentLevel) + String.valueOf(categoryVal);
-					}
-					if (StringUtil.isEmpty(sVal)) {
-						sVal = "(not categorized)";
+						if (categoryVal == null) {
+							categoryVal = "(Not categorized)";
+						}
+						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
 					}
 					return sVal;
 				}
