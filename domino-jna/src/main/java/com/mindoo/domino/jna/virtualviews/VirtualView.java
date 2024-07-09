@@ -722,7 +722,7 @@ public class VirtualView {
 			}			
 		}
 	
-		return createdChildEntriesForDocument;
+		return Collections.unmodifiableList(createdChildEntriesForDocument);
 	}
 
 	private void addDocToCountsAndReadersListOfParents(VirtualViewEntryData docEntry) {
@@ -954,14 +954,7 @@ public class VirtualView {
 		
 	}
 	
-	/**
-	 * Returns all occurrences of a note id in the view
-	 * 
-	 * @param origin origin of the entry
-	 * @param noteId note id of the entry
-	 * @return list of entries
-	 */
-	public List<VirtualViewEntryData> findEntries(String origin, int noteId) {
-		return Collections.unmodifiableList(entriesByNoteId.get(new ScopedNoteId(origin, noteId)));
+	List<VirtualViewEntryData> getEntries(String origin, int noteId) {
+		return entriesByNoteId.getOrDefault(new ScopedNoteId(origin, noteId), Collections.emptyList());
 	}
 }

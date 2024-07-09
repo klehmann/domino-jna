@@ -1,6 +1,7 @@
 package com.mindoo.domino.jna.virtualviews;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -677,6 +678,94 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
+	 * Compares two position arrays like [1,2], [1,2,3] and [1,2,4]
+	 */
+	private static final Comparator<int[]> positionArrayComparator = new Comparator<int[]>() {
+		@Override
+		public int compare(int[] o1, int[] o2) {
+			int len = Math.min(o1.length, o2.length);
+			for (int i = 0; i < len; i++) {
+				if (o1[i] != o2[i]) {
+					return o1[i] - o2[i];
+				}
+			}
+			return o1.length - o2.length;
+		}
+	};
+	
+	/**
+	 * Returns all occurrences of a note id in the view in ascending order (sorted by position)
+	 * 
+	 * @param origin origin of the entry
+	 * @param noteId note id of the entry
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntryData> getSortedEntries(String origin, int noteId) {
+		return view
+				.getEntries(origin, noteId)
+				.stream()
+				.sorted((entry1, entry2) -> {
+					int[] pos1 = entry1.getPosition();
+					int[] pos2 = entry2.getPosition();
+					
+					return positionArrayComparator.compare(pos1, pos2);
+				})
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+
+	/**
+	 * Returns all occurrences of a note id in the view in ascending order (sorted by position)
+	 * 
+	 * @param origin origin
+	 * @param noteIds set of note ids
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntryData> getSortedEntries(String origin, Set<Integer> noteIds) {
+		//same as other getSortedEntries method, but for a single origin
+		return noteIds
+				.stream()
+				.flatMap((noteId) -> {
+					return view.getEntries(origin, noteId).stream();
+				})
+				.sorted((entry1, entry2) -> {
+					int[] pos1 = entry1.getPosition();
+					int[] pos2 = entry2.getPosition();
+					
+					return positionArrayComparator.compare(pos1, pos2);
+				})
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+
+	/**
+	 * Returns all occurrences of the specified note ids in the view in ascending order (sorted
+	 * by position)
+	 * 
+	 * @param noteIds set of note ids with origin
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntryData> getSortedEntries(Set<ScopedNoteId> noteIds) {
+		//return Stream of VirtualViewEntryData sorted by VirtualViewEntryData.getPositionStr()
+		return noteIds
+				.stream()
+				.flatMap((scopedNoteId) -> {
+					return view.getEntries(scopedNoteId.getOrigin(), scopedNoteId.getNoteId()).stream();
+				})
+				.sorted((entry1, entry2) -> {
+					int[] pos1 = entry1.getPosition();
+					int[] pos2 = entry2.getPosition();
+					
+					return positionArrayComparator.compare(pos1, pos2);
+				})
+				.filter((currEntry) -> {
+					return viewEntryAccessCheck.isVisible(currEntry);
+				});
+	}
+
+	/**
 	 * Returns the view entry at the cursor position
 	 * 
 	 * @return view entry or null if the cursor is offroad
@@ -719,7 +808,7 @@ public class VirtualViewNavigator {
 		}
 		
 		if (selectParentCategories) {
-			List<VirtualViewEntryData> entries = view.findEntries(origin, noteId);
+			List<VirtualViewEntryData> entries = view.getEntries(origin, noteId);
 			if (entries != null) {
 				VirtualViewEntryData rootEntry = view.getRoot();
 				
