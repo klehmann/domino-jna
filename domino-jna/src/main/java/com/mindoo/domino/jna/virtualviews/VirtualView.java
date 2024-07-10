@@ -77,7 +77,6 @@ public class VirtualView {
 	/**
 	 * Creates a new virtual view
 	 * 
-	 * @param categorizationStyle categorization style (whether categories are on top of documents or vice versa)
 	 * @param columnsParam columns of the view
 	 */
 	public VirtualView(List<VirtualViewColumn> columnsParam) {
