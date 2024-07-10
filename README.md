@@ -1,10 +1,29 @@
 # Domino JNA
-Cross-platform access to IBM/HCL Notes/Domino C API methods from Java
+Cross-platform access to HCL Notes/Domino C API methods from Java
 
-## Features
+# Features
 The project provides functionality that is not available in the classic Java API of HCL Notes/Domino or that is poorly implemented, for example:
 
-* **run DQL (Domino Query Language) queries against databases** on Domino V10 and return the result dynamically sorted
+## Document API
+* basic APIs to read and write note (document) item values like String/Double/NotesDateTime/Calendar single and multiple values
+* **direct attachment streaming to create and extract files** (HCL's Java API extracts files to temp disk space first to read attachment data and only supports adding files stored on disk as document attachments)
+* **quick check if a document is editable** by a specified user (without the need to scan through author items)
+* faster **formula execution on documents** with document modified/selected/deleted info, **more than 64K of result data and applied security** (e.g. no changes to Notes.ini)
+* creation of **ghost notes** (documents that do not appear in any views)
+
+## Database API
+* **fulltext index creation** with all available options
+* searching NSF data with formula (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does, including the readers list **
+* **run agents bypassing ECL checks**, pass an in-memory document for data exchange readable as `Session.DocumentContext` and redirect Agent output to a Java `Writer`
+* read/write replication data (change replica id and flags)
+* clearing the replication history
+* fast noteid / UNID bulk conversion with lookup of "modified in this file" property (part of the note OID - originator id)
+* API to **read the item definition table** of a database (all fieldnames and fieldtypes, useful to track FT Search issues and provide fieldname typeahead)
+* **extended folder operations**, e.g. create/delete/move/copy with content/rename, creation of new folder with specifying where to get the design
+* API to **incrementally read folder changes** (added/remove note ids)
+* **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
+
+## Domino views API
 * **view lookups using different key formats** (e.g. strings, numbers, dates, date ranges) and equality/**inequality searches (e.g. find less or greater than a search key)**
 * **decodes all available types of view column data types** (string, string list, number, number list, datetime, datetime list) **and row data** (e.g. just note id, UNID, counts, unread flag etc.)
 * read view data as **another Notes user**
@@ -12,58 +31,85 @@ The project provides functionality that is not available in the classic Java API
 * **separation of Notes views and their data into multiple databases** (like programmatically creating private views and keeping them up-to-date incrementally)
 * **dynamic filtering of view rows based on a Note id list with paging support (this really rocks!)**
 * **reading categorized views** with expanded/collapsed entries and min/max level
-* read **design collection** with design elements in a database
 * **differential view reads** : on second view lookup, only read rows that have changed
 * support for view resorting (changing the collation in C API terms)
-* **direct attachment streaming to create and extract files** (HCL's Java API extracts files to temp disk space first to read attachment data and only supports adding files stored on disk as document attachments)
-* basic APIs to read note (document) item values like String/Double/Calendar single and multiple values
-* several APIs to write item values and attachments (needs more work)
+
+## DQL / QueryResultsProcessor API
+* **run DQL (Domino Query Language) queries against databases** on Domino V10+ and return the result dynamically sorted
+* **QueryResultsProcessor API** to create JSON data and QRP views
+
+## Virtual View API
+Our own replacement for Domino views and the QueryResultsProcessor! See testcase [TestVirtualView](https://github.com/klehmann/domino-jna/blob/develop/domino-jna/src/test/java/com/mindoo/domino/jna/test/TestVirtualView.java) for code examples.
+
+* multi-DB views, even work between servers and client-server
+* view structure similar to Domino (multi level categorization, sorted columns)
+* support for sums / average values, child and descendant counts
+* compute column values via formula or Java code
+* incremental view updates, so no rebuilt required
+* view is populated by the server, shared across users
+* for each user we check which view entries the user is allowed to see (checks DB ACL level and compares user names list for each DB with computed list of document readers list)
+* for category entries we accumulate the readers of all descendant docs to quickly skip categories that would be empty for a user
+* these collected readers stats can be used for analysis purposes
+* several data sources can be combined to produce view data
+    * datasource 1: run NSF search with a formula (incrementally), can search data and design documents, optional post processing with FT search
+    * datasource 2: profile documents
+    * datasource 3: read note ids from a folder (incrementally)
+    * datasource 4: compute column values from any list of note ids
+    * custom datasources can be implemented and added to the virtual view
+* VirtualViewNavigator to read the view entries that a user is allowed to see, either all entries/category descendants, just docs/category, support for expanded/selected entries, upwards/downwards/paging like NIFReadEntries, keyword and range lookups
+* fast (e.g. processes 40.000 fakename docs and builds the view in 2-3 seconds)
+* VirtualView currently stored in Java heap (each VirtualViewEntry with a ConcurrentSkipListMap for the sorted children), might add support for serialization to disk later on
+* not a Domino specific implementation, would work in other environments as well
+
+## Richtext / MIME API
 * **richtext item reading**: convenience method to extract text content, advanced API to read all CD records (IRichTextNavigator)
 * **richtext item writing**: create richtext items with text, images, doclinks, by rendering other notes and appending other richtet items
 * **add PNG images to richtext items**: something that cannot easily be done yet in the Notes Client UI
 * **richtext item conversion**: multi-level conversion of richtext item content, e.g. to **add/remove file hotspots (file icons with custom image that open file on click) independent from the actual file attachment** or do mail merge with richtext
-* **design richtext processing**: e.g. to **apply a string replacement and recompile formulas** for computed text/subforms or hotspots and **find all fields in a form**
 * **richtext-html conversion** with advanced quality and access to embedded images
+* API to **read and write MIME items**
+
+## Design API
+* read **design collection** with design elements in a database
+* **design richtext processing**: e.g. to **apply a string replacement and recompile formulas** for computed text/subforms or hotspots and **find all fields in a form**
+* **DXL exporter with the option to write the DXL into a stream** (Notes.jar classes fill up the Java heap with a giant DXL string)
+
+## Sync API
 * **incremental data synchronization** with external databases or indexers. Generic design, sample implementation for [CQEngine](https://github.com/npgall/cqengine) and [SQLite](https://www.sqlite.org)
-* **quick check if a document is editable** by a specified user (without the need to scan through author items)
-* **fulltext index creation** with all available options
 * supports incremental synchronization of Domino databases by **reading noteid lists of modified and deleted documents** (HCL's Java API does not return ids of deleted docs)
-* searching NSF data with formula on the fly (NSFSearch in the C API) with all parameters and return values, e.g. **get summary buffer data for each document matching a formula and compute your own field values like the view indexer does**
+
+## Server API
 * quick reading of files and folders in the Domino data directory or in subdirectories (HCL's DbDirectory is slow for many DBs and does not support subdirectory scanning)
-* **run agents bypassing ECL checks**, pass an in-memory document for data exchange readable as `Session.DocumentContext` and redirect Agent output to a Java `Writer`
-* read/write replication data (change replica id and flags)
-* clearing the replication history
-* fast noteid / UNID bulk conversion with lookup of "modified in this file" property (part of the note OID - originator id)
 * compute @Usernameslist values for any Notes user on local and remote server
-* faster **formula execution on documents** with document modified/selected/deleted info, **more than 64K of result data and applied security** (e.g. no changes to Notes.ini)
-* **SSO token computation** (with tokens also working on Websphere)
-* APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
+* APIs to **read and write Out-of-Office information (OOO) of any user** 
+* API to **read the remote server console** and send commands.
+
+## Calendaring API
 * APIs to **read extended busytime information** like UNID/start/end of busytime entries (not just the freetime search that HCL provides)
 * APIs to **create/read/update Domino appointments** via iCal format and the option to only output selected fields into the generated iCal (e.g. only start/end/summary) and full meeting workflow action support (accept/decline invitation etc.)
-* APIs to **read and modify the ECL**
-* APIs to **read and write Out-of-Office information (OOO) of any user** 
-* API to **read the item definition table** of a database (all fieldnames and fieldtypes, useful to track FT Search issues and provide fieldname typeahead)
-* **DXL exporter with the option to write the DXL into a stream** (Notes.jar classes fill up the Java heap with a giant DXL string)
-* **extended folder operations**, e.g. create/delete/move/copy with content/rename, creation of new folder with specifying where to get the design
-* **efficient lookup of documents without lookup views** by a value in the $Name field (see testcase TestNotePrimaryKey)
-* creation of **ghost notes** (documents that do not appear in any views)
-* API to **read the remote server console** and send commands.
-* **read/write access for the Notes Client workspace** (desktop8.nsk), e.g. read/write page and chicklet infos (titles, server, filename, tabindex, x, y, classic and modern icon), move pages with their icons, move replicas on top
-* **QueryResultsProcessor API to create JSON And QRP views**
 
-**Please note:**
+## Notes Client API
+* APIs to **read and modify the ECL**
+* **read/write access for the Notes Client workspace** (desktop8.nsk), e.g. read/write page and chicklet infos (titles, server, filename, tabindex, x, y, classic and modern icon), move pages with their icons, move replicas on top
+
+## Security API
+* **SSO token computation** (with tokens also working on Websphere)
+* APIs to **get/put/sync IDs with the ID Vault** and to **sign/encrypt/decrypt** documents and attachments
+
+
+# Warning
 
 **The project gives access to some really low level functions of HCL Notes/Domino. Using them in the wrong way or sending unexpected parameter values might crash your application server, so make sure you know what you are doing and test your code on a local machine first!**
 
 One reason for open sourcing all this stuff was to get more hands on it and make it as robust as possible.
 
-## Supported platforms
+# Supported platforms
 The code should run in 32 and 64 bit Notes Client and Domino server environments on Windows, Linux and Mac.
 
 It is not expected to run without changes on other platforms, mainly because of little endian / big endian differences or memory alignments, but
 we don't currently have access to those platforms anyway.
 
-## XPages
+# XPages
 Domino JNA can be used in XPages applications!
 
 See the [release](https://github.com/klehmann/domino-jna/releases) section for ready to install builds.
@@ -77,7 +123,7 @@ If you are having **trouble getting Domino JNA to work in Designer 9.0.1 FP10 or
 
 In short, you need to add ```<notesdata>\workspace\applications\eclipse``` to your target platform (replace ```<notesdata>``` with your data directory path).
 
-## Maven
+# Maven
 Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna](https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna).
 
 ```xml
@@ -90,10 +136,10 @@ Domino JNA is available on Maven Central: [https://mvnrepository.com/artifact/co
 
 Snapshot releases may be provided on [https://oss.sonatype.org/content/repositories/snapshots](https://oss.sonatype.org/content/repositories/snapshots) for bug analysis purpose, e.g. via a Github issue.
 
-## Standalone applications
+# Standalone applications
 There is a [sample application](https://github.com/klehmann/domino-jna/tree/master/standalone-app-sample) available that demonstrates how to use Domino JNA in standalone Java applications.
 
-## Usage
+# Usage
 Here is a code snippet for the API usage. It opens a database and filters view entries.
 
 ```java
@@ -189,7 +235,7 @@ the C API), `NotesNote` (a document) or `NotesIDTable` do have a `recycle()` met
 
 When running in an XPages environment, `NotesGC.runWithAutoGC` can be omitted when the code processes a HTTP request (e.g. an XAgent). It is only required if you run code in separate threads, e.g. using the `SessionCloner` class.
 
-## Further information
+# Further information
 * [New on Github: Domino JNA - Cross-platform access to IBM/HCL Notes/Domino C API methods from Java](http://www.mindoo.com/web/blog.nsf/dx/08.04.2016191137KLEN6U.htm?opendocument&comments)
 * [Big update for Domino JNA project on Github](http://www.mindoo.com/web/blog.nsf/dx/11.07.2016233301KLETA8.htm?opendocument&comments)
 * [New APIs for Domino JNA project, now available for XPages development](http://www.mindoo.com/web/blog.nsf/dx/16.01.2017082125KLEAMY.htm?opendocument&comments)
@@ -198,7 +244,7 @@ When running in an XPages environment, `NotesGC.runWithAutoGC` can be omitted wh
 * [Query Domino data and faceted search with Domino JNA (part 2) by Mark Leusink](http://linqed.eu/2018/10/08/query-domino-data-and-faceted-search-with-domino-jna-part-2/)
 * [Query Domino data with Domino JNA (part 3): REST API and infinite scroll by Mark Leusink](http://linqed.eu/2018/11/02/query-domino-data-with-domino-jna-part-3-rest-api-and-infinite-scroll/)
 
-## Next steps
+# Next steps
 This project is not done yet, this is just the beginning.
 Here are some of the things that we plan to do:
 
@@ -207,21 +253,21 @@ Here are some of the things that we plan to do:
 * write more testcases
 * add more syntactical sugar, hide complexity
 
-## Licence
+# Licence
 The code is available under Apache 2.0 license.
 
 Copyright by [Mindoo GmbH](http://www.mindoo.com)
 
-## Java Profiler
+# Java Profiler
 For development, we are using [JProfiler Java profiler](https://www.ej-technologies.com/products/jprofiler/overview.html).
 It's the perfect tool to analyze performance bottlenecks and memory leaks.
 
 ![JProfiler logo](https://www.ej-technologies.com/images/product_banners/jprofiler_small.png)
 
-## Creating your own build
+# Creating your own build
 The following instructions are only relevant when you want to create your own Domino JNA release version.
 
-### Registration of local Notes.jar, lwpd.commons.jar and lwpd.domino.napi.jar
+## Registration of local Notes.jar, lwpd.commons.jar and lwpd.domino.napi.jar
 There are three JAR files that are part of every Notes Client installation and that are required to compile the Domino JNA code.
 
 On macOS, you can find the files in these locations:
@@ -257,7 +303,7 @@ mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\osgi\shared\ec
 mvn install:install-file -Dfile="C:\Program Files (x86)\HCL\Notes\osgi\shared\eclipse\plugins\com.ibm.domino.napi_-version-\lwpd.domino.napi.jar" -DgroupId=com.ibm -DartifactId=napi -Dversion=11.0.0 -Dpackaging=jar
 ```
 
-### Maven build
+## Maven build
 
 **Mac:**
 On Mac, use this syntax to build Domino JNA against the Notes Client:
@@ -275,13 +321,13 @@ mvn -DJVMPARAMS= -DDOMINOOSGIDIR="C:\Program Files (x86)\HCL\Notes\osgi" -DDOMIN
 
 After the build is done, the directory `target/lib` contains all recursive dependencies required to use the library, e.g. JNA and Apache tool libraries.
 
-### Running the test cases
+## Running the test cases
 The project contains a number of test cases that demonstrate how the API is used. The project is not ready to run the tests automatically as part of the build. That's why they are disabled by default and should only be run manually for now.
 
 We are still working on the tests to make the more robust and let them set up their required test environment.
 In addition there are issues in macOS when running the tests via Surefire plugin, because DYLD_LIBRARY_PATH is not allowed to be set via bash scripts anymore, causing load errors for libnotes.dylib, libxml.dylib and others.
 
-#### Sample databases
+## Sample databases
 The test cases use sample databases that we provide for download and will update from time to time depending on the requirements of newer testcases.
 
 You can download the two sample databases fakenames.nsf and fakenames-views.nsf from this URL:
@@ -314,7 +360,7 @@ NotesINI=/Users/klehmann/Library/Preferences/Notes Preferences
 PATH=/Applications/HCL Notes.app/Contents/MacOS
 ```
 
-### Creating XPages plugin build
+## Creating XPages plugin build
 The projects `com.mindoo.domino.jna.xsp.build` and `domino-target` contain build scripts to use Domino JNA in XPages applications, similar to HCL's XPages Extension Library.
 
 Please use the following steps to create a build or just download a binary build from the "releases" section.
@@ -338,7 +384,7 @@ This copies the current Domino JNA source code from project `domino-jna` into tw
 
 You can find the created Update Site in directory `com.mindoo.domino.jna.xsp-updatesite/target/site`.
 
-## Dependencies
+# Dependencies
 The code uses the following open source projects:
 
 [metadata-extractor](https://github.com/drewnoakes/metadata-extractor)
@@ -347,6 +393,6 @@ for image file metadata extraction, available under Apache 2.0 license
 [Apache Commons Collections 4](https://commons.apache.org/proper/commons-collections/)
 for case insensitive maps, available under Apache 2.0 license
 
-[ICU4J](http://site.icu-project.org/home/why-use-icu4j)
-for LMBCS - Java String conversion without C API calls, [license](https://github.com/unicode-org/icu/blob/master/icu4c/LICENSE)
+[cglib](https://github.com/cglib/cglib)
+for bytecode manipulation, available under Apache 2.0 license
 
