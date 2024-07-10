@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-base</artifactId>
-		<version>0.9.49-SNAPSHOT</version>
+		<version>0.9.51-SNAPSHOT</version>
 	</parent>
 
 	<name>Domino JNA</name>
@@ -84,7 +84,7 @@
 						<configuration>
 							<serverId>nexus-releases</serverId>
 							<nexusUrl>https://oss.sonatype.org/</nexusUrl>
-							<autoReleaseAfterClose>true</autoReleaseAfterClose>
+							<!--<autoReleaseAfterClose>true</autoReleaseAfterClose>-->
 							<!-- explicit matching using the staging profile id -->
 							<!-- <stagingProfileId>49650ad66a37c6</stagingProfileId> -->
 						</configuration>

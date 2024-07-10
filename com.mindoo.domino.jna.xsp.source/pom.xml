@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>com.mindoo.domino</groupId>
 		<artifactId>domino-jna-xsp-build</artifactId>
-		<version>0.9.49-SNAPSHOT</version>
+		<version>0.9.51-SNAPSHOT</version>
 		<relativePath>../com.mindoo.domino.jna.xsp.build</relativePath>
 	</parent>
 

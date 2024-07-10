@@ -2306,7 +2306,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 * @param retUntil A pointer to a {@link NotesTimeDate} structure into which the ending time of this search will be returned.  This can subsequently be used as the starting time in a later search.
 	 * @return newly allocated ID Table, you are responsible for freeing the storage when you are done with it using {@link NotesIDTable#recycle()}
 	 */
-	public NotesIDTable getModifiedNoteTable(EnumSet<NoteClass> noteClassMaskEnum, NotesTimeDate since, NotesTimeDate retUntil) {
+	public NotesIDTable getModifiedNoteTable(Set<NoteClass> noteClassMaskEnum, NotesTimeDate since, NotesTimeDate retUntil) {
 		short noteClassMask = NoteClass.toBitMask(noteClassMaskEnum);
 
 		return getModifiedNoteTable(noteClassMask, since, retUntil);

@@ -469,7 +469,7 @@ public class NotesMarkdownTable {
 	/**
 	 * Table column for the child count of the view entry
 	 */
-	public static final ColumnInfo CHILDCOUNT = new ColumnInfo("ChildCount", 12, (table, entry) -> {
+	public static final ColumnInfo CHILDCOUNT = new ColumnInfo("ChildCount", 10, (table, entry) -> {
 		return Integer.toString(entry.getChildCount());
 	});
 	
@@ -483,8 +483,15 @@ public class NotesMarkdownTable {
 	/**
 	 * Table column for the descendant count of the view entry
 	 */
-	public static final ColumnInfo DESCENDANTCOUNT = new ColumnInfo("DescendantCount", 12, (table, entry) -> {
+	public static final ColumnInfo DESCENDANTCOUNT = new ColumnInfo("DescendantCount", 15, (table, entry) -> {
 		return Integer.toString(entry.getDescendantCount());
+	});
+
+	/**
+	 * Table column for the indent levels of the view entry
+	 */
+	public static final ColumnInfo INDENTLEVELS = new ColumnInfo("IndentLevels", 12, (table, entry) -> {
+		return Integer.toString(entry.getIndentLevels());
 	});
 
 	/**
@@ -566,28 +573,39 @@ public class NotesMarkdownTable {
 				if (entry.isCategory()) {
 					String sVal;
 					int level = entry.getLevel();
+					int indentLevels = entry.getIndentLevels();
+					
 					if (table.m_realView != null) {
 						if (level == -1) {
 							//ReadMask.INDEX_POSITION not loaded from view
 							return "(no index position found)";
 						}
-						int indentLevels = ((NotesViewEntryData)entry).getIndentLevels();
 
-						NotesViewColumn col = table.m_realView.getColumns().get(level);
-						Object categoryVal = entry.get(col.getItemName());
-						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
+						Object categoryVal = null;
+						for (int i=table.m_realView.getColumns().size()-1; i>=0; i--) {
+							NotesViewColumn col = table.m_realView.getColumns().get(i);
+							if (col.isCategory()) {
+								categoryVal = entry.get(col.getItemName());
+								if (categoryVal != null) {
+									break;
+								}
+							}
+						}
+						if (categoryVal == null || "".equals(categoryVal)) {
+							categoryVal = "(Not categorized)";
+						}
+						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
 					}
 					else {
 						if (level == -1) {
 							//for virtual views, -1 means the artificial root entry
 							return "";
 						}
-						VirtualViewColumn col = table.m_virtualView.getColumns().get(level);
-						Object categoryVal = entry.get(col.getItemName());
-						sVal = StringUtil.repeat(' ', level) + String.valueOf(categoryVal);
-					}
-					if (StringUtil.isEmpty(sVal)) {
-						sVal = "(not categorized)";
+						Object categoryVal = ((VirtualViewEntryData)entry).getCategoryValue();
+						if (categoryVal == null || "".equals(categoryVal)) {
+							categoryVal = "(Not categorized)";
+						}
+						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
 					}
 					return sVal;
 				}

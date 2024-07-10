@@ -55,4 +55,13 @@ public interface IViewEntryData extends INoteSummary {
 	 * @return level
 	 */
 	int getLevel();
+	
+	/**
+	 * For category entries where the category contains a "\" character, this method returns the
+	 * index of the category entry (e.g. 1 for "level2" in the string "level1\level2").
+	 * 
+	 * @return indent level
+	 */
+	int getIndentLevels();
+	
 }

@@ -11,6 +11,7 @@ import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesFTSearchResult;
 import com.mindoo.domino.jna.NotesIDTable;
+import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;
@@ -82,6 +83,27 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		return origin;
 	}
 	
+	/**
+	 * By default, we exclude response documents from the virtual views, since the view indexer does not support response hierarchies.
+	 * <br>
+	 * Override this method to include response documents if your plan is to analyze responses, e.g. to build a lookup table for
+	 * the $ref field.
+	 * 
+	 * @return true by default
+	 */
+	protected boolean isExcludeResponseDocs() {
+		return true;
+	}
+	
+	private NotesIDTable getAllIds(NotesDatabase db, NotesIDTable loadedTable) {
+		if (loadedTable != null) {
+			return loadedTable;
+		}
+		NotesTimeDate allNoteIdsSince = new NotesTimeDate();
+		allNoteIdsSince.setMinimum();
+		return db.getModifiedNoteTable(noteClasses, allNoteIdsSince, null);
+	}
+	
 	@Override
 	public void update() {
 		if (view == null) {
@@ -105,17 +127,22 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 		//compute readers lists
 		formulas.put("$C1$", "");
 
-		NotesDatabase db = getDatabase();
+		boolean noRefDocs = isExcludeResponseDocs();
+		if (noRefDocs) {
+			formulas.put("$REF_Text", "@Text($REF)");
+		}
 		
+		NotesDatabase db = getDatabase();
+
+		NotesIDTable allIds = null;
+
 		NotesIDTable idTableFilter = null;
-		if (since ==null && noteIdFilter != null) {
-			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
-			allNoteIdsSince.setMinimum();
-			NotesIDTable allIds = db.getModifiedNoteTable(EnumSet.of(NoteClass.DATA), allNoteIdsSince, null);
+		if (since == null && noteIdFilter != null) {
 
 			//verify that the note ids in the filter are still valid, because NSFSearch throws an
 			//error if we pass invalid note ids
 			NotesIDTable noteIdFilterAsTable = new NotesIDTable(noteIdFilter);
+			allIds = getAllIds(db, allIds);
 			idTableFilter = noteIdFilterAsTable.intersect(allIds);
 			noteIdFilterAsTable.recycle();
 		}
@@ -131,9 +158,7 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 			NotesIDTable ftIdTable = ftResult.getMatches();
 			
 			//prevent any invalid note ids in the ft search result
-			NotesTimeDate allNoteIdsSince = new NotesTimeDate();
-			allNoteIdsSince.setMinimum();
-			NotesIDTable allIds = db.getModifiedNoteTable(EnumSet.of(NoteClass.DATA), allNoteIdsSince, null);
+			allIds = getAllIds(db, allIds);
 			idTableFilter = ftIdTable.intersect(allIds);
 		}
 		
@@ -164,13 +189,17 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 					public Action noteFound(NotesDatabase parentDb, ISearchMatch searchMatch,
 							IItemTableData summaryBufferData) {
 						
-						summaryBufferData.setPreferNotesTimeDates(true);						
 						int noteId = searchMatch.getNoteId();
 						String unid = searchMatch.getUNID();
+						
+						summaryBufferData.setPreferNotesTimeDates(true);						
 						Map<String,Object> values = summaryBufferData.asMap(true);
 						
 						boolean isAccepted = true;
-						if (noteIdFilter != null && !noteIdFilter.contains(noteId)) {
+						if (noRefDocs && StringUtil.isNotEmpty(summaryBufferData.getAsString("$REF_Text", ""))) {
+							isAccepted = false;
+						}
+						if (isAccepted && noteIdFilter != null && !noteIdFilter.contains(noteId)) {
 							isAccepted = false;
 						}
 						if (isAccepted && !isAccepted(searchMatch, summaryBufferData)) {
@@ -189,7 +218,7 @@ public class NotesSearchVirtualViewDataProvider extends AbstractNSFVirtualViewDa
 					}
 
 		});
-
+		
 		if (since != null && // not on the first run (there we already did the ft search above)
 				!StringUtil.isEmpty(optFTQuery)) {
 			//post process the collected IDs with a full text search

@@ -3,16 +3,18 @@ package com.mindoo.domino.jna.virtualviews;
 import java.util.Comparator;
 import java.util.List;
 
-import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.virtualviews.VirtualView.CategorizationStyle;
 
 /**
  * Comparator to sort {@link ViewEntrySortKey} objects within one level of the {@link VirtualView} tree structure
  */
 public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> {
+	private boolean categoriesOnTopOfDocuments;
 	private boolean categoryOrderDescending;
 	private boolean[] docOrderPerColumnDescending;
 	
-	public ViewEntrySortKeyComparator(boolean categoryOrderDescending, boolean[] docOrderDescending) {
+	public ViewEntrySortKeyComparator(CategorizationStyle categorizationStyle, boolean categoryOrderDescending, boolean[] docOrderDescending) {
+		this.categoriesOnTopOfDocuments = categorizationStyle == CategorizationStyle.CATEGORY_THEN_DOCUMENT;
 		this.categoryOrderDescending = categoryOrderDescending;
 		this.docOrderPerColumnDescending = docOrderDescending;
 	}
@@ -30,17 +32,17 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				Object catVal1 = values1.get(0);
 				Object catVal2 = values2.get(0);
 				
-				//sort null category values on top ("(no category)")
+				//sort null category values to the bottom ("(Not categorized)")
 				if (catVal1 == null) {
 					if (catVal2 == null) {
 						return 0;
 					} else {
-						return categoryOrderDescending ? 1 : -1;
+						return categoryOrderDescending ? -1 : 1;
 					}
 				}
 				else {
 					if (catVal2 == null) {
-						return categoryOrderDescending ? -1 : 1;
+						return categoryOrderDescending ? 1 : -1;
 					}
 					else {
 						//special case, LOW_SORTVAL always on top; we use LOW_SORTVAL and HIGH_SORTVAL to select all categories or all documents
@@ -96,17 +98,19 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 								return categoryOrderDescending ? -result : result;
 							}
 
-						} else if (catVal1 instanceof NotesTimeDate && catVal2 instanceof Comparable) {
-							NotesTimeDate time1 = (NotesTimeDate) catVal1;
-							NotesTimeDate time2 = (NotesTimeDate) catVal2;
-							int result = time1.compareTo(time2);
+						} else if (catVal1.getClass().equals(catVal2.getClass()) && catVal1 instanceof Comparable) {
+							int result = ((Comparable)catVal1).compareTo((Comparable)catVal2);
 							
 							if (result != 0) {
 								return categoryOrderDescending ? -result : result;
 							}
 
 						} else {
-							throw new IllegalArgumentException("Unsupported value type for category: " + catVal1.getClass());
+							String class1 = catVal1 != null ? catVal1.getClass().getName() : "null";
+							String class2 = catVal2 != null ? catVal2.getClass().getName() : "null";
+							
+							throw new IllegalArgumentException("Incompatible/unknown value types for category comparison: " +
+									"value1="+catVal1+" ("+class1+"), value2="+catVal2+" ("+class2+")");
 						}
 						
 						//category values are equal, now sort by origin and note id
@@ -116,14 +120,14 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				}
 			}
 			else {
-				//sort category above document
-				return -1;
+				//sort category above/below document
+				return categoriesOnTopOfDocuments ? -1 : 1;
 			}
 		}
 		else {
 			if (isCategory2) {
-				//sort document below category
-				return 1;
+				//sort document below/above category
+				return categoriesOnTopOfDocuments ? 1 : -1;
 			}
 			else {
 				//both are no categories, fall through to sort by values
@@ -169,16 +173,23 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 				return -1;
 			}
 
+			if ("".equals(currValue1)) {
+				currValue1 = null;
+			}
+			if ("".equals(currValue2)) {
+				currValue2 = null;
+			}
+			
 			if (currValue1 == null) {
 				if (currValue2 == null) {
 					continue;
 				} else {
-					return docOrderPerColumnDescending[i] ? 1 : -1;
+					return docOrderPerColumnDescending[i] ? -1 : 1;
 				}
 			}
 			else {
 				if (currValue2 == null) {
-					return docOrderPerColumnDescending[i] ? -1 : 1;
+					return docOrderPerColumnDescending[i] ? 1 : -1;
 				}
 				else {
 					if (currValue1 instanceof String && currValue2 instanceof String) {
@@ -197,38 +208,18 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 						if (result != 0) {
 							return docOrderPerColumnDescending[i] ? -result : result;
 						}
-					} else if (currValue1 instanceof NotesTimeDate && currValue2 instanceof NotesTimeDate) {
-						NotesTimeDate time1 = (NotesTimeDate) currValue1;
-						NotesTimeDate time2 = (NotesTimeDate) currValue2;
+					} else if (currValue1.getClass().equals(currValue2.getClass()) && currValue1 instanceof Comparable) {
+						int result = ((Comparable)currValue1).compareTo((Comparable)currValue2);
 						
-						// Ensure that we can compare the two temporals
-//						if (!o1.isSupported(ChronoField.INSTANT_SECONDS) || !o2.isSupported(ChronoField.INSTANT_SECONDS)) {
-//							throw new IllegalArgumentException("Both Temporals must support the INSTANT_SECONDS field for comparison");
-//						}
-//
-//						long epochSecond1 = o1.getLong(ChronoField.INSTANT_SECONDS);
-//						long epochSecond2 = o2.getLong(ChronoField.INSTANT_SECONDS);
-//
-//						// Compare the INSTANT_SECONDS, which represents the number of seconds from the Java epoch of 1970-01-01 (ISO).
-//						int compare = Long.compare(epochSecond1, epochSecond2);
-//
-//						if (compare != 0) {
-//							return compare;
-//						}
-//
-//						// If the INSTANT_SECONDS are equal, compare the nanosecond part.
-//						if (o1.isSupported(ChronoField.NANO_OF_SECOND) && o2.isSupported(ChronoField.NANO_OF_SECOND)) {
-//							int nanoOfSecond1 = o1.get(ChronoField.NANO_OF_SECOND);
-//							int nanoOfSecond2 = o2.get(ChronoField.NANO_OF_SECOND);
-//							return Integer.compare(nanoOfSecond1, nanoOfSecond2);
-//						}
-						
-						int result = time1.compareTo(time2);
 						if (result != 0) {
 							return docOrderPerColumnDescending[i] ? -result : result;
 						}
 					} else {
-						throw new IllegalArgumentException("Unsupported value type " + currValue1.getClass());
+						String class1 = currValue1 != null ? currValue1.getClass().getName() : "null";
+						String class2 = currValue2 != null ? currValue2.getClass().getName() : "null";
+						
+						throw new IllegalArgumentException("Incompatible/unknown value types for document comparison: index= " + i+
+								", value1="+currValue1+" ("+class1+"), value2="+currValue2+" ("+class2+")");
 					}
 				}
 			}

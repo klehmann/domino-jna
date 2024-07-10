@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.constants.FTSearch;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.constants.Search;
 import com.mindoo.domino.jna.utils.StringUtil;
+import com.mindoo.domino.jna.virtualviews.VirtualView.CategorizationStyle;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Category;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Hidden;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Total;
@@ -48,7 +49,7 @@ public enum VirtualViewFactory {
 	public static VirtualViewBuilder createView(VirtualViewColumn... columnsParam) {
 		return createView(Arrays.asList(columnsParam));
 	}
-	
+
 	/**
 	 * Creates a new {@link VirtualView} object with the specified columns
 	 * 
@@ -58,7 +59,7 @@ public enum VirtualViewFactory {
 	public static VirtualViewBuilder createView(List<VirtualViewColumn> columnsParam) {
 		return new VirtualViewBuilder(columnsParam);
 	}
-
+	
 	/**
 	 * Creates a new {@link VirtualView} object with the columns from the specified NotesCollection
 	 * 
@@ -70,6 +71,10 @@ public enum VirtualViewFactory {
 				.getColumns()
 				.stream()
 				.map((currCol) -> {
+					if (currCol.isResponse()) {
+						//skip response columns, unsupported
+						return null;
+					}
 					String title = currCol.getTitle();
 					String itemName = currCol.getItemName();
 					String formula = currCol.getFormula();
@@ -93,6 +98,7 @@ public enum VirtualViewFactory {
 					return new VirtualViewColumn(title, itemName, isCategory ? Category.YES : Category.NO, isHidden ? Hidden.YES : Hidden.NO, sort,
 							totalMode, formula);
                 })
+				.filter((currCol) -> currCol!=null)
 				.collect(Collectors.toList());
 		return new VirtualViewBuilder(virtualViewColumns);
 	}
@@ -112,6 +118,19 @@ public enum VirtualViewFactory {
 			return m_view;
 		}
 
+		/**
+		 * Method to chose the categorization style of the view, either
+		 * {@link CategorizationStyle#DOCUMENT_THEN_CATEGORY} (default style of Domino views) or
+		 * {@link CategorizationStyle#CATEGORY_THEN_DOCUMENT}
+		 * 
+		 * @param style categorization style
+		 * @return builder object to add more data providers
+		 */
+		public VirtualViewBuilder withCategorizationStyle(CategorizationStyle style) {
+			m_view.setCategorizationStyle(style);
+			return this;
+		}
+		
 		/**
 		 * Adds a data provider to the view that runs a formula search in a Notes database and for all matching data documents
 		 * it computes the view column values.
