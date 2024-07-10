@@ -591,7 +591,7 @@ public class NotesMarkdownTable {
 								}
 							}
 						}
-						if (categoryVal == null) {
+						if (categoryVal == null || "".equals(categoryVal)) {
 							categoryVal = "(Not categorized)";
 						}
 						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
@@ -602,7 +602,7 @@ public class NotesMarkdownTable {
 							return "";
 						}
 						Object categoryVal = ((VirtualViewEntryData)entry).getCategoryValue();
-						if (categoryVal == null) {
+						if (categoryVal == null || "".equals(categoryVal)) {
 							categoryVal = "(Not categorized)";
 						}
 						sVal = StringUtil.repeat(' ', level + indentLevels) + String.valueOf(categoryVal);
