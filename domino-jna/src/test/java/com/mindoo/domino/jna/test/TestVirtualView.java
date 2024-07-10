@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 
@@ -22,6 +24,7 @@ import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.utils.NotesIniUtils;
 import com.mindoo.domino.jna.utils.NotesMarkdownTable;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
+import com.mindoo.domino.jna.virtualviews.VirtualView.CategorizationStyle;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Category;
 import com.mindoo.domino.jna.virtualviews.VirtualViewColumn.Hidden;
@@ -40,7 +43,7 @@ public class TestVirtualView extends BaseJNATestClass {
 	 * Sample to compute sums/averages, use categories and fetch additional data from an external source
 	 * (poor man's join)
 	 */
-	@Test
+//	@Test
 	public void testDataJoin() {
 		runWithSession(new IDominoCallable<Object>() {
 
@@ -905,4 +908,229 @@ public class TestVirtualView extends BaseJNATestClass {
 		
 	}
 	
+	/**
+	 * Sample to just read category structures from the virtual view and skip any documents
+	 */
+//	@Test
+	public void testNavigatorWithCategoriesOnly() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				long update_t0=System.currentTimeMillis();
+				
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_lastnamefirstname_catsonly",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+							new VirtualViewColumn("Lastname", "Lastname",
+									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname",
+									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Firstname")
+
+
+
+							)
+							.withDbSearch("myfakenames1",
+									"", DBPATH_FAKENAMES_NSF,
+									"Form=\"Person\"")
+							.withCategorizationStyle(CategorizationStyle.DOCUMENT_THEN_CATEGORY)
+							.build();
+				});
+				
+				long update_t1=System.currentTimeMillis();
+
+				System.out.println("Time to generate view structure: "+(update_t1-update_t0)+"ms");
+
+				{
+					//read the whole category structure
+					StringWriter sWriter = new StringWriter();
+					PrintWriter pWriter = new PrintWriter(sWriter);
+					
+					long nav_t0=System.currentTimeMillis();
+					
+					VirtualViewNavigator nav = view
+							.createViewNav()
+							.withCategories()
+							.build()
+							.expandAll();
+
+					new NotesMarkdownTable(nav, pWriter)
+					.addColumn(NotesMarkdownTable.EXPANDSTATE)
+					.addColumn(NotesMarkdownTable.POS)
+					.addColumn(NotesMarkdownTable.CATEGORY)
+					.addColumn(NotesMarkdownTable.NOTEID)
+					.addColumn(NotesMarkdownTable.UNID)
+					.addAllViewColumns()
+
+					.printHeader()
+					.printRows(nav.entriesForward(SelectedOnly.NO))
+					.printFooter();
+
+					long nav_t1=System.currentTimeMillis();
+					System.out.println("Time to navigate view structure: "+(nav_t1-nav_t0)+"ms");
+					
+					System.out.println(sWriter);
+				}
+				
+				{
+					//read a single category
+					StringWriter sWriter = new StringWriter();
+					PrintWriter pWriter = new PrintWriter(sWriter);
+
+					long nav_t0=System.currentTimeMillis();
+					
+					VirtualViewNavigator nav = view
+							.createViewNav()
+							.withCategories()
+							.buildFromCategory("Abbott")
+							.expandAll();
+
+					new NotesMarkdownTable(nav, pWriter)
+					.addColumn(NotesMarkdownTable.EXPANDSTATE)
+					.addColumn(NotesMarkdownTable.POS)
+					.addColumn(NotesMarkdownTable.CATEGORY)
+					.addColumn(NotesMarkdownTable.NOTEID)
+					.addColumn(NotesMarkdownTable.UNID)
+					.addAllViewColumns()
+
+					.printHeader()
+					.printRows(nav.entriesForward(SelectedOnly.NO))
+					.printFooter();
+
+					long nav_t1=System.currentTimeMillis();
+					System.out.println("Time to navigate view structure for single category Abbott: "+(nav_t1-nav_t0)+"ms");
+					
+					System.out.println(sWriter);
+				}
+
+				{
+					//combine two category lookups
+					long nav_t0=System.currentTimeMillis();
+					
+					VirtualViewNavigator nav1 = view
+							.createViewNav()
+							.withCategories()
+							.buildFromCategory("Zamora")
+							.expandAll();
+
+					VirtualViewNavigator nav2 = view
+							.createViewNav()
+							.withCategories()
+							.buildFromCategory("Adams")
+							.expandAll();
+
+					Stream<VirtualViewEntryData> stream1 = nav1.entriesForward(SelectedOnly.NO);
+					Stream<VirtualViewEntryData> stream2 = nav2.entriesForward(SelectedOnly.NO);
+					
+					//concatenate the two streams and sort by category name (firstname)
+					Stream<VirtualViewEntryData> combinedStream = Stream
+							.concat(stream1, stream2)
+							.sorted((e1, e2) -> String.valueOf(e1.getCategoryValue()).compareTo(String.valueOf(e2.getCategoryValue())));
+					
+					System.out.println("All firstnames in categories Zamora and Adams:");
+					combinedStream.forEach(e -> System.out.println(e.getCategoryValue()));
+
+					long nav_t1=System.currentTimeMillis();
+					System.out.println("Time to navigate view structure for single category Abbott: "+(nav_t1-nav_t0)+"ms");
+				}
+				
+				return null;
+			}
+		});
+
+	}
+	
+
+	/**
+	 * Sample to resort all docs in memory
+	 */
+//	@Test
+	public void testManualResort() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				long update_t0=System.currentTimeMillis();
+				
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_origindb_lastnamefirstname_catsonly",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+							new VirtualViewColumn("Lastname", "Lastname",
+									Category.NO, Hidden.NO, ColumnSort.DESCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname",
+									Category.NO, Hidden.NO, ColumnSort.DESCENDING, Total.NONE,
+									"Firstname"),
+
+							new VirtualViewColumn("Company", "CompanyName",
+									Category.NO, Hidden.NO, ColumnSort.NONE, Total.NONE,
+									"CompanyName")
+
+
+							)
+							.withDbSearch("myfakenames1",
+									"", DBPATH_FAKENAMES_NSF,
+									"Form=\"Person\"")
+							.build();
+				});
+				
+				long update_t1=System.currentTimeMillis();
+
+				System.out.println("Time to generate view structure: "+(update_t1-update_t0)+"ms");
+
+				StringWriter sWriter = new StringWriter();
+				PrintWriter pWriter = new PrintWriter(sWriter);
+				
+				long nav_t0=System.currentTimeMillis();
+				
+				VirtualViewNavigator nav = view
+						.createViewNav()
+						.build()
+						.expandAll();
+
+				//sort 40.000 entries in memory by company name, lastname and then firstname; this is just a test to see how long it takes (1 sec on my machine);
+				//this is not a recommended way to sort entries, because it consumes lots of CPU and memory, but it's possible
+				Stream<VirtualViewEntryData> entries = nav
+						.entriesForward(SelectedOnly.NO)
+						.filter((entry) -> entry.isDocument())
+						.sorted((e1, e2) -> {
+							int cmp = e1.getAsString("companyname", "").compareToIgnoreCase(e2.getAsString("companyname", ""));
+							if (cmp != 0) {
+								return cmp;
+							}
+							cmp = e1.getAsString("lastname", "").compareToIgnoreCase(e2.getAsString("lastname", ""));
+							if (cmp != 0) {
+								return cmp;
+							}
+							return e1.getAsString("firstname", "").compareToIgnoreCase(e2.getAsString("firstname", ""));
+						});
+
+				new NotesMarkdownTable(nav, pWriter)
+				.addColumn(NotesMarkdownTable.EXPANDSTATE)
+				.addColumn(NotesMarkdownTable.POS)
+				.addColumn(NotesMarkdownTable.CATEGORY)
+				.addColumn(NotesMarkdownTable.NOTEID)
+				.addColumn(NotesMarkdownTable.UNID)
+				.addAllViewColumns()
+				.addColumn("Company", 70, (table, entry) -> { return entry.getAsString("companyname", ""); })
+				.addColumn("Lastname", 70, (table, entry) -> { return entry.getAsString("lastname", ""); })
+				.addColumn("Firstname", 70, (table, entry) -> { return entry.getAsString("firstname", ""); })
+
+				.printHeader()
+				.printRows(entries)
+				.printFooter();
+
+				long nav_t1=System.currentTimeMillis();
+				System.out.println("Time to navigate view structure: "+(nav_t1-nav_t0)+"ms");
+				
+				System.out.println(sWriter);				
+				return null;
+			}
+		});
+
+	}
 }
