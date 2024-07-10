@@ -114,23 +114,6 @@ public class VirtualView {
 			docOrderDescending[i] = sortColumns.get(i).getSorting() == VirtualViewColumn.ColumnSort.DESCENDING;
 		}
 		
-		ViewEntrySortKeyComparator rootChildEntryComparator;
-		if (this.categoryColumns.isEmpty()) {
-			rootChildEntryComparator = new ViewEntrySortKeyComparator(
-					categorizationStyle, false, this.docOrderDescending);
-		}
-		else {
-			rootChildEntryComparator = new ViewEntrySortKeyComparator(
-					categorizationStyle, this.categoryColumns.get(0).getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
-		}
-		
-		ViewEntrySortKey rootSortKey = ViewEntrySortKey.createSortKey(true, Collections.emptyList(), ORIGIN_VIRTUALVIEW, 0);
-		this.rootEntryNoteId = createNewCategoryNoteId();
-		this.rootEntry = new VirtualViewEntryData(this, null, ORIGIN_VIRTUALVIEW,
-				rootEntryNoteId, "", rootSortKey, rootChildEntryComparator);
-		this.rootEntry.setColumnValues(new ConcurrentHashMap<>());
-		this.rootEntry.setSiblingIndex(0);
-		
 		this.entriesByNoteId = new ConcurrentHashMap<>();
 	}
 	
@@ -448,6 +431,8 @@ public class VirtualView {
 			
 			//apply additions
 			
+			VirtualViewEntryData root = getRoot();
+			
 			for (Entry<Integer,EntryData> currEntry : change.getAdditions().entrySet()) {
 				int currNoteId = currEntry.getKey();
 				EntryData currData = currEntry.getValue();
@@ -455,7 +440,7 @@ public class VirtualView {
 				Map<String,Object> columnValues = currData.getValues();
 
 				List<VirtualViewEntryData> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
-						rootEntry, this.categoryColumns, true);
+						root, this.categoryColumns, true);
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
                 entriesByNoteId.put(scopedNoteId, addedViewEntries);
 			}
@@ -575,7 +560,7 @@ public class VirtualView {
 			ViewEntrySortKey sortKey = ViewEntrySortKey.createSortKey(false, docSortValues, origin, noteId);
 
 			ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
-					categorizationStyle, false, this.docOrderDescending);
+					getCategorizationStyle(), false, this.docOrderDescending);
 
 			VirtualViewEntryData newDocChild = new VirtualViewEntryData(this,
 					targetParent, origin, noteId,
@@ -605,29 +590,23 @@ public class VirtualView {
 		
 		List<Object> multipleCategoryValues;
 		
+		//make sure this is a list,
 		//special case: empty or null category value
-		if (valuesForColumn == null) {
+		if (
+				valuesForColumn == null ||
+				"".equals(valuesForColumn) ||
+				(valuesForColumn instanceof List && ((List) valuesForColumn).isEmpty()) ||
+				(valuesForColumn instanceof List && ((List) valuesForColumn).size() ==1 && "".equals(((List) valuesForColumn).get(0)))				
+				) {
 			multipleCategoryValues = Arrays.asList(new Object[] {null} );
 		}
-		else if ("".equals(valuesForColumn)) {
-			multipleCategoryValues = Arrays.asList(new Object[] {null} );
-		}
-		else if (valuesForColumn instanceof List && ((List) valuesForColumn).isEmpty()) {
-			multipleCategoryValues = Arrays.asList(new Object[] {null} );
-		}
-		else if (valuesForColumn instanceof List &&
-				((List) valuesForColumn).size() ==1 &&
-				"".equals(((List) valuesForColumn).get(0))) {
-			multipleCategoryValues = Arrays.asList(new Object[] {null} );
-		}
-		
-		//make sure this is a list
-		if (valuesForColumn instanceof List) {
+		else if (valuesForColumn instanceof List) {
 			multipleCategoryValues = (List<Object>) valuesForColumn;
-		} else {
+		}
+		else {
 			multipleCategoryValues = Arrays.asList(valuesForColumn);
 		}
-
+		
 		//we can insert the document entry in multiple categories:
 		for (Object currCategoryValue : multipleCategoryValues) {
 			if (currCategoryValue instanceof String && ((String)currCategoryValue).contains("\\")) {
@@ -663,7 +642,7 @@ public class VirtualView {
 								childCategoryOrderingDescending = false;
 							}
 						}
-						ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(categorizationStyle, childCategoryOrderingDescending, this.docOrderDescending);
+						ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(getCategorizationStyle(), childCategoryOrderingDescending, this.docOrderDescending);
 
 						
 						int newCategoryNoteId = createNewCategoryNoteId();
@@ -716,7 +695,7 @@ public class VirtualView {
 						nextCategoryColumnSort = ColumnSort.DESCENDING;
 					}
 					ViewEntrySortKeyComparator childEntryComparator = new ViewEntrySortKeyComparator(
-							categorizationStyle, nextCategoryColumnSort == ColumnSort.DESCENDING, this.docOrderDescending);
+							getCategorizationStyle(), nextCategoryColumnSort == ColumnSort.DESCENDING, this.docOrderDescending);
 
 					int newCategoryNoteId = createNewCategoryNoteId();
 					entryWithSortKey = new VirtualViewEntryData(this, targetParent, ORIGIN_VIRTUALVIEW,
@@ -937,6 +916,24 @@ public class VirtualView {
 	 * @return root entry
 	 */
 	public VirtualViewEntryData getRoot() {
+		if (rootEntry == null) {
+			ViewEntrySortKeyComparator rootChildEntryComparator;
+			if (this.categoryColumns.isEmpty()) {
+				rootChildEntryComparator = new ViewEntrySortKeyComparator(
+						getCategorizationStyle(), false, this.docOrderDescending);
+			}
+			else {
+				rootChildEntryComparator = new ViewEntrySortKeyComparator(
+						getCategorizationStyle(), this.categoryColumns.get(0).getSorting() == ColumnSort.DESCENDING, this.docOrderDescending);
+			}
+			
+			ViewEntrySortKey rootSortKey = ViewEntrySortKey.createSortKey(true, Collections.emptyList(), ORIGIN_VIRTUALVIEW, 0);
+			rootEntryNoteId = createNewCategoryNoteId();
+			rootEntry = new VirtualViewEntryData(this, null, ORIGIN_VIRTUALVIEW,
+					rootEntryNoteId, "", rootSortKey, rootChildEntryComparator);
+			rootEntry.setColumnValues(new ConcurrentHashMap<>());
+			rootEntry.setSiblingIndex(0);
+		}
 		return rootEntry;
 	}
 
