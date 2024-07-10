@@ -316,6 +316,17 @@ public class VirtualViewNavigator {
 	 * then navigates through the view with {@link #gotoNext()}, returning
 	 * the entries as a stream. Takes the expand states into account.
 	 * 
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntryData> entriesForward() {
+		return entriesForward(SelectedOnly.NO);
+	}
+	
+	/**
+	 * Moves the cursor to the top of the view ({@link #gotoFirst()}) and
+	 * then navigates through the view with {@link #gotoNext()}, returning
+	 * the entries as a stream. Takes the expand states into account.
+	 * 
 	 * @param selectedOnly true to return only selected entries
 	 * @return stream of entries
 	 * @see #select(String, int, boolean)
@@ -345,8 +356,20 @@ public class VirtualViewNavigator {
 	 * then navigates through the view with {@link #gotoPrev()}, returning
 	 * the entries as a stream. Takes the expand states into account.
 	 * 
+	 * @return stream of entries
+	 */
+	public Stream<VirtualViewEntryData> entriesBackward() {
+		return entriesBackward(SelectedOnly.NO);
+	}
+	
+	/**
+	 * Moves the cursor to the end of the view ({@link #gotoLast()}) and
+	 * then navigates through the view with {@link #gotoPrev()}, returning
+	 * the entries as a stream. Takes the expand states into account.
+	 * 
 	 * @param selectedOnly true to return only selected entries
 	 * @return stream of entries
+	 * @see #select(String, int, boolean)
 	 */
 	public Stream<VirtualViewEntryData> entriesBackward(SelectedOnly selectedOnly) {
 		if (!gotoLast()) {
