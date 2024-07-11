@@ -46,6 +46,7 @@ Our own replacement for Domino views and the QueryResultsProcessor! See testcase
 * support for sums / average values, child and descendant counts
 * compute column values via formula or Java code
 * incremental view updates, so no rebuilt required
+* full control when the view is updated, optional read locks to have exclusive access
 * view is populated by the server, shared across users
 * for each user we check which view entries the user is allowed to see (checks DB ACL level and compares user names list for each DB with computed list of document readers list)
 * for category entries we accumulate the readers of all descendant docs to quickly skip categories that would be empty for a user
