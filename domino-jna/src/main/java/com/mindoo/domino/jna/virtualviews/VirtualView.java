@@ -129,7 +129,7 @@ public class VirtualView {
 	 * @param style categorization style
 	 * @return this view
 	 */
-	public VirtualView setCategorizationStyle(CategorizationStyle style) {
+	VirtualView setCategorizationStyle(CategorizationStyle style) {
 		if (!indexBuild) {
 			this.categorizationStyle = style;			
 		}
