@@ -432,7 +432,7 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 	int decreaseAndGetReader(String origin, String reader) {
 		String readerLC = reader.toLowerCase();
 		
-		return categoryReadersList.computeIfAbsent(origin, (key) -> {
+		Integer newVal = categoryReadersList.computeIfAbsent(origin, (key) -> {
 			return new ConcurrentHashMap<>();
 		})
 		.compute(readerLC, (key, oldVal) -> {
@@ -446,6 +446,8 @@ public class VirtualViewEntryData extends TypedItemAccess implements IViewEntryD
 				return oldVal - 1;
 			}
 		});
+		
+		return newVal == null ? 0 : newVal.intValue();
 	}
 
 	@Override

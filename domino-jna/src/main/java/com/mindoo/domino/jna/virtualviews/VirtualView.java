@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -399,8 +401,11 @@ public class VirtualView {
 			List<VirtualViewEntryData> categoryEntriesToCheck = new ArrayList<>();
 			
 			//apply removals
+			Set<Integer> noteIdsToRemove = new HashSet<>();
+			noteIdsToRemove.addAll(change.getRemovals());
+			noteIdsToRemove.addAll(change.getAdditions().keySet());
 			
-			for (int currNoteId : change.getRemovals()) {
+			for (int currNoteId : noteIdsToRemove) {
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
 				List<VirtualViewEntryData> entries = entriesByNoteId.remove(scopedNoteId);
 				if (entries != null) {
