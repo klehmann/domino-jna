@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
@@ -61,6 +62,7 @@ public class VirtualView {
 	private AtomicLong categoryNoteId = new AtomicLong(4);
 	private CategorizationStyle categorizationStyle = CategorizationStyle.DOCUMENT_THEN_CATEGORY;
 	private boolean indexBuild = false;
+	private NotesTimeDate lastIndexUpdateTime;
 	
 	/** contains the occurences of a note id in the view */
 	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
@@ -396,6 +398,7 @@ public class VirtualView {
 		viewChangeLock.writeLock().lock();
 		try {
 			indexBuild = true;
+			boolean indexChanged = false;
 			
 			String origin = change.getOrigin();
 			List<VirtualViewEntryData> categoryEntriesToCheck = new ArrayList<>();
@@ -417,6 +420,7 @@ public class VirtualView {
 						
 						VirtualViewEntryData parentEntry = currEntry.getParent();
 						if (parentEntry.getChildEntriesAsMap().remove(currEntry.getSortKey()) != null) {
+							indexChanged = true;
 						    parentEntry.childCount.decrementAndGet();
 					    	parentEntry.childDocumentCount.decrementAndGet();
 
@@ -446,6 +450,9 @@ public class VirtualView {
 
 				List<VirtualViewEntryData> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
 						root, this.categoryColumns, true);
+				if (!addedViewEntries.isEmpty()) {
+					indexChanged = true;
+				}
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
                 entriesByNoteId.put(scopedNoteId, addedViewEntries);
 			}
@@ -455,15 +462,34 @@ public class VirtualView {
 			for (VirtualViewEntryData currCategoryEntry : categoryEntriesToCheck) {
 				if (currCategoryEntry.getChildEntriesAsMap().isEmpty()) {
 					removeCategoryFromParent(currCategoryEntry);
+					indexChanged = true;
 				}
 			}
 			
 			//assign new sibling indexes
 			processPendingSiblingIndexUpdates();
 			
+			if (indexChanged) {
+				lastIndexUpdateTime = NotesTimeDate.now();
+			}
 		} finally {
 			viewChangeLock.writeLock().unlock();
 		}
+	}
+	
+	/**
+	 * Returns the date/time the virtual view index was last changed (by adding/removing document or category entries)
+	 * 
+	 * @return date/time as milliseconds since the time 00:00:00 UTC on January 1, 1970
+	 */
+	public NotesTimeDate getLastModifiedTime() {
+		if (lastIndexUpdateTime == null) {
+			NotesTimeDate dummyTD = NotesTimeDate.now();
+			dummyTD.setAnyDate();
+			dummyTD.setAnyTime();
+			return dummyTD;
+		}
+		return lastIndexUpdateTime;
 	}
 	
 	/**
