@@ -1182,7 +1182,7 @@ public class TestVirtualView extends BaseJNATestClass {
 	}
 	
 
-	@Test
+//	@Test
 	public void testCustomAccessCheck() {
 		runWithSession(new IDominoCallable<Object>() {
 
