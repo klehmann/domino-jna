@@ -40,7 +40,6 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 	 * 
 	 * @param view virtual view
 	 * @param effectiveUserName name of the user to check access for
-	 * @param dontShowEmptyCategories true to skip categories that have no entries the user can see
 	 */
 	public ViewEntryAccessCheck(VirtualView view, String effectiveUserName) {
 		this.view = view;
