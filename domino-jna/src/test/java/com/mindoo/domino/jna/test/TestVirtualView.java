@@ -12,8 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.junit.Test;
 
 import com.mindoo.domino.jna.INoteSummary;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
@@ -1172,6 +1175,68 @@ public class TestVirtualView extends BaseJNATestClass {
 
 				Stream<VirtualViewEntryData> entries = nav.entriesForwardFromPosition("5", SelectedOnly.NO).limit(100);
 				assertTrue(entries.count() == 0);
+
+				return null;
+			}
+		});
+	}
+	
+
+	@Test
+	public void testCustomAccessCheck() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_bylastname",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+
+							new VirtualViewColumn("Lastname", "Lastname", Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname", Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Firstname")
+
+							)
+							.withDbSearch("myfakenames",
+									"", "fakenames.nsf",
+									"Form=\"Person\"")
+							.build();
+				});
+				
+				long nav_t0=System.currentTimeMillis();
+				
+				VirtualViewNavigator nav = view
+						.createViewNav()
+						.dontShowEmptyCategories()
+						.withCustomAccessCheck((ourNav, entry) -> {
+							// simulate that we can only read entries that have a lastname starting with "A"
+							if (entry.isCategory()) {
+								return true;
+							}
+							return entry.getAsString("lastname", "").endsWith("r");
+						})
+						.build()
+						.expandAll();
+
+				AtomicInteger docCount = new AtomicInteger(0);
+				AtomicInteger catCount = new AtomicInteger(0);
+				
+				nav.entriesForward().forEach(e -> {
+					if (e.isCategory()) {
+						catCount.incrementAndGet();
+					} else {
+						docCount.incrementAndGet();
+						assertTrue(e.getAsString("lastname", "").endsWith("r"));
+					}
+				});
+
+				assertTrue(catCount.get() > 0);
+				assertTrue(docCount.get() > 0);
+				
+				long nav_t1=System.currentTimeMillis();
+				System.out.println("Time to navigate view structure: "+(nav_t1-nav_t0)+"ms");
 
 				return null;
 			}

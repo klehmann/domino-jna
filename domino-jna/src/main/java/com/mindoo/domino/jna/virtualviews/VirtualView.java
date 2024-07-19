@@ -283,8 +283,7 @@ public class VirtualView {
 		private IViewEntryAccessCheck createAccessCheck() {
 			if (this.accessCheck == null) {
 				this.accessCheck = new ViewEntryAccessCheck(VirtualView.this,
-						StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
-								dontShowEmptyCategories);
+						StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName);
 			}
 			
 			return accessCheck;
@@ -297,7 +296,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator build() {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck());
+			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck(), dontShowEmptyCategories);
 		}
 		
 		/**
@@ -308,7 +307,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromDescendants(VirtualViewEntryData topEntry) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck());
+			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck(), dontShowEmptyCategories);
 		}
 		
 		/**
@@ -324,7 +323,7 @@ public class VirtualView {
 			String[] categoryParts = category.split("\\\\", -1);
 			
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), 
-					WithCategories.YES, WithDocuments.NO, accessCheck);
+					WithCategories.YES, WithDocuments.NO, accessCheck, dontShowEmptyCategories);
 			
 			VirtualViewEntryData currCategoryEntry = getRoot();
 			for (String currPart : categoryParts) {
@@ -344,7 +343,7 @@ public class VirtualView {
 			}
 			
 			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
-					accessCheck);
+					accessCheck, dontShowEmptyCategories);
 			return nav;
 		}
 		
@@ -359,7 +358,7 @@ public class VirtualView {
 			IViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), WithCategories.YES,
-					WithDocuments.NO, accessCheck);
+					WithDocuments.NO, accessCheck, dontShowEmptyCategories);
 
 			VirtualViewEntryData currCategoryEntry = getRoot();
 			for (Object currPart : categoryLevels) {
@@ -376,7 +375,7 @@ public class VirtualView {
 			}
 
 			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
-					accessCheck);
+					accessCheck, dontShowEmptyCategories);
 			return nav;
 		}
 	}
