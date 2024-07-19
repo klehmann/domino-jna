@@ -18,8 +18,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.utils.IDUtils;
@@ -29,6 +29,7 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithCategories;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithDocuments;
 import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
+import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
 import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
@@ -206,7 +207,7 @@ public class VirtualView {
 		private WithDocuments docs = null;
 		private boolean dontShowEmptyCategories = false;
 		
-		ViewEntryAccessCheck accessCheck;
+		IViewEntryAccessCheck accessCheck;
 		
 		private VirtualViewNavigatorBuilder(VirtualView view) {
 			this.view = view;
@@ -274,12 +275,12 @@ public class VirtualView {
 		 * @param accessCheck access check
 		 * @return builder
 		 */
-		public VirtualViewNavigatorBuilder withCustomAccessCheck(ViewEntryAccessCheck accessCheck) {
+		public VirtualViewNavigatorBuilder withCustomAccessCheck(IViewEntryAccessCheck accessCheck) {
 			this.accessCheck = accessCheck;
 			return this;
 		}
 		
-		private ViewEntryAccessCheck createAccessCheck() {
+		private IViewEntryAccessCheck createAccessCheck() {
 			if (this.accessCheck == null) {
 				this.accessCheck = new ViewEntryAccessCheck(VirtualView.this,
 						StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
@@ -318,7 +319,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromCategory(String category) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			ViewEntryAccessCheck accessCheck = createAccessCheck();
+			IViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			String[] categoryParts = category.split("\\\\", -1);
 			
@@ -355,7 +356,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromCategory(List<Object> categoryLevels) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			ViewEntryAccessCheck accessCheck = createAccessCheck();
+			IViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), WithCategories.YES,
 					WithDocuments.NO, accessCheck);
