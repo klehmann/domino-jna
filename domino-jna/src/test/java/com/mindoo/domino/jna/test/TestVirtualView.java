@@ -1,10 +1,11 @@
 package com.mindoo.domino.jna.test;
 
+import static org.junit.Assert.*;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -13,8 +14,6 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.junit.Test;
 
 import com.mindoo.domino.jna.INoteSummary;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
@@ -1075,6 +1074,7 @@ public class TestVirtualView extends BaseJNATestClass {
 							.withDbSearch("myfakenames1",
 									"", DBPATH_FAKENAMES_NSF,
 									"Form=\"Person\"")
+							.withCategorizationStyle(CategorizationStyle.CATEGORY_THEN_DOCUMENT) // let's move the categories above the docs like in Windows Explorer
 							.build();
 				});
 				
@@ -1089,6 +1089,7 @@ public class TestVirtualView extends BaseJNATestClass {
 				
 				VirtualViewNavigator nav = view
 						.createViewNav()
+						.dontShowEmptyCategories()
 						.build()
 						.expandAll();
 
@@ -1133,4 +1134,48 @@ public class TestVirtualView extends BaseJNATestClass {
 		});
 
 	}
+	
+//	@Test
+	public void testSingleCategoryNavigatorScope() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames2_bycontinent",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+							
+							new VirtualViewColumn("Lastname letter", "$2", Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+							"@Left(Lastname;1) + \"\\\\\" + Lastname"),
+
+							new VirtualViewColumn("Lastname", "Lastname", Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname", Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Firstname"),
+
+							new VirtualViewColumn("CompanyName", "CompanyName", Category.NO, Hidden.YES, ColumnSort.NONE, Total.NONE,
+									"CompanyName")
+
+							)
+							.withDbSearch("myfakenames1",
+									"", "fakenames.nsf",
+									"Form=\"Person\"")
+							.build();
+				});
+				
+				VirtualViewNavigator nav = view
+						.createViewNav()
+						.dontShowEmptyCategories()
+						.buildFromCategory("A") // probably "1", an any case not "5" where we will try to start reading
+						.expandAll();
+
+				Stream<VirtualViewEntryData> entries = nav.entriesForwardFromPosition("5", SelectedOnly.NO).limit(100);
+				assertTrue(entries.count() == 0);
+
+				return null;
+			}
+		});
+	}
+	
 }
