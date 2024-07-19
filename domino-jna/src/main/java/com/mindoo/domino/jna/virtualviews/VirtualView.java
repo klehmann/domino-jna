@@ -267,10 +267,25 @@ public class VirtualView {
 			return this;
 		}
 		
+		/**
+		 * Sets a custom access check implementation that checks if the user has read access to a view entry.<br>
+		 * By default, the view navigator uses the {@link ViewEntryAccessCheck}.
+		 * 
+		 * @param accessCheck access check
+		 * @return builder
+		 */
+		public VirtualViewNavigatorBuilder withCustomAccessCheck(ViewEntryAccessCheck accessCheck) {
+			this.accessCheck = accessCheck;
+			return this;
+		}
+		
 		private ViewEntryAccessCheck createAccessCheck() {
-			ViewEntryAccessCheck accessCheck = new ViewEntryAccessCheck(VirtualView.this,
-					StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
-							dontShowEmptyCategories);
+			if (this.accessCheck == null) {
+				this.accessCheck = new ViewEntryAccessCheck(VirtualView.this,
+						StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
+								dontShowEmptyCategories);
+			}
+			
 			return accessCheck;
 		}
 		
