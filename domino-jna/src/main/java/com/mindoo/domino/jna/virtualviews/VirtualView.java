@@ -5,18 +5,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.TypedItemAccess;
 import com.mindoo.domino.jna.utils.IDUtils;
@@ -26,6 +29,7 @@ import com.mindoo.domino.jna.virtualviews.VirtualViewDataChange.EntryData;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithCategories;
 import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator.WithDocuments;
 import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
+import com.mindoo.domino.jna.virtualviews.security.IViewEntryAccessCheck;
 import com.mindoo.domino.jna.virtualviews.security.ViewEntryAccessCheck;
 
 /**
@@ -59,6 +63,7 @@ public class VirtualView {
 	private AtomicLong categoryNoteId = new AtomicLong(4);
 	private CategorizationStyle categorizationStyle = CategorizationStyle.DOCUMENT_THEN_CATEGORY;
 	private boolean indexBuild = false;
+	private NotesTimeDate lastIndexUpdateTime;
 	
 	/** contains the occurences of a note id in the view */
 	private Map<ScopedNoteId,List<VirtualViewEntryData>> entriesByNoteId;
@@ -125,7 +130,7 @@ public class VirtualView {
 	 * @param style categorization style
 	 * @return this view
 	 */
-	public VirtualView setCategorizationStyle(CategorizationStyle style) {
+	VirtualView setCategorizationStyle(CategorizationStyle style) {
 		if (!indexBuild) {
 			this.categorizationStyle = style;			
 		}
@@ -202,7 +207,7 @@ public class VirtualView {
 		private WithDocuments docs = null;
 		private boolean dontShowEmptyCategories = false;
 		
-		ViewEntryAccessCheck accessCheck;
+		IViewEntryAccessCheck accessCheck;
 		
 		private VirtualViewNavigatorBuilder(VirtualView view) {
 			this.view = view;
@@ -263,10 +268,24 @@ public class VirtualView {
 			return this;
 		}
 		
-		private ViewEntryAccessCheck createAccessCheck() {
-			ViewEntryAccessCheck accessCheck = new ViewEntryAccessCheck(VirtualView.this,
-					StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName,
-							dontShowEmptyCategories);
+		/**
+		 * Sets a custom access check implementation that checks if the user has read access to a view entry.<br>
+		 * By default, the view navigator uses the {@link ViewEntryAccessCheck}.
+		 * 
+		 * @param accessCheck access check
+		 * @return builder
+		 */
+		public VirtualViewNavigatorBuilder withCustomAccessCheck(IViewEntryAccessCheck accessCheck) {
+			this.accessCheck = accessCheck;
+			return this;
+		}
+		
+		private IViewEntryAccessCheck createAccessCheck() {
+			if (this.accessCheck == null) {
+				this.accessCheck = new ViewEntryAccessCheck(VirtualView.this,
+						StringUtil.isEmpty(effectiveUserName) ? IDUtils.getIdUsername() : effectiveUserName);
+			}
+			
 			return accessCheck;
 		}
 		
@@ -277,7 +296,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator build() {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck());
+			return new VirtualViewNavigator(this.view, this.view.getRoot(), cats, docs, createAccessCheck(), dontShowEmptyCategories);
 		}
 		
 		/**
@@ -288,7 +307,7 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromDescendants(VirtualViewEntryData topEntry) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck());
+			return new VirtualViewNavigator(this.view, topEntry, cats, docs, createAccessCheck(), dontShowEmptyCategories);
 		}
 		
 		/**
@@ -299,12 +318,12 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromCategory(String category) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			ViewEntryAccessCheck accessCheck = createAccessCheck();
+			IViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			String[] categoryParts = category.split("\\\\", -1);
 			
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), 
-					WithCategories.YES, WithDocuments.NO, accessCheck);
+					WithCategories.YES, WithDocuments.NO, accessCheck, dontShowEmptyCategories);
 			
 			VirtualViewEntryData currCategoryEntry = getRoot();
 			for (String currPart : categoryParts) {
@@ -324,7 +343,7 @@ public class VirtualView {
 			}
 			
 			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
-					accessCheck);
+					accessCheck, dontShowEmptyCategories);
 			return nav;
 		}
 		
@@ -336,10 +355,10 @@ public class VirtualView {
 		 */
 		public VirtualViewNavigator buildFromCategory(List<Object> categoryLevels) {
 			fillWithCategoriesAndDocumentsWithDefaults();
-			ViewEntryAccessCheck accessCheck = createAccessCheck();
+			IViewEntryAccessCheck accessCheck = createAccessCheck();
 
 			VirtualViewNavigator findCategoryNav = new VirtualViewNavigator(this.view, getRoot(), WithCategories.YES,
-					WithDocuments.NO, accessCheck);
+					WithDocuments.NO, accessCheck, dontShowEmptyCategories);
 
 			VirtualViewEntryData currCategoryEntry = getRoot();
 			for (Object currPart : categoryLevels) {
@@ -356,7 +375,7 @@ public class VirtualView {
 			}
 
 			VirtualViewNavigator nav = new VirtualViewNavigator(this.view, currCategoryEntry, cats, docs,
-					accessCheck);
+					accessCheck, dontShowEmptyCategories);
 			return nav;
 		}
 	}
@@ -394,13 +413,17 @@ public class VirtualView {
 		viewChangeLock.writeLock().lock();
 		try {
 			indexBuild = true;
+			boolean indexChanged = false;
 			
 			String origin = change.getOrigin();
 			List<VirtualViewEntryData> categoryEntriesToCheck = new ArrayList<>();
 			
 			//apply removals
+			Set<Integer> noteIdsToRemove = new HashSet<>();
+			noteIdsToRemove.addAll(change.getRemovals());
+			noteIdsToRemove.addAll(change.getAdditions().keySet());
 			
-			for (int currNoteId : change.getRemovals()) {
+			for (int currNoteId : noteIdsToRemove) {
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
 				List<VirtualViewEntryData> entries = entriesByNoteId.remove(scopedNoteId);
 				if (entries != null) {
@@ -412,6 +435,7 @@ public class VirtualView {
 						
 						VirtualViewEntryData parentEntry = currEntry.getParent();
 						if (parentEntry.getChildEntriesAsMap().remove(currEntry.getSortKey()) != null) {
+							indexChanged = true;
 						    parentEntry.childCount.decrementAndGet();
 					    	parentEntry.childDocumentCount.decrementAndGet();
 
@@ -441,6 +465,9 @@ public class VirtualView {
 
 				List<VirtualViewEntryData> addedViewEntries = addEntry(origin, currNoteId, unid, columnValues,
 						root, this.categoryColumns, true);
+				if (!addedViewEntries.isEmpty()) {
+					indexChanged = true;
+				}
 				ScopedNoteId scopedNoteId = new ScopedNoteId(origin, currNoteId);
                 entriesByNoteId.put(scopedNoteId, addedViewEntries);
 			}
@@ -450,15 +477,34 @@ public class VirtualView {
 			for (VirtualViewEntryData currCategoryEntry : categoryEntriesToCheck) {
 				if (currCategoryEntry.getChildEntriesAsMap().isEmpty()) {
 					removeCategoryFromParent(currCategoryEntry);
+					indexChanged = true;
 				}
 			}
 			
 			//assign new sibling indexes
 			processPendingSiblingIndexUpdates();
 			
+			if (indexChanged) {
+				lastIndexUpdateTime = NotesTimeDate.now();
+			}
 		} finally {
 			viewChangeLock.writeLock().unlock();
 		}
+	}
+	
+	/**
+	 * Returns the date/time the virtual view index was last changed (by adding/removing document or category entries)
+	 * 
+	 * @return date/time as milliseconds since the time 00:00:00 UTC on January 1, 1970
+	 */
+	public NotesTimeDate getLastModifiedTime() {
+		if (lastIndexUpdateTime == null) {
+			NotesTimeDate dummyTD = NotesTimeDate.now();
+			dummyTD.setAnyDate();
+			dummyTD.setAnyTime();
+			return dummyTD;
+		}
+		return lastIndexUpdateTime;
 	}
 	
 	/**

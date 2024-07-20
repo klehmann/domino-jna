@@ -51,9 +51,11 @@ public class VirtualViewNavigator {
 	public enum SelectedOnly { YES, NO };
 	
 	private VirtualView view;
+	private VirtualViewEntryData topEntry;
 	private boolean withCategories;
 	private boolean withDocuments;
 	private IViewEntryAccessCheck viewEntryAccessCheck;
+	private boolean dontShowEmptyCategories;
 	
 	/** if selectAll==true, this set is treated as deselected list */
 	private Set<ScopedNoteId> selectedOrDeselectedEntries = ConcurrentHashMap.newKeySet();
@@ -75,8 +77,8 @@ public class VirtualViewNavigator {
 	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 */
 	public VirtualViewNavigator(VirtualView view, WithCategories cats, WithDocuments docs,
-			IViewEntryAccessCheck viewEntryAccessCheck) {
-		this(view, view.getRoot(), cats, docs, viewEntryAccessCheck);
+			IViewEntryAccessCheck viewEntryAccessCheck, boolean dontShowEmptyCategories) {
+		this(view, view.getRoot(), cats, docs, viewEntryAccessCheck, dontShowEmptyCategories);
 	}
 	
 	/**
@@ -89,8 +91,10 @@ public class VirtualViewNavigator {
 	 * @param viewEntryAccessCheck class to check {@link VirtualViewEntryData} visibility for a specific user
 	 */
 	public VirtualViewNavigator(VirtualView view, VirtualViewEntryData topEntry, WithCategories cats, WithDocuments docs,
-			IViewEntryAccessCheck viewEntryAccessCheck) {
+			IViewEntryAccessCheck viewEntryAccessCheck, boolean dontShowEmptyCategories) {
 		this.view = view;
+		this.topEntry = topEntry;
+		this.dontShowEmptyCategories = dontShowEmptyCategories;
 		this.withCategories = cats == WithCategories.YES;
 		this.withDocuments = docs == WithDocuments.YES;
 		if (!withCategories && !withDocuments) {
@@ -110,6 +114,10 @@ public class VirtualViewNavigator {
 		return view;
 	}
 	
+	public boolean isDontShowEmptyCategories() {
+		return dontShowEmptyCategories;
+	}
+	
 	/**
 	 * Moves the top element of this view navigator to the specified position, resulting in a subtree ("restrict to category")
 	 * 
@@ -118,6 +126,7 @@ public class VirtualViewNavigator {
 	 */
 	public VirtualViewNavigator setRoot(VirtualViewEntryData newRoot) {
 		TraversalInfo traversalInfo = new TraversalInfo(newRoot, withCategories, withDocuments);
+		this.topEntry = newRoot;
 		this.currentEntryStack = new Stack<>();
 		this.currentEntryStack.push(traversalInfo);
 		return this;
@@ -176,16 +185,40 @@ public class VirtualViewNavigator {
 	private Optional<VirtualViewEntryData> getPos(int[] pos, boolean moveCursor) {
 		Stack<TraversalInfo> newCurrentEntryStack = new Stack<>();
 		
-		VirtualViewEntryData parentEntry = view.getRoot();
+		int[] topEntryPos = topEntry.getPosition();
+		
+		if (!view.getRoot().equals(topEntry)) {
+			//for top level entries other than the root, we need to make sure that "pos" is
+			//within the subtree of the top entry
+			
+			if (pos.length < topEntryPos.length) {
+				return Optional.empty();
+			}
+			boolean match = true;
+			for (int i = 0; i < topEntryPos.length; i++) {
+				if (pos[i] != topEntryPos[i]) {
+					match = false;
+					break;
+				}
+			}
+			if (!match) {
+				return Optional.empty();
+			}
+		}
+		
+		int[] remainingPos = new int[pos.length - topEntryPos.length];
+		System.arraycopy(pos, topEntryPos.length, remainingPos, 0, remainingPos.length);
+		
+		VirtualViewEntryData parentEntry = topEntry;
 		TraversalInfo traversalInfo = new TraversalInfo(parentEntry, withCategories, withDocuments);
 		newCurrentEntryStack.push(traversalInfo);
 		
-		for (int i=0; i<pos.length; i++) {						
+		for (int i=0; i<remainingPos.length; i++) {						
 			if (traversalInfo.gotoFirst()) {
 				VirtualViewEntryData matchingEntry = null;
 				do {
 					VirtualViewEntryData currSearchEntry = traversalInfo.getCurrentEntry();
-					if (currSearchEntry.getSiblingIndex() == pos[i]) {
+					if (currSearchEntry.getSiblingIndex() == remainingPos[i]) {
 						matchingEntry = currSearchEntry;
 						break;
 					}
@@ -193,7 +226,7 @@ public class VirtualViewNavigator {
 				while (traversalInfo.gotoNextSibling());
 				
 				if (matchingEntry != null) {
-					if ((i+1) < pos.length) {
+					if ((i+1) < remainingPos.length) {
 						//more to do, scan the next level
 						traversalInfo = new TraversalInfo(matchingEntry, withCategories, withDocuments);
 						newCurrentEntryStack.push(traversalInfo);
@@ -220,6 +253,62 @@ public class VirtualViewNavigator {
 		}
 		
 		return Optional.empty();
+	}
+	
+	/**
+	 * Starts at the top entry and navigates throw the category tree to find the specified category
+	 * 
+	 * @param view view
+	 * @param category category path e.g. "Category1\\Category1.1"
+	 * @return entry if found
+	 */
+	public Optional<VirtualViewEntryData> findCategoryEntry(VirtualView view, String category) {
+		String[] categoryParts = category.split("\\\\", -1);
+		
+		VirtualViewEntryData currCategoryEntry = topEntry;
+		for (String currPart : categoryParts) {
+			VirtualViewEntryData matchingSubCategories = childCategoriesByKey(currCategoryEntry, currPart, true, false)
+					.findFirst()	
+					.orElse(null);
+			
+			if (matchingSubCategories == null) {
+				// category not found
+				currCategoryEntry = null;
+				break;
+			}
+			else {
+				currCategoryEntry = matchingSubCategories;
+			}
+		}
+
+		return Optional.ofNullable(currCategoryEntry);
+	}
+	
+	/**
+	 * Starts at the top entry and navigates throw the category tree to find the specified category
+	 * 
+	 * @param view view
+	 * @param categoryParts category path as list, e.g. ["Category1", "Category1.1"]
+	 * @return entry if found
+	 */
+	public Optional<VirtualViewEntryData> findCategoryEntry(VirtualView view, List<Object> categoryParts) {
+		VirtualViewEntryData currCategoryEntry = topEntry;
+		for (Object currPart : categoryParts) {
+			VirtualViewEntryData matchingSubCategories = childCategoriesBetween(currCategoryEntry, currPart, currPart, false)
+					.findFirst()	
+					.orElse(null);
+			
+			if (matchingSubCategories == null) {
+				// category not found
+				currCategoryEntry = null;
+				break;
+			}
+			else {
+				currCategoryEntry = matchingSubCategories;
+			}
+		}
+
+		return Optional.ofNullable(currCategoryEntry);
 	}
 	
 	/**
@@ -352,6 +441,36 @@ public class VirtualViewNavigator {
 	}
 	
 	/**
+	 * Moves the cursor to the start position  then navigates through the view with
+	 * {@link #gotoNext()}, returning
+	 * the entries as a stream. Takes the expand states into account.
+	 * 
+	 * @param startPos start position
+	 * @param selectedOnly true to return only selected entries
+	 * @return stream of entries
+	 * @see #select(String, int, boolean)
+	 */
+	public Stream<VirtualViewEntryData> entriesForwardFromPosition(String startPos, SelectedOnly selectedOnly) {
+		if (!gotoPos(startPos)) {
+			return Stream.empty();
+		}
+		
+		return StreamSupport
+				.stream(new Spliterators.AbstractSpliterator<VirtualViewEntryData>(Long.MAX_VALUE, Spliterator.ORDERED) {
+					@Override
+					public boolean tryAdvance(Consumer<? super VirtualViewEntryData> action) {
+						VirtualViewEntryData entry = getCurrentEntry();
+						if (selectedOnly == SelectedOnly.NO ||
+								(selectedOnly == SelectedOnly.YES && isSelected(entry.getOrigin(), entry.getNoteId()))) {
+							action.accept(getCurrentEntry());
+						}
+						return selectedOnly == SelectedOnly.YES ? gotoNextSelected() : gotoNext();
+					}
+				}, false);			
+	
+	}
+	
+	/**
 	 * Moves the cursor to the end of the view ({@link #gotoLast()}) and
 	 * then navigates through the view with {@link #gotoPrev()}, returning
 	 * the entries as a stream. Takes the expand states into account.
@@ -417,7 +536,7 @@ public class VirtualViewNavigator {
 				.values()
 				.stream()
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 	
@@ -459,7 +578,7 @@ public class VirtualViewNavigator {
 				.values()
 				.stream()
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 	
@@ -490,7 +609,7 @@ public class VirtualViewNavigator {
 				.values()
 				.stream()
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 	
@@ -532,8 +651,30 @@ public class VirtualViewNavigator {
 				.values()
 				.stream()
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
+	}
+	
+	private ThreadLocal<Boolean> inVisibilityCheck = ThreadLocal.withInitial(() -> false);
+	
+	/**
+	 * For security reasons, we need to check if a view entry is visible for the current user
+	 * 
+	 * @param entry entry to check
+	 * @return true if visible
+	 */
+	private boolean isVisible(VirtualViewEntryData entry) {
+		if (inVisibilityCheck.get()) {
+			//might happen if the view entry access check code calls virtual view navigator methods that itself need to check access;
+			//prevents StackOverflowError
+			throw new IllegalStateException("Nested visibility checks are not allowed");
+		}
+		inVisibilityCheck.set(true);
+		try {
+			return viewEntryAccessCheck.isVisible(this, entry);
+		} finally {
+			inVisibilityCheck.set(false);
+		}
 	}
 	
 	/**
@@ -551,7 +692,7 @@ public class VirtualViewNavigator {
 				.values()
 				.stream()
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 	
@@ -736,7 +877,7 @@ public class VirtualViewNavigator {
 					return positionArrayComparator.compare(pos1, pos2);
 				})
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 
@@ -761,7 +902,7 @@ public class VirtualViewNavigator {
 					return positionArrayComparator.compare(pos1, pos2);
 				})
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 
@@ -785,7 +926,7 @@ public class VirtualViewNavigator {
 					return positionArrayComparator.compare(pos1, pos2);
 				})
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				})
 				.map((entry) -> {
 					return entry.getNoteId();
@@ -812,7 +953,7 @@ public class VirtualViewNavigator {
 					return positionArrayComparator.compare(pos1, pos2);
 				})
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				})
 				.map((entry) -> {
 					return new ScopedNoteId(entry.getOrigin(), entry.getNoteId());
@@ -841,7 +982,7 @@ public class VirtualViewNavigator {
 					return positionArrayComparator.compare(pos1, pos2);
 				})
 				.filter((currEntry) -> {
-					return viewEntryAccessCheck.isVisible(currEntry);
+					return isVisible(currEntry);
 				});
 	}
 
@@ -1255,7 +1396,7 @@ public class VirtualViewNavigator {
 		 */
 		public VirtualViewEntryData getCurrentEntry() {
 			VirtualViewEntryData entry = getCurrentEntryUnchecked();
-			if (viewEntryAccessCheck.isVisible(entry)) {
+			if (isVisible(entry)) {
 				return entry;
 			}
 			return null;

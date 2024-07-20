@@ -11,7 +11,6 @@ import com.mindoo.domino.jna.IItemTableData;
 import com.mindoo.domino.jna.NotesDatabase;
 import com.mindoo.domino.jna.NotesFTSearchResult;
 import com.mindoo.domino.jna.NotesIDTable;
-import com.mindoo.domino.jna.NotesNote;
 import com.mindoo.domino.jna.NotesSearch;
 import com.mindoo.domino.jna.NotesSearch.ISearchMatch;
 import com.mindoo.domino.jna.NotesTimeDate;

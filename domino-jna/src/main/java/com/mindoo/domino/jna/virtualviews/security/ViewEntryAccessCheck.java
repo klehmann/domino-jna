@@ -15,6 +15,7 @@ import com.mindoo.domino.jna.constants.AclLevel;
 import com.mindoo.domino.jna.utils.NotesNamingUtils;
 import com.mindoo.domino.jna.virtualviews.VirtualView;
 import com.mindoo.domino.jna.virtualviews.VirtualViewEntryData;
+import com.mindoo.domino.jna.virtualviews.VirtualViewNavigator;
 import com.mindoo.domino.jna.virtualviews.dataprovider.AbstractNSFVirtualViewDataProvider;
 import com.mindoo.domino.jna.virtualviews.dataprovider.IVirtualViewDataProvider;
 
@@ -33,19 +34,16 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 	private String effectiveUserName;
 	private Map<String,Set<String>> userNamesListByOrigin;
 	private Map<String,AclLevel> dbAccessLevelsByOrigin;
-	private boolean dontShowEmptyCategories;
 	
 	/**
 	 * Creates a new instance
 	 * 
 	 * @param view virtual view
 	 * @param effectiveUserName name of the user to check access for
-	 * @param dontShowEmptyCategories true to skip categories that have no entries the user can see
 	 */
-	public ViewEntryAccessCheck(VirtualView view, String effectiveUserName, boolean dontShowEmptyCategories) {
+	public ViewEntryAccessCheck(VirtualView view, String effectiveUserName) {
 		this.view = view;
 		this.effectiveUserName = effectiveUserName;
-		this.dontShowEmptyCategories = dontShowEmptyCategories;
 		this.userNamesListByOrigin = new HashMap<>();
 		this.dbAccessLevelsByOrigin = new HashMap<>();
 		
@@ -64,12 +62,16 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 		}
 	}
 	
+	protected VirtualView getView() {
+		return view;
+	}
+	
 	public String getUserName() {
 		return effectiveUserName;
 	}
 	
 	@Override
-	public boolean isVisible(VirtualViewEntryData entry) {
+	public boolean isVisible(VirtualViewNavigator nav, VirtualViewEntryData entry) {
 		if (entry.isDocument()) {
 			String origin = entry.getOrigin();
 			
@@ -97,7 +99,7 @@ public class ViewEntryAccessCheck implements IViewEntryAccessCheck {
 			return false;
 		}
 		else if (entry.isCategory()) {
-			if (!dontShowEmptyCategories) {
+			if (!nav.isDontShowEmptyCategories()) {
 				//show all categories
 				return true;
 			}
