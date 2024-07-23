@@ -78,6 +78,9 @@ public interface INotesNativeAPI extends Library {
 	void OSSetEnvironmentTIMEDATE(Memory envVariable, NotesTimeDateStruct td);
 	short OSGetEnvironmentSeqNo();
 
+	@UndocumentedAPI
+	short OSGetEnvAllConfigStrings(Memory SectionName, Memory searchKeyword, DHANDLE.ByReference rethVarsList);
+
 	short OSMemoryAllocate(int  dwtype, int  size, IntByReference rethandle);
 
 	/**
