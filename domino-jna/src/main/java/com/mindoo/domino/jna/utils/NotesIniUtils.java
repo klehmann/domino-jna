@@ -1,10 +1,20 @@
 package com.mindoo.domino.jna.utils;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
+
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.errors.NotesErrorUtils;
+import com.mindoo.domino.jna.internal.Mem;
 import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.internal.NotesNativeAPI;
+import com.mindoo.domino.jna.internal.handles.DHANDLE;
 import com.mindoo.domino.jna.internal.structs.NotesTimeDateStruct;
 import com.sun.jna.Memory;
+import com.sun.jna.Native;
+import com.sun.jna.Pointer;
+import com.sun.jna.ptr.ShortByReference;
 
 /**
  * Utilities to read and write values in the Notes.ini file
@@ -165,5 +175,53 @@ public class NotesIniUtils {
 	 */
 	public static short getEnvironmentSeqNo() {
 		return NotesNativeAPI.get().OSGetEnvironmentSeqNo();
+	}
+	
+	/**
+	 * Scans the Notes.ini for variables matching a search pattern
+	 * 
+	 * @param searchKeyword search pattern, either the name of a variable, a wildcard (e.g. "dir*") or "*" to get all entries
+	 * @return case-insensitive map of Notes.ini variables and values
+	 */
+	public static Map<String,String> findEnvironmentEntries(String searchKeyword) {
+		Memory sectionNameMem = NotesStringUtils.toLMBCS("Notes", true);
+		Memory searchKeywordMem = NotesStringUtils.toLMBCS(searchKeyword == null ? "" : searchKeyword, true);
+		
+		DHANDLE.ByReference rethVarsList = DHANDLE.newInstanceByReference();
+		
+		short result = NotesNativeAPI.get().OSGetEnvAllConfigStrings(sectionNameMem, searchKeywordMem, rethVarsList);
+		NotesErrorUtils.checkResult(result);
+		
+		if (rethVarsList.isNull()) {
+			return Collections.emptyMap();
+		}
+		
+		Map<String, String> entries = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		
+		Pointer pEnvData = Mem.OSLockObject(rethVarsList);
+		ShortByReference retTextLength = new ShortByReference();
+		Memory retTextPointer = new Memory(Native.POINTER_SIZE);
+		try {
+			int numEntriesAsInt = (int) (NotesNativeAPI.get().ListGetNumEntries(pEnvData, 0) & 0xffff);
+			for (int i=0; i<numEntriesAsInt; i+=2) {
+				result = NotesNativeAPI.get().ListGetText(pEnvData, false, (char) i, retTextPointer, retTextLength);
+				NotesErrorUtils.checkResult(result);
+				
+				String currKey = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), -1);
+
+				result = NotesNativeAPI.get().ListGetText(pEnvData, false, (char) (i+1), retTextPointer, retTextLength);
+				NotesErrorUtils.checkResult(result);
+				
+				String currValue = NotesStringUtils.fromLMBCS(retTextPointer.getPointer(0), -1);
+
+				entries.put(currKey, currValue);
+			}
+		}
+		finally {
+			Mem.OSUnlockObject(rethVarsList);
+			Mem.OSMemFree(rethVarsList.getByValue());
+		}
+		
+		return entries;
 	}
 }
