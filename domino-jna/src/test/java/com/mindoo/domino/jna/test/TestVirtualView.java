@@ -22,6 +22,7 @@ import com.mindoo.domino.jna.INoteSummary;
 import com.mindoo.domino.jna.IViewColumn.ColumnSort;
 import com.mindoo.domino.jna.NotesCollection;
 import com.mindoo.domino.jna.NotesDatabase;
+import com.mindoo.domino.jna.NotesTimeDate;
 import com.mindoo.domino.jna.constants.NoteClass;
 import com.mindoo.domino.jna.utils.NotesIniUtils;
 import com.mindoo.domino.jna.utils.NotesMarkdownTable;
@@ -1242,5 +1243,69 @@ public class TestVirtualView extends BaseJNATestClass {
 			}
 		});
 	}
-	
+
+	/**
+	 * Makes sure that the sorting of columns with mixed types works like NIF
+	 */
+//	@Test
+	public void testMixedColumnDataTypes() {
+		runWithSession(new IDominoCallable<Object>() {
+
+			@Override
+			public Object call(Session session) throws Exception {
+				long update_t0=System.currentTimeMillis();
+				
+				NotesTimeDate aDate = new NotesTimeDate(2024, 9, 1);
+				
+				VirtualView view = VirtualViewFactory.INSTANCE.createViewOnce("fakenames_mixedcolumn",
+						1, 1, TimeUnit.MINUTES, (id) -> {
+					return VirtualViewFactory.createView(
+							new VirtualViewColumn("Mixed type category", "MixedTypeCategory",
+									Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									new VirtualViewColumnValueFunction<Object>(1) {
+
+								@Override
+								public Object getValue(String origin, String itemName,
+										INoteSummary columnValues) {
+									return Arrays.asList(
+											"1",
+											2,
+											aDate,
+											null
+											);
+								}
+							}),
+
+							new VirtualViewColumn("Lastname", "Lastname", Category.YES, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Lastname"),
+
+							new VirtualViewColumn("Firstname", "Firstname", Category.NO, Hidden.NO, ColumnSort.ASCENDING, Total.NONE,
+									"Firstname")
+
+							)
+							.withDbSearch("myfakenames",
+									"", "fakenames.nsf",
+									"Form=\"Person\"")
+							.build();
+				});
+				
+				long update_t1=System.currentTimeMillis();
+				System.out.println("Time to generate view structure: "+(update_t1-update_t0)+"ms");
+
+				VirtualViewNavigator nav = view
+						.createViewNav()
+						.build()
+						.expandLevel(0);
+
+				List<Object> categoryValuesOrdered = nav
+				.entriesForward()
+				.map((entry) -> entry.getCategoryValue())
+				.collect(Collectors.toList());
+				
+				assertEquals(Arrays.asList(2, aDate, "1", null), categoryValuesOrdered);
+				
+				return null;
+			}
+		});
+	}
 }

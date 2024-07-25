@@ -1,8 +1,12 @@
 package com.mindoo.domino.jna.virtualviews;
 
+import java.time.temporal.Temporal;
+import java.util.Calendar;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
+import com.mindoo.domino.jna.internal.NotesConstants;
 import com.mindoo.domino.jna.virtualviews.VirtualView.CategorizationStyle;
 
 /**
@@ -17,6 +21,31 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		this.categoriesOnTopOfDocuments = categorizationStyle == CategorizationStyle.CATEGORY_THEN_DOCUMENT;
 		this.categoryOrderDescending = categoryOrderDescending;
 		this.docOrderPerColumnDescending = docOrderDescending;
+	}
+	
+	/**
+	 * Returns the sort order for a data type in case a column contains mixed types.<br>
+	 * See this blog article of John Curtis for details: <a href="https://jdcurtis.blog/2019/12/16/tdr-notes-indexing-facility/">TDR – Notes Indexing Facility</a>
+	 * 
+	 * @param val data type
+	 * @return sort order
+	 */
+	private int getDataTypeSortOrder(Object val) {
+		if (val == null) {
+			return Integer.MAX_VALUE;
+		}
+		else if (val instanceof Number) {
+			return NotesConstants.CLASS_NUMBER;
+		}
+		else if (val instanceof Temporal || val instanceof Calendar || val instanceof Date) {
+			return NotesConstants.CLASS_TIME;
+		}
+		else if (val instanceof String) {
+			return NotesConstants.CLASS_TEXT;
+		}
+		else {
+			throw new IllegalArgumentException("Unsupported value type "+val.getClass().getName()+" : "+val);
+		}
 	}
 	
 	@Override
@@ -75,6 +104,13 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 							}
 							
 							return -1;
+						}
+
+						int typeOrder1 = getDataTypeSortOrder(catVal1);
+						int typeOrder2 = getDataTypeSortOrder(catVal2);
+						
+						if (typeOrder1 != typeOrder2) {
+							return (categoryOrderDescending ? -1 : 1) * (typeOrder1 - typeOrder2);
 						}
 						
 						//for categories, just compare the value, not the origin and note id (because they are the same for all entries)
@@ -192,6 +228,13 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 					return docOrderPerColumnDescending[i] ? 1 : -1;
 				}
 				else {
+					int typeOrder1 = getDataTypeSortOrder(currValue1);
+					int typeOrder2 = getDataTypeSortOrder(currValue2);
+					
+					if (typeOrder1 != typeOrder2) {
+						return (docOrderPerColumnDescending[i] ? -1 : 1) * (typeOrder1 - typeOrder2);
+					}
+
 					if (currValue1 instanceof String && currValue2 instanceof String) {
 						String str1 = (String) currValue1;
 						String str2 = (String) currValue2;
