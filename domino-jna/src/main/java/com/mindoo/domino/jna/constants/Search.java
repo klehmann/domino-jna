@@ -45,12 +45,6 @@ public enum Search {
 	/** Allow search to return id's only i.e. no summary buffer */
 	NOPRIVCHECK(NotesConstants.SEARCH_NOPRIVCHECK),
 	
-	/** Search includes all children of matching documents. */
-	ALLCHILDREN(NotesConstants.SEARCH_ALLCHILDREN),
-	
-	/** Search includes all descendants of matching documents. */
-	ALLDESCENDANTS(NotesConstants.SEARCH_ALLDESCENDANTS),
-	
 	/**
 	 * Include *** ALL *** named ghost notes in the search (profile docs,
 	 * xACL's, etc). Note: use SEARCH1_PROFILE_DOCS, etc., introduced in R6, for
