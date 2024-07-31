@@ -1189,10 +1189,6 @@ short LSECINFOSET_MODIFY = 0x0004;
 	 * other bits provide additional information regarding the note.
 	 */
 	public int SEARCH_V4INFO = 0x00010000;
-	/** Search includes all children of matching documents. */
-	public int SEARCH_ALLCHILDREN = 0x00020000;
-	/** Search includes all descendants of matching documents. */
-	public int SEARCH_ALLDESCENDANTS = 0x00040000;
 	/** First pass in a multipass hierarchical search. */
 	public int SEARCH_FIRSTPASS = 0x00080000;
 	/** Descendants were added on this pass. */
