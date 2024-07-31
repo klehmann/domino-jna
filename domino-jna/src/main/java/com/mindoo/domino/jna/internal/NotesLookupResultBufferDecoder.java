@@ -19,6 +19,7 @@ import com.mindoo.domino.jna.NotesDateRange;
 import com.mindoo.domino.jna.NotesIDTable;
 import com.mindoo.domino.jna.NotesItem;
 import com.mindoo.domino.jna.NotesTimeDate;
+import com.mindoo.domino.jna.NotesUniversalNoteId;
 import com.mindoo.domino.jna.NotesViewEntryData;
 import com.mindoo.domino.jna.NotesViewLookupResultData;
 import com.mindoo.domino.jna.constants.ReadMask;
@@ -27,10 +28,12 @@ import com.mindoo.domino.jna.errors.NotesErrorUtils;
 import com.mindoo.domino.jna.gc.NotesGC;
 import com.mindoo.domino.jna.internal.structs.NotesCollectionStatsStruct;
 import com.mindoo.domino.jna.internal.structs.NotesItemTableStruct;
+import com.mindoo.domino.jna.internal.structs.NotesUniversalNoteIdStruct;
 import com.mindoo.domino.jna.utils.LMBCSString;
 import com.mindoo.domino.jna.utils.NotesStringUtils;
 import com.mindoo.domino.jna.utils.PlatformUtils;
 import com.mindoo.domino.jna.utils.PointerWithBounds;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 
 /**
@@ -626,6 +629,28 @@ public class NotesLookupResultBufferDecoder {
 				else if (type == NotesItem.TYPE_TIME_RANGE) {
 					//we always store a List of NotesTimeDate and convert to Calendar if requested by caller
 					m_itemValues[index] = ItemDecoder.decodeTimeDateListAsNotesTimeDate(m_itemValueBufferPointers[index]);
+				}
+				else if (type == NotesItem.TYPE_NOTEREF_LIST) {
+					int numEntries = (int) (m_itemValueBufferPointers[index].getShort(0) & 0xffff);
+					
+					//skip LIST structure, clone data to prevent invalid memory access when buffer gets disposed
+					Pointer listContentPtr = m_itemValueBufferPointers[index].share(2);
+					
+					List<Object> unids = new ArrayList<>();
+					
+					for (int i=0; i<numEntries; i++) {
+						byte[] unidBytes = listContentPtr.getByteArray(0, NotesConstants.notesUniversalNoteIdSize);
+						Memory unidMem = new Memory(NotesConstants.notesUniversalNoteIdSize);
+						unidMem.write(0, unidBytes, 0, unidBytes.length);
+						NotesUniversalNoteIdStruct unidStruct = NotesUniversalNoteIdStruct.newInstance(unidMem);
+						unidStruct.read();
+						NotesUniversalNoteId unid = new NotesUniversalNoteId(unidStruct);
+						unids.add(unid);
+						
+						listContentPtr = listContentPtr.share(NotesConstants.notesUniversalNoteIdSize);
+					}
+					return unids;
+
 				}
 			}
 			
