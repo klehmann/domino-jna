@@ -39,7 +39,10 @@ The project provides functionality that is not available in the classic Java API
 * **QueryResultsProcessor API** to create JSON data and QRP views
 
 ## Virtual View API
-Our own replacement for Domino views and the QueryResultsProcessor! See testcase [TestVirtualView](https://github.com/klehmann/domino-jna/blob/develop/domino-jna/src/test/java/com/mindoo/domino/jna/test/TestVirtualView.java) for code examples.
+Our own replacement for Domino views and the QueryResultsProcessor!
+
+See testcase [TestVirtualView](https://github.com/klehmann/domino-jna/blob/develop/domino-jna/src/test/java/com/mindoo/domino/jna/test/TestVirtualView.java) for code examples.
+And here is a [recording of the OpenNTF Developer Variety Hour](https://www.youtube.com/watch?v=TGsudzbvbmc&t=1417s) where I presented the Virtual View API in detail.
 
 * multi-DB views, even work between servers and client-server
 * view structure similar to Domino (multi level categorization, sorted columns)
