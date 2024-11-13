@@ -321,9 +321,7 @@ public interface INotesNativeAPI32 extends Library {
 	short NSFNoteHasComposite(int hNote);
 	short NSFNoteHasMIME(int hNote);
 	short NSFNoteHasMIMEPart(int hNote);
-	@UndocumentedAPI
 	short NSFIsFileItemMimePart(int hNote, NotesBlockIdStruct.ByValue bhFileItem);
-	@UndocumentedAPI
 	short NSFIsMimePartInFile(int hNote, NotesBlockIdStruct.ByValue bhMIMEItem, Memory pszFileName, short wMaxFileNameLen);
 	
 	short NSFMimePartCreateStream(
