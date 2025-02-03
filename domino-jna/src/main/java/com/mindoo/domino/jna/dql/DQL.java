@@ -673,7 +673,62 @@ public class DQL {
 			
 			return new ValueComparisonTerm(this, TermRelation.IN, dblValues);
 		}
-		
+
+		public <T> ValueComparisonTerm inAll(final Collection<T> values, final Class<T> clazz) {
+			if (Integer.class == clazz) {
+				final int[] valuesArr = new int[values.size()];
+				int idx = 0;
+				for (final T currVal : values) {
+					valuesArr[idx++] = ((Number) currVal).intValue();
+				}
+				return this.inAll(valuesArr);
+			} else if (Double.class == clazz) {
+				final double[] valuesArr = new double[values.size()];
+				int idx = 0;
+				for (final T currVal : values) {
+					valuesArr[idx++] = ((Number) currVal).doubleValue();
+				}
+				return this.inAll(valuesArr);
+			} else if (String.class == clazz) {
+				final String[] valuesArr = new String[values.size()];
+				int idx = 0;
+				for (final T currVal : values) {
+					valuesArr[idx++] = (String) currVal;
+				}
+				return this.inAll(valuesArr);
+			} else {
+				throw new IllegalArgumentException(
+						MessageFormat.format("Unsupported class type: {0}. Try Integer, Double or String.", clazz.getName()));
+			}
+		}
+
+		public ValueComparisonTerm inAll(final double... dblValues) {
+			Objects.requireNonNull(dblValues, "Values list cannot be null");
+			if (dblValues.length == 0) {
+				throw new IllegalArgumentException("Values list cannot be empty");
+			}
+
+			return new ValueComparisonTerm(this, TermRelation.INALL, dblValues);
+		}
+
+		public ValueComparisonTerm inAll(final int... intValues) {
+			Objects.requireNonNull(intValues, "Values list cannot be null");
+			if (intValues.length == 0) {
+				throw new IllegalArgumentException("Values list cannot be empty");
+			}
+
+			return new ValueComparisonTerm(this, TermRelation.INALL, intValues);
+		}
+
+		public ValueComparisonTerm inAll(final String... strValues) {
+			Objects.requireNonNull(strValues, "Values list cannot be null");
+			if (strValues.length == 0) {
+				throw new IllegalArgumentException("Values list cannot be empty");
+			}
+
+			return new ValueComparisonTerm(this, TermRelation.INALL, strValues);
+		}
+
 		public ValueComparisonTerm isEqualTo(Date dtVal) {
 			return new ValueComparisonTerm(this, TermRelation.EQUAL, dtVal);
 		}
