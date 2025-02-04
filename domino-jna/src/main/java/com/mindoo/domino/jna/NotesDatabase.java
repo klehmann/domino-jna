@@ -8559,7 +8559,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 					retList.add(path);
 				}
 				
-				strPtr = strPtr.share(strlen);
+				strPtr = strPtr.share(strlen+1);
 			}
 			
 			return retList;
