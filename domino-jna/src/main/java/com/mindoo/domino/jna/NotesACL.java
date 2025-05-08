@@ -203,22 +203,21 @@ public class NotesACL implements IAllocatedMemory {
 		short result;
 		
 		DHANDLE hAcl = getHandle();
+		DHANDLE hNamesList = namesList.getHandle();
 
-		LongByReference rethPrivNames = new LongByReference();
+		DHANDLE.ByReference rethPrivNames = DHANDLE.newInstanceByReference();
 		
-		long hNamesList = namesList.getHandle64();
-		Pointer pNamesList = Mem64.OSLockObject(hNamesList);
+		Pointer pNamesList = Mem.OSLockObject(hNamesList);
 		try {
 			result = NotesNativeAPI.get().ACLLookupAccess(hAcl.getByValue(), pNamesList, retAccessLevel,
 					retPrivileges, retAccessFlags, rethPrivNames);
 			NotesErrorUtils.checkResult(result);
 			
-			long hPrivNames = rethPrivNames.getValue();
 			List<String> roles;
-			if (hPrivNames==0)
+			if (rethPrivNames.isNull())
 				roles = Collections.emptyList();
 			else {
-				Pointer pPrivNames = Mem64.OSLockObject(hPrivNames);
+				Pointer pPrivNames = Mem.OSLockObject(rethPrivNames);
 				ShortByReference retTextLength = new ShortByReference();
 				Memory retTextPointer = new Memory(Native.POINTER_SIZE);
 				try {
@@ -233,8 +232,8 @@ public class NotesACL implements IAllocatedMemory {
 					}
 				}
 				finally {
-					Mem64.OSUnlockObject(hPrivNames);
-					Mem64.OSMemFree(hPrivNames);
+					Mem.OSUnlockObject(rethPrivNames);
+					Mem.OSMemFree(rethPrivNames.getByValue());
 				}
 			}
 
@@ -253,7 +252,7 @@ public class NotesACL implements IAllocatedMemory {
 			return access;
 		}
 		finally {
-			Mem64.OSUnlockObject(hNamesList);
+			Mem.OSUnlockObject(hNamesList);
 		}
 	}
 	

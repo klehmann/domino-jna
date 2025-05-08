@@ -764,7 +764,7 @@ public interface INotesNativeAPI extends Library {
 			ShortByReference retAccessLevel,
 			Memory retPrivileges,
 			ShortByReference retAccessFlags,
-			LongByReference rethPrivNames);
+			DHANDLE.ByReference rethPrivNames);
 	
 	short ACLAddEntry(
 			DHANDLE.ByValue hACL,
