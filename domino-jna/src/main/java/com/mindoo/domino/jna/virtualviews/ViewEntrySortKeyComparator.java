@@ -21,6 +21,9 @@ public class ViewEntrySortKeyComparator implements Comparator<ViewEntrySortKey> 
 		this.categoriesOnTopOfDocuments = categorizationStyle == CategorizationStyle.CATEGORY_THEN_DOCUMENT;
 		this.categoryOrderDescending = categoryOrderDescending;
 		this.docOrderPerColumnDescending = docOrderDescending;
+		if (docOrderPerColumnDescending.length == 0) {
+			throw new IllegalArgumentException("View must have at least one sorted column");
+		}
 	}
 	
 	/**
