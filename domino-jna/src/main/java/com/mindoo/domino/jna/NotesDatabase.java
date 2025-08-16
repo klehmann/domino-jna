@@ -3222,7 +3222,7 @@ public class NotesDatabase implements IRecyclableNotesObject, IAdaptable {
 	 * @return true if indexed
 	 */
 	public boolean isFTIndex() {
-		return getFTLastIndexTime() != null;
+		return getFTLastIndexTime() != null && getOptions().contains(DatabaseOption.FT_INDEX);
 	}
 	
 	/**
