@@ -349,31 +349,30 @@ public class NotesSearchKeyEncoder {
 	 */
 	private static void addStringKey(OutputStream itemOut, OutputStream valueDataOut, String currKey) throws Exception {
 		Memory strValueMem = NotesStringUtils.toLMBCS(currKey, false);
-		long strValueMemLen = strValueMem == null ? 0 : strValueMem.size();
+		long strValueMemLength = strValueMem==null ? 0 : strValueMem.size();
 		
+		if (strValueMemLength > 65533) {
+			throw new IllegalArgumentException("String search key is too long: "+currKey+" (length="+strValueMemLength+"). Maximum length is 65533 bytes.");
+		}
+
 		Memory itemMem = new Memory(NotesConstants.tableItemSize);
 		NotesTableItemStruct item = NotesTableItemStruct.newInstance(itemMem);
 		item.NameLength = 0;
-		if (strValueMem == null) {
-			item.ValueLength = 2;
-		}
-		else {
-			item.ValueLength = (short) ((strValueMemLen + 2) & 0xffff);			
-		}
+		item.ValueLength = (short) ((strValueMemLength + 2) & 0xffff);
 		item.write();
 
 		for (int i=0; i<NotesConstants.tableItemSize; i++) {
 			itemOut.write(itemMem.getByte(i));
 		}
 
-		Memory valueMem = new Memory(strValueMemLen + 2);
+		Memory valueMem = new Memory(strValueMemLength + 2);
 		short txtType = (short) NotesItem.TYPE_TEXT;
 		valueMem.setShort(0, txtType);
 
-		if (strValueMem != null) {
+		if (strValueMemLength > 0) {
 			Pointer strValuePtr = valueMem.share(2);
 			
-			for (int i=0; i<strValueMem.size(); i++) {
+			for (int i=0; i<strValueMemLength; i++) {
 				strValuePtr.setByte(i, strValueMem.getByte(i));
 			}			
 		}
