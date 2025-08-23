@@ -239,6 +239,7 @@ public class NotesCollectionPosition implements IAdaptable {
 			this.struct.MinLevel = (byte) (level & 0xff);
 			this.struct.write();
 		}
+		this.toString = null;
 	}
 	
 	/**
@@ -271,6 +272,7 @@ public class NotesCollectionPosition implements IAdaptable {
 			this.struct.MaxLevel = (byte) (level & 0xff);
 			this.struct.write();
 		}
+		this.toString = null;
 	}
 	
 	/**
